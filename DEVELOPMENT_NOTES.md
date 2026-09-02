@@ -47,10 +47,13 @@ Pricing authority: [OpenAI GPT-5.6 Sol model documentation](https://developers.o
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
 | 2 Sep 2026 | `PP-20260902-01` | Repository baseline and non-motion FTMS capability explorer | `gpt-5.6-sol` | 22,180,485 (21,742,208; 0) | 100,109 | 22,280,594 | $12.45 | Initial task aggregate |
 | 2 Sep 2026 | `PP-20260902-02` | Issue #1 read-only FTMS live telemetry and diagnostic capture | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Exact start/end task counters and model identifier unavailable |
+| 2 Sep 2026 | `PP-20260902-03` | Issue #2 safe FR30z FTMS Control Point handshake specification | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Exact start/end task counters and model identifier unavailable |
 | 3 Sep 2026 | `PP-20260903-01` | Training Status initial read and diagnostic source provenance | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Exact start/end task counters and model identifier unavailable |
 
 `PP-20260902-01` covers the full Codex Desktop task from repository orientation through implementation, simulator validation, the user-run physical capability check, evidence reconciliation and pre-commit review. The cutoff is the final counter snapshot before inserting this numeric row; the small final insertion, commit and push operations are excluded. No linked subagent usage is included.
 
 `PP-20260902-02` covers the implementation and simulator validation of GitHub issue #1, committed as `5aea8ca` with the matching `PacePrompt-Change` trailer. The task interface did not expose an exact starting counter snapshot, ending counter snapshot or model identifier, so no token count or API-equivalent cost was reconstructed.
+
+`PP-20260902-03` covers the GitHub issue #2 protocol specification, integration with `e41bbae`, primary-source review, documentation checks and simulator validation. This task interface did not expose an exact starting counter snapshot, ending counter snapshot or model identifier, so no token count or API-equivalent cost was reconstructed.
 
 `PP-20260903-01` covers the follow-up investigation of passive FTMS telemetry, the Training Status initial-read implementation, simulator validation and the user-operated physical-treadmill capture. The capture confirmed successful subscriptions to `0x2ACD`, `0x2AD3` and `0x2ADA`, an initial `0x2AD3` value of `00 00`, and live `0x2ACD` notifications while the belt was operated exclusively from the physical console. No Control Point write was performed. This task interface did not expose exact start/end counters or a reliable exact model identifier, so token usage and API-equivalent cost remain unmeasured.
