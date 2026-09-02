@@ -1,0 +1,2 @@
+// Personal signing configuration stays in the ignored file below.
+#include? "Signing.local.xcconfig"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "FTMS Safe Development"
+  short_description: "Develop FTMS features without unsafe motion"
+  default_prompt: "Use $ftms-safe-development to implement or review the authorised FTMS work safely."

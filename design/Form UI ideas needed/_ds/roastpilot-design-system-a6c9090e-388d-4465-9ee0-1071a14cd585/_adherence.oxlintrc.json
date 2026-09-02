@@ -1,0 +1,276 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/shared/AppFrame/**",
+              "components/shared/ConnectionIndicator/**",
+              "components/shared/LiveCurve/**",
+              "components/shared/VerdictBadge/**",
+              "design_handoff_settings/settings/**",
+              "settings/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AppFrame'] > JSXAttribute > JSXIdentifier[name!=/^(?:headerRight|children|className|key|ref|className|style|children)$/]",
+        "message": "<AppFrame> doesn't accept that prop. Declared props: headerRight, children, className."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ConnectionIndicator'] > JSXAttribute > JSXIdentifier[name!=/^(?:status|className|key|ref|className|style|children)$/]",
+        "message": "<ConnectionIndicator> doesn't accept that prop. Declared props: status, className."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ConnectionIndicator'] > JSXAttribute[name.name='status'] > Literal[value!=/^(?:connecting|live|reconnecting|stale)$/]",
+        "message": "<ConnectionIndicator> status must be one of 'connecting' | 'live' | 'reconnecting' | 'stale'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='LiveCurve'] > JSXAttribute > JSXIdentifier[name!=/^(?:points|markers|phase|chargeBand|highlightTime|originSeconds|initialHidden|className|height|key|ref|className|style|children)$/]",
+        "message": "<LiveCurve> doesn't accept that prop. Declared props: points, markers, phase, chargeBand, highlightTime, originSeconds, initialHidden, className, height."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='LiveCurve'] > JSXAttribute[name.name='phase'] > Literal[value!=/^(?:idle|starting|preheating|roasting_pre_first_crack|development|cooling|complete|faulted|operator_recovery_required)$/]",
+        "message": "<LiveCurve> phase must be one of 'idle' | 'starting' | 'preheating' | 'roasting_pre_first_crack' | 'development' | 'cooling' | 'complete' | 'faulted' | 'operator_recovery_required'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='VerdictBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:verdict|className|key|ref|className|style|children)$/]",
+        "message": "<VerdictBadge> doesn't accept that prop. Declared props: verdict, className."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='VerdictBadge'] > JSXAttribute[name.name='verdict'] > Literal[value!=/^(?:allow|clamp|reject|recovery|fault|emergency_stop)$/]",
+        "message": "<VerdictBadge> verdict must be one of 'allow' | 'clamp' | 'reject' | 'recovery' | 'fault' | 'emergency_stop'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "AppFrame": {
+        "replaces": []
+      },
+      "ConnectionIndicator": {
+        "replaces": []
+      },
+      "LiveCurve": {
+        "replaces": []
+      },
+      "VerdictBadge": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-foreground",
+      "--background",
+      "--border",
+      "--card",
+      "--card-foreground",
+      "--destructive",
+      "--destructive-foreground",
+      "--font-size",
+      "--font-weight-medium",
+      "--font-weight-normal",
+      "--foreground",
+      "--input",
+      "--muted",
+      "--muted-foreground",
+      "--popover",
+      "--popover-foreground",
+      "--primary",
+      "--primary-foreground",
+      "--radius",
+      "--ring",
+      "--roast-caution",
+      "--roast-coffee",
+      "--roast-fan",
+      "--roast-fan-dim",
+      "--roast-fault",
+      "--roast-heat",
+      "--roast-heat-dim",
+      "--roast-nominal",
+      "--roast-phase-cooling",
+      "--roast-phase-development",
+      "--roast-phase-preheat",
+      "--roast-phase-roasting",
+      "--secondary",
+      "--secondary-foreground",
+      "--tw-backdrop-blur",
+      "--tw-backdrop-brightness",
+      "--tw-backdrop-contrast",
+      "--tw-backdrop-grayscale",
+      "--tw-backdrop-hue-rotate",
+      "--tw-backdrop-invert",
+      "--tw-backdrop-opacity",
+      "--tw-backdrop-saturate",
+      "--tw-backdrop-sepia",
+      "--tw-blur",
+      "--tw-border-spacing-x",
+      "--tw-border-spacing-y",
+      "--tw-brightness",
+      "--tw-contain-layout",
+      "--tw-contain-paint",
+      "--tw-contain-size",
+      "--tw-contain-style",
+      "--tw-contrast",
+      "--tw-drop-shadow",
+      "--tw-gradient-from-position",
+      "--tw-gradient-to-position",
+      "--tw-gradient-via-position",
+      "--tw-grayscale",
+      "--tw-hue-rotate",
+      "--tw-invert",
+      "--tw-numeric-figure",
+      "--tw-numeric-fraction",
+      "--tw-numeric-spacing",
+      "--tw-ordinal",
+      "--tw-pan-x",
+      "--tw-pan-y",
+      "--tw-pinch-zoom",
+      "--tw-ring-color",
+      "--tw-ring-inset",
+      "--tw-ring-offset-color",
+      "--tw-ring-offset-shadow",
+      "--tw-ring-offset-width",
+      "--tw-ring-shadow",
+      "--tw-rotate",
+      "--tw-saturate",
+      "--tw-scale-x",
+      "--tw-scale-y",
+      "--tw-scroll-snap-strictness",
+      "--tw-sepia",
+      "--tw-shadow",
+      "--tw-shadow-colored",
+      "--tw-skew-x",
+      "--tw-skew-y",
+      "--tw-slashed-zero",
+      "--tw-text-opacity",
+      "--tw-translate-x",
+      "--tw-translate-y"
+    ],
+    "tokenKinds": {
+      "--font-size": "font",
+      "--radius": "radius",
+      "--font-weight-medium": "font",
+      "--font-weight-normal": "font",
+      "--background": "color",
+      "--foreground": "color",
+      "--card": "color",
+      "--card-foreground": "color",
+      "--popover": "color",
+      "--popover-foreground": "color",
+      "--primary": "color",
+      "--primary-foreground": "color",
+      "--secondary": "color",
+      "--secondary-foreground": "color",
+      "--muted": "color",
+      "--muted-foreground": "color",
+      "--accent": "color",
+      "--accent-foreground": "color",
+      "--destructive": "color",
+      "--destructive-foreground": "color",
+      "--border": "color",
+      "--input": "color",
+      "--ring": "color",
+      "--roast-heat": "color",
+      "--roast-heat-dim": "color",
+      "--roast-fan": "color",
+      "--roast-fan-dim": "color",
+      "--roast-coffee": "color",
+      "--roast-nominal": "color",
+      "--roast-caution": "color",
+      "--roast-fault": "color",
+      "--roast-phase-preheat": "color",
+      "--roast-phase-roasting": "color",
+      "--roast-phase-development": "color",
+      "--roast-phase-cooling": "color",
+      "--tw-border-spacing-x": "spacing",
+      "--tw-border-spacing-y": "spacing",
+      "--tw-translate-x": "spacing",
+      "--tw-translate-y": "spacing",
+      "--tw-rotate": "other",
+      "--tw-skew-x": "other",
+      "--tw-skew-y": "other",
+      "--tw-scale-x": "other",
+      "--tw-scale-y": "other",
+      "--tw-pan-x": "other",
+      "--tw-pan-y": "other",
+      "--tw-pinch-zoom": "other",
+      "--tw-scroll-snap-strictness": "other",
+      "--tw-gradient-from-position": "other",
+      "--tw-gradient-via-position": "other",
+      "--tw-gradient-to-position": "other",
+      "--tw-ordinal": "other",
+      "--tw-slashed-zero": "other",
+      "--tw-numeric-figure": "other",
+      "--tw-numeric-spacing": "spacing",
+      "--tw-numeric-fraction": "other",
+      "--tw-ring-inset": "spacing",
+      "--tw-ring-offset-width": "spacing",
+      "--tw-ring-offset-color": "color",
+      "--tw-ring-color": "color",
+      "--tw-ring-offset-shadow": "shadow",
+      "--tw-ring-shadow": "shadow",
+      "--tw-shadow": "shadow",
+      "--tw-shadow-colored": "shadow",
+      "--tw-blur": "other",
+      "--tw-brightness": "other",
+      "--tw-contrast": "other",
+      "--tw-grayscale": "other",
+      "--tw-hue-rotate": "other",
+      "--tw-invert": "other",
+      "--tw-saturate": "other",
+      "--tw-sepia": "other",
+      "--tw-drop-shadow": "shadow",
+      "--tw-backdrop-blur": "other",
+      "--tw-backdrop-brightness": "other",
+      "--tw-backdrop-contrast": "other",
+      "--tw-backdrop-grayscale": "other",
+      "--tw-backdrop-hue-rotate": "other",
+      "--tw-backdrop-invert": "other",
+      "--tw-backdrop-opacity": "other",
+      "--tw-backdrop-saturate": "other",
+      "--tw-backdrop-sepia": "other",
+      "--tw-contain-size": "spacing",
+      "--tw-contain-layout": "other",
+      "--tw-contain-paint": "other",
+      "--tw-contain-style": "other",
+      "--tw-text-opacity": "font"
+    },
+    "fontFamilies": []
+  }
+}

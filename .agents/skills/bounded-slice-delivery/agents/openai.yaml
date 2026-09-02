@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bounded Slice Delivery"
+  short_description: "Deliver one authorised repository slice safely"
+  default_prompt: "Use $bounded-slice-delivery to deliver only the currently authorised slice."

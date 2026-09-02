@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/roastpilot-design-system-a6c9090e-388d-4465-9ee0-1071a14cd585/_ds_bundle.css">
+<link rel="stylesheet" href="_ds/roastpilot-design-system-a6c9090e-388d-4465-9ee0-1071a14cd585/styles.css">
+<script src="_ds/roastpilot-design-system-a6c9090e-388d-4465-9ee0-1071a14cd585/_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: var(--background); color: var(--foreground); }
+  a { color: var(--roast-fan); text-decoration: none; }
+  a:hover { color: var(--foreground); }
+</style>
+</helmet>
+
+<section style="padding: 64px 56px 96px; display: flex; flex-direction: column; gap: 44px; background: var(--background); color: var(--foreground)">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 780px">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground)">Turn 1 · iOS + watchOS</span>
+    <h1 style="margin: 0; font-size: 40px; font-weight: 650; letter-spacing: -.03em; line-height: 1.1">FR30z treadmill controller — six screens</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--muted-foreground); text-wrap: pretty">Static hi-fi, iPhone 16 Pro. The Exercise screen follows the split you picked: countdown and the requested-vs-actual panel own the top half, the two dials own the thumb half, the full plan lives behind an upward swipe. Reference any screen by its id in chat — <a href="#1c">1c</a>, <a href="#1e">1e</a>, and so on.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 56px; align-items: flex-start">
+
+    <div id="1a" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1a</span>
+        <span style="font-size: 15px; font-weight: 600">Import · plan preview</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">The model's job ends at the schema. The verdict badge and the clamp annotations come from local validation, and the totals are computed by the app — not quoted from the response.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 62px 18px 30px; box-sizing: border-box; gap: 14px">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+            <span style="color: var(--muted-foreground)">Cancel</span>
+            <span style="font-weight: 600">Import workout</span>
+            <span style="color: var(--muted-foreground); opacity: .35">Save</span>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; display: flex; flex-direction: column; gap: 7px">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Pasted text</span>
+              <span style="font-size: 13px; color: var(--roast-fan)">Edit</span>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty">10 min easy, then 5 × 3 min at 12 k with 2 min walk recoveries, climbing 1% each rep, 8 min cool down</p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px">
+            <x-import component-from-global-scope="RoastPilotDS.VerdictBadge" verdict="{{ verdict }}" hint-size="auto,24px"></x-import>
+            <span style="font-size: 13px; color: var(--muted-foreground)">2 of 23 segments clamped</span>
+          </div>
+
+          <div style="display: flex; gap: 8px">
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Duration</div>
+              <div style="font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums">43:00</div>
+            </div>
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Est. distance</div>
+              <div style="font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums">6.8 km</div>
+            </div>
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Segments</div>
+              <div style="font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums">23</div>
+            </div>
+          </div>
+
+          <div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Interval timeline</span>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--roast-phase-preheat)"></div>
+              <div style="flex: 1; display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600">Warm up</div>
+                  <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">5.5 km/h · 1.0%</div>
+                </div>
+                <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">10:00</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--roast-caution); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+                  <div>
+                    <div style="font-size: 14px; font-weight: 600">Rep 1 · run</div>
+                    <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">10.0 km/h · 1.0%</div>
+                  </div>
+                  <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">3:00</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--roast-caution); font-variant-numeric: tabular-nums">
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--roast-caution)"></span>
+                  <span>Clamped from 12.0 — your speed ceiling is 10.0</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+              <div style="flex: 1; display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600">Recovery 1 · walk</div>
+                  <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">5.5 km/h · 1.0%</div>
+                </div>
+                <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">2:00</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600">Rep 2 · run</div>
+                  <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">10.0 km/h · 2.0%</div>
+                </div>
+                <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">3:00</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; font-size: 13px; color: var(--muted-foreground)">
+              <span>19 more segments</span>
+              <span>Technical details (JSON) ›</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-size: 17px; font-weight: 650">Name and save</div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1b" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1b</span>
+        <span style="font-size: 15px; font-weight: 600">Preflight</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">One screen that answers "can this run right now" — readiness, the ceilings that will be enforced, and the activity type confirmed before the belt moves.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 62px 18px 30px; box-sizing: border-box; gap: 16px">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+            <span style="color: var(--muted-foreground)">‹ Plans</span>
+            <x-import component-from-global-scope="RoastPilotDS.ConnectionIndicator" status="live" hint-size="auto,20px"></x-import>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 5px">
+            <h2 style="margin: 0; font-size: 30px; font-weight: 650; letter-spacing: -.025em">Pyramid 5 × 3</h2>
+            <div style="font-size: 14px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">43:00 · 6.8 km est. · 23 segments</div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden">
+            <div style="display: flex; align-items: center; gap: 11px; padding: 14px; border-bottom: 1px solid var(--border)">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--roast-nominal)"></span>
+              <div style="flex: 1">
+                <div style="font-size: 15px; font-weight: 600">Reebok FR30z</div>
+                <div style="font-size: 12px; color: var(--muted-foreground)">FTMS control acquired · speed + incline</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 11px; padding: 14px; border-bottom: 1px solid var(--border)">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--roast-nominal)"></span>
+              <div style="flex: 1">
+                <div style="font-size: 15px; font-weight: 600">Apple Watch</div>
+                <div style="font-size: 12px; color: var(--muted-foreground)">Companion reachable · owns the workout session</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 11px; padding: 14px">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--roast-caution)"></span>
+              <div style="flex: 1">
+                <div style="font-size: 15px; font-weight: 600">Apple Health</div>
+                <div style="font-size: 12px; color: var(--roast-caution)">Distance write not yet authorised — review</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 12px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Enforced this session</span>
+            <div style="display: flex; gap: 10px">
+              <div style="flex: 1">
+                <div style="font-size: 12px; color: var(--muted-foreground)">Speed ceiling</div>
+                <div style="font-size: 18px; font-weight: 650; color: var(--roast-heat); font-variant-numeric: tabular-nums">10.0 km/h</div>
+              </div>
+              <div style="flex: 1">
+                <div style="font-size: 12px; color: var(--muted-foreground)">Incline ceiling</div>
+                <div style="font-size: 18px; font-weight: 650; color: var(--roast-fan); font-variant-numeric: tabular-nums">6.0 %</div>
+              </div>
+              <div style="flex: 1">
+                <div style="font-size: 12px; color: var(--muted-foreground)">Max step</div>
+                <div style="font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums">2.0 km/h</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px">
+            <div>
+              <div style="font-size: 15px; font-weight: 600">Activity type</div>
+              <div style="font-size: 12px; color: var(--muted-foreground)">Saved to Health as this workout</div>
+            </div>
+            <div style="display: flex; gap: 4px; background: var(--secondary); border-radius: 9px; padding: 3px">
+              <span style="padding: 7px 12px; border-radius: 7px; font-size: 13px; color: var(--muted-foreground)">Walk</span>
+              <span style="padding: 7px 12px; border-radius: 7px; background: var(--background); font-size: 13px; font-weight: 600">Run</span>
+            </div>
+          </div>
+
+          <div style="flex: 1"></div>
+
+          <p style="margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty">The treadmill console and safety key stay authoritative. The app will read actual machine state before it sends anything.</p>
+
+          <div style="display: flex; align-items: center; justify-content: center; height: 58px; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-size: 18px; font-weight: 650">Start workout</div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1c" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1c</span>
+        <span style="font-size: 15px; font-weight: 600">Exercise · portrait</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Top half is read-only: countdown, then one panel that puts requested next to actual for both axes. Incline is shown mid-flight — target 3.0, machine still at 2.0, command unacknowledged. Bottom half is nothing but controls, all ≥ 56 px.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 58px 16px 26px; box-sizing: border-box">
+
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px">
+            <x-import component-from-global-scope="RoastPilotDS.ConnectionIndicator" status="live" hint-size="auto,20px"></x-import>
+            <span style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">42:18 elapsed · 5.82 km</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border)">
+            <div style="display: flex; align-items: center; gap: 9px">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-phase-roasting)"></span>
+              <span style="font-size: 13px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase">Rep 6 of 10 · run</span>
+            </div>
+
+            <div style="display: flex; align-items: flex-end; justify-content: space-between">
+              <div style="font-size: 84px; font-weight: 680; line-height: .88; letter-spacing: -.05em; font-variant-numeric: tabular-nums">1:34</div>
+              <div style="text-align: right; padding-bottom: 6px">
+                <div style="font-size: 11px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .08em">Heart rate</div>
+                <div style="font-size: 26px; font-weight: 650; color: var(--roast-fault); font-variant-numeric: tabular-nums">148</div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 3px; height: 8px">
+              <div style="flex: 3; border-radius: 3px; background: var(--roast-phase-preheat)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--secondary)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--secondary)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--secondary)"></div>
+              <div style="flex: 2; border-radius: 3px; background: var(--secondary)"></div>
+            </div>
+
+            <div style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Next · recovery 2:00 at 5.5 km/h · 1.0%</div>
+          </div>
+
+          <div style="padding: 14px 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Requested vs actual</span>
+              <span style="font-size: 11px; color: var(--muted-foreground)">Last ack 0.4 s ago</span>
+            </div>
+            <div style="display: flex; gap: 10px">
+              <div style="flex: 1; display: flex; align-items: center; gap: 10px">
+                <span style="width: 3px; align-self: stretch; border-radius: 3px; background: var(--roast-heat)"></span>
+                <div style="flex: 1">
+                  <div style="font-size: 12px; color: var(--muted-foreground)">Speed</div>
+                  <div style="display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums">
+                    <span style="font-size: 20px; font-weight: 650">8.0</span>
+                    <span style="font-size: 13px; color: var(--muted-foreground)">→ 8.0</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--roast-nominal)">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--roast-nominal)"></span>Confirmed
+                  </div>
+                </div>
+              </div>
+              <div style="flex: 1; display: flex; align-items: center; gap: 10px">
+                <span style="width: 3px; align-self: stretch; border-radius: 3px; background: var(--roast-fan)"></span>
+                <div style="flex: 1">
+                  <div style="font-size: 12px; color: var(--muted-foreground)">Incline</div>
+                  <div style="display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums">
+                    <span style="font-size: 20px; font-weight: 650">2.0</span>
+                    <span style="font-size: 13px; color: var(--roast-caution)">→ 3.0</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--roast-caution)">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--roast-caution)"></span>Moving
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding-top: 14px">
+            <div style="display: flex; gap: 10px">
+              <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; align-items: center">
+                <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-heat)">Speed</span>
+                <div style="display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums">
+                  <span style="font-size: 42px; font-weight: 680; line-height: 1; letter-spacing: -.04em">8.0</span>
+                  <span style="font-size: 13px; color: var(--muted-foreground)">km/h</span>
+                </div>
+                <div style="display: flex; gap: 8px; width: 100%">
+                  <div style="flex: 1; height: 60px; border-radius: 14px; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 650">−</div>
+                  <div style="flex: 1; height: 60px; border-radius: 14px; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 650">+</div>
+                </div>
+                <span style="font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">0.1 steps · max 10.0</span>
+              </div>
+              <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; align-items: center">
+                <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-fan)">Incline</span>
+                <div style="display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums">
+                  <span style="font-size: 42px; font-weight: 680; line-height: 1; letter-spacing: -.04em">2.0</span>
+                  <span style="font-size: 13px; color: var(--muted-foreground)">%</span>
+                </div>
+                <div style="display: flex; gap: 8px; width: 100%">
+                  <div style="flex: 1; height: 60px; border-radius: 14px; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 650">−</div>
+                  <div style="flex: 1; height: 60px; border-radius: 14px; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 650">+</div>
+                </div>
+                <span style="font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">0.5 steps · max 6.0</span>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px">
+              <div style="flex: 1; height: 62px; border-radius: var(--radius); background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 650">Pause</div>
+              <div style="flex: 1.35; height: 62px; border-radius: var(--radius); background: var(--destructive); color: var(--destructive-foreground); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700">Stop belt</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 2px">
+              <div style="width: 44px; height: 4px; border-radius: 99px; background: var(--border)"></div>
+              <span style="font-size: 11px; color: var(--muted-foreground)">Swipe up for the full plan</span>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1d" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1d</span>
+        <span style="font-size: 15px; font-weight: 600">Exercise · landscape</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 874px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Phone docked on the console rail. Same three facts, no scrolling: progress on the left, the two axes centre, stop always under the right hand.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="874px" height="402px" hint-size="874px,402px">
+        <div style="height: 100%; display: flex; background: var(--background); padding: 26px 30px 22px; box-sizing: border-box; gap: 22px">
+
+          <div style="flex: 1.1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+            <div style="display: flex; align-items: center; gap: 9px">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-phase-roasting)"></span>
+              <span style="font-size: 12px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase">Rep 6 of 10 · run</span>
+            </div>
+            <div style="font-size: 92px; font-weight: 680; line-height: .85; letter-spacing: -.05em; font-variant-numeric: tabular-nums">1:34</div>
+            <div style="display: flex; gap: 3px; height: 7px">
+              <div style="flex: 3; border-radius: 3px; background: var(--roast-phase-preheat)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 4; border-radius: 3px; background: var(--secondary)"></div>
+            </div>
+            <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Next · recovery 2:00 at 5.5 km/h · 1.0%</div>
+            <div style="display: flex; gap: 18px; font-variant-numeric: tabular-nums">
+              <div>
+                <div style="font-size: 10px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .08em">Elapsed</div>
+                <div style="font-size: 17px; font-weight: 650">42:18</div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .08em">Distance</div>
+                <div style="font-size: 17px; font-weight: 650">5.82 km</div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .08em">HR</div>
+                <div style="font-size: 17px; font-weight: 650; color: var(--roast-fault)">148</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex: 1.5; display: flex; gap: 12px; min-width: 0">
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-heat)">Speed</span>
+              <div style="display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums">
+                <span style="font-size: 46px; font-weight: 680; line-height: 1; letter-spacing: -.04em">8.0</span>
+                <span style="font-size: 12px; color: var(--muted-foreground)">km/h</span>
+              </div>
+              <span style="font-size: 11px; color: var(--roast-nominal); font-variant-numeric: tabular-nums">Target 8.0 · confirmed</span>
+              <div style="display: flex; gap: 8px; width: 100%; margin-top: auto">
+                <div style="flex: 1; height: 54px; border-radius: 13px; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 650">−</div>
+                <div style="flex: 1; height: 54px; border-radius: 13px; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 650">+</div>
+              </div>
+            </div>
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-fan)">Incline</span>
+              <div style="display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums">
+                <span style="font-size: 46px; font-weight: 680; line-height: 1; letter-spacing: -.04em">2.0</span>
+                <span style="font-size: 12px; color: var(--muted-foreground)">%</span>
+              </div>
+              <span style="font-size: 11px; color: var(--roast-caution); font-variant-numeric: tabular-nums">Target 3.0 · moving</span>
+              <div style="display: flex; gap: 8px; width: 100%; margin-top: auto">
+                <div style="flex: 1; height: 54px; border-radius: 13px; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 650">−</div>
+                <div style="flex: 1; height: 54px; border-radius: 13px; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 650">+</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex: .6; display: flex; flex-direction: column; gap: 10px; min-width: 130px">
+            <x-import component-from-global-scope="RoastPilotDS.ConnectionIndicator" status="live" hint-size="auto,20px"></x-import>
+            <div style="flex: 1; border-radius: var(--radius); background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 650">Pause</div>
+            <div style="flex: 1.6; border-radius: var(--radius); background: var(--destructive); color: var(--destructive-foreground); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 18px; font-weight: 700">Stop<br>belt</div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1e" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1e</span>
+        <span style="font-size: 15px; font-weight: 600">History detail</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Summary plus the heart-rate trace, with the Health save state stated plainly and the deeper telemetry left behind Export JSON.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 62px 18px 30px; box-sizing: border-box; gap: 15px">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+            <span style="color: var(--muted-foreground)">‹ History</span>
+            <span style="color: var(--roast-fan)">Repeat</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px">
+            <h2 style="margin: 0; font-size: 27px; font-weight: 650; letter-spacing: -.025em">Pyramid 5 × 3</h2>
+            <div style="display: flex; align-items: center; gap: 9px">
+              <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: var(--secondary); font-size: 12px; font-weight: 600">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-nominal)"></span>Completed
+              </span>
+              <span style="font-size: 13px; color: var(--muted-foreground)">1 Sept, 06:12 · indoor run</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px">
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Duration</div>
+              <div style="font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums">43:06</div>
+            </div>
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Distance</div>
+              <div style="font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums">6.74 km</div>
+            </div>
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Avg HR</div>
+              <div style="font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums">143</div>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Heart rate · Apple Watch</span>
+              <span style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">max 167</span>
+            </div>
+            <svg viewBox="0 0 340 110" width="100%" height="110" preserveAspectRatio="none" role="img" aria-label="Heart rate over the session">
+              <polyline points="0,96 20,88 40,74 60,58 80,64 100,42 120,54 140,36 160,50 180,30 200,46 220,26 240,44 260,22 280,40 300,58 320,76 340,88" fill="none" stroke="var(--roast-fault)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+              <line x1="0" y1="55" x2="340" y2="55" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 5"></line>
+            </svg>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Planned vs executed</span>
+            <div style="display: flex; gap: 3px; height: 10px">
+              <div style="flex: 3; border-radius: 3px; background: var(--roast-phase-preheat)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-caution)"></div>
+              <div style="flex: 1; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+              <div style="flex: 2; border-radius: 3px; background: var(--roast-phase-cooling)"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--roast-caution)">
+              <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--roast-caution)"></span>
+              <span>Rep 7 run 14 s short — manual pause at 31:40</span>
+            </div>
+            <div style="display: flex; gap: 16px; font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">
+              <span>Avg 9.4 · max 10.0 km/h</span>
+              <span>Incline 1.0–5.0%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 9px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--roast-nominal)"></span>
+            <div style="flex: 1">
+              <div style="font-size: 14px; font-weight: 600">Saved to Apple Health</div>
+              <div style="font-size: 12px; color: var(--muted-foreground)">One workout · Watch owned the session</div>
+            </div>
+          </div>
+
+          <div style="flex: 1"></div>
+
+          <div style="display: flex; gap: 10px">
+            <div style="flex: 1; height: 52px; border-radius: var(--radius); background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600">Export JSON</div>
+            <div style="flex: 1; height: 52px; border-radius: var(--radius); border: 1px solid var(--destructive); color: var(--destructive); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600">Delete</div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1f" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1f</span>
+        <span style="font-size: 15px; font-weight: 600">Apple Watch · two faces</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 470px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Left: the glance — heart rate and time left in the rep. Right: crown turned, so the face becomes a single speed target and stays there until the phone acknowledges.</p>
+      </sc-if>
+      <div style="display: flex; gap: 26px; align-items: flex-start">
+
+        <div style="display: flex; flex-direction: column; gap: 8px; align-items: center">
+          <div style="width: 214px; height: 258px; border-radius: 46px; background: #17171a; padding: 15px; box-sizing: border-box; box-shadow: 0 24px 48px rgba(0,0,0,.45)">
+            <div style="height: 100%; border-radius: 33px; background: #000; padding: 13px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 9px; color: var(--foreground)">
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums">
+                <span style="color: var(--roast-phase-roasting); font-weight: 650">RUN 6/10</span>
+                <span style="color: var(--muted-foreground)">06:55</span>
+              </div>
+              <div style="font-size: 44px; font-weight: 680; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums">1:34</div>
+              <div style="display: flex; gap: 2px; height: 5px">
+                <div style="flex: 6; border-radius: 3px; background: var(--roast-phase-roasting)"></div>
+                <div style="flex: 4; border-radius: 3px; background: #2a2a2e"></div>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 5px; font-variant-numeric: tabular-nums">
+                <span style="font-size: 34px; font-weight: 680; color: var(--roast-fault); line-height: 1">148</span>
+                <span style="font-size: 11px; color: var(--muted-foreground)">bpm</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; margin-top: auto">
+                <span>8.0 km/h</span>
+                <span>2.0%</span>
+                <span>5.82 km</span>
+              </div>
+            </div>
+          </div>
+          <span style="font-size: 12px; color: var(--muted-foreground)">Live glance</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; align-items: center">
+          <div style="width: 214px; height: 258px; border-radius: 46px; background: #17171a; padding: 15px; box-sizing: border-box; box-shadow: 0 24px 48px rgba(0,0,0,.45); position: relative">
+            <div style="position: absolute; right: -4px; top: 74px; width: 7px; height: 42px; border-radius: 4px; background: #3a3a3f"></div>
+            <div style="height: 100%; border-radius: 33px; background: #000; padding: 16px 14px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--foreground)">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-heat)">Speed</span>
+              <div style="display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums">
+                <span style="font-size: 54px; font-weight: 680; line-height: 1; letter-spacing: -.04em; color: var(--roast-heat)">8.4</span>
+              </div>
+              <span style="font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">was 8.0 km/h</span>
+              <div style="width: 100%; height: 5px; border-radius: 3px; background: #2a2a2e; overflow: hidden">
+                <div style="width: 84%; height: 100%; background: var(--roast-heat)"></div>
+              </div>
+              <span style="font-size: 11px; color: var(--roast-caution); font-variant-numeric: tabular-nums">Sending · ceiling 10.0</span>
+              <div style="width: 100%; height: 44px; border-radius: 12px; background: var(--destructive); color: var(--destructive-foreground); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 6px">Stop belt</div>
+            </div>
+          </div>
+          <span style="font-size: 12px; color: var(--muted-foreground)">Crown speed adjust</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showNotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Board&quot;},&quot;verdict&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;allow&quot;,&quot;clamp&quot;,&quot;reject&quot;],&quot;default&quot;:&quot;clamp&quot;,&quot;tsType&quot;:&quot;\&quot;allow\&quot; | \&quot;clamp\&quot; | \&quot;reject\&quot;&quot;,&quot;section&quot;:&quot;Import screen&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showNotes: this.props.showNotes ?? true,
+      verdict: this.props.verdict ?? "clamp",
+    };
+  }
+}
+
+</script>
+</body>
+</html>
