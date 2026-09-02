@@ -46,5 +46,8 @@ Pricing authority: [OpenAI GPT-5.6 Sol model documentation](https://developers.o
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
 | 2 Sep 2026 | `PP-20260902-01` | Repository baseline and non-motion FTMS capability explorer | `gpt-5.6-sol` | 22,180,485 (21,742,208; 0) | 100,109 | 22,280,594 | $12.45 | Initial task aggregate |
+| 2 Sep 2026 | `PP-20260902-02` | Issue #1 read-only FTMS live telemetry and diagnostic capture | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Exact start/end task counters and model identifier unavailable |
 
 `PP-20260902-01` covers the full Codex Desktop task from repository orientation through implementation, simulator validation, the user-run physical capability check, evidence reconciliation and pre-commit review. The cutoff is the final counter snapshot before inserting this numeric row; the small final insertion, commit and push operations are excluded. No linked subagent usage is included.
+
+`PP-20260902-02` covers the uncommitted implementation and simulator validation of GitHub issue #1. This task interface did not expose an exact starting counter snapshot, ending counter snapshot or model identifier, so no token count or API-equivalent cost was reconstructed. If this change is later authorised for commit, use `PacePrompt-Change: PP-20260902-02` as the commit-message trailer.

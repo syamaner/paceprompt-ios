@@ -44,6 +44,7 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
 
         discoveries.removeAll()
         peripherals.removeAll()
+        publishInactiveSubscriptions(reason: "Not connected")
         delegate?.ftmsClient(self, didReceive: .devices([]))
         delegate?.ftmsClient(self, didReceive: .connection(.scanning))
         centralManager.scanForPeripherals(
@@ -71,6 +72,7 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
         currentName = discoveries[identifier]?.name ?? peripheral.name ?? "Treadmill"
         peripheral.delegate = self
         delegate?.ftmsClient(self, didReceive: .connection(.connecting(name: currentName)))
+        publishInactiveSubscriptions(reason: "Awaiting characteristic discovery")
         centralManager.connect(peripheral)
     }
 
@@ -89,6 +91,15 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
             return $0.rssi > $1.rssi
         }
         delegate?.ftmsClient(self, didReceive: .devices(sorted))
+    }
+
+    private func publishInactiveSubscriptions(reason: String) {
+        for uuid in FTMSUUID.passiveNotifications.sorted() {
+            delegate?.ftmsClient(
+                self,
+                didReceive: .subscription(uuid: uuid, state: .inactive(reason: reason))
+            )
+        }
     }
 
     private static func availability(from state: CBManagerState) -> BluetoothAvailability {
@@ -111,6 +122,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
 
         guard central.state != .poweredOn else { return }
         central.stopScan()
+        publishInactiveSubscriptions(reason: availability.title)
         if currentPeripheral != nil {
             delegate?.ftmsClient(
                 self,
@@ -147,6 +159,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         error: Error?
     ) {
         currentPeripheral = nil
+        publishInactiveSubscriptions(reason: "Connection failed")
         delegate?.ftmsClient(
             self,
             didReceive: .connection(
@@ -161,6 +174,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         error: Error?
     ) {
         currentPeripheral = nil
+        publishInactiveSubscriptions(reason: "Disconnected")
         delegate?.ftmsClient(
             self,
             didReceive: .connection(.disconnected(message: error?.localizedDescription))
@@ -209,16 +223,41 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         delegate?.ftmsClient(self, didReceive: .characteristics(infos))
         delegate?.ftmsClient(self, didReceive: .connection(.connected(name: currentName)))
 
+        var characteristicsByUUID: [String: CBCharacteristic] = [:]
         for characteristic in characteristics {
-            let uuid = characteristic.uuid.uuidString.uppercased()
+            characteristicsByUUID[characteristic.uuid.uuidString.uppercased()] = characteristic
+        }
+
+        for (uuid, characteristic) in characteristicsByUUID {
             if FTMSUUID.readableCapabilities.contains(uuid),
                characteristic.properties.contains(.read) {
                 peripheral.readValue(for: characteristic)
             }
-            if FTMSUUID.passiveNotifications.contains(uuid),
-               characteristic.properties.contains(.notify) {
-                peripheral.setNotifyValue(true, for: characteristic)
+        }
+
+        for uuid in FTMSUUID.passiveNotifications.sorted() {
+            guard let characteristic = characteristicsByUUID[uuid] else {
+                delegate?.ftmsClient(
+                    self,
+                    didReceive: .subscription(
+                        uuid: uuid,
+                        state: .unsupported(reason: "Characteristic was not discovered")
+                    )
+                )
+                continue
             }
+            guard characteristic.properties.contains(.notify) else {
+                delegate?.ftmsClient(
+                    self,
+                    didReceive: .subscription(
+                        uuid: uuid,
+                        state: .unsupported(reason: "Notify property was not discovered")
+                    )
+                )
+                continue
+            }
+            delegate?.ftmsClient(self, didReceive: .subscription(uuid: uuid, state: .subscribing))
+            peripheral.setNotifyValue(true, for: characteristic)
         }
     }
 
@@ -250,12 +289,24 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         didUpdateNotificationStateFor characteristic: CBCharacteristic,
         error: Error?
     ) {
-        guard let error else { return }
+        let uuid = characteristic.uuid.uuidString.uppercased()
+        guard FTMSUUID.passiveNotifications.contains(uuid) else { return }
+
+        if let error {
+            delegate?.ftmsClient(
+                self,
+                didReceive: .subscription(uuid: uuid, state: .failed(message: error.localizedDescription))
+            )
+            return
+        }
+
         delegate?.ftmsClient(
             self,
-            didReceive: .valueError(
-                uuid: characteristic.uuid.uuidString.uppercased(),
-                message: "Notification subscription failed: \(error.localizedDescription)"
+            didReceive: .subscription(
+                uuid: uuid,
+                state: characteristic.isNotifying
+                    ? .subscribed
+                    : .failed(message: "CoreBluetooth did not enable notifications")
             )
         )
     }

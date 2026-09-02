@@ -10,20 +10,34 @@ final class TreadmillSetupViewModel: ObservableObject {
     @Published private(set) var featureFlags: CapabilityRead<FTMSFeatureFlags> = .unavailable
     @Published private(set) var speedRange: CapabilityRead<FTMSSpeedRange> = .unavailable
     @Published private(set) var inclinationRange: CapabilityRead<FTMSInclinationRange> = .unavailable
+    @Published private(set) var subscriptions: [FTMSSubscription]
     @Published private(set) var diagnostics: [FTMSDiagnostic] = []
     @Published private(set) var lastError: String?
 
     private let client: any FTMSClientProtocol
+    private let now: () -> Date
+    private let diagnosticLimit: Int
+    private var nextDiagnosticID: UInt64 = 0
 
-    init(client: (any FTMSClientProtocol)? = nil) {
+    init(
+        client: (any FTMSClientProtocol)? = nil,
+        now: @escaping () -> Date = { Date() },
+        diagnosticLimit: Int = 100
+    ) {
+        precondition(diagnosticLimit > 0)
         let resolvedClient = client ?? FTMSClient()
         self.client = resolvedClient
+        self.now = now
+        self.diagnosticLimit = diagnosticLimit
+        subscriptions = Self.inactiveSubscriptions(reason: "Not connected")
         resolvedClient.delegate = self
     }
 
     var isScanning: Bool {
         connectionState == .scanning
     }
+
+    var diagnosticCapacity: Int { diagnosticLimit }
 
     var canScan: Bool {
         availability.isAvailable && !canDisconnect
@@ -92,6 +106,67 @@ final class TreadmillSetupViewModel: ObservableObject {
         }
     }
 
+    var diagnosticReport: String {
+        var lines = [
+            "PacePrompt read-only FTMS diagnostics",
+            "Connection: \(connectionState.title)",
+            "Bluetooth: \(availability.title)",
+            "",
+            "Discovered FTMS devices",
+        ]
+
+        if devices.isEmpty {
+            lines.append("Unavailable - no devices discovered")
+        } else {
+            for device in devices {
+                lines.append("\(device.name) - \(device.id.uuidString) - RSSI \(device.rssi) dBm")
+            }
+        }
+
+        lines.append(contentsOf: [
+            "",
+            "Discovered characteristics",
+        ])
+
+        if characteristics.isEmpty {
+            lines.append("Unavailable - no characteristics discovered")
+        } else {
+            for characteristic in characteristics {
+                lines.append("0x\(characteristic.uuid) \(FTMSUUID.name(for: characteristic.uuid)): \(characteristic.properties.joined(separator: ", "))")
+            }
+        }
+
+        lines.append(contentsOf: ["", "Capability reads"])
+        lines.append("0x\(FTMSUUID.fitnessMachineFeature): \(featureFlags.rawHex) - speed target \(speedTargetSettingText), inclination target \(inclinationTargetSettingText)")
+        lines.append("0x\(FTMSUUID.supportedSpeedRange): \(speedRange.rawHex) - \(speedRangeText)")
+        lines.append("0x\(FTMSUUID.supportedInclinationRange): \(inclinationRange.rawHex) - \(inclinationRangeText)")
+
+        lines.append(contentsOf: ["", "Passive subscriptions"])
+        for subscription in subscriptions {
+            let detail = subscription.state.detail.map { " - \($0)" } ?? ""
+            lines.append("0x\(subscription.uuid) \(FTMSUUID.name(for: subscription.uuid)): \(subscription.state.title)\(detail)")
+        }
+
+        lines.append(contentsOf: ["", "Packet log (\(diagnostics.count)/\(diagnosticLimit))"])
+        if diagnostics.isEmpty {
+            lines.append("Unavailable - no packets received")
+        } else {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            for diagnostic in diagnostics {
+                lines.append("[\(formatter.string(from: diagnostic.timestamp))] 0x\(diagnostic.uuid) \(diagnostic.kind.reportLabel)")
+                lines.append("Raw: \(diagnostic.rawHex)")
+                lines.append(contentsOf: diagnostic.decodedLines.map { "Decoded: \($0)" })
+            }
+        }
+
+        lines.append(contentsOf: [
+            "",
+            "Read-only capture. No FTMS Control Point 0x2AD9 write was performed.",
+        ])
+        return lines.joined(separator: "\n")
+    }
+
     func toggleScan() {
         if isScanning {
             client.stopScan()
@@ -111,12 +186,23 @@ final class TreadmillSetupViewModel: ObservableObject {
         client.disconnect()
     }
 
+    func clearDiagnostics() {
+        diagnostics.removeAll()
+    }
+
+    func subscription(for uuid: String) -> FTMSSubscriptionState {
+        subscriptions.first(where: { $0.uuid == uuid })?.state
+            ?? .inactive(reason: "State unavailable")
+    }
+
     private func resetCapabilityResults() {
         featureFlags = .unavailable
         speedRange = .unavailable
         inclinationRange = .unavailable
         characteristics = []
         diagnostics = []
+        subscriptions = Self.inactiveSubscriptions(reason: "Not connected")
+        nextDiagnosticID = 0
     }
 
     private func consume(uuid: String, data: Data) {
@@ -130,25 +216,22 @@ final class TreadmillSetupViewModel: ObservableObject {
             case FTMSUUID.supportedInclinationRange:
                 inclinationRange = .value(try FTMSParser.supportedInclinationRange(data), rawHex: rawHex)
             case FTMSUUID.treadmillData:
-                updateDiagnostic(
+                appendDiagnostic(
                     uuid: uuid,
                     rawHex: rawHex,
-                    decoded: try FTMSParser.treadmillDataSummary(data),
-                    isMalformed: false
+                    decoded: .treadmillData(try FTMSParser.treadmillData(data))
                 )
             case FTMSUUID.trainingStatus:
-                updateDiagnostic(
+                appendDiagnostic(
                     uuid: uuid,
                     rawHex: rawHex,
-                    decoded: try FTMSParser.trainingStatusSummary(data),
-                    isMalformed: false
+                    decoded: .trainingStatus(try FTMSParser.trainingStatus(data))
                 )
             case FTMSUUID.fitnessMachineStatus:
-                updateDiagnostic(
+                appendDiagnostic(
                     uuid: uuid,
                     rawHex: rawHex,
-                    decoded: try FTMSParser.fitnessMachineStatusSummary(data),
-                    isMalformed: false
+                    decoded: .fitnessMachineStatus(try FTMSParser.fitnessMachineStatus(data))
                 )
             default:
                 try FTMSParser.validateSupportedCharacteristic(uuid)
@@ -163,34 +246,59 @@ final class TreadmillSetupViewModel: ObservableObject {
             case FTMSUUID.supportedInclinationRange:
                 inclinationRange = .malformed(rawHex: rawHex, reason: reason)
             default:
-                updateDiagnostic(
+                appendDiagnostic(
                     uuid: uuid,
                     rawHex: rawHex,
-                    decoded: reason,
-                    isMalformed: true
+                    decodedLines: [reason],
+                    kind: .malformed
                 )
             }
             lastError = reason
         }
     }
 
-    private func updateDiagnostic(
+    private func appendDiagnostic(
         uuid: String,
         rawHex: String,
-        decoded: String,
-        isMalformed: Bool
+        decoded: FTMSDecodedPacket
     ) {
-        let diagnostic = FTMSDiagnostic(
+        appendDiagnostic(
             uuid: uuid,
             rawHex: rawHex,
-            decoded: decoded,
-            isMalformed: isMalformed
+            decodedLines: decoded.decodedLines,
+            kind: decoded.isUnknown ? .unknown : .decoded
         )
-        if let index = diagnostics.firstIndex(where: { $0.uuid == uuid }) {
-            diagnostics[index] = diagnostic
-        } else {
-            diagnostics.append(diagnostic)
-            diagnostics.sort { $0.uuid < $1.uuid }
+    }
+
+    private func appendDiagnostic(
+        uuid: String,
+        rawHex: String,
+        decodedLines: [String],
+        kind: FTMSDiagnosticKind
+    ) {
+        nextDiagnosticID += 1
+        let diagnostic = FTMSDiagnostic(
+            id: nextDiagnosticID,
+            timestamp: now(),
+            uuid: uuid,
+            rawHex: rawHex,
+            decodedLines: decodedLines,
+            kind: kind
+        )
+        diagnostics.append(diagnostic)
+        if diagnostics.count > diagnosticLimit {
+            diagnostics.removeFirst(diagnostics.count - diagnosticLimit)
+        }
+    }
+
+    private func updateSubscription(uuid: String, state: FTMSSubscriptionState) {
+        guard let index = subscriptions.firstIndex(where: { $0.uuid == uuid }) else { return }
+        subscriptions[index] = FTMSSubscription(uuid: uuid, state: state)
+    }
+
+    private static func inactiveSubscriptions(reason: String) -> [FTMSSubscription] {
+        FTMSUUID.passiveNotifications.sorted().map {
+            FTMSSubscription(uuid: $0, state: .inactive(reason: reason))
         }
     }
 }
@@ -209,16 +317,22 @@ extension TreadmillSetupViewModel: FTMSClientDelegate {
             devices = value
         case let .characteristics(value):
             characteristics = value
+        case let .subscription(uuid, state):
+            updateSubscription(uuid: uuid, state: state)
         case let .value(uuid, data):
             consume(uuid: uuid, data: data)
-        case let .valueError(uuid, message):
+        case let .valueError(_, message):
             lastError = message
-            updateDiagnostic(
-                uuid: uuid,
-                rawHex: "Unavailable",
-                decoded: message,
-                isMalformed: true
-            )
+        }
+    }
+}
+
+private extension FTMSDiagnosticKind {
+    var reportLabel: String {
+        switch self {
+        case .decoded: "Decoded"
+        case .unknown: "Unknown protocol value"
+        case .malformed: "Malformed"
         }
     }
 }

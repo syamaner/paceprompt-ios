@@ -1,7 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct TreadmillSetupView: View {
     @ObservedObject var treadmill: TreadmillSetupViewModel
+    @State private var copiedDiagnostics = false
 
     var body: some View {
         List {
@@ -13,10 +15,8 @@ struct TreadmillSetupView: View {
             }
 
             capabilitySection
-
-            if !treadmill.diagnostics.isEmpty {
-                notificationSection
-            }
+            subscriptionSection
+            diagnosticSection
 
             if !treadmill.characteristics.isEmpty {
                 characteristicSection
@@ -138,16 +138,70 @@ struct TreadmillSetupView: View {
         }
     }
 
-    private var notificationSection: some View {
-        Section("Passive notifications") {
-            ForEach(treadmill.diagnostics) { diagnostic in
-                CapabilityCard(
-                    title: "\(FTMSUUID.name(for: diagnostic.uuid)) · 0x\(diagnostic.uuid)",
-                    decoded: diagnostic.decoded,
-                    raw: diagnostic.rawHex,
-                    issue: diagnostic.isMalformed ? diagnostic.decoded : nil
-                )
+    private var subscriptionSection: some View {
+        Section {
+            ForEach(treadmill.subscriptions) { subscription in
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("\(FTMSUUID.name(for: subscription.uuid)) · 0x\(subscription.uuid)")
+                        Spacer()
+                        Text(subscription.state.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(subscriptionColour(subscription.state))
+                    }
+                    if let detail = subscription.state.detail {
+                        Text(detail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    let packetCount = treadmill.diagnostics.count { $0.uuid == subscription.uuid }
+                    Text(packetCount == 0 ? "No packets received" : "\(packetCount) packet\(packetCount == 1 ? "" : "s") captured")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
             }
+        } header: {
+            Text("Passive subscriptions")
+        } footer: {
+            Text("Subscribed means CoreBluetooth enabled notifications. No packets received is not a zero measurement or proof that the treadmill lacks data.")
+        }
+    }
+
+    private var diagnosticSection: some View {
+        Section {
+            if treadmill.diagnostics.isEmpty {
+                ContentUnavailableView(
+                    "No packets received",
+                    systemImage: "waveform.path.ecg.rectangle",
+                    description: Text("Telemetry remains unavailable until the treadmill sends a notification.")
+                )
+            } else {
+                ForEach(treadmill.diagnostics.reversed()) { diagnostic in
+                    DiagnosticPacketCard(diagnostic: diagnostic)
+                }
+            }
+
+            ShareLink(item: treadmill.diagnosticReport) {
+                Label("Share diagnostics", systemImage: "square.and.arrow.up")
+            }
+
+            Button {
+                UIPasteboard.general.string = treadmill.diagnosticReport
+                copiedDiagnostics = true
+            } label: {
+                Label(copiedDiagnostics ? "Diagnostics copied" : "Copy diagnostics", systemImage: "doc.on.doc")
+            }
+
+            if !treadmill.diagnostics.isEmpty {
+                Button("Clear packet log", role: .destructive) {
+                    treadmill.clearDiagnostics()
+                    copiedDiagnostics = false
+                }
+            }
+        } header: {
+            Text("In-memory packet log · \(treadmill.diagnostics.count)/\(treadmill.diagnosticCapacity)")
+        } footer: {
+            Text("Packets are timestamped and held only in memory. Copy and share happen only when you choose them; PacePrompt does not persist or transmit diagnostics automatically.")
         }
     }
 
@@ -171,7 +225,72 @@ struct TreadmillSetupView: View {
             Text("This app never writes to FTMS Control Point 0x2AD9. The physical console and safety key remain authoritative.")
         }
     }
+
+    private func subscriptionColour(_ state: FTMSSubscriptionState) -> Color {
+        switch state {
+        case .subscribed: .green
+        case .subscribing: .blue
+        case .failed: .red
+        case .inactive, .unsupported: .secondary
+        }
+    }
 }
+
+private struct DiagnosticPacketCard: View {
+    let diagnostic: FTMSDiagnostic
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(FTMSUUID.name(for: diagnostic.uuid)) · 0x\(diagnostic.uuid)")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text(diagnostic.timestamp, format: .dateTime.hour().minute().second())
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Label(diagnosticLabel, systemImage: diagnosticSymbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(diagnosticColour)
+            ForEach(Array(diagnostic.decodedLines.enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .font(.subheadline)
+            }
+            LabeledContent("Raw") {
+                Text(diagnostic.rawHex)
+                    .font(.caption.monospaced())
+                    .textSelection(.enabled)
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var diagnosticLabel: String {
+        switch diagnostic.kind {
+        case .decoded: "Decoded"
+        case .unknown: "Unknown protocol value"
+        case .malformed: "Malformed packet"
+        }
+    }
+
+    private var diagnosticSymbol: String {
+        switch diagnostic.kind {
+        case .decoded: "checkmark.circle.fill"
+        case .unknown: "questionmark.circle.fill"
+        case .malformed: "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var diagnosticColour: Color {
+        switch diagnostic.kind {
+        case .decoded: .green
+        case .unknown: .orange
+        case .malformed: .red
+        }
+    }
+}
+
 private struct CapabilityCard: View {
     let title: String
     let decoded: String
