@@ -154,7 +154,7 @@ final class TreadmillSetupViewModel: ObservableObject {
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             for diagnostic in diagnostics {
-                lines.append("[\(formatter.string(from: diagnostic.timestamp))] 0x\(diagnostic.uuid) \(diagnostic.kind.reportLabel)")
+                lines.append("[\(formatter.string(from: diagnostic.timestamp))] 0x\(diagnostic.uuid) \(diagnostic.source.title) · \(diagnostic.kind.reportLabel)")
                 lines.append("Raw: \(diagnostic.rawHex)")
                 lines.append(contentsOf: diagnostic.decodedLines.map { "Decoded: \($0)" })
             }
@@ -205,7 +205,7 @@ final class TreadmillSetupViewModel: ObservableObject {
         nextDiagnosticID = 0
     }
 
-    private func consume(uuid: String, data: Data) {
+    private func consume(uuid: String, data: Data, source: FTMSValueSource) {
         let rawHex = data.ftmsHex
         do {
             switch uuid {
@@ -218,18 +218,21 @@ final class TreadmillSetupViewModel: ObservableObject {
             case FTMSUUID.treadmillData:
                 appendDiagnostic(
                     uuid: uuid,
+                    source: source,
                     rawHex: rawHex,
                     decoded: .treadmillData(try FTMSParser.treadmillData(data))
                 )
             case FTMSUUID.trainingStatus:
                 appendDiagnostic(
                     uuid: uuid,
+                    source: source,
                     rawHex: rawHex,
                     decoded: .trainingStatus(try FTMSParser.trainingStatus(data))
                 )
             case FTMSUUID.fitnessMachineStatus:
                 appendDiagnostic(
                     uuid: uuid,
+                    source: source,
                     rawHex: rawHex,
                     decoded: .fitnessMachineStatus(try FTMSParser.fitnessMachineStatus(data))
                 )
@@ -248,6 +251,7 @@ final class TreadmillSetupViewModel: ObservableObject {
             default:
                 appendDiagnostic(
                     uuid: uuid,
+                    source: source,
                     rawHex: rawHex,
                     decodedLines: [reason],
                     kind: .malformed
@@ -259,11 +263,13 @@ final class TreadmillSetupViewModel: ObservableObject {
 
     private func appendDiagnostic(
         uuid: String,
+        source: FTMSValueSource,
         rawHex: String,
         decoded: FTMSDecodedPacket
     ) {
         appendDiagnostic(
             uuid: uuid,
+            source: source,
             rawHex: rawHex,
             decodedLines: decoded.decodedLines,
             kind: decoded.isUnknown ? .unknown : .decoded
@@ -272,6 +278,7 @@ final class TreadmillSetupViewModel: ObservableObject {
 
     private func appendDiagnostic(
         uuid: String,
+        source: FTMSValueSource,
         rawHex: String,
         decodedLines: [String],
         kind: FTMSDiagnosticKind
@@ -281,6 +288,7 @@ final class TreadmillSetupViewModel: ObservableObject {
             id: nextDiagnosticID,
             timestamp: now(),
             uuid: uuid,
+            source: source,
             rawHex: rawHex,
             decodedLines: decodedLines,
             kind: kind
@@ -319,9 +327,9 @@ extension TreadmillSetupViewModel: FTMSClientDelegate {
             characteristics = value
         case let .subscription(uuid, state):
             updateSubscription(uuid: uuid, state: state)
-        case let .value(uuid, data):
-            consume(uuid: uuid, data: data)
-        case let .valueError(_, message):
+        case let .value(uuid, data, source):
+            consume(uuid: uuid, data: data, source: source)
+        case let .valueError(_, _, message):
             lastError = message
         }
     }

@@ -12,10 +12,10 @@ This version contains:
 - explicit Bluetooth availability and treadmill connection states;
 - a user-initiated scan restricted to devices advertising Fitness Machine Service `0x1826`;
 - explicit device selection, connection, service and characteristic discovery;
-- reads of Fitness Machine Feature `0x2ACC`, Supported Speed Range `0x2AD4` and Supported Inclination Range `0x2AD5`;
+- initial reads of Fitness Machine Feature `0x2ACC`, Training Status `0x2AD3`, Supported Speed Range `0x2AD4` and Supported Inclination Range `0x2AD5` where the Read property is present;
 - passive subscriptions to Treadmill Data `0x2ACD`, Training Status `0x2AD3` and Fitness Machine Status `0x2ADA`, with explicit inactive, subscribing, subscribed, not-subscribable and failed states;
 - full flag-driven decoding of supported Treadmill Data fields, Training Status values and Fitness Machine Status opcodes, while preserving unavailable sentinels, unknown values and malformed packets;
-- a 100-packet, timestamped, in-memory log with raw hexadecimal bytes and decoded values;
+- a 100-packet, timestamped, in-memory log with initial-read or notification provenance, raw hexadecimal bytes and decoded values;
 - deliberate copy and system-share actions, with no automatic persistence or transmission;
 - pure FTMS parsers tested with synthetic payloads.
 
@@ -86,7 +86,7 @@ Use another listed iPhone simulator if that model is not installed.
 3. Insert the FR30z fitness Bluetooth dongle, insert the safety key and turn on the treadmill. Keep the physical console and safety key authoritative throughout.
 4. In PacePrompt, open **Settings → Treadmill**, press **Scan for FTMS treadmills**, select the FR30z and connect. Do not use another app to control the treadmill during this check.
 5. Record the subscription state shown for `0x2ACD`, `0x2AD3` and `0x2ADA`. A subscribed state with no packet is distinct from an unsupported or failed subscription.
-6. With the belt stationary, wait at least 30 seconds. Capture the raw and decoded values for `0x2ACC`, `0x2AD4` and `0x2AD5`, then use **Copy diagnostics** or **Share diagnostics** to capture the stationary packet log. Do not put the resulting device diagnostics in Git.
+6. With the belt stationary, wait at least 30 seconds. Capture the raw and decoded values for `0x2ACC`, `0x2AD4` and `0x2AD5`; confirm whether an **Initial read** entry appears for `0x2AD3`; then use **Copy diagnostics** or **Share diagnostics** to capture the stationary packet log. Do not put the resulting device diagnostics in Git.
 7. If and only if you choose to validate moving-belt telemetry, stand clear first, retain access to the safety key, and start and adjust the belt exclusively from the physical FR30z console. The app must remain untouched and read-only. Observe at least one console-initiated start, one speed change, one inclination change if safe, and one console-initiated stop.
 8. After the belt is fully stationary, copy or share the final diagnostic report, press **Disconnect**, and turn off the treadmill.
 
@@ -95,6 +95,7 @@ Return:
 - the discovered device name and identifier;
 - the full discovered-characteristic list and properties;
 - raw values for `0x2ACC`, `0x2AD4` and `0x2AD5`;
+- the result of the initial `0x2AD3` read, including its raw value or read error;
 - the subscription state for `0x2ACD`, `0x2AD3` and `0x2ADA`;
 - the stationary 30-second packet log, including an explicit report when no packet arrived;
 - if the optional console-only moving check was performed, packets surrounding the physical start, speed change, inclination change and stop;

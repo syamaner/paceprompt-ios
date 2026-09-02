@@ -25,6 +25,8 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
     private var discoveries: [UUID: FTMSDiscoveredDevice] = [:]
     private var currentPeripheral: CBPeripheral?
     private var currentName = "Treadmill"
+    private var pendingInitialReads: Set<String> = []
+    private var deferredNotificationCharacteristics: [String: CBCharacteristic] = [:]
 
     override init() {
         super.init()
@@ -44,6 +46,7 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
 
         discoveries.removeAll()
         peripherals.removeAll()
+        resetPendingOperations()
         publishInactiveSubscriptions(reason: "Not connected")
         delegate?.ftmsClient(self, didReceive: .devices([]))
         delegate?.ftmsClient(self, didReceive: .connection(.scanning))
@@ -68,6 +71,7 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
         }
 
         centralManager.stopScan()
+        resetPendingOperations()
         currentPeripheral = peripheral
         currentName = discoveries[identifier]?.name ?? peripheral.name ?? "Treadmill"
         peripheral.delegate = self
@@ -102,6 +106,11 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
         }
     }
 
+    private func resetPendingOperations() {
+        pendingInitialReads.removeAll()
+        deferredNotificationCharacteristics.removeAll()
+    }
+
     private static func availability(from state: CBManagerState) -> BluetoothAvailability {
         switch state {
         case .unknown: .notDetermined
@@ -122,6 +131,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
 
         guard central.state != .poweredOn else { return }
         central.stopScan()
+        resetPendingOperations()
         publishInactiveSubscriptions(reason: availability.title)
         if currentPeripheral != nil {
             delegate?.ftmsClient(
@@ -158,6 +168,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         didFailToConnect peripheral: CBPeripheral,
         error: Error?
     ) {
+        resetPendingOperations()
         currentPeripheral = nil
         publishInactiveSubscriptions(reason: "Connection failed")
         delegate?.ftmsClient(
@@ -173,6 +184,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
+        resetPendingOperations()
         currentPeripheral = nil
         publishInactiveSubscriptions(reason: "Disconnected")
         delegate?.ftmsClient(
@@ -229,8 +241,9 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         }
 
         for (uuid, characteristic) in characteristicsByUUID {
-            if FTMSUUID.readableCapabilities.contains(uuid),
+            if FTMSUUID.initialReads.contains(uuid),
                characteristic.properties.contains(.read) {
+                pendingInitialReads.insert(uuid)
                 peripheral.readValue(for: characteristic)
             }
         }
@@ -257,6 +270,11 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
                 continue
             }
             delegate?.ftmsClient(self, didReceive: .subscription(uuid: uuid, state: .subscribing))
+            if uuid == FTMSUUID.trainingStatus,
+               pendingInitialReads.contains(uuid) {
+                deferredNotificationCharacteristics[uuid] = characteristic
+                continue
+            }
             peripheral.setNotifyValue(true, for: characteristic)
         }
     }
@@ -267,21 +285,33 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         error: Error?
     ) {
         let uuid = characteristic.uuid.uuidString.uppercased()
+        let wasInitialRead = pendingInitialReads.remove(uuid) != nil
+        let source: FTMSValueSource = wasInitialRead
+            ? .initialRead
+            : .notification
+        if wasInitialRead,
+           let deferredCharacteristic = deferredNotificationCharacteristics.removeValue(forKey: uuid) {
+            peripheral.setNotifyValue(true, for: deferredCharacteristic)
+        }
         if let error {
             delegate?.ftmsClient(
                 self,
-                didReceive: .valueError(uuid: uuid, message: error.localizedDescription)
+                didReceive: .valueError(uuid: uuid, source: source, message: error.localizedDescription)
             )
             return
         }
         guard let value = characteristic.value else {
             delegate?.ftmsClient(
                 self,
-                didReceive: .valueError(uuid: uuid, message: "The characteristic returned no value.")
+                didReceive: .valueError(
+                    uuid: uuid,
+                    source: source,
+                    message: "The characteristic returned no value."
+                )
             )
             return
         }
-        delegate?.ftmsClient(self, didReceive: .value(uuid: uuid, data: value))
+        delegate?.ftmsClient(self, didReceive: .value(uuid: uuid, data: value, source: source))
     }
 
     func peripheral(

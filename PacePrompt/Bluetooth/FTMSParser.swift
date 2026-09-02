@@ -327,7 +327,7 @@ enum FTMSParser {
     }
 
     static func validateSupportedCharacteristic(_ uuid: String) throws {
-        let supported = FTMSUUID.readableCapabilities.union(FTMSUUID.passiveNotifications)
+        let supported = FTMSUUID.initialReads.union(FTMSUUID.passiveNotifications)
         guard supported.contains(uuid.uppercased()) else {
             throw FTMSParseError.unsupportedCharacteristic(uuid.uppercased())
         }

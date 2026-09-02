@@ -413,10 +413,23 @@ enum FTMSDiagnosticKind: Equatable {
     case malformed
 }
 
+enum FTMSValueSource: Equatable {
+    case initialRead
+    case notification
+
+    var title: String {
+        switch self {
+        case .initialRead: "Initial read"
+        case .notification: "Notification"
+        }
+    }
+}
+
 struct FTMSDiagnostic: Identifiable, Equatable {
     let id: UInt64
     let timestamp: Date
     let uuid: String
+    let source: FTMSValueSource
     let rawHex: String
     let decodedLines: [String]
     let kind: FTMSDiagnosticKind
@@ -428,8 +441,8 @@ enum FTMSClientEvent: Equatable {
     case devices([FTMSDiscoveredDevice])
     case characteristics([FTMSCharacteristicInfo])
     case subscription(uuid: String, state: FTMSSubscriptionState)
-    case value(uuid: String, data: Data)
-    case valueError(uuid: String, message: String)
+    case value(uuid: String, data: Data, source: FTMSValueSource)
+    case valueError(uuid: String, source: FTMSValueSource, message: String)
 }
 
 extension Data {

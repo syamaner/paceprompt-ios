@@ -173,7 +173,7 @@ struct TreadmillSetupView: View {
                 ContentUnavailableView(
                     "No packets received",
                     systemImage: "waveform.path.ecg.rectangle",
-                    description: Text("Telemetry remains unavailable until the treadmill sends a notification.")
+                    description: Text("Telemetry remains unavailable until an initial read or notification returns a value.")
                 )
             } else {
                 ForEach(treadmill.diagnostics.reversed()) { diagnostic in
@@ -252,6 +252,9 @@ private struct DiagnosticPacketCard: View {
             Label(diagnosticLabel, systemImage: diagnosticSymbol)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(diagnosticColour)
+            Text(diagnostic.source.title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
             ForEach(Array(diagnostic.decodedLines.enumerated()), id: \.offset) { _, line in
                 Text(line)
                     .font(.subheadline)

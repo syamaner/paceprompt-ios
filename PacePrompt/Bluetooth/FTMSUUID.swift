@@ -13,8 +13,9 @@ enum FTMSUUID {
     static let fitnessMachineControlPoint = "2AD9"
     static let fitnessMachineStatus = "2ADA"
 
-    static let readableCapabilities: Set<String> = [
+    static let initialReads: Set<String> = [
         fitnessMachineFeature,
+        trainingStatus,
         supportedSpeedRange,
         supportedInclinationRange,
     ]

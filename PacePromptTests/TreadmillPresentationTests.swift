@@ -48,7 +48,8 @@ final class TreadmillPresentationTests: XCTestCase {
         client.send(
             .value(
                 uuid: FTMSUUID.supportedSpeedRange,
-                data: Data([0x32, 0x00, 0xD0, 0x07, 0x0A, 0x00])
+                data: Data([0x32, 0x00, 0xD0, 0x07, 0x0A, 0x00]),
+                source: .initialRead
             )
         )
 
@@ -64,7 +65,8 @@ final class TreadmillPresentationTests: XCTestCase {
         client.send(
             .value(
                 uuid: FTMSUUID.supportedInclinationRange,
-                data: Data([0x01, 0x02])
+                data: Data([0x01, 0x02]),
+                source: .initialRead
             )
         )
 
@@ -109,14 +111,15 @@ final class TreadmillPresentationTests: XCTestCase {
         let timestamp = Date(timeIntervalSince1970: 1_788_379_200.125)
         let model = TreadmillSetupViewModel(client: client, now: { timestamp })
 
-        client.send(.value(uuid: FTMSUUID.treadmillData, data: Data([0x00, 0x00, 0x20, 0x03])))
-        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x01])))
+        client.send(.value(uuid: FTMSUUID.treadmillData, data: Data([0x00, 0x00, 0x20, 0x03]), source: .notification))
+        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x01]), source: .initialRead))
 
         XCTAssertEqual(model.diagnostics.count, 2)
         XCTAssertEqual(model.diagnostics.map(\.id), [1, 2])
         XCTAssertEqual(model.diagnostics.map(\.timestamp), [timestamp, timestamp])
         XCTAssertEqual(model.diagnostics[0].rawHex, "00 00 20 03")
         XCTAssertEqual(model.diagnostics[0].kind, .decoded)
+        XCTAssertEqual(model.diagnostics.map(\.source), [.notification, .initialRead])
         XCTAssertTrue(model.diagnostics[0].decodedLines.contains("Instantaneous speed: 8.00 km/h"))
     }
 
@@ -124,9 +127,9 @@ final class TreadmillPresentationTests: XCTestCase {
         let client = FakeFTMSClient()
         let model = TreadmillSetupViewModel(client: client, diagnosticLimit: 2)
 
-        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x01])))
-        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x02])))
-        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x03])))
+        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x01]), source: .notification))
+        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x02]), source: .notification))
+        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x03]), source: .notification))
 
         XCTAssertEqual(model.diagnostics.map(\.id), [2, 3])
         XCTAssertEqual(model.diagnosticCapacity, 2)
@@ -136,8 +139,8 @@ final class TreadmillPresentationTests: XCTestCase {
         let client = FakeFTMSClient()
         let model = TreadmillSetupViewModel(client: client)
 
-        client.send(.value(uuid: FTMSUUID.fitnessMachineStatus, data: Data([0xFE, 0xAA])))
-        client.send(.value(uuid: FTMSUUID.treadmillData, data: Data([0x00])))
+        client.send(.value(uuid: FTMSUUID.fitnessMachineStatus, data: Data([0xFE, 0xAA]), source: .notification))
+        client.send(.value(uuid: FTMSUUID.treadmillData, data: Data([0x00]), source: .notification))
 
         XCTAssertEqual(model.diagnostics.map(\.kind), [.unknown, .malformed])
         XCTAssertEqual(model.diagnostics.map(\.rawHex), ["FE AA", "00"])
@@ -163,7 +166,7 @@ final class TreadmillPresentationTests: XCTestCase {
         let model = TreadmillSetupViewModel(client: client)
         client.send(.subscription(uuid: FTMSUUID.treadmillData, state: .subscribed))
 
-        client.send(.valueError(uuid: FTMSUUID.treadmillData, message: "Synthetic packet error"))
+        client.send(.valueError(uuid: FTMSUUID.treadmillData, source: .notification, message: "Synthetic packet error"))
 
         XCTAssertEqual(model.subscription(for: FTMSUUID.treadmillData), .subscribed)
         XCTAssertEqual(model.lastError, "Synthetic packet error")
@@ -173,12 +176,28 @@ final class TreadmillPresentationTests: XCTestCase {
         let client = FakeFTMSClient()
         let model = TreadmillSetupViewModel(client: client)
         client.send(.subscription(uuid: FTMSUUID.treadmillData, state: .subscribed))
-        client.send(.value(uuid: FTMSUUID.treadmillData, data: Data([0x00, 0x00, 0x00, 0x00])))
+        client.send(.value(uuid: FTMSUUID.treadmillData, data: Data([0x00, 0x00, 0x00, 0x00]), source: .notification))
 
         model.clearDiagnostics()
 
         XCTAssertTrue(model.diagnostics.isEmpty)
         XCTAssertEqual(model.subscription(for: FTMSUUID.treadmillData), .subscribed)
+    }
+
+    func testTrainingStatusIsBothInitiallyReadAndPassivelySubscribed() {
+        XCTAssertTrue(FTMSUUID.initialReads.contains(FTMSUUID.trainingStatus))
+        XCTAssertTrue(FTMSUUID.passiveNotifications.contains(FTMSUUID.trainingStatus))
+    }
+
+    func testDiagnosticReportDistinguishesInitialReadFromNotification() {
+        let client = FakeFTMSClient()
+        let model = TreadmillSetupViewModel(client: client)
+
+        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x01]), source: .initialRead))
+        client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, 0x02]), source: .notification))
+
+        XCTAssertTrue(model.diagnosticReport.contains("0x2AD3 Initial read · Decoded"))
+        XCTAssertTrue(model.diagnosticReport.contains("0x2AD3 Notification · Decoded"))
     }
 }
 
