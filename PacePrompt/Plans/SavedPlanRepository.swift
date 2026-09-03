@@ -183,7 +183,16 @@ struct SavedPlanJSONCodec: SavedPlanStoreCoding {
     }
 }
 
-final class SavedPlanRepository {
+protocol SavedPlanRepositoryProtocol {
+    func list() -> SavedPlanRepositoryStatus
+    func create(_ validatedPlan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord
+    func replace(
+        id: UUID,
+        with validatedPlan: WorkoutPlanValidator.ValidatedPlan
+    ) throws -> SavedPlanRecord
+}
+
+final class SavedPlanRepository: SavedPlanRepositoryProtocol {
     private enum FileName {
         static let directory = "PacePrompt"
         static let canonical = "saved-plans.json"

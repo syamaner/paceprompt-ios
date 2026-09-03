@@ -22,15 +22,27 @@
 		AA000000000000000000100D /* WorkoutPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200D /* WorkoutPlan.swift */; };
 		AA000000000000000000100E /* WorkoutPlanValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200E /* WorkoutPlanValidator.swift */; };
 		AA0000000000000000001014 /* SavedPlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002014 /* SavedPlanRepository.swift */; };
+		AA0000000000000000001016 /* ManualWorkoutPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002016 /* ManualWorkoutPlan.swift */; };
+		AA0000000000000000001017 /* PlansViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002017 /* PlansViewModel.swift */; };
 		AA000000000000000000100F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200F /* Assets.xcassets */; };
 		AA0000000000000000001011 /* FTMSParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002011 /* FTMSParserTests.swift */; };
 		AA0000000000000000001012 /* TreadmillPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002012 /* TreadmillPresentationTests.swift */; };
 		AA0000000000000000001013 /* WorkoutPlanValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */; };
 		AA0000000000000000001015 /* SavedPlanRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002015 /* SavedPlanRepositoryTests.swift */; };
+		AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002018 /* PlansPresentationTests.swift */; };
+		AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002019 /* PlansUITestSupport.swift */; };
+		AA000000000000000000101A /* PlansFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000201A /* PlansFlowUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		AA0000000000000000003001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000101;
+			remoteInfo = PacePrompt;
+		};
+		AA0000000000000000003002 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AA0000000000000000000001 /* Project object */;
 			proxyType = 1;
@@ -55,15 +67,21 @@
 		AA000000000000000000200D /* WorkoutPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlan.swift; sourceTree = "<group>"; };
 		AA000000000000000000200E /* WorkoutPlanValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlanValidator.swift; sourceTree = "<group>"; };
 		AA0000000000000000002014 /* SavedPlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlanRepository.swift; sourceTree = "<group>"; };
+		AA0000000000000000002016 /* ManualWorkoutPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualWorkoutPlan.swift; sourceTree = "<group>"; };
+		AA0000000000000000002017 /* PlansViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansViewModel.swift; sourceTree = "<group>"; };
 		AA000000000000000000200F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000002011 /* FTMSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSParserTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002012 /* TreadmillPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreadmillPresentationTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlanValidatorTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002015 /* SavedPlanRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlanRepositoryTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000002018 /* PlansPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansPresentationTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000002019 /* PlansUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansUITestSupport.swift; sourceTree = "<group>"; };
+		AA000000000000000000201A /* PlansFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansFlowUITests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002021 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		AA0000000000000000002022 /* Signing.local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.local.xcconfig.example; sourceTree = "<group>"; };
 		AA0000000000000000002101 /* PacePrompt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PacePrompt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000002102 /* PacePromptTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PacePromptTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000002103 /* PacePromptUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PacePromptUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +99,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000004003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -89,6 +114,7 @@
 			children = (
 				AA0000000000000000005002 /* PacePrompt */,
 				AA0000000000000000005006 /* PacePromptTests */,
+				AA000000000000000000500A /* PacePromptUITests */,
 				AA0000000000000000005007 /* Config */,
 				AA0000000000000000005008 /* Products */,
 			);
@@ -122,6 +148,8 @@
 		AA0000000000000000005004 /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
+				AA0000000000000000002017 /* PlansViewModel.swift */,
+				AA0000000000000000002019 /* PlansUITestSupport.swift */,
 				AA000000000000000000200C /* TreadmillSetupViewModel.swift */,
 			);
 			path = Presentation;
@@ -133,6 +161,7 @@
 				AA000000000000000000200D /* WorkoutPlan.swift */,
 				AA000000000000000000200E /* WorkoutPlanValidator.swift */,
 				AA0000000000000000002014 /* SavedPlanRepository.swift */,
+				AA0000000000000000002016 /* ManualWorkoutPlan.swift */,
 			);
 			path = Plans;
 			sourceTree = "<group>";
@@ -156,6 +185,7 @@
 				AA0000000000000000002012 /* TreadmillPresentationTests.swift */,
 				AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */,
 				AA0000000000000000002015 /* SavedPlanRepositoryTests.swift */,
+				AA0000000000000000002018 /* PlansPresentationTests.swift */,
 			);
 			path = PacePromptTests;
 			sourceTree = "<group>";
@@ -174,8 +204,17 @@
 			children = (
 				AA0000000000000000002101 /* PacePrompt.app */,
 				AA0000000000000000002102 /* PacePromptTests.xctest */,
+				AA0000000000000000002103 /* PacePromptUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000500A /* PacePromptUITests */ = {
+			isa = PBXGroup;
+			children = (
+				AA000000000000000000201A /* PlansFlowUITests.swift */,
+			);
+			path = PacePromptUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -216,6 +255,24 @@
 			productReference = AA0000000000000000002102 /* PacePromptTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		AA0000000000000000000103 /* PacePromptUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000006004 /* Build configuration list for PBXNativeTarget "PacePromptUITests" */;
+			buildPhases = (
+				AA0000000000000000004003 /* Frameworks */,
+				AA0000000000000000007003 /* Sources */,
+				AA0000000000000000008003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0000000000000000009002 /* PBXTargetDependency */,
+			);
+			name = PacePromptUITests;
+			productName = PacePromptUITests;
+			productReference = AA0000000000000000002103 /* PacePromptUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -230,6 +287,10 @@
 						CreatedOnToolsVersion = 26.6;
 					};
 					AA0000000000000000000102 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = AA0000000000000000000101;
+					};
+					AA0000000000000000000103 = {
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = AA0000000000000000000101;
 					};
@@ -250,6 +311,7 @@
 			targets = (
 				AA0000000000000000000101 /* PacePrompt */,
 				AA0000000000000000000102 /* PacePromptTests */,
+				AA0000000000000000000103 /* PacePromptUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -264,6 +326,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AA0000000000000000008002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000008003 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -292,6 +361,9 @@
 				AA000000000000000000100D /* WorkoutPlan.swift in Sources */,
 				AA000000000000000000100E /* WorkoutPlanValidator.swift in Sources */,
 				AA0000000000000000001014 /* SavedPlanRepository.swift in Sources */,
+				AA0000000000000000001016 /* ManualWorkoutPlan.swift in Sources */,
+				AA0000000000000000001017 /* PlansViewModel.swift in Sources */,
+				AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -303,6 +375,15 @@
 				AA0000000000000000001012 /* TreadmillPresentationTests.swift in Sources */,
 				AA0000000000000000001013 /* WorkoutPlanValidatorTests.swift in Sources */,
 				AA0000000000000000001015 /* SavedPlanRepositoryTests.swift in Sources */,
+				AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000007003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000000000000000000101A /* PlansFlowUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -313,6 +394,11 @@
 			isa = PBXTargetDependency;
 			target = AA0000000000000000000101 /* PacePrompt */;
 			targetProxy = AA0000000000000000003001 /* PBXContainerItemProxy */;
+		};
+		AA0000000000000000009002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000101 /* PacePrompt */;
+			targetProxy = AA0000000000000000003002 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -536,6 +622,40 @@
 			};
 			name = Release;
 		};
+		AA000000000000000000A301 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sertanyamaner.PacePromptUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = PacePrompt;
+			};
+			name = Debug;
+		};
+		AA000000000000000000A302 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sertanyamaner.PacePromptUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = PacePrompt;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -562,6 +682,15 @@
 			buildConfigurations = (
 				AA000000000000000000A201 /* Debug */,
 				AA000000000000000000A202 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0000000000000000006004 /* Build configuration list for PBXNativeTarget "PacePromptUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000000000000000000A301 /* Debug */,
+				AA000000000000000000A302 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -21,6 +21,20 @@
                ReferencedContainer = "container:PacePrompt.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AA0000000000000000000103"
+               BuildableName = "PacePromptUITests.xctest"
+               BlueprintName = "PacePromptUITests"
+               ReferencedContainer = "container:PacePrompt.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -38,6 +52,17 @@
                BlueprintIdentifier = "AA0000000000000000000102"
                BuildableName = "PacePromptTests.xctest"
                BlueprintName = "PacePromptTests"
+               ReferencedContainer = "container:PacePrompt.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AA0000000000000000000103"
+               BuildableName = "PacePromptUITests.xctest"
+               BlueprintName = "PacePromptUITests"
                ReferencedContainer = "container:PacePrompt.xcodeproj">
             </BuildableReference>
          </TestableReference>

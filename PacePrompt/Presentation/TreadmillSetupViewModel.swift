@@ -39,6 +39,16 @@ final class TreadmillSetupViewModel: ObservableObject {
 
     var diagnosticCapacity: Int { diagnosticLimit }
 
+    var workoutPlanCapabilities: WorkoutPlanCapabilities {
+        WorkoutPlanCapabilities(
+            speed: Self.speedCapability(featureFlags: featureFlags, range: speedRange),
+            inclination: Self.inclinationCapability(
+                featureFlags: featureFlags,
+                range: inclinationRange
+            )
+        )
+    }
+
     var canScan: Bool {
         availability.isAvailable && !canDisconnect
     }
@@ -308,6 +318,76 @@ final class TreadmillSetupViewModel: ObservableObject {
         FTMSUUID.passiveNotifications.sorted().map {
             FTMSSubscription(uuid: $0, state: .inactive(reason: reason))
         }
+    }
+
+    private static func speedCapability(
+        featureFlags: CapabilityRead<FTMSFeatureFlags>,
+        range: CapabilityRead<FTMSSpeedRange>
+    ) -> WorkoutTargetCapability<WorkoutSpeedRange> {
+        switch featureFlags {
+        case .unavailable, .malformed:
+            return .unknown
+        case let .value(flags, _):
+            guard flags.supportsSpeedTargetSetting else { return .unsupported }
+        }
+
+        switch range {
+        case .unavailable:
+            return .unknown
+        case .malformed:
+            return .supported(
+                WorkoutSpeedRange(
+                    minimum: .init(value: .nan, unit: .kilometresPerHour),
+                    maximum: .init(value: .nan, unit: .kilometresPerHour),
+                    increment: .init(value: .nan, unit: .kilometresPerHour)
+                )
+            )
+        case let .value(value, _):
+            return .supported(
+                WorkoutSpeedRange(
+                    minimum: .init(value: decimal(value.minimumKilometresPerHour), unit: .kilometresPerHour),
+                    maximum: .init(value: decimal(value.maximumKilometresPerHour), unit: .kilometresPerHour),
+                    increment: .init(value: decimal(value.minimumIncrementKilometresPerHour), unit: .kilometresPerHour)
+                )
+            )
+        }
+    }
+
+    private static func inclinationCapability(
+        featureFlags: CapabilityRead<FTMSFeatureFlags>,
+        range: CapabilityRead<FTMSInclinationRange>
+    ) -> WorkoutTargetCapability<WorkoutInclinationRange> {
+        switch featureFlags {
+        case .unavailable, .malformed:
+            return .unknown
+        case let .value(flags, _):
+            guard flags.supportsInclinationTargetSetting else { return .unsupported }
+        }
+
+        switch range {
+        case .unavailable:
+            return .unknown
+        case .malformed:
+            return .supported(
+                WorkoutInclinationRange(
+                    minimum: .init(value: .nan, unit: .percent),
+                    maximum: .init(value: .nan, unit: .percent),
+                    increment: .init(value: .nan, unit: .percent)
+                )
+            )
+        case let .value(value, _):
+            return .supported(
+                WorkoutInclinationRange(
+                    minimum: .init(value: decimal(value.minimumPercent), unit: .percent),
+                    maximum: .init(value: decimal(value.maximumPercent), unit: .percent),
+                    increment: .init(value: decimal(value.minimumIncrementPercent), unit: .percent)
+                )
+            )
+        }
+    }
+
+    private static func decimal(_ value: Double) -> Decimal {
+        Decimal(string: String(value), locale: Locale(identifier: "en_US_POSIX")) ?? .nan
     }
 }
 

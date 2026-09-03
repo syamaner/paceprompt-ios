@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import PacePrompt
 
@@ -13,10 +14,107 @@ final class TreadmillPresentationTests: XCTestCase {
         XCTAssertEqual(model.inclinationRangeText, "Unavailable")
         XCTAssertEqual(model.speedRange.rawHex, "Unavailable")
         XCTAssertEqual(model.diagnostics.count, 0)
+        XCTAssertEqual(model.workoutPlanCapabilities.speed, .unknown)
+        XCTAssertEqual(model.workoutPlanCapabilities.inclination, .unknown)
         XCTAssertEqual(
             model.subscription(for: FTMSUUID.treadmillData),
             .inactive(reason: "Not connected")
         )
+    }
+
+    func testWorkoutValidationCapabilitiesRequireFeatureSupportAndKnownRanges() {
+        let client = FakeFTMSClient()
+        let model = TreadmillSetupViewModel(client: client)
+        client.send(
+            .value(
+                uuid: FTMSUUID.fitnessMachineFeature,
+                data: Data([0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00]),
+                source: .initialRead
+            )
+        )
+        client.send(
+            .value(
+                uuid: FTMSUUID.supportedSpeedRange,
+                data: Data([0x32, 0x00, 0xD0, 0x07, 0x0A, 0x00]),
+                source: .initialRead
+            )
+        )
+        client.send(
+            .value(
+                uuid: FTMSUUID.supportedInclinationRange,
+                data: Data([0xE2, 0xFF, 0x96, 0x00, 0x05, 0x00]),
+                source: .initialRead
+            )
+        )
+
+        let capabilities = model.workoutPlanCapabilities
+
+        XCTAssertEqual(
+            capabilities.speed,
+            .supported(
+                .init(
+                    minimum: .init(value: decimal("0.5"), unit: .kilometresPerHour),
+                    maximum: .init(value: decimal("20"), unit: .kilometresPerHour),
+                    increment: .init(value: decimal("0.1"), unit: .kilometresPerHour)
+                )
+            )
+        )
+        XCTAssertEqual(
+            capabilities.inclination,
+            .supported(
+                .init(
+                    minimum: .init(value: decimal("-3"), unit: .percent),
+                    maximum: .init(value: decimal("15"), unit: .percent),
+                    increment: .init(value: decimal("0.5"), unit: .percent)
+                )
+            )
+        )
+    }
+
+    func testUnsupportedTargetFeatureWinsOverAnAvailableRange() {
+        let client = FakeFTMSClient()
+        let model = TreadmillSetupViewModel(client: client)
+        client.send(
+            .value(
+                uuid: FTMSUUID.fitnessMachineFeature,
+                data: Data(repeating: 0, count: 8),
+                source: .initialRead
+            )
+        )
+        client.send(
+            .value(
+                uuid: FTMSUUID.supportedSpeedRange,
+                data: Data([0x32, 0x00, 0xD0, 0x07, 0x0A, 0x00]),
+                source: .initialRead
+            )
+        )
+
+        XCTAssertEqual(model.workoutPlanCapabilities.speed, .unsupported)
+        XCTAssertEqual(model.workoutPlanCapabilities.inclination, .unsupported)
+    }
+
+    func testMalformedSupportedRangeReachesValidatorAsInvalidNotUnknown() {
+        let client = FakeFTMSClient()
+        let model = TreadmillSetupViewModel(client: client)
+        client.send(
+            .value(
+                uuid: FTMSUUID.fitnessMachineFeature,
+                data: Data([0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00]),
+                source: .initialRead
+            )
+        )
+        client.send(
+            .value(
+                uuid: FTMSUUID.supportedSpeedRange,
+                data: Data([0x01]),
+                source: .initialRead
+            )
+        )
+
+        guard case let .supported(range) = model.workoutPlanCapabilities.speed else {
+            return XCTFail("Malformed supported range should remain distinct from unknown")
+        }
+        XCTAssertTrue(range.minimum.value.isNaN)
     }
 
     func testScanStartsOnlyAfterPresentationAction() {
@@ -199,6 +297,10 @@ final class TreadmillPresentationTests: XCTestCase {
         XCTAssertTrue(model.diagnosticReport.contains("0x2AD3 Initial read · Decoded"))
         XCTAssertTrue(model.diagnosticReport.contains("0x2AD3 Notification · Decoded"))
     }
+}
+
+private func decimal(_ value: String) -> Decimal {
+    Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))!
 }
 
 @MainActor

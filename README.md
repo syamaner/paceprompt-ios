@@ -18,12 +18,13 @@ This version contains:
 - a 100-packet, timestamped, in-memory log with initial-read or notification provenance, raw hexadecimal bytes and decoded values;
 - deliberate copy and system-share actions, with no automatic persistence or transmission;
 - pure FTMS parsers tested with synthetic payloads;
-- a versioned, Codable workout-plan schema with ordered warm-up, interval, recovery and cool-down steps, explicit seconds, kilometres-per-hour and percent units; and
+- a versioned, Codable workout-plan schema with ordered warm-up, interval, recovery and cool-down steps, explicit seconds, kilometres-per-hour and percent units;
 - a pure deterministic validator that returns a validated-plan wrapper only after structural and known-capability range checks succeed;
-- an accepted [local workout storage and history contract](design/local-workout-storage-and-history-contract.md); and
-- a Foundation-only saved-plan repository that accepts only validated plans, preserves complete versioned plans and lifecycle identity in a separately versioned local JSON store, and exposes unavailable, corrupt, partial, stale-staging and unsupported data without treating it as empty.
+- an accepted [local workout storage and history contract](design/local-workout-storage-and-history-contract.md);
+- a Foundation-only saved-plan repository that accepts only validated plans, preserves complete versioned plans and lifecycle identity in a separately versioned local JSON store, and exposes unavailable, corrupt, partial, stale-staging and unsupported data without treating it as empty; and
+- a repository-backed Plans tab for manual walking or running plan creation and identity-preserving edits, with ordered step entry, current-capability validation, an exact complete-plan preview with derived duration and estimated distance, and a separate confirmation-only save action.
 
-It does **not** yet connect that repository to the Plans or History UI. It also does not contain manual plan entry, treadmill commands, FTMS Control Point writes, workout execution, OpenRouter, API keys, HealthKit access, a watchOS app or persistent workout history.
+It does **not** contain plan deletion or recovery UI, workout history, treadmill commands, FTMS Control Point writes, workout execution, OpenRouter, API keys, HealthKit access or a watchOS app.
 
 The FTMS mappings, behaviours and field layouts were checked on 2 September 2026 against Bluetooth SIG [Fitness Machine Service 1.0.1](https://www.bluetooth.com/specifications/specs/fitness-machine-service-1-0-1/), the 5 February 2026 [GATT Specification Supplement](https://www.bluetooth.com/specifications/gss/) and current [Assigned Numbers](https://www.bluetooth.com/specifications/assigned-numbers/).
 
@@ -36,6 +37,8 @@ The FTMS mappings, behaviours and field layouts were checked on 2 September 2026
 - SwiftUI views render state and forward deliberate scan, connection, copy, share and clear actions; they do not parse bytes or call CoreBluetooth.
 - `WorkoutPlan` models untrusted plan data without UI, Bluetooth or storage dependencies. `WorkoutPlanValidator` keeps capability unknown, unsupported targets, malformed capability ranges and invalid target values distinct, and never clamps or rounds a target.
 - `SavedPlanRepository` is independent of SwiftUI, Bluetooth and network code. It preserves stored record order, stages and verifies full-file replacements, and requires complete file protection plus backup exclusion before atomic promotion.
+- `PlansViewModel` owns repository presentation and the create/edit/preview/confirm state machine. `ManualWorkoutDraftParser` converts localised text entry into explicit domain units without clamping, rounding or silently reinterpreting malformed values; every resulting plan must still pass `WorkoutPlanValidator` against the current capability state before the repository can receive it.
+- `PlansView` renders saved, empty and blocked repository states and forwards deliberate editing actions. Debug-only synthetic dependencies support XCUITests without placing personal workout values in fixtures or touching the production store.
 - The local storage contract keeps saved plans, future execution summaries and deliberately ephemeral data separate. History, reset, recovery UI and previewable manual export remain deferred.
 
 The client protocol intentionally has no characteristic-write operation.
