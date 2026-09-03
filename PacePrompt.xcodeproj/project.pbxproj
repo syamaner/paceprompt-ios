@@ -32,6 +32,26 @@
 		AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002018 /* PlansPresentationTests.swift */; };
 		AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002019 /* PlansUITestSupport.swift */; };
 		AA000000000000000000101A /* PlansFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000201A /* PlansFlowUITests.swift */; };
+		AB0000000000000000001001 /* PacePromptEvaluationApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002001 /* PacePromptEvaluationApp.swift */; };
+		AB0000000000000000001002 /* EvaluationReadinessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002002 /* EvaluationReadinessView.swift */; };
+		AB0000000000000000001003 /* EvaluationLaunchReadiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002003 /* EvaluationLaunchReadiness.swift */; };
+		AB0000000000000000001004 /* EvaluationContracts.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002004 /* EvaluationContracts.swift */; };
+		AB0000000000000000001005 /* EvaluationCorpus.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002005 /* EvaluationCorpus.swift */; };
+		AB0000000000000000001006 /* GeneratorOutputParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002006 /* GeneratorOutputParser.swift */; };
+		AB0000000000000000001007 /* ProposalPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002007 /* ProposalPipeline.swift */; };
+		AB0000000000000000001008 /* EvaluationRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002008 /* EvaluationRunner.swift */; };
+		AB0000000000000000001009 /* EvaluationRunWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002009 /* EvaluationRunWriter.swift */; };
+		AB000000000000000000100A /* WorkoutProposalProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200A /* WorkoutProposalProvider.swift */; };
+		AB000000000000000000100B /* OpenRouterAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200B /* OpenRouterAdapter.swift */; };
+		AB000000000000000000100C /* FoundationModelsAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200C /* FoundationModelsAdapter.swift */; };
+		AB000000000000000000100D /* WorkoutPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200D /* WorkoutPlan.swift */; };
+		AB000000000000000000100E /* WorkoutPlanValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200E /* WorkoutPlanValidator.swift */; };
+		AB000000000000000000100F /* Corpus in Resources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200E /* Corpus */; };
+		AB0000000000000000001010 /* Contracts in Resources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200F /* Contracts */; };
+		AB0000000000000000001011 /* WorkoutImportEvaluationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200D /* WorkoutImportEvaluationTests.swift */; };
+		AB0000000000000000001012 /* Corpus in Resources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200E /* Corpus */; };
+		AB0000000000000000001013 /* Contracts in Resources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200F /* Contracts */; };
+		AB0000000000000000001014 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002010 /* Fixtures */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +68,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AA0000000000000000000101;
 			remoteInfo = PacePrompt;
+		};
+		AB0000000000000000003001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB0000000000000000000101;
+			remoteInfo = PacePromptEvaluation;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -82,6 +109,24 @@
 		AA0000000000000000002101 /* PacePrompt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PacePrompt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000002102 /* PacePromptTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PacePromptTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000002103 /* PacePromptUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PacePromptUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB0000000000000000002001 /* PacePromptEvaluationApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptEvaluationApp.swift; sourceTree = "<group>"; };
+		AB0000000000000000002002 /* EvaluationReadinessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationReadinessView.swift; sourceTree = "<group>"; };
+		AB0000000000000000002003 /* EvaluationLaunchReadiness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationLaunchReadiness.swift; sourceTree = "<group>"; };
+		AB0000000000000000002004 /* EvaluationContracts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationContracts.swift; sourceTree = "<group>"; };
+		AB0000000000000000002005 /* EvaluationCorpus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationCorpus.swift; sourceTree = "<group>"; };
+		AB0000000000000000002006 /* GeneratorOutputParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratorOutputParser.swift; sourceTree = "<group>"; };
+		AB0000000000000000002007 /* ProposalPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProposalPipeline.swift; sourceTree = "<group>"; };
+		AB0000000000000000002008 /* EvaluationRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationRunner.swift; sourceTree = "<group>"; };
+		AB0000000000000000002009 /* EvaluationRunWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationRunWriter.swift; sourceTree = "<group>"; };
+		AB000000000000000000200A /* WorkoutProposalProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProposalProvider.swift; sourceTree = "<group>"; };
+		AB000000000000000000200B /* OpenRouterAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterAdapter.swift; sourceTree = "<group>"; };
+		AB000000000000000000200C /* FoundationModelsAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelsAdapter.swift; sourceTree = "<group>"; };
+		AB000000000000000000200D /* WorkoutImportEvaluationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutImportEvaluationTests.swift; sourceTree = "<group>"; };
+		AB000000000000000000200E /* Corpus */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Corpus; sourceTree = "<group>"; };
+		AB000000000000000000200F /* Contracts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Contracts; sourceTree = "<group>"; };
+		AB0000000000000000002010 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
+		AB0000000000000000002101 /* PacePromptEvaluation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PacePromptEvaluation.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB0000000000000000002102 /* PacePromptEvaluationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PacePromptEvaluationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +151,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AB0000000000000000004001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0000000000000000004002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -115,6 +174,7 @@
 				AA0000000000000000005002 /* PacePrompt */,
 				AA0000000000000000005006 /* PacePromptTests */,
 				AA000000000000000000500A /* PacePromptUITests */,
+				AB0000000000000000005001 /* WorkoutImport Evaluation */,
 				AA0000000000000000005007 /* Config */,
 				AA0000000000000000005008 /* Products */,
 			);
@@ -205,6 +265,8 @@
 				AA0000000000000000002101 /* PacePrompt.app */,
 				AA0000000000000000002102 /* PacePromptTests.xctest */,
 				AA0000000000000000002103 /* PacePromptUITests.xctest */,
+				AB0000000000000000002101 /* PacePromptEvaluation.app */,
+				AB0000000000000000002102 /* PacePromptEvaluationTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -215,6 +277,70 @@
 				AA000000000000000000201A /* PlansFlowUITests.swift */,
 			);
 			path = PacePromptUITests;
+			sourceTree = "<group>";
+		};
+		AB0000000000000000005001 /* WorkoutImport Evaluation */ = {
+			isa = PBXGroup;
+			children = (
+				AB0000000000000000005002 /* Sources */,
+				AB0000000000000000005006 /* Tests */,
+				AB000000000000000000200E /* Corpus */,
+				AB000000000000000000200F /* Contracts */,
+			);
+			name = "WorkoutImport Evaluation";
+			path = Evaluation/WorkoutImport;
+			sourceTree = "<group>";
+		};
+		AB0000000000000000005002 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				AB0000000000000000005003 /* App */,
+				AB0000000000000000005004 /* Providers */,
+				AB0000000000000000005005 /* Runner */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		AB0000000000000000005003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AB0000000000000000002001 /* PacePromptEvaluationApp.swift */,
+				AB0000000000000000002002 /* EvaluationReadinessView.swift */,
+				AB0000000000000000002003 /* EvaluationLaunchReadiness.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AB0000000000000000005004 /* Providers */ = {
+			isa = PBXGroup;
+			children = (
+				AB000000000000000000200A /* WorkoutProposalProvider.swift */,
+				AB000000000000000000200C /* FoundationModelsAdapter.swift */,
+				AB000000000000000000200B /* OpenRouterAdapter.swift */,
+			);
+			path = Providers;
+			sourceTree = "<group>";
+		};
+		AB0000000000000000005005 /* Runner */ = {
+			isa = PBXGroup;
+			children = (
+				AB0000000000000000002004 /* EvaluationContracts.swift */,
+				AB0000000000000000002005 /* EvaluationCorpus.swift */,
+				AB0000000000000000002006 /* GeneratorOutputParser.swift */,
+				AB0000000000000000002007 /* ProposalPipeline.swift */,
+				AB0000000000000000002008 /* EvaluationRunner.swift */,
+				AB0000000000000000002009 /* EvaluationRunWriter.swift */,
+			);
+			path = Runner;
+			sourceTree = "<group>";
+		};
+		AB0000000000000000005006 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				AB000000000000000000200D /* WorkoutImportEvaluationTests.swift */,
+				AB0000000000000000002010 /* Fixtures */,
+			);
+			path = Tests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -273,6 +399,41 @@
 			productReference = AA0000000000000000002103 /* PacePromptUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		AB0000000000000000000101 /* PacePromptEvaluation */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0000000000000000006001 /* Build configuration list for PBXNativeTarget "PacePromptEvaluation" */;
+			buildPhases = (
+				AB0000000000000000004001 /* Frameworks */,
+				AB0000000000000000007001 /* Sources */,
+				AB0000000000000000008001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PacePromptEvaluation;
+			productName = PacePromptEvaluation;
+			productReference = AB0000000000000000002101 /* PacePromptEvaluation.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AB0000000000000000000102 /* PacePromptEvaluationTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0000000000000000006002 /* Build configuration list for PBXNativeTarget "PacePromptEvaluationTests" */;
+			buildPhases = (
+				AB0000000000000000004002 /* Frameworks */,
+				AB0000000000000000007002 /* Sources */,
+				AB0000000000000000008002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AB0000000000000000009001 /* PBXTargetDependency */,
+			);
+			name = PacePromptEvaluationTests;
+			productName = PacePromptEvaluationTests;
+			productReference = AB0000000000000000002102 /* PacePromptEvaluationTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -294,6 +455,13 @@
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = AA0000000000000000000101;
 					};
+					AB0000000000000000000101 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					AB0000000000000000000102 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = AB0000000000000000000101;
+					};
 				};
 			};
 			buildConfigurationList = AA0000000000000000006001 /* Build configuration list for PBXProject "PacePrompt" */;
@@ -312,6 +480,8 @@
 				AA0000000000000000000101 /* PacePrompt */,
 				AA0000000000000000000102 /* PacePromptTests */,
 				AA0000000000000000000103 /* PacePromptUITests */,
+				AB0000000000000000000101 /* PacePromptEvaluation */,
+				AB0000000000000000000102 /* PacePromptEvaluationTests */,
 			);
 		};
 /* End PBXProject section */
@@ -336,6 +506,25 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0000000000000000008001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB000000000000000000100F /* Corpus in Resources */,
+				AB0000000000000000001010 /* Contracts in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0000000000000000008002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000001012 /* Corpus in Resources */,
+				AB0000000000000000001013 /* Contracts in Resources */,
+				AB0000000000000000001014 /* Fixtures in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -387,6 +576,35 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AB0000000000000000007001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000001001 /* PacePromptEvaluationApp.swift in Sources */,
+				AB0000000000000000001002 /* EvaluationReadinessView.swift in Sources */,
+				AB0000000000000000001003 /* EvaluationLaunchReadiness.swift in Sources */,
+				AB0000000000000000001004 /* EvaluationContracts.swift in Sources */,
+				AB0000000000000000001005 /* EvaluationCorpus.swift in Sources */,
+				AB0000000000000000001006 /* GeneratorOutputParser.swift in Sources */,
+				AB0000000000000000001007 /* ProposalPipeline.swift in Sources */,
+				AB0000000000000000001008 /* EvaluationRunner.swift in Sources */,
+				AB0000000000000000001009 /* EvaluationRunWriter.swift in Sources */,
+				AB000000000000000000100A /* WorkoutProposalProvider.swift in Sources */,
+				AB000000000000000000100B /* OpenRouterAdapter.swift in Sources */,
+				AB000000000000000000100C /* FoundationModelsAdapter.swift in Sources */,
+				AB000000000000000000100D /* WorkoutPlan.swift in Sources */,
+				AB000000000000000000100E /* WorkoutPlanValidator.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0000000000000000007002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000001011 /* WorkoutImportEvaluationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -399,6 +617,11 @@
 			isa = PBXTargetDependency;
 			target = AA0000000000000000000101 /* PacePrompt */;
 			targetProxy = AA0000000000000000003002 /* PBXContainerItemProxy */;
+		};
+		AB0000000000000000009001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AB0000000000000000000101 /* PacePromptEvaluation */;
+			targetProxy = AB0000000000000000003001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -656,6 +879,106 @@
 			};
 			name = Release;
 		};
+		AB000000000000000000B101 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "PacePrompt Evaluation";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sertanyamaner.PacePromptEvaluation;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AB000000000000000000B102 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "PacePrompt Evaluation";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sertanyamaner.PacePromptEvaluation;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		AB000000000000000000B201 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sertanyamaner.PacePromptEvaluationTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PacePromptEvaluation.app/PacePromptEvaluation";
+			};
+			name = Debug;
+		};
+		AB000000000000000000B202 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sertanyamaner.PacePromptEvaluationTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PacePromptEvaluation.app/PacePromptEvaluation";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -691,6 +1014,24 @@
 			buildConfigurations = (
 				AA000000000000000000A301 /* Debug */,
 				AA000000000000000000A302 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB0000000000000000006001 /* Build configuration list for PBXNativeTarget "PacePromptEvaluation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB000000000000000000B101 /* Debug */,
+				AB000000000000000000B102 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB0000000000000000006002 /* Build configuration list for PBXNativeTarget "PacePromptEvaluationTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB000000000000000000B201 /* Debug */,
+				AB000000000000000000B202 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

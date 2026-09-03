@@ -1,10 +1,12 @@
 # Workout-import evaluation contracts and corpus
 
-This developer-only boundary implements GitHub issue #12 under the accepted
+This developer-only boundary implements GitHub issues #12 and #13 under the accepted
 [provider-neutral workout proposal, privacy and evaluation contract](../../design/workout-proposal-privacy-and-evaluation-contract.md).
-It contains deterministic static/fixture tooling only. It does not invoke a
-model, choose a provider, run on an iPhone, enter production code, persist a
-workout or control a treadmill.
+The accepted #12 corpus, schemas and scorer remain unchanged. The separate
+`PacePromptEvaluation` iPhone target now supplies a provider-neutral runner,
+Apple Foundation Models and OpenRouter adapters, and an explicit readiness
+screen. Nothing in this boundary chooses a provider or model, performs a real
+provider run, enters production code, persists a workout or controls a treadmill.
 
 ## Tracked and local areas
 
@@ -16,7 +18,7 @@ workout or control a treadmill.
 | `Tests/` | Tracked synthetic results, deliberately failing fixtures and deterministic tests. |
 | `Summaries/` | Tracked only after an aggregate has been explicitly reviewed under the rules in its README. |
 | `.runs/` | Ignored local raw run inputs and complete outputs. Never commit this directory or treat it as workout storage. |
-| `Sources/` | Reserved by the accepted #6 structure for the separately authorised #13 app, provider and runner work. It is intentionally absent here. |
+| `Sources/` | Developer-only #13 app, provider adapters and runner. These files are members of `PacePromptEvaluation`, never `PacePrompt`. |
 
 No raw provider transcript is eligible for `Summaries/`. There is no automatic
 upload, export, deletion or retention job. An operator deliberately removes a
@@ -132,3 +134,102 @@ HealthKit, watchOS or treadmill operation.
 
 All current evidence is static/fixture evidence. It establishes only contract,
 corpus, schema and deterministic scorer behaviour.
+
+## Developer-only targets and execution boundary
+
+`PacePromptEvaluation` requires iOS 26 because its Apple adapter imports the
+Foundation Models framework. `PacePromptEvaluationTests` is hosted only by that
+developer app. The evaluation target compiles the canonical production
+`WorkoutPlan` and `WorkoutPlanValidator` source files directly; it neither
+duplicates them nor links the production app target. The production scheme,
+archive and tab navigation have no dependency on either evaluation target.
+
+The runner loads only the bundled accepted v1 corpus and verifies its fixed
+version, stable case index and hash
+`be6355a1afdd9d56a14c759e3da0ef836280091218a6f282d7a826029cade79c`.
+It requires an explicit run identity, exact app commit, repetition count,
+evidence level, device/OS/locale, network condition, provider/model identity,
+routing inputs, inference parameters and measurement-tool list. Adapter inputs
+must exactly match the provenance recorded by the runner.
+
+The Apple adapter uses Foundation Models guided generation with no tools. It
+reports runtime, model and locale availability separately and accepts the
+model identity and generation options supplied by the run configuration. The
+OpenRouter adapter uses the fixed OpenRouter chat-completions endpoint, derives
+its strict response schema from both checked-in #12 schemas, requires an exact
+model, non-empty provider-routing object, explicit inference parameters and a
+positive finite timeout, and requires a separately supplied request authorizer
+before sending anything. It does not add, infer or alter any fallback field;
+the separately authorised run must supply and record every routing value.
+Offline and network unavailable states normalize to `providerUnavailable`;
+cancellation, timeout and transport failure remain explicit and do not become
+refusals.
+
+Every structurally valid proposal passes through exact canonical mapping and
+the unchanged local validator. The in-memory execution record keeps
+`failedCanonicalMapping`, `invalidLocalPlan` and `localValidationBlocked`
+distinct. Invalid/partial generator structure remains
+`invalidGeneratorOutput`; later scorer failure remains owned by the unchanged
+#12 scorer. None of these states grants save, execution or treadmill-control
+authority, and normalized results always emit an empty `claimedAuthorities`.
+
+Raw normalized results may be written only by `EvaluationRunWriter` to a path
+whose final components are `Evaluation/WorkoutImport/.runs`. The writer rejects
+every other destination. That directory is ignored by Git and is never copied
+into either app target.
+
+## Local readiness configuration
+
+The shared evaluation scheme contains no environment values. The readiness
+screen reads only an unshared local launch environment and never displays a
+credential. It remains **Not ready** until the operator supplies the common
+keys below:
+
+- `PACEPROMPT_EVALUATION_PROVIDER` (`apple` or `openrouter`)
+- `PACEPROMPT_MODEL_ID`
+- `PACEPROMPT_RUN_CONFIGURATION_ID`
+- `PACEPROMPT_REPETITION_COUNT`
+- `PACEPROMPT_APP_COMMIT`
+- `PACEPROMPT_DEVICE_LOCALE`
+- `PACEPROMPT_INFERENCE_PARAMETERS_JSON`
+
+OpenRouter readiness additionally requires
+`PACEPROMPT_OPENROUTER_PROVIDER_ROUTING_JSON`,
+`PACEPROMPT_OPENROUTER_TIMEOUT_SECONDS`, and
+`PACEPROMPT_OPENROUTER_API_KEY`. The key is read only from the process launch
+environment, wrapped as a redacted value and used only for the Authorization
+header. It must not be added to a shared scheme, source, build setting, log,
+artifact or summary. A Ready display means only that the declared configuration
+and current availability checks permit a later operator action; it is not
+inference evidence and does not itself invoke a provider.
+
+Build and test the developer boundary without installing it or making a provider
+call:
+
+```sh
+xcodebuild -project PacePrompt.xcodeproj -scheme PacePromptEvaluation \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  CODE_SIGNING_ALLOWED=NO test
+
+xcodebuild -project PacePrompt.xcodeproj -scheme PacePromptEvaluation \
+  -destination 'generic/platform=iOS' \
+  CODE_SIGNING_ALLOWED=NO build
+```
+
+## Bounded handoff to issue #14
+
+Issue #14 remains blocked until this implementation is accepted and the
+operator separately confirms the named iPhone, installation and run authority.
+Before any provider invocation, #14 must ratify and supply the exact Apple and
+OpenRouter model set, routing and generation settings, repetition count, run
+order, warm-up policy, network conditions, timeout/cancellation policy,
+spending limit, comparison rubric, hard safety gates and decision rule. It must
+also supply a request authorizer that enforces those remote-run decisions. Do
+not turn the deterministic test fixtures or the readiness screen into
+comparison evidence.
+
+The #14 run must preserve raw normalized evidence only under `.runs/`, score
+completed results with the unchanged scorer, label simulator, physical-iPhone
+and remote-provider evidence separately, and stop for human ratification. No
+production inference issue, fallback, credential UI, persistence change,
+treadmill connection or treadmill operation follows automatically.
