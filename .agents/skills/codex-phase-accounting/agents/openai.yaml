@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Phase Accounting"
+  short_description: "Measure bounded Codex usage reproducibly"
+  default_prompt: "Use $codex-phase-accounting to measure this PacePrompt work phase and prepare the development ledger entry."
