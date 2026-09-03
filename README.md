@@ -21,10 +21,11 @@ This version contains:
 - a versioned, Codable workout-plan schema with ordered warm-up, interval, recovery and cool-down steps, explicit seconds, kilometres-per-hour and percent units;
 - a pure deterministic validator that returns a validated-plan wrapper only after structural and known-capability range checks succeed;
 - an accepted [local workout storage and history contract](design/local-workout-storage-and-history-contract.md);
+- an accepted [provider-neutral workout proposal, privacy and evaluation contract](design/workout-proposal-privacy-and-evaluation-contract.md) that keeps every model output untrusted, preserves local validation and confirmation authority, and defines the developer-only comparison boundary without selecting or integrating a provider;
 - a Foundation-only saved-plan repository that accepts only validated plans, preserves complete versioned plans and lifecycle identity in a separately versioned local JSON store, and exposes unavailable, corrupt, partial, stale-staging and unsupported data without treating it as empty; and
 - a repository-backed Plans tab for manual walking or running plan creation and identity-preserving edits, with ordered step entry, current-capability validation, an exact complete-plan preview with derived duration and estimated distance, and a separate confirmation-only save action.
 
-It does **not** contain plan deletion or recovery UI, workout history, treadmill commands, FTMS Control Point writes, workout execution, OpenRouter, API keys, HealthKit access or a watchOS app.
+It does **not** contain plan deletion or recovery UI, workout history, inference, an evaluation corpus or runner, network calls, OpenRouter, API keys, treadmill commands, FTMS Control Point writes, workout execution, HealthKit access or a watchOS app.
 
 The FTMS mappings, behaviours and field layouts were checked on 2 September 2026 against Bluetooth SIG [Fitness Machine Service 1.0.1](https://www.bluetooth.com/specifications/specs/fitness-machine-service-1-0-1/), the 5 February 2026 [GATT Specification Supplement](https://www.bluetooth.com/specifications/gss/) and current [Assigned Numbers](https://www.bluetooth.com/specifications/assigned-numbers/).
 
@@ -36,6 +37,7 @@ The FTMS mappings, behaviours and field layouts were checked on 2 September 2026
 - `TreadmillSetupViewModel` also bounds packet capture to the newest 100 entries and builds the user-requested diagnostic report in memory.
 - SwiftUI views render state and forward deliberate scan, connection, copy, share and clear actions; they do not parse bytes or call CoreBluetooth.
 - `WorkoutPlan` models untrusted plan data without UI, Bluetooth or storage dependencies. `WorkoutPlanValidator` keeps capability unknown, unsupported targets, malformed capability ranges and invalid target values distinct, and never clamps or rounds a target.
+- The workout-proposal contract keeps `WorkoutProposal` distinct from `WorkoutPlan`, requires deterministic local mapping and validation for every provider response, and reserves all provider adapters, raw runs and scoring tools for the developer-only `Evaluation/WorkoutImport/` boundary in later authorised slices.
 - `SavedPlanRepository` is independent of SwiftUI, Bluetooth and network code. It preserves stored record order, stages and verifies full-file replacements, and requires complete file protection plus backup exclusion before atomic promotion.
 - `PlansViewModel` owns repository presentation and the create/edit/preview/confirm state machine. `ManualWorkoutDraftParser` converts localised text entry into explicit domain units without clamping, rounding or silently reinterpreting malformed values; every resulting plan must still pass `WorkoutPlanValidator` against the current capability state before the repository can receive it.
 - `PlansView` renders saved, empty and blocked repository states and forwards deliberate editing actions. Debug-only synthetic dependencies support XCUITests without placing personal workout values in fixtures or touching the production store.
@@ -45,7 +47,7 @@ The client protocol intentionally has no characteristic-write operation.
 
 ## Privacy
 
-PacePrompt has no account, analytics, advertising, telemetry, cloud storage or background delivery. It makes no network API calls and requests no HealthKit permission. Capability and packet diagnostics stay in memory and are not persisted. Data leaves that memory-only view only after the user deliberately copies it or opens the system share sheet.
+PacePrompt has no account, analytics, advertising, telemetry, cloud storage or background delivery. It makes no network API calls and requests no HealthKit permission. Capability and packet diagnostics stay in memory and are not persisted. Data leaves that memory-only view only after the user deliberately copies it or opens the system share sheet. The accepted proposal contract similarly keeps any future production prompt, provider exchange, routing detail and transient proposal out of workout storage, logs, analytics and export; no remote path is accepted without clear disclosure and explicit user choice.
 
 Do not commit personal device captures or signing identifiers. Synthetic fixtures are clearly isolated in the test target.
 
