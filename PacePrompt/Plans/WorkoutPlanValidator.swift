@@ -82,6 +82,15 @@ enum WorkoutPlanValidator {
         return .success(ValidatedPlan(plan: plan))
     }
 
+    static func structuralIssues(in plan: WorkoutPlan) -> [WorkoutPlanValidationIssue] {
+        var issues: [WorkoutPlanValidationIssue] = []
+        validateStructure(plan, issues: &issues)
+        for (index, step) in plan.steps.enumerated() {
+            validateStep(step, at: index, issues: &issues)
+        }
+        return issues
+    }
+
     private static func validateStructure(
         _ plan: WorkoutPlan,
         issues: inout [WorkoutPlanValidationIssue]
