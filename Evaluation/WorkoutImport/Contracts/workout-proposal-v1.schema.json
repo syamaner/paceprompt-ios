@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paceprompt.local/schemas/workout-proposal-v1.schema.json",
+  "title": "PacePrompt provider-neutral workout proposal v1",
+  "type": "object",
+  "required": [
+    "contractVersion",
+    "suggestedName",
+    "activity",
+    "steps"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": "workout-proposal/v1"
+    },
+    "suggestedName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "activity": {
+      "enum": [
+        "indoorWalking",
+        "indoorRunning"
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "step": {
+      "type": "object",
+      "required": [
+        "kind",
+        "label",
+        "duration",
+        "targetSpeed",
+        "targetInclination"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "warmUp",
+            "interval",
+            "recovery",
+            "coolDown"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "duration": {
+          "$ref": "#/$defs/duration"
+        },
+        "targetSpeed": {
+          "$ref": "#/$defs/speed"
+        },
+        "targetInclination": {
+          "$ref": "#/$defs/inclination"
+        }
+      },
+      "additionalProperties": false
+    },
+    "duration": {
+      "type": "object",
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "enum": [
+            "seconds",
+            "minutes"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "speed": {
+      "type": "object",
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "enum": [
+            "kilometresPerHour",
+            "milesPerHour"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "inclination": {
+      "type": "object",
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "const": "percent"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

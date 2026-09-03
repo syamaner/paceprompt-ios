@@ -1,0 +1,425 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paceprompt.local/schemas/workout-import-result-v1.schema.json",
+  "title": "PacePrompt normalized workout-import evaluation result v1",
+  "type": "object",
+  "required": [
+    "resultContractVersion",
+    "provenance",
+    "results"
+  ],
+  "properties": {
+    "resultContractVersion": {
+      "const": "workout-import-result/v1"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/caseResult"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": [
+        "runID",
+        "appCommit",
+        "corpusVersion",
+        "corpusHash",
+        "proposalContractVersion",
+        "promptTemplateVersion",
+        "scorerVersion",
+        "evidenceLevel",
+        "deviceClass",
+        "osVersion",
+        "locale",
+        "providerID",
+        "modelID",
+        "modelRevision",
+        "routingConstraints",
+        "inferenceParameters",
+        "networkCondition",
+        "runConfigurationID",
+        "startedAt",
+        "endedAt",
+        "measurementTools"
+      ],
+      "properties": {
+        "runID": {
+          "type": "string",
+          "minLength": 1
+        },
+        "appCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "corpusVersion": {
+          "const": "workout-import-corpus/v1"
+        },
+        "corpusHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "proposalContractVersion": {
+          "const": "workout-proposal/v1"
+        },
+        "promptTemplateVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scorerVersion": {
+          "const": "workout-import-scorer/v1"
+        },
+        "evidenceLevel": {
+          "enum": [
+            "staticFixture",
+            "simulator",
+            "physicalIPhone",
+            "remoteProvider"
+          ]
+        },
+        "deviceClass": {
+          "type": "string",
+          "minLength": 1
+        },
+        "osVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "providerID": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelID": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelRevision": {
+          "$ref": "#/$defs/availableString"
+        },
+        "routingConstraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/keyValue"
+          }
+        },
+        "inferenceParameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/keyValue"
+          }
+        },
+        "networkCondition": {
+          "enum": [
+            "offline",
+            "online",
+            "notApplicable"
+          ]
+        },
+        "runConfigurationID": {
+          "type": "string",
+          "minLength": 1
+        },
+        "startedAt": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        },
+        "endedAt": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        },
+        "measurementTools": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "availableString": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "status",
+            "value"
+          ],
+          "properties": {
+            "status": {
+              "const": "available"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "const": "unavailable"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "keyValue": {
+      "type": "object",
+      "required": [
+        "key",
+        "value"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caseResult": {
+      "type": "object",
+      "required": [
+        "resultID",
+        "caseID",
+        "repetitionIndex",
+        "observed",
+        "claimedAuthorities",
+        "operationalMeasurements"
+      ],
+      "properties": {
+        "resultID": {
+          "type": "string",
+          "minLength": 1
+        },
+        "caseID": {
+          "type": "string",
+          "pattern": "^WI-V1-[0-9]{3}$"
+        },
+        "repetitionIndex": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "observed": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/validObserved"
+            },
+            {
+              "$ref": "#/$defs/invalidObserved"
+            }
+          ]
+        },
+        "claimedAuthorities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "localValidation",
+              "persistence",
+              "workoutExecution",
+              "treadmillControl"
+            ]
+          }
+        },
+        "operationalMeasurements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/measurement"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "validObserved": {
+      "type": "object",
+      "required": [
+        "structure",
+        "outcome"
+      ],
+      "properties": {
+        "structure": {
+          "const": "valid"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      },
+      "additionalProperties": false
+    },
+    "invalidObserved": {
+      "type": "object",
+      "required": [
+        "structure",
+        "errors"
+      ],
+      "properties": {
+        "structure": {
+          "const": "invalidGeneratorOutput"
+        },
+        "errors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/structureError"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "structureError": {
+      "type": "object",
+      "required": [
+        "code",
+        "path"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/proposalOutcome"
+        },
+        {
+          "$ref": "#/$defs/reasonOutcome"
+        }
+      ]
+    },
+    "proposalOutcome": {
+      "type": "object",
+      "required": [
+        "type",
+        "proposal"
+      ],
+      "properties": {
+        "type": {
+          "const": "proposal"
+        },
+        "proposal": {
+          "$ref": "workout-proposal-v1.schema.json"
+        }
+      },
+      "additionalProperties": false
+    },
+    "reasonOutcome": {
+      "type": "object",
+      "required": [
+        "type",
+        "reasonCategory",
+        "affectedPaths"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "clarificationRequired",
+            "unsupportedRequest",
+            "refusal",
+            "providerUnavailable",
+            "providerFailure"
+          ]
+        },
+        "reasonCategory": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affectedPaths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "measurement": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "status",
+            "value",
+            "unit"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "const": "measured"
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "const": "unmeasured"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

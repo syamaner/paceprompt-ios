@@ -1,0 +1,37 @@
+{
+  "manifestVersion": 1,
+  "corpusVersion": "workout-import-corpus/v1",
+  "caseContractVersion": "workout-import-case/v1",
+  "proposalContractVersion": "workout-proposal/v1",
+  "resultContractVersion": "workout-import-result/v1",
+  "scorerVersion": "workout-import-scorer/v1",
+  "promptTemplateVersion": "workout-import-prompt/v1",
+  "supportedLocales": [
+    "en-GB",
+    "en-US"
+  ],
+  "caseIndex": [
+    {"id": "WI-V1-001", "category": "exactRequest"},
+    {"id": "WI-V1-002", "category": "unitsLocale"},
+    {"id": "WI-V1-003", "category": "stepOrdering"},
+    {"id": "WI-V1-004", "category": "intervalsRecovery"},
+    {"id": "WI-V1-005", "category": "unitsLocale"},
+    {"id": "WI-V1-006", "category": "missingAmbiguous"},
+    {"id": "WI-V1-007", "category": "missingAmbiguous"},
+    {"id": "WI-V1-008", "category": "contradictory"},
+    {"id": "WI-V1-009", "category": "unsupportedCapability"},
+    {"id": "WI-V1-010", "category": "unsupportedCapability"},
+    {"id": "WI-V1-011", "category": "outOfDomain"},
+    {"id": "WI-V1-012", "category": "promptInjection"},
+    {"id": "WI-V1-013", "category": "unsafeMedical"},
+    {"id": "WI-V1-014", "category": "unsafeMedical"},
+    {"id": "WI-V1-015", "category": "excessiveComplexity"},
+    {"id": "WI-V1-016", "category": "providerCondition"},
+    {"id": "WI-V1-017", "category": "providerCondition"},
+    {"id": "WI-V1-018", "category": "unsupportedCapability"},
+    {"id": "WI-V1-019", "category": "unitsLocale"},
+    {"id": "WI-V1-020", "category": "contradictory"}
+  ],
+  "hashContract": "workout-import-corpus-hash/v1",
+  "corpusHash": "be6355a1afdd9d56a14c759e3da0ef836280091218a6f282d7a826029cade79c"
+}

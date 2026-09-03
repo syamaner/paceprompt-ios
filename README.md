@@ -22,10 +22,11 @@ This version contains:
 - a pure deterministic validator that returns a validated-plan wrapper only after structural and known-capability range checks succeed;
 - an accepted [local workout storage and history contract](design/local-workout-storage-and-history-contract.md);
 - an accepted [provider-neutral workout proposal, privacy and evaluation contract](design/workout-proposal-privacy-and-evaluation-contract.md) that keeps every model output untrusted, preserves local validation and confirmation authority, and defines the developer-only comparison boundary without selecting or integrating a provider;
+- a developer-only [provider-neutral workout-import evaluation corpus](Evaluation/WorkoutImport/README.md), versioned proposal/result schemas and deterministic semantic scorer with synthetic fixtures and no model judge;
 - a Foundation-only saved-plan repository that accepts only validated plans, preserves complete versioned plans and lifecycle identity in a separately versioned local JSON store, and exposes unavailable, corrupt, partial, stale-staging and unsupported data without treating it as empty; and
 - a repository-backed Plans tab for manual walking or running plan creation and identity-preserving edits, with ordered step entry, current-capability validation, an exact complete-plan preview with derived duration and estimated distance, and a separate confirmation-only save action.
 
-It does **not** contain plan deletion or recovery UI, workout history, inference, an evaluation corpus or runner, network calls, OpenRouter, API keys, treadmill commands, FTMS Control Point writes, workout execution, HealthKit access or a watchOS app.
+It does **not** contain plan deletion or recovery UI, workout history, inference, a provider adapter or evaluation runner, network calls, Apple Foundation Models integration, OpenRouter, API keys, model comparison results, treadmill commands, FTMS Control Point writes, workout execution, HealthKit access or a watchOS app.
 
 The FTMS mappings, behaviours and field layouts were checked on 2 September 2026 against Bluetooth SIG [Fitness Machine Service 1.0.1](https://www.bluetooth.com/specifications/specs/fitness-machine-service-1-0-1/), the 5 February 2026 [GATT Specification Supplement](https://www.bluetooth.com/specifications/gss/) and current [Assigned Numbers](https://www.bluetooth.com/specifications/assigned-numbers/).
 
@@ -37,7 +38,8 @@ The FTMS mappings, behaviours and field layouts were checked on 2 September 2026
 - `TreadmillSetupViewModel` also bounds packet capture to the newest 100 entries and builds the user-requested diagnostic report in memory.
 - SwiftUI views render state and forward deliberate scan, connection, copy, share and clear actions; they do not parse bytes or call CoreBluetooth.
 - `WorkoutPlan` models untrusted plan data without UI, Bluetooth or storage dependencies. `WorkoutPlanValidator` keeps capability unknown, unsupported targets, malformed capability ranges and invalid target values distinct, and never clamps or rounds a target.
-- The workout-proposal contract keeps `WorkoutProposal` distinct from `WorkoutPlan`, requires deterministic local mapping and validation for every provider response, and reserves all provider adapters, raw runs and scoring tools for the developer-only `Evaluation/WorkoutImport/` boundary in later authorised slices.
+- The workout-proposal contract keeps `WorkoutProposal` distinct from `WorkoutPlan`, requires deterministic local mapping and validation for every provider response, and confines the current corpus/contracts/scorer plus all later provider adapters and raw runs to the developer-only `Evaluation/WorkoutImport/` boundary.
+- The workout-import evaluation boundary contains only synthetic corpus data, strict provider-neutral JSON contracts and standard-library deterministic scoring. Raw future runs are ignored, reviewed summaries exclude complete transcripts, and no evaluation file is part of the production target.
 - `SavedPlanRepository` is independent of SwiftUI, Bluetooth and network code. It preserves stored record order, stages and verifies full-file replacements, and requires complete file protection plus backup exclusion before atomic promotion.
 - `PlansViewModel` owns repository presentation and the create/edit/preview/confirm state machine. `ManualWorkoutDraftParser` converts localised text entry into explicit domain units without clamping, rounding or silently reinterpreting malformed values; every resulting plan must still pass `WorkoutPlanValidator` against the current capability state before the repository can receive it.
 - `PlansView` renders saved, empty and blocked repository states and forwards deliberate editing actions. Debug-only synthetic dependencies support XCUITests without placing personal workout values in fixtures or touching the production store.
@@ -87,6 +89,14 @@ Run static analysis:
 xcodebuild -project PacePrompt.xcodeproj -scheme PacePrompt \
   -destination 'generic/platform=iOS Simulator' \
   CODE_SIGNING_ALLOWED=NO analyze
+```
+
+Validate the developer-only workout-import corpus and scorer:
+
+```sh
+python3 -B Evaluation/WorkoutImport/Scoring/scorer.py \
+  --root Evaluation/WorkoutImport verify-corpus
+python3 -B -m unittest discover -s Evaluation/WorkoutImport/Tests -v
 ```
 
 Use another listed iPhone simulator if that model is not installed.

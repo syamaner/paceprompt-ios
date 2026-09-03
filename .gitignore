@@ -10,6 +10,11 @@ xcuserdata/
 *.ipa
 *.dSYM
 *.dSYM.zip
+__pycache__/
+*.py[cod]
+
+# Developer-only raw workout-import evaluation runs
+Evaluation/WorkoutImport/.runs/
 
 # Local signing and secrets
 Config/Signing.local.xcconfig

@@ -1,0 +1,195 @@
+{
+  "resultContractVersion": "workout-import-result/v1",
+  "provenance": {
+    "runID": "synthetic-fixture-run-v1",
+    "appCommit": "0000000000000000000000000000000000000000",
+    "corpusVersion": "workout-import-corpus/v1",
+    "corpusHash": "be6355a1afdd9d56a14c759e3da0ef836280091218a6f282d7a826029cade79c",
+    "proposalContractVersion": "workout-proposal/v1",
+    "promptTemplateVersion": "workout-import-prompt/v1",
+    "scorerVersion": "workout-import-scorer/v1",
+    "evidenceLevel": "staticFixture",
+    "deviceClass": "synthetic-fixture",
+    "osVersion": "not-applicable",
+    "locale": "mixed-declared-corpus-locales",
+    "providerID": "synthetic-fixture-provider",
+    "modelID": "deterministic-fixture-model",
+    "modelRevision": {"status": "unavailable", "reason": "no model is invoked by a static fixture"},
+    "routingConstraints": [],
+    "inferenceParameters": [],
+    "networkCondition": "notApplicable",
+    "runConfigurationID": "synthetic-fixture-configuration-v1",
+    "startedAt": "2026-09-03T00:00:00Z",
+    "endedAt": "2026-09-03T00:00:00Z",
+    "measurementTools": ["workout-import-scorer/v1"]
+  },
+  "results": [
+    {
+      "resultID": "fixture-WI-V1-001-r1",
+      "caseID": "WI-V1-001",
+      "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "proposal", "proposal": {
+        "contractVersion": "workout-proposal/v1", "suggestedName": "Synthetic walk", "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "label": "Warm up", "duration": {"value": 120, "unit": "seconds"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Walk", "duration": {"value": 300, "unit": "seconds"}, "targetSpeed": {"value": 6, "unit": "kilometresPerHour"}, "targetInclination": {"value": 1, "unit": "percent"}},
+          {"kind": "coolDown", "label": "Cool down", "duration": {"value": 120, "unit": "seconds"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}}
+        ]
+      }}},
+      "claimedAuthorities": [],
+      "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-002-r1",
+      "caseID": "WI-V1-002",
+      "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "proposal", "proposal": {
+        "contractVersion": "workout-proposal/v1", "suggestedName": "Synthetic imperial run", "activity": "indoorRunning",
+        "steps": [
+          {"kind": "warmUp", "label": "Warm up", "duration": {"value": 2, "unit": "minutes"}, "targetSpeed": {"value": 3, "unit": "milesPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Run", "duration": {"value": 1, "unit": "minutes"}, "targetSpeed": {"value": 6, "unit": "milesPerHour"}, "targetInclination": {"value": 1, "unit": "percent"}},
+          {"kind": "coolDown", "label": "Cool down", "duration": {"value": 2, "unit": "minutes"}, "targetSpeed": {"value": 3, "unit": "milesPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}}
+        ]
+      }}},
+      "claimedAuthorities": [],
+      "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-003-r1",
+      "caseID": "WI-V1-003",
+      "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "proposal", "proposal": {
+        "contractVersion": "workout-proposal/v1", "suggestedName": "Ordered synthetic run", "activity": "indoorRunning",
+        "steps": [
+          {"kind": "warmUp", "label": "Warm up", "duration": {"value": 60, "unit": "seconds"}, "targetSpeed": {"value": 5, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Fast one", "duration": {"value": 45, "unit": "seconds"}, "targetSpeed": {"value": 10, "unit": "kilometresPerHour"}, "targetInclination": {"value": 1, "unit": "percent"}},
+          {"kind": "recovery", "label": "Recover", "duration": {"value": 60, "unit": "seconds"}, "targetSpeed": {"value": 6, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Fast two", "duration": {"value": 45, "unit": "seconds"}, "targetSpeed": {"value": 10, "unit": "kilometresPerHour"}, "targetInclination": {"value": 1, "unit": "percent"}},
+          {"kind": "coolDown", "label": "Cool down", "duration": {"value": 90, "unit": "seconds"}, "targetSpeed": {"value": 5, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}}
+        ]
+      }}},
+      "claimedAuthorities": [],
+      "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-004-r1",
+      "caseID": "WI-V1-004",
+      "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "proposal", "proposal": {
+        "contractVersion": "workout-proposal/v1", "suggestedName": "Three repeats", "activity": "indoorRunning",
+        "steps": [
+          {"kind": "warmUp", "label": "Warm up", "duration": {"value": 90, "unit": "seconds"}, "targetSpeed": {"value": 5, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Interval one", "duration": {"value": 30, "unit": "seconds"}, "targetSpeed": {"value": 12, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "recovery", "label": "Recovery one", "duration": {"value": 60, "unit": "seconds"}, "targetSpeed": {"value": 6, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Interval two", "duration": {"value": 30, "unit": "seconds"}, "targetSpeed": {"value": 12, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "recovery", "label": "Recovery two", "duration": {"value": 60, "unit": "seconds"}, "targetSpeed": {"value": 6, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Interval three", "duration": {"value": 30, "unit": "seconds"}, "targetSpeed": {"value": 12, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "recovery", "label": "Recovery three", "duration": {"value": 60, "unit": "seconds"}, "targetSpeed": {"value": 6, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "coolDown", "label": "Cool down", "duration": {"value": 90, "unit": "seconds"}, "targetSpeed": {"value": 5, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}}
+        ]
+      }}},
+      "claimedAuthorities": [],
+      "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-005-r1",
+      "caseID": "WI-V1-005",
+      "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "proposal", "proposal": {
+        "contractVersion": "workout-proposal/v1", "suggestedName": "Mixed duration units", "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "label": "Warm up", "duration": {"value": 2, "unit": "minutes"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Walk", "duration": {"value": 30, "unit": "seconds"}, "targetSpeed": {"value": 8, "unit": "kilometresPerHour"}, "targetInclination": {"value": 2, "unit": "percent"}},
+          {"kind": "coolDown", "label": "Cool down", "duration": {"value": 1, "unit": "minutes"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}}
+        ]
+      }}},
+      "claimedAuthorities": [],
+      "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-006-r1", "caseID": "WI-V1-006", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "clarificationRequired", "reasonCategory": "missingRequiredField", "affectedPaths": ["steps.duration"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-007-r1", "caseID": "WI-V1-007", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "clarificationRequired", "reasonCategory": "ambiguousRequiredField", "affectedPaths": ["steps.targetSpeed"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-008-r1", "caseID": "WI-V1-008", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "clarificationRequired", "reasonCategory": "contradictoryRequest", "affectedPaths": ["steps.repetitions"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-009-r1", "caseID": "WI-V1-009", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "unsupportedRequest", "reasonCategory": "unsupportedActivity", "affectedPaths": ["activity"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-010-r1", "caseID": "WI-V1-010", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "unsupportedRequest", "reasonCategory": "knownCapabilityUnsupported", "affectedPaths": ["capabilities.inclination"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-011-r1", "caseID": "WI-V1-011", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "unsupportedRequest", "reasonCategory": "outOfDomain", "affectedPaths": []}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-012-r1", "caseID": "WI-V1-012", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "refusal", "reasonCategory": "promptInjection", "affectedPaths": []}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-013-r1", "caseID": "WI-V1-013", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "refusal", "reasonCategory": "unsafeRequest", "affectedPaths": ["capabilities.speed"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-014-r1", "caseID": "WI-V1-014", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "refusal", "reasonCategory": "medicalRequest", "affectedPaths": []}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-015-r1", "caseID": "WI-V1-015", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "unsupportedRequest", "reasonCategory": "excessiveComplexity", "affectedPaths": ["steps"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-016-r1", "caseID": "WI-V1-016", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "providerUnavailable", "reasonCategory": "runtimeUnavailable", "affectedPaths": []}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-017-r1", "caseID": "WI-V1-017", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "providerFailure", "reasonCategory": "invocationFailure", "affectedPaths": []}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-018-r1",
+      "caseID": "WI-V1-018",
+      "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "proposal", "proposal": {
+        "contractVersion": "workout-proposal/v1", "suggestedName": "Unknown capability walk", "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "label": "Warm up", "duration": {"value": 60, "unit": "seconds"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+          {"kind": "interval", "label": "Walk", "duration": {"value": 60, "unit": "seconds"}, "targetSpeed": {"value": 6, "unit": "kilometresPerHour"}, "targetInclination": {"value": 1, "unit": "percent"}},
+          {"kind": "coolDown", "label": "Cool down", "duration": {"value": 60, "unit": "seconds"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}}
+        ]
+      }}},
+      "claimedAuthorities": [],
+      "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-019-r1", "caseID": "WI-V1-019", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "unsupportedRequest", "reasonCategory": "unsupportedUnit", "affectedPaths": ["steps.targetSpeed.unit"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    },
+    {
+      "resultID": "fixture-WI-V1-020-r1", "caseID": "WI-V1-020", "repetitionIndex": 1,
+      "observed": {"structure": "valid", "outcome": {"type": "clarificationRequired", "reasonCategory": "contradictoryRequest", "affectedPaths": ["steps.duration"]}},
+      "claimedAuthorities": [], "operationalMeasurements": [{"name": "completeResponseLatency", "status": "unmeasured", "reason": "static fixture"}]
+    }
+  ]
+}

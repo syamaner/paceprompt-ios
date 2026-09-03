@@ -1,0 +1,68 @@
+{
+  "invalidGeneratorOutput": {
+    "resultID": "failure-invalid-generator",
+    "caseID": "WI-V1-001",
+    "repetitionIndex": 1,
+    "observed": {
+      "structure": "invalidGeneratorOutput",
+      "errors": [
+        {"code": "missingRequiredProperty", "path": "$.steps"}
+      ]
+    },
+    "claimedAuthorities": [],
+    "operationalMeasurements": []
+  },
+  "failedCanonicalMapping": {
+    "resultID": "failure-canonical-mapping",
+    "caseID": "WI-V1-001",
+    "repetitionIndex": 1,
+    "observed": {
+      "structure": "valid",
+      "outcome": {
+        "type": "proposal",
+        "proposal": {
+          "contractVersion": "workout-proposal/v1",
+          "suggestedName": "Non-integral seconds",
+          "activity": "indoorWalking",
+          "steps": [
+            {"kind": "warmUp", "label": "Warm up", "duration": {"value": 0.333, "unit": "minutes"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+            {"kind": "interval", "label": "Walk", "duration": {"value": 300, "unit": "seconds"}, "targetSpeed": {"value": 6, "unit": "kilometresPerHour"}, "targetInclination": {"value": 1, "unit": "percent"}},
+            {"kind": "coolDown", "label": "Cool down", "duration": {"value": 120, "unit": "seconds"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}}
+          ]
+        }
+      }
+    },
+    "claimedAuthorities": [],
+    "operationalMeasurements": []
+  },
+  "invalidLocalPlan": {
+    "resultID": "failure-invalid-local-plan",
+    "caseID": "WI-V1-001",
+    "repetitionIndex": 1,
+    "observed": {
+      "structure": "valid",
+      "outcome": {
+        "type": "proposal",
+        "proposal": {
+          "contractVersion": "workout-proposal/v1",
+          "suggestedName": "Out of range",
+          "activity": "indoorWalking",
+          "steps": [
+            {"kind": "warmUp", "label": "Warm up", "duration": {"value": 120, "unit": "seconds"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}},
+            {"kind": "interval", "label": "Walk", "duration": {"value": 300, "unit": "seconds"}, "targetSpeed": {"value": 25, "unit": "kilometresPerHour"}, "targetInclination": {"value": 1, "unit": "percent"}},
+            {"kind": "coolDown", "label": "Cool down", "duration": {"value": 120, "unit": "seconds"}, "targetSpeed": {"value": 4, "unit": "kilometresPerHour"}, "targetInclination": {"value": 0, "unit": "percent"}}
+          ]
+        }
+      }
+    },
+    "claimedAuthorities": [],
+    "operationalMeasurements": []
+  },
+  "scorerFailureEvidence": {
+    "resultID": "failure-incomplete-evidence",
+    "caseID": "WI-V1-001",
+    "repetitionIndex": 1,
+    "claimedAuthorities": [],
+    "operationalMeasurements": []
+  }
+}
