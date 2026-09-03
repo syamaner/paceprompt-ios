@@ -19,7 +19,8 @@ This version contains:
 - deliberate copy and system-share actions, with no automatic persistence or transmission;
 - pure FTMS parsers tested with synthetic payloads;
 - a versioned, Codable workout-plan schema with ordered warm-up, interval, recovery and cool-down steps, explicit seconds, kilometres-per-hour and percent units; and
-- a pure deterministic validator that returns a validated-plan wrapper only after structural and known-capability range checks succeed.
+- a pure deterministic validator that returns a validated-plan wrapper only after structural and known-capability range checks succeed; and
+- an accepted documentation-only [local workout storage and history contract](design/local-workout-storage-and-history-contract.md) for later bounded persistence slices.
 
 It does **not** contain treadmill commands, FTMS Control Point writes, workout execution, OpenRouter, API keys, HealthKit access, a watchOS app or persistent workout history.
 
@@ -33,6 +34,7 @@ The FTMS mappings, behaviours and field layouts were checked on 2 September 2026
 - `TreadmillSetupViewModel` also bounds packet capture to the newest 100 entries and builds the user-requested diagnostic report in memory.
 - SwiftUI views render state and forward deliberate scan, connection, copy, share and clear actions; they do not parse bytes or call CoreBluetooth.
 - `WorkoutPlan` models untrusted plan data without UI, Bluetooth or storage dependencies. `WorkoutPlanValidator` keeps capability unknown, unsupported targets, malformed capability ranges and invalid target values distinct, and never clamps or rounds a target.
+- The local storage contract keeps saved plans, future execution summaries and deliberately ephemeral data separate. It specifies versioned atomic JSON under Application Support, complete file protection, backup exclusion, deletion, recovery and previewable manual export without implementing them.
 
 The client protocol intentionally has no characteristic-write operation.
 
