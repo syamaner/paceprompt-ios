@@ -17,7 +17,9 @@ This version contains:
 - full flag-driven decoding of supported Treadmill Data fields, Training Status values and Fitness Machine Status opcodes, while preserving unavailable sentinels, unknown values and malformed packets;
 - a 100-packet, timestamped, in-memory log with initial-read or notification provenance, raw hexadecimal bytes and decoded values;
 - deliberate copy and system-share actions, with no automatic persistence or transmission;
-- pure FTMS parsers tested with synthetic payloads.
+- pure FTMS parsers tested with synthetic payloads;
+- a versioned, Codable workout-plan schema with ordered warm-up, interval, recovery and cool-down steps, explicit seconds, kilometres-per-hour and percent units; and
+- a pure deterministic validator that returns a validated-plan wrapper only after structural and known-capability range checks succeed.
 
 It does **not** contain treadmill commands, FTMS Control Point writes, workout execution, OpenRouter, API keys, HealthKit access, a watchOS app or persistent workout history.
 
@@ -30,6 +32,7 @@ The FTMS mappings, behaviours and field layouts were checked on 2 September 2026
 - `TreadmillSetupViewModel` adapts client events into explicit observable presentation state.
 - `TreadmillSetupViewModel` also bounds packet capture to the newest 100 entries and builds the user-requested diagnostic report in memory.
 - SwiftUI views render state and forward deliberate scan, connection, copy, share and clear actions; they do not parse bytes or call CoreBluetooth.
+- `WorkoutPlan` models untrusted plan data without UI, Bluetooth or storage dependencies. `WorkoutPlanValidator` keeps capability unknown, unsupported targets, malformed capability ranges and invalid target values distinct, and never clamps or rounds a target.
 
 The client protocol intentionally has no characteristic-write operation.
 
