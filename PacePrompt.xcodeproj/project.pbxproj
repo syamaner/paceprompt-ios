@@ -21,6 +21,7 @@
 		AA000000000000000000100C /* TreadmillSetupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200C /* TreadmillSetupViewModel.swift */; };
 		AA000000000000000000100D /* WorkoutPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200D /* WorkoutPlan.swift */; };
 		AA000000000000000000100E /* WorkoutPlanValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200E /* WorkoutPlanValidator.swift */; };
+		AA000000000000000000100F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000200F /* Assets.xcassets */; };
 		AA0000000000000000001011 /* FTMSParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002011 /* FTMSParserTests.swift */; };
 		AA0000000000000000001012 /* TreadmillPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002012 /* TreadmillPresentationTests.swift */; };
 		AA0000000000000000001013 /* WorkoutPlanValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */; };
@@ -51,6 +52,7 @@
 		AA000000000000000000200C /* TreadmillSetupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreadmillSetupViewModel.swift; sourceTree = "<group>"; };
 		AA000000000000000000200D /* WorkoutPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlan.swift; sourceTree = "<group>"; };
 		AA000000000000000000200E /* WorkoutPlanValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlanValidator.swift; sourceTree = "<group>"; };
+		AA000000000000000000200F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000002011 /* FTMSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSParserTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002012 /* TreadmillPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreadmillPresentationTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlanValidatorTests.swift; sourceTree = "<group>"; };
@@ -91,6 +93,7 @@
 		AA0000000000000000005002 /* PacePrompt */ = {
 			isa = PBXGroup;
 			children = (
+				AA000000000000000000200F /* Assets.xcassets */,
 				AA0000000000000000002001 /* PacePromptApp.swift */,
 				AA0000000000000000002002 /* RootTabView.swift */,
 				AA0000000000000000005003 /* Bluetooth */,
@@ -250,6 +253,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA000000000000000000100F /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -420,6 +424,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
@@ -450,6 +455,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
