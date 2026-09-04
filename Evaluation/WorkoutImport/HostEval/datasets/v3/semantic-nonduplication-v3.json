@@ -133,16 +133,16 @@
       "category": "proposal",
       "nearestDevelopmentCaseID": "WI-V3-D001",
       "nearestDevelopmentIsFewShot": true,
-      "templateDifference": "Same behaviour (plain three-step walk) as the few-shot example, but a different opening phrase, different durations (3/6/3 minutes) and different speeds; the few-shot answer cannot be reused because every number differs.",
+      "templateDifference": "Development is a prose request ('warm up for 2 minutes at 3 km/h and 0%, then ...'); this case is three labelled lines with comma-separated values and no connecting verbs, so the model must read a tabular structure rather than a narrative one. Same plain-walk behaviour, every number different.",
       "supportingLexicalEvidence": {
-        "skeletonJaccardToNearestDevelopment": 0.789,
+        "skeletonJaccardToNearestDevelopment": 0.409,
         "maxSkeletonJaccardToV2": {
-          "caseID": "WI-V2-H008",
-          "value": 0.778
+          "caseID": "WI-V2-H001",
+          "value": 0.6
         },
         "maxSkeletonJaccardToV1": {
-          "caseID": "WI-V1-001",
-          "value": 0.722
+          "caseID": "WI-V1-003",
+          "value": 0.526
         }
       }
     },
@@ -943,16 +943,16 @@
       "category": "unsupportedUnit",
       "nearestDevelopmentCaseID": "WI-V3-D014",
       "nearestDevelopmentIsFewShot": false,
-      "templateDifference": "Same degree unit as development but phrased as 'degrees of slope' with 'at' rather than 'and', and a 4-degree interval.",
+      "templateDifference": "Development states degrees per step three times; here a single slope in degrees is stated once with whole-workout scope and no step mentions inclination, so the unit defect reaches every step through scoping rather than repetition.",
       "supportingLexicalEvidence": {
-        "skeletonJaccardToNearestDevelopment": 0.786,
+        "skeletonJaccardToNearestDevelopment": 0.524,
         "maxSkeletonJaccardToV2": {
-          "caseID": "WI-V2-D001",
-          "value": 0.588
+          "caseID": "WI-V2-D006",
+          "value": 0.462
         },
         "maxSkeletonJaccardToV1": {
-          "caseID": "WI-V1-018",
-          "value": 0.529
+          "caseID": "WI-V1-001",
+          "value": 0.417
         }
       }
     },
@@ -1105,16 +1105,16 @@
       "category": "knownCapabilityUnsupported",
       "nearestDevelopmentCaseID": "WI-V3-D009",
       "nearestDevelopmentIsFewShot": true,
-      "templateDifference": "Same unsupported speed capability but a run with different values and 'warming up / cooling down' phrasing.",
+      "templateDifference": "Development is a three-step walk with per-step speeds; here the speed is stated once with whole-workout scope over a run containing a four-times repeated block, so the unsupported capability is requested through scope and expansion rather than per step.",
       "supportingLexicalEvidence": {
-        "skeletonJaccardToNearestDevelopment": 0.45,
+        "skeletonJaccardToNearestDevelopment": 0.44,
         "maxSkeletonJaccardToV2": {
-          "caseID": "WI-V2-H007",
-          "value": 0.5
+          "caseID": "WI-V2-D004",
+          "value": 0.565
         },
         "maxSkeletonJaccardToV1": {
-          "caseID": "WI-V1-018",
-          "value": 0.35
+          "caseID": "WI-V1-004",
+          "value": 0.483
         }
       }
     },
@@ -1195,16 +1195,16 @@
       "category": "excessiveComplexity",
       "nearestDevelopmentCaseID": "WI-V3-D016",
       "nearestDevelopmentIsFewShot": false,
-      "templateDifference": "Same over-limit pair repetition but 33 repeats (66 steps) in a walk, minutes rather than seconds.",
+      "templateDifference": "Development repeats a two-step block a numeral number of times ('repeat 40 times ... followed by'); here a three-step set is repeated a spelled-out number of times ('twenty-two rounds') and the count must be multiplied by three to see that 66 exceeds the limit.",
       "supportingLexicalEvidence": {
-        "skeletonJaccardToNearestDevelopment": 0.857,
+        "skeletonJaccardToNearestDevelopment": 0.185,
         "maxSkeletonJaccardToV2": {
-          "caseID": "WI-V2-H027",
-          "value": 0.625
+          "caseID": "WI-V2-D006",
+          "value": 0.276
         },
         "maxSkeletonJaccardToV1": {
           "caseID": "WI-V1-005",
-          "value": 0.353
+          "value": 0.381
         }
       }
     },
@@ -1375,16 +1375,16 @@
       "category": "ambiguousRequiredField",
       "nearestDevelopmentCaseID": "WI-V3-D006",
       "nearestDevelopmentIsFewShot": true,
-      "templateDifference": "Same two-unit alternative but 'either ... or' wording in a walk with a longer interval.",
+      "templateDifference": "Development embeds 'X km/h or Y mph' inline in a step; here the two-unit choice is delegated to the model in a separate sentence ('whichever you prefer'), testing that delegation is still ambiguity and not permission to choose.",
       "supportingLexicalEvidence": {
-        "skeletonJaccardToNearestDevelopment": 0.786,
+        "skeletonJaccardToNearestDevelopment": 0.6,
         "maxSkeletonJaccardToV2": {
-          "caseID": "WI-V2-H012",
-          "value": 0.706
+          "caseID": "WI-V2-H007",
+          "value": 0.5
         },
         "maxSkeletonJaccardToV1": {
           "caseID": "WI-V1-018",
-          "value": 0.625
+          "value": 0.375
         }
       }
     },
@@ -1501,16 +1501,16 @@
       "category": "contradictoryRequest",
       "nearestDevelopmentCaseID": "WI-V3-D007",
       "nearestDevelopmentIsFewShot": true,
-      "templateDifference": "Same duration-value contradiction pattern but a different pair of durations, 'long' phrasing, and different speeds.",
+      "templateDifference": "Development demands two exact durations inline for one step; here a whole-workout scope fixes every step at 4 minutes and one step separately demands 7 minutes, so the contradiction arises between a scoped rule and a per-step value rather than between two adjacent numbers.",
       "supportingLexicalEvidence": {
-        "skeletonJaccardToNearestDevelopment": 0.667,
+        "skeletonJaccardToNearestDevelopment": 0.5,
         "maxSkeletonJaccardToV2": {
-          "caseID": "WI-V2-D001",
-          "value": 0.667
+          "caseID": "WI-V2-D007",
+          "value": 0.56
         },
         "maxSkeletonJaccardToV1": {
-          "caseID": "WI-V1-018",
-          "value": 0.611
+          "caseID": "WI-V1-001",
+          "value": 0.5
         }
       }
     },
@@ -1566,7 +1566,9 @@
       "WI-V3-H065 replaced with a missing-activity case expecting missingRequiredField [\"activity\"]",
       "WI-V3-H012 jog synonym proposal ratified as indoorRunning",
       "WI-V3-H030 belt lubrication ratified as outOfDomain []",
-      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]"
+      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]",
+      "WI-V3-H001, H046, H055, H060, H070 and H077 rewritten with materially different semantic structures from their nearest development cases (labelled lines; whole-workout scoped degrees; scoped speed over a repeated block; spelled-out count over a three-step set; unit choice delegated in a separate sentence; scoped per-step duration contradicted by one step); categories, paths and proposal role unchanged",
+      "WI-V3-H055 repeated block given explicit interval and recovery kinds; review few-shot flags for the H046 to D014 and H060 to D016 comparisons corrected to false and now derived mechanically from the referenced development case"
     ],
     "heldoutSealed": true
   },

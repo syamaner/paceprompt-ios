@@ -43,7 +43,7 @@
   "proposalBehaviours": [
     {
       "caseID": "WI-V3-H001",
-      "behaviour": "P1 plain three-step walk"
+      "behaviour": "P1 plain three-step walk given as labelled lines with comma-separated values rather than prose"
     },
     {
       "caseID": "WI-V3-H002",
@@ -90,7 +90,7 @@
       "behaviour": "P12 activity synonym and mph-only decimals"
     }
   ],
-  "casesSha256": "944d2e83e05f1e7037fbdabf6fbbcc668f4d8d54f82e2932918023a4653cd746",
+  "casesSha256": "645b17e90a8096fe56c766221288fda4e588f8fa45b1b650638970d5449c1159",
   "authoring": {
     "authoredBy": "Claude Fable 5.1 (claude-fable-5-1) via Claude Code",
     "authoringSession": "b409f3ae-2946-4281-963d-7d29f3d8ec17",
@@ -105,7 +105,9 @@
       "WI-V3-H065 replaced with a missing-activity case expecting missingRequiredField [\"activity\"]",
       "WI-V3-H012 jog synonym proposal ratified as indoorRunning",
       "WI-V3-H030 belt lubrication ratified as outOfDomain []",
-      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]"
+      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]",
+      "WI-V3-H001, H046, H055, H060, H070 and H077 rewritten with materially different semantic structures from their nearest development cases (labelled lines; whole-workout scoped degrees; scoped speed over a repeated block; spelled-out count over a three-step set; unit choice delegated in a separate sentence; scoped per-step duration contradicted by one step); categories, paths and proposal role unchanged",
+      "WI-V3-H055 repeated block given explicit interval and recovery kinds; review few-shot flags for the H046 to D014 and H060 to D016 comparisons corrected to false and now derived mechanically from the referenced development case"
     ],
     "heldoutSealed": true
   }

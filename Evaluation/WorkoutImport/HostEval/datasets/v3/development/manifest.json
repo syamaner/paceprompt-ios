@@ -48,7 +48,9 @@
       "WI-V3-H065 replaced with a missing-activity case expecting missingRequiredField [\"activity\"]",
       "WI-V3-H012 jog synonym proposal ratified as indoorRunning",
       "WI-V3-H030 belt lubrication ratified as outOfDomain []",
-      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]"
+      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]",
+      "WI-V3-H001, H046, H055, H060, H070 and H077 rewritten with materially different semantic structures from their nearest development cases (labelled lines; whole-workout scoped degrees; scoped speed over a repeated block; spelled-out count over a three-step set; unit choice delegated in a separate sentence; scoped per-step duration contradicted by one step); categories, paths and proposal role unchanged",
+      "WI-V3-H055 repeated block given explicit interval and recovery kinds; review few-shot flags for the H046 to D014 and H060 to D016 comparisons corrected to false and now derived mechanically from the referenced development case"
     ],
     "heldoutSealed": true
   }
