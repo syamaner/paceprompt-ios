@@ -1,0 +1,9 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-gemini-diagnostic/v2.5",
+  "purpose": "test-required-reasoning-without-effort-or-exclusion",
+  "scope": {"developmentCaseID": "WI-V2-D006", "warmupsPerModel": 1, "heldoutCalls": 0},
+  "changedVariable": {"reasoningEnabled": true, "reasoningEffort": null, "reasoningExcluded": false},
+  "unchangedInputs": {"prompt": "workout-import-prompt/v2", "providerTransportSchema": "workout-import-provider-transport/v2.3", "hostSemanticSchema": "workout-import-model-output/v2"},
+  "execution": {"globalConcurrency": 1, "minimumInterCallDelaySeconds": 2, "automaticRetries": 0, "httpConnectRetries": 0, "connectTimeoutSeconds": 15, "attemptTimeoutSeconds": 180, "cancelFlushSeconds": 15, "cache": false, "cachePrompt": false, "resumable": false},
+  "spending": {"currency": "USD", "hardLimit": "2.00", "enforcement": "worstCaseBeforeEveryCallPlusEndpointPriceCap"}
+}

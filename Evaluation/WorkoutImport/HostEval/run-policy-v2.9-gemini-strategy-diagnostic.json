@@ -1,0 +1,57 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-gemini-semantic-json/v2.9",
+  "purpose": "verify-profile-validated-semantic-json-strategy-through-inspect-before-heldout-evaluation",
+  "scope": {
+    "developmentCaseID": "WI-V2-D006",
+    "warmupsPerModel": 1,
+    "maximumCalls": 2,
+    "heldoutCalls": 0
+  },
+  "strategy": {
+    "registry": "strategyRegistryV29",
+    "selection": "closedExactRouteRegistry",
+    "unknownRouteBehaviour": "failClosed",
+    "google/gemini-3.5-flash-lite": "semanticJsonV29",
+    "google/gemini-3.7-flash": "semanticJsonV29"
+  },
+  "schemaProfiles": {
+    "selection": "ownedByTransportStrategy",
+    "validation": "offlineBeforePayloadConstruction",
+    "google/gemini-3.5-flash-lite": "googleGeminiMinimalV29",
+    "google/gemini-3.7-flash": "googleGeminiMinimalV29"
+  },
+  "changedVariable": {
+    "providerTransportStrategy": "semanticJsonV29",
+    "providerTransportSchema": "workout-import-provider-transport-semantic-json/v2.9",
+    "envelopeProjection": "oneStrictStringContainingCanonicalSemanticV2JSON",
+    "schemaProfile": "googleGeminiMinimalV29"
+  },
+  "unchangedInputs": {
+    "prompt": "workout-import-prompt/v2",
+    "developmentExamples": "workout-import-development/v2",
+    "hostSemanticSchema": "workout-import-model-output/v2",
+    "normalisedResultEnvelope": "workout-import-result/v1",
+    "deterministicScorer": "workout-import-scorer/v1"
+  },
+  "reasoning": {
+    "google/gemini-3.5-flash-lite": {"enabled": true, "effort": "minimal", "exclude": false},
+    "google/gemini-3.7-flash": {"enabled": true, "effort": "medium", "exclude": false}
+  },
+  "execution": {
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "cancelFlushSeconds": 15,
+    "cache": false,
+    "cachePrompt": false,
+    "resumable": false
+  },
+  "spending": {
+    "currency": "USD",
+    "hardLimit": "2.00",
+    "enforcement": "worstCaseBeforeEveryCallPlusEndpointPriceCap"
+  }
+}

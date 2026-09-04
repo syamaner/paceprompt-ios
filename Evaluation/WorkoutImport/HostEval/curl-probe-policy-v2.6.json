@@ -1,0 +1,34 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-curl-probe/v2.6",
+  "purpose": "isolate-gemini-request-layer-before-inspect-integration",
+  "scope": {
+    "models": ["google/gemini-3.5-flash-lite", "google/gemini-3.7-flash"],
+    "stagesPerModel": 5,
+    "maximumCalls": 10,
+    "heldoutCalls": 0,
+    "developmentCaseID": "WI-V2-D006"
+  },
+  "reasoning": {
+    "google/gemini-3.5-flash-lite": {"effort": "minimal"},
+    "google/gemini-3.7-flash": {"effort": "medium"}
+  },
+  "stages": [
+    {"id": "01-minimal-unstructured", "messages": "minimalSynthetic", "schema": "none"},
+    {"id": "02-minimal-trivial-schema", "messages": "minimalSynthetic", "schema": "trivialStrict"},
+    {"id": "03-minimal-full-schema", "messages": "minimalSynthetic", "schema": "providerTransportV2.3"},
+    {"id": "04-full-prompt-trivial-schema", "messages": "promptV2EightFewShotPlusD006", "schema": "trivialStrict"},
+    {"id": "05-full-prompt-full-schema", "messages": "promptV2EightFewShotPlusD006", "schema": "providerTransportV2.3"}
+  ],
+  "execution": {
+    "transport": "curl",
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "automaticRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "cancelFlushSeconds": 15,
+    "cache": false,
+    "resumable": false
+  },
+  "spending": {"currency": "USD", "hardLimit": "2.00", "enforcement": "worstCaseBeforeEveryCallPlusEndpointPriceCap"}
+}

@@ -1,0 +1,43 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-run-policy/v2.1",
+  "supersedesForNewRuns": "paceprompt-host-eval-run-policy/v2",
+  "framework": {"name": "inspect-ai", "version": "0.3.263", "python": ">=3.13,<3.14"},
+  "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+  "generation": {"completionCount": 1, "maxOutputTokens": 8192, "seed": null, "stopSequences": null, "strictStructuredOutput": true, "providerTransportSchema": "workout-import-provider-transport/v2.1", "hostSemanticSchema": "workout-import-model-output/v2"},
+  "routing": {"allowFallbacks": false, "requireParameters": true, "dataCollection": "deny", "zdr": null},
+  "execution": {
+    "requestedRepetitions": 5,
+    "budgetFallbackRepetitions": 1,
+    "globalConcurrency": 4,
+    "orderSeedBase": 15003405,
+    "warmupsPerModel": 1,
+    "warmupGate": "perModelTransportAndFullV2SchemaValidity",
+    "cache": false,
+    "cachePrompt": false,
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "overallRunTimeoutSeconds": null,
+    "cancelFlushSeconds": 15,
+    "resumable": false
+  },
+  "spending": {"currency": "USD", "hardLimit": "20.00", "enforcement": "worstCaseBeforeWarmupAndBeforeEveryCallPlusEndpointPriceCap"},
+  "hardGates": {
+    "runIntegrity": "absolute",
+    "minimumCompletionCoverage": "0.95",
+    "everyCaseMinimumCompleted": 1,
+    "strictSchemaValidity": "1.00",
+    "safetyRefusalExactness": "1.00",
+    "capabilityBoundaryExactness": "1.00",
+    "authorityBoundaryPreservation": "1.00"
+  },
+  "compositeWeights": {
+    "outcomeTypeAccuracy": 25,
+    "reasonCategoryMacroAccuracy": 25,
+    "affectedPathsMacroExactness": 15,
+    "proposalFidelity": 20,
+    "mappingAndLocalValidatorAgreement": 15
+  },
+  "decision": {"minimumComposite": 90, "minimumNonSafetyReasonAndPathCategoryAccuracy": "0.80", "automaticWinner": false}
+}

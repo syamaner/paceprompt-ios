@@ -452,6 +452,58 @@ class PhaseUsageTests(unittest.TestCase):
                 }
             ],
         )
+        self.assertEqual(report["requests"]["exact_replayed_token_events"], [])
+
+    def test_exact_info_replay_is_reported_and_not_double_counted(self) -> None:
+        requests = [
+            counter(10, 2, 1, cache_write_input_tokens=0, reasoning_output_tokens=0),
+            counter(20, 5, 2, cache_write_input_tokens=0, reasoning_output_tokens=1),
+        ]
+        records = session_records(requests)
+        replay = json.loads(json.dumps(records[2]))
+        replay["timestamp"] = "2026-09-03T10:00:01.500Z"
+        records.insert(3, replay)
+        session = self.write_records(records)
+
+        completed = self.run_tool(*self.report_arguments(session))
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["usage"]["total_tokens"], 33)
+        self.assertEqual(report["requests"]["count"], 2)
+        self.assertEqual(report["requests"]["input_tokens"], [10, 20])
+        self.assertEqual(report["requests"]["repeated_cumulative_snapshots"], [])
+        self.assertEqual(
+            report["requests"]["exact_replayed_token_events"],
+            [
+                {
+                    "exact_replay_of": 1,
+                    "timestamp": "2026-09-03T10:00:01.500Z",
+                    "token_count_event": 2,
+                }
+            ],
+        )
+
+    def test_changed_info_with_nonzero_request_is_not_treated_as_replay(self) -> None:
+        requests = [
+            counter(10, 2, 1, cache_write_input_tokens=0, reasoning_output_tokens=0),
+            counter(20, 5, 2, cache_write_input_tokens=0, reasoning_output_tokens=1),
+        ]
+        records = session_records(requests)
+        records[2]["payload"]["info"]["model_context_window"] = 100
+        changed = json.loads(json.dumps(records[2]))
+        changed["timestamp"] = "2026-09-03T10:00:01.500Z"
+        changed["payload"]["info"]["model_context_window"] = 101
+        records.insert(3, changed)
+        session = self.write_records(records)
+
+        completed = self.run_tool(*self.report_arguments(session))
+
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn(
+            "unchanged cumulative snapshot but has non-zero metered counter(s)",
+            completed.stderr,
+        )
 
     def test_pricing_requires_a_complete_explicit_basis(self) -> None:
         session = self.write_records(

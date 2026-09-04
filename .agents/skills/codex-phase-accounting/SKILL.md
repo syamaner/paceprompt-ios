@@ -39,7 +39,7 @@ python3 .agents/skills/codex-phase-accounting/scripts/phase_usage.py report \
 
 Omit `--baseline` only for a deliberately labelled whole-session measurement. The helper validates cumulative and request counters, preserves missing optional counters as `null`, checks that request totals reconcile to the phase delta, and reports every measured request input size. A request crosses the supplied threshold only when its input is greater than the threshold.
 
-Codex can emit an unchanged cumulative snapshot after context maintenance with all metered `last_token_usage` components explicitly zero and a standalone `total_tokens` context-size value. The helper validates and reports that record as a repeated cumulative snapshot, but does not count it as a request, usage or cost. Any non-zero metered component on an unchanged snapshot remains an actionable error.
+Codex can emit an unchanged cumulative snapshot after context maintenance with all metered `last_token_usage` components explicitly zero and a standalone `total_tokens` context-size value. The helper validates and reports that record as a repeated cumulative snapshot, but does not count it as a request, usage or cost. It also reports and excludes an idempotently replayed token event only when the complete canonical `info` payload exactly matches the immediately preceding token event. That replay is not counted as a request, usage or cost. Any non-identical unchanged snapshot with a non-zero metered component remains an actionable error.
 
 ## Calculate an API-equivalent estimate
 

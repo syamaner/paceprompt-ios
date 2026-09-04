@@ -70,6 +70,8 @@ class TokenEvent:
     total: Counter
     request: Counter | None
     repeated_snapshot_last_total_tokens: int | None = None
+    exact_replay_of: int | None = None
+    info_fingerprint: str = ""
 
 
 @dataclass(frozen=True)
@@ -275,12 +277,24 @@ def load_session(path: Path) -> Session:
                     label=f"token_count event {ordinal} total_token_usage",
                 )
                 repeated_snapshot_last_total_tokens = None
+                exact_replay_of = None
+                info_fingerprint = json.dumps(
+                    info,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                )
                 if token_events and not counter_mismatch(token_events[-1].total, total):
                     request = None
-                    repeated_snapshot_last_total_tokens = parse_repeated_snapshot_request(
-                        info.get("last_token_usage"),
-                        label=f"token_count event {ordinal} last_token_usage",
-                    )
+                    if token_events[-1].info_fingerprint == info_fingerprint:
+                        exact_replay_of = token_events[-1].ordinal
+                    else:
+                        repeated_snapshot_last_total_tokens = (
+                            parse_repeated_snapshot_request(
+                                info.get("last_token_usage"),
+                                label=f"token_count event {ordinal} last_token_usage",
+                            )
+                        )
                 else:
                     request = parse_counter(
                         info.get("last_token_usage"),
@@ -299,6 +313,8 @@ def load_session(path: Path) -> Session:
                         total,
                         request,
                         repeated_snapshot_last_total_tokens,
+                        exact_replay_of,
+                        info_fingerprint,
                     )
                 )
 
@@ -734,7 +750,16 @@ def build_report(
                     ),
                 }
                 for event in events
-                if event.request is None
+                if event.repeated_snapshot_last_total_tokens is not None
+            ],
+            "exact_replayed_token_events": [
+                {
+                    "token_count_event": event.ordinal,
+                    "timestamp": event.timestamp,
+                    "exact_replay_of": event.exact_replay_of,
+                }
+                for event in events
+                if event.exact_replay_of is not None
             ],
         },
         "api_equivalent": None,

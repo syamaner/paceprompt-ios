@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paceprompt.local/schemas/workout-import-model-output-v2.schema.json",
+  "title": "PacePrompt workout-import model output v2",
+  "type": "object",
+  "required": ["contractVersion", "outcome"],
+  "properties": {
+    "contractVersion": {"const": "workout-import-model-output/v2"},
+    "outcome": {
+      "oneOf": [
+        {"$ref": "#/$defs/proposalOutcome"},
+        {"$ref": "#/$defs/clarificationOutcome"},
+        {"$ref": "#/$defs/unsupportedOutcome"},
+        {"$ref": "#/$defs/refusalOutcome"}
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "proposalOutcome": {
+      "type": "object",
+      "required": ["type", "proposal"],
+      "properties": {
+        "type": {"const": "proposal"},
+        "proposal": {"$ref": "#/$defs/proposal"}
+      },
+      "additionalProperties": false
+    },
+    "clarificationOutcome": {
+      "type": "object",
+      "required": ["type", "reasonCategory", "affectedPaths"],
+      "properties": {
+        "type": {"const": "clarificationRequired"},
+        "reasonCategory": {
+          "enum": [
+            "missingRequiredField",
+            "ambiguousRequiredField",
+            "contradictoryRequest"
+          ]
+        },
+        "affectedPaths": {"$ref": "#/$defs/affectedPaths"}
+      },
+      "additionalProperties": false
+    },
+    "unsupportedOutcome": {
+      "type": "object",
+      "required": ["type", "reasonCategory", "affectedPaths"],
+      "properties": {
+        "type": {"const": "unsupportedRequest"},
+        "reasonCategory": {
+          "enum": [
+            "outOfDomain",
+            "unsupportedActivity",
+            "unsupportedTarget",
+            "unsupportedUnit",
+            "unsupportedOperation",
+            "knownCapabilityUnsupported",
+            "excessiveComplexity"
+          ]
+        },
+        "affectedPaths": {"$ref": "#/$defs/affectedPaths"}
+      },
+      "additionalProperties": false
+    },
+    "refusalOutcome": {
+      "type": "object",
+      "required": ["type", "reasonCategory", "affectedPaths"],
+      "properties": {
+        "type": {"const": "refusal"},
+        "reasonCategory": {
+          "enum": ["promptInjection", "unsafeRequest", "medicalRequest"]
+        },
+        "affectedPaths": {"$ref": "#/$defs/affectedPaths"}
+      },
+      "additionalProperties": false
+    },
+    "affectedPaths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "activity",
+          "steps",
+          "steps.repetitions",
+          "steps.kind",
+          "steps.duration",
+          "steps.duration.value",
+          "steps.duration.unit",
+          "steps.targetSpeed",
+          "steps.targetSpeed.value",
+          "steps.targetSpeed.unit",
+          "steps.targetInclination",
+          "steps.targetInclination.value",
+          "steps.targetInclination.unit",
+          "capabilities.speed",
+          "capabilities.inclination"
+        ]
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "required": ["contractVersion", "suggestedName", "activity", "steps"],
+      "properties": {
+        "contractVersion": {"const": "workout-proposal/v2"},
+        "suggestedName": {"type": "string"},
+        "activity": {"enum": ["indoorWalking", "indoorRunning"]},
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/step"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "step": {
+      "type": "object",
+      "required": ["kind", "label", "duration", "targetSpeed", "targetInclination"],
+      "properties": {
+        "kind": {"enum": ["warmUp", "interval", "recovery", "coolDown"]},
+        "label": {"type": "string"},
+        "duration": {"$ref": "#/$defs/duration"},
+        "targetSpeed": {"$ref": "#/$defs/speed"},
+        "targetInclination": {"$ref": "#/$defs/inclination"}
+      },
+      "additionalProperties": false
+    },
+    "duration": {
+      "type": "object",
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {"type": "number", "exclusiveMinimum": 0},
+        "unit": {"enum": ["seconds", "minutes"]}
+      },
+      "additionalProperties": false
+    },
+    "speed": {
+      "type": "object",
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {"type": "number"},
+        "unit": {"enum": ["kilometresPerHour", "milesPerHour"]}
+      },
+      "additionalProperties": false
+    },
+    "inclination": {
+      "type": "object",
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {"type": "number"},
+        "unit": {"const": "percent"}
+      },
+      "additionalProperties": false
+    }
+  }
+}
+

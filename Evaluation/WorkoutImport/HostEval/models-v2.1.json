@@ -1,0 +1,12 @@
+{
+  "catalogueObservedAt": "2026-09-04",
+  "catalogueURL": "https://openrouter.ai/api/v1/models",
+  "models": [
+    {"requestedModelID": "openai/gpt-5.6-sol", "canonicalRevision": "openai/gpt-5.6-sol-20260709", "providerEndpoint": "openai", "quantization": null, "role": "ceiling", "temperature": null, "topP": null, "reasoning": {"enabled": false, "effort": "none", "exclude": false}},
+    {"requestedModelID": "anthropic/claude-sonnet-5", "canonicalRevision": "anthropic/claude-sonnet-5-20260630", "providerEndpoint": "anthropic", "quantization": null, "role": "ceiling", "temperature": null, "topP": null, "reasoning": {"enabled": false, "effort": null, "exclude": false}},
+    {"requestedModelID": "openai/gpt-5.6-luna", "canonicalRevision": "openai/gpt-5.6-luna-20260709", "providerEndpoint": "openai", "quantization": null, "role": "productionCandidate", "temperature": null, "topP": null, "reasoning": {"enabled": false, "effort": "none", "exclude": false}},
+    {"requestedModelID": "google/gemini-3.5-flash-lite", "canonicalRevision": "google/gemini-3.5-flash-lite-20260721", "providerEndpoint": "google-ai-studio", "quantization": null, "role": "productionCandidate", "temperature": 0, "topP": 1, "reasoning": {"enabled": true, "effort": "minimal", "exclude": true}},
+    {"requestedModelID": "deepseek/deepseek-v4-flash-0731", "canonicalRevision": "deepseek/deepseek-v4-flash-20260731", "providerEndpoint": "deepinfra/fp8", "quantization": "fp8", "role": "productionCandidate", "temperature": 0, "topP": 1, "reasoning": {"enabled": false, "effort": null, "exclude": false}},
+    {"requestedModelID": "google/gemini-3.7-flash", "canonicalRevision": "google/gemini-3.7-flash-20260813", "providerEndpoint": "google-ai-studio", "quantization": null, "role": "productionCandidate", "temperature": 0, "topP": 1, "reasoning": {"enabled": true, "effort": "low", "exclude": true}}
+  ]
+}
