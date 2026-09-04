@@ -4006,7 +4006,7 @@
     "locale": "en-GB",
     "scenarioFamily": "feedback-loop-sequence",
     "fewShot": false,
-    "prompt": "Indoor run where each step's speed is 10% faster than the previous step and the sequence continues recursively for as long as my heart rate allows.",
+    "prompt": "Indoor run: start with a 1 minute warm-up at 8 km/h and 0%, then define every following step recursively from the one before it, 1 km/h faster, twice as long and still 0%, and keep generating steps that way with no end.",
     "capabilities": {
       "speed": {
         "state": "unknown"
@@ -4029,7 +4029,7 @@
       "unsupportedCapabilityHandling": "notApplicable"
     },
     "conventionTags": [],
-    "rationale": "Rule 10 fires: a recursive, sensor-dependent sequence cannot be materialised. This is a structural problem with the sequence itself rather than a counted repetition, so the path is steps."
+    "rationale": "Rules 1 to 9 do not apply: the activity is an indoor run, the only target types are duration, absolute speed and inclination, and every unit is supported. Rule 10 fires: the sequence is defined recursively from its predecessor and has no end, so it cannot be materialised as a finite list. No count is stated, so this is a structural problem with the sequence itself rather than a counted repetition, and the path is steps."
   },
   {
     "caseContractVersion": "workout-import-case/v3",

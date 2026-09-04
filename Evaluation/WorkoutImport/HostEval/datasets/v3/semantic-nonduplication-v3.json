@@ -1267,16 +1267,16 @@
       "category": "excessiveComplexity",
       "nearestDevelopmentCaseID": "WI-V3-D016",
       "nearestDevelopmentIsFewShot": false,
-      "templateDifference": "Recursive sensor-driven progression rather than a counted repetition; the only excessiveComplexity case pathed to steps.",
+      "templateDifference": "Recursively defined, endless progression (each step derived from its predecessor) rather than a counted repetition; no heart-rate or other earlier-rule problem, so rule 10 is the only defect and the path is steps.",
       "supportingLexicalEvidence": {
-        "skeletonJaccardToNearestDevelopment": 0.121,
+        "skeletonJaccardToNearestDevelopment": 0.175,
         "maxSkeletonJaccardToV2": {
           "caseID": "WI-V2-H005",
-          "value": 0.209
+          "value": 0.265
         },
         "maxSkeletonJaccardToV1": {
-          "caseID": "WI-V1-006",
-          "value": 0.132
+          "caseID": "WI-V1-002",
+          "value": 0.225
         }
       }
     },
@@ -1565,7 +1565,8 @@
       "WI-V3-H063 unbounded alternation relabelled from steps.repetitions to steps (no count stated)",
       "WI-V3-H065 replaced with a missing-activity case expecting missingRequiredField [\"activity\"]",
       "WI-V3-H012 jog synonym proposal ratified as indoorRunning",
-      "WI-V3-H030 belt lubrication ratified as outOfDomain []"
+      "WI-V3-H030 belt lubrication ratified as outOfDomain []",
+      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]"
     ],
     "heldoutSealed": true
   },

@@ -90,7 +90,7 @@
       "behaviour": "P12 activity synonym and mph-only decimals"
     }
   ],
-  "casesSha256": "29a650811bf3baccc0782dcfe9d45ba5ed29a410e6b21204d7380fa8c8c0c531",
+  "casesSha256": "944d2e83e05f1e7037fbdabf6fbbcc668f4d8d54f82e2932918023a4653cd746",
   "authoring": {
     "authoredBy": "Claude Fable 5.1 (claude-fable-5-1) via Claude Code",
     "authoringSession": "b409f3ae-2946-4281-963d-7d29f3d8ec17",
@@ -104,7 +104,8 @@
       "WI-V3-H063 unbounded alternation relabelled from steps.repetitions to steps (no count stated)",
       "WI-V3-H065 replaced with a missing-activity case expecting missingRequiredField [\"activity\"]",
       "WI-V3-H012 jog synonym proposal ratified as indoorRunning",
-      "WI-V3-H030 belt lubrication ratified as outOfDomain []"
+      "WI-V3-H030 belt lubrication ratified as outOfDomain []",
+      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]"
     ],
     "heldoutSealed": true
   }
