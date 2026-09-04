@@ -1,0 +1,111 @@
+{
+  "datasetContractVersion": "workout-import-dataset-manifest/v3",
+  "datasetID": "paceprompt-workout-import-heldout/v3",
+  "purpose": "scored-held-out",
+  "caseCount": 79,
+  "localeCounts": {
+    "en-GB": 79
+  },
+  "proposalCaseCount": 12,
+  "reasonCategoryCaseCount": 67,
+  "safetyCaseCount": 15,
+  "nonSafetyReasonCaseCount": 52,
+  "categoryCounts": {
+    "ambiguousRequiredField": 5,
+    "contradictoryRequest": 5,
+    "excessiveComplexity": 5,
+    "knownCapabilityUnsupported": 6,
+    "medicalRequest": 5,
+    "missingRequiredField": 5,
+    "outOfDomain": 5,
+    "promptInjection": 5,
+    "proposal": 12,
+    "unsafeRequest": 5,
+    "unsupportedActivity": 6,
+    "unsupportedOperation": 5,
+    "unsupportedTarget": 5,
+    "unsupportedUnit": 5
+  },
+  "orderingCaseIDs": {
+    "unsupportedActivityBeforeMissingRequiredField": "WI-V3-H038",
+    "knownCapabilityUnsupportedBeforeRangeValidation": "WI-V3-H059"
+  },
+  "requiredSecondaryProblemCaseIDs": {
+    "contradictoryRequestWithUnsupportedUnit": "WI-V3-H079",
+    "missingRequiredFieldWithAmbiguousValue": "WI-V3-H069"
+  },
+  "embeddedSafetyCaseIDs": [
+    "WI-V3-H013",
+    "WI-V3-H014",
+    "WI-V3-H015",
+    "WI-V3-H018"
+  ],
+  "proposalBehaviours": [
+    {
+      "caseID": "WI-V3-H001",
+      "behaviour": "P1 plain three-step walk"
+    },
+    {
+      "caseID": "WI-V3-H002",
+      "behaviour": "P2 mixed units across steps"
+    },
+    {
+      "caseID": "WI-V3-H003",
+      "behaviour": "P3 seconds and fractional minutes preserved as stated"
+    },
+    {
+      "caseID": "WI-V3-H004",
+      "behaviour": "P4 whole-workout scoped inclination"
+    },
+    {
+      "caseID": "WI-V3-H005",
+      "behaviour": "P5 explicit finite repetition"
+    },
+    {
+      "caseID": "WI-V3-H006",
+      "behaviour": "P6 unique fully specified antecedent"
+    },
+    {
+      "caseID": "WI-V3-H007",
+      "behaviour": "P7 unknown capabilities"
+    },
+    {
+      "caseID": "WI-V3-H008",
+      "behaviour": "P8 inclination range handoff"
+    },
+    {
+      "caseID": "WI-V3-H009",
+      "behaviour": "P9 increment handoff"
+    },
+    {
+      "caseID": "WI-V3-H010",
+      "behaviour": "P10 exact 64-step boundary"
+    },
+    {
+      "caseID": "WI-V3-H011",
+      "behaviour": "P11 step-scoped flat and level wording"
+    },
+    {
+      "caseID": "WI-V3-H012",
+      "behaviour": "P12 activity synonym and mph-only decimals"
+    }
+  ],
+  "casesSha256": "29a650811bf3baccc0782dcfe9d45ba5ed29a410e6b21204d7380fa8c8c0c531",
+  "authoring": {
+    "authoredBy": "Claude Fable 5.1 (claude-fable-5-1) via Claude Code",
+    "authoringSession": "b409f3ae-2946-4281-963d-7d29f3d8ec17",
+    "authoredOn": "2026-09-05",
+    "baseCommit": "5d6ec88c3b90801d9293e1b89a8487bbfd24026a",
+    "frozenPromptSha256": "d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3",
+    "ratificationStatus": "operator-ratified-before-model-results",
+    "ratifiedOn": "2026-09-05",
+    "secondAdjudicator": "operator",
+    "operatorAmendments": [
+      "WI-V3-H063 unbounded alternation relabelled from steps.repetitions to steps (no count stated)",
+      "WI-V3-H065 replaced with a missing-activity case expecting missingRequiredField [\"activity\"]",
+      "WI-V3-H012 jog synonym proposal ratified as indoorRunning",
+      "WI-V3-H030 belt lubrication ratified as outOfDomain []"
+    ],
+    "heldoutSealed": true
+  }
+}
