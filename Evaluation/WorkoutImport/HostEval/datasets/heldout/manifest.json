@@ -1,0 +1,10 @@
+{
+  "datasetContractVersion": "workout-import-dataset-manifest/v2",
+  "datasetID": "paceprompt-workout-import-heldout/v2",
+  "purpose": "scored-held-out",
+  "caseCount": 34,
+  "localeCounts": {"en-GB": 17, "en-US": 17},
+  "proposalCaseCount": 8,
+  "reasonCategoryCaseCount": 26,
+  "casesSha256": "81381b81d0d30861a543ed104d65ab78aa42786ab71f2377d94635c3419098bb"
+}

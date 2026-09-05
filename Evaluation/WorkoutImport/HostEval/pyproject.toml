@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "paceprompt-host-eval"
+version = "0.1.0"
+description = "Host-only prompt-v2 evaluation harness for PacePrompt workout import"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "inspect-ai==0.3.263",
+  "openai==3.1.0",
+]
+
+[project.scripts]
+paceprompt-host-eval = "paceprompt_eval.task:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["paceprompt_eval"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

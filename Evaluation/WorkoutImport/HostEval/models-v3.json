@@ -1,0 +1,51 @@
+{
+  "modelSetVersion": "paceprompt-host-eval-models/v3",
+  "catalogueRatifiedAt": "2026-09-04",
+  "catalogueURL": "https://openrouter.ai/api/v1/models",
+  "comparisonProfile": "per-model-ratified-not-identical-sampling",
+  "models": [
+    {
+      "requestedModelID": "openai/gpt-5.6-sol",
+      "canonicalRevision": "openai/gpt-5.6-sol-20260709",
+      "providerEndpoint": "openai",
+      "quantization": null,
+      "role": "candidateAndCeiling",
+      "temperature": null,
+      "topP": null,
+      "reasoning": {"enabled": false, "effort": "none", "exclude": false},
+      "transportRegistry": "strategyRegistryV29",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    },
+    {
+      "requestedModelID": "openai/gpt-5.6-luna",
+      "canonicalRevision": "openai/gpt-5.6-luna-20260709",
+      "providerEndpoint": "openai",
+      "quantization": null,
+      "role": "productionCandidate",
+      "temperature": null,
+      "topP": null,
+      "reasoning": {"enabled": false, "effort": "none", "exclude": false},
+      "transportRegistry": "strategyRegistryV29",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    },
+    {
+      "requestedModelID": "google/gemini-3.7-flash",
+      "canonicalRevision": "google/gemini-3.7-flash-20260813",
+      "providerEndpoint": "google-ai-studio",
+      "quantization": null,
+      "role": "productionCandidate",
+      "temperature": 0,
+      "topP": 1,
+      "reasoning": {"enabled": true, "effort": "medium", "exclude": false},
+      "transportRegistry": "strategyRegistryV29",
+      "transportStrategy": "semanticJsonV29",
+      "transportSchemaSha256": "9241acedc827b4bb5e1d2de0b16a762af2e5b22217f4b61408725cfad9ac009f"
+    }
+  ],
+  "excludedAfterV2_9": [
+    "anthropic/claude-sonnet-5",
+    "google/gemini-3.5-flash-lite"
+  ]
+}

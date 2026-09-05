@@ -1,0 +1,7 @@
+{
+  "diagnosticVersion": "paceprompt-gemini-required-reasoning-diagnostic/v2.5",
+  "models": [
+    {"requestedModelID": "google/gemini-3.5-flash-lite", "canonicalRevision": "google/gemini-3.5-flash-lite-20260721", "providerEndpoint": "google-ai-studio", "quantization": null, "role": "compatibilityDiagnostic", "temperature": 0, "topP": 1, "reasoning": {"enabled": true, "effort": null, "exclude": false}},
+    {"requestedModelID": "google/gemini-3.7-flash", "canonicalRevision": "google/gemini-3.7-flash-20260813", "providerEndpoint": "google-ai-studio", "quantization": null, "role": "compatibilityDiagnostic", "temperature": 0, "topP": 1, "reasoning": {"enabled": true, "effort": null, "exclude": false}}
+  ]
+}

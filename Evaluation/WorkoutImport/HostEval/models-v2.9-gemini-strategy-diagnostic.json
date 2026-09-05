@@ -1,0 +1,29 @@
+{
+  "diagnosticVersion": "paceprompt-gemini-semantic-json-diagnostic/v2.9",
+  "models": [
+    {
+      "requestedModelID": "google/gemini-3.5-flash-lite",
+      "canonicalRevision": "google/gemini-3.5-flash-lite-20260721",
+      "providerEndpoint": "google-ai-studio",
+      "quantization": null,
+      "role": "compatibilityDiagnostic",
+      "temperature": 0,
+      "topP": 1,
+      "reasoning": {"enabled": true, "effort": "minimal", "exclude": false},
+      "transportRegistry": "strategyRegistryV29",
+      "transportStrategy": "semanticJsonV29"
+    },
+    {
+      "requestedModelID": "google/gemini-3.7-flash",
+      "canonicalRevision": "google/gemini-3.7-flash-20260813",
+      "providerEndpoint": "google-ai-studio",
+      "quantization": null,
+      "role": "compatibilityDiagnostic",
+      "temperature": 0,
+      "topP": 1,
+      "reasoning": {"enabled": true, "effort": "medium", "exclude": false},
+      "transportRegistry": "strategyRegistryV29",
+      "transportStrategy": "semanticJsonV29"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "datasetContractVersion": "workout-import-dataset-manifest/v3",
+  "datasetID": "paceprompt-workout-import-development/v3",
+  "purpose": "development-and-fixed-few-shot",
+  "caseCount": 20,
+  "localeCounts": {
+    "en-GB": 20
+  },
+  "proposalCaseCount": 6,
+  "fewShotCaseIDs": [
+    "WI-V3-D001",
+    "WI-V3-D002",
+    "WI-V3-D003",
+    "WI-V3-D004",
+    "WI-V3-D005",
+    "WI-V3-D006",
+    "WI-V3-D007",
+    "WI-V3-D008",
+    "WI-V3-D009",
+    "WI-V3-D010",
+    "WI-V3-D011"
+  ],
+  "fewShotOrderSha256": "09570638ff0bd8cd2c28b6861af0470cd3349cb2836cde70e676b9a1c201f7a6",
+  "developmentOnlyCaseIDs": [
+    "WI-V3-D012",
+    "WI-V3-D013",
+    "WI-V3-D014",
+    "WI-V3-D015",
+    "WI-V3-D016",
+    "WI-V3-D017",
+    "WI-V3-D018",
+    "WI-V3-D019",
+    "WI-V3-D020"
+  ],
+  "warmUpCaseID": "WI-V3-D020",
+  "casesSha256": "2e3ef23ddc3a11b1614deae002c7c934d63410b4b681c335f6b7e8065a727a24",
+  "authoring": {
+    "authoredBy": "Claude Fable 5.1 (claude-fable-5-1) via Claude Code",
+    "authoringSession": "b409f3ae-2946-4281-963d-7d29f3d8ec17",
+    "authoredOn": "2026-09-05",
+    "baseCommit": "5d6ec88c3b90801d9293e1b89a8487bbfd24026a",
+    "frozenPromptSha256": "d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3",
+    "ratificationStatus": "operator-ratified-before-model-results",
+    "ratifiedOn": "2026-09-05",
+    "secondAdjudicator": "operator",
+    "operatorAmendments": [
+      "WI-V3-H063 unbounded alternation relabelled from steps.repetitions to steps (no count stated)",
+      "WI-V3-H065 replaced with a missing-activity case expecting missingRequiredField [\"activity\"]",
+      "WI-V3-H012 jog synonym proposal ratified as indoorRunning",
+      "WI-V3-H030 belt lubrication ratified as outOfDomain []",
+      "WI-V3-H064 rewritten as a purely recursive unbounded sequence after the operator found its heart-rate wording would fire rule 8 before rule 10; oracle unchanged at excessiveComplexity [\"steps\"]",
+      "WI-V3-H001, H046, H055, H060, H070 and H077 rewritten with materially different semantic structures from their nearest development cases (labelled lines; whole-workout scoped degrees; scoped speed over a repeated block; spelled-out count over a three-step set; unit choice delegated in a separate sentence; scoped per-step duration contradicted by one step); categories, paths and proposal role unchanged",
+      "WI-V3-H055 repeated block given explicit interval and recovery kinds; review few-shot flags for the H046 to D014 and H060 to D016 comparisons corrected to false and now derived mechanically from the referenced development case"
+    ],
+    "heldoutSealed": true
+  }
+}

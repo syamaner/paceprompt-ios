@@ -1,0 +1,29 @@
+{
+  "reviewContractVersion": "paceprompt-semantic-nonduplication-review/v2",
+  "reviewedAgainst": [
+    "Evaluation/WorkoutImport/Corpus/v1/cases.json",
+    "Evaluation/WorkoutImport/HostEval/datasets/development/cases.json",
+    "Evaluation/WorkoutImport/HostEval/datasets/heldout/cases.json"
+  ],
+  "reviewedCaseIDs": [
+    "WI-V2-D001", "WI-V2-D002", "WI-V2-D003", "WI-V2-D004", "WI-V2-D005",
+    "WI-V2-D006", "WI-V2-D007", "WI-V2-D008", "WI-V2-D009", "WI-V2-D010",
+    "WI-V2-D011", "WI-V2-D012", "WI-V2-D013", "WI-V2-D014", "WI-V2-D015",
+    "WI-V2-D016", "WI-V2-D017",
+    "WI-V2-H001", "WI-V2-H002", "WI-V2-H003", "WI-V2-H004", "WI-V2-H005",
+    "WI-V2-H006", "WI-V2-H007", "WI-V2-H008", "WI-V2-H009", "WI-V2-H010",
+    "WI-V2-H011", "WI-V2-H012", "WI-V2-H013", "WI-V2-H014", "WI-V2-H015",
+    "WI-V2-H016", "WI-V2-H017", "WI-V2-H018", "WI-V2-H019", "WI-V2-H020",
+    "WI-V2-H021", "WI-V2-H022", "WI-V2-H023", "WI-V2-H024", "WI-V2-H025",
+    "WI-V2-H026", "WI-V2-H027", "WI-V2-H028", "WI-V2-H029", "WI-V2-H030",
+    "WI-V2-H031", "WI-V2-H032", "WI-V2-H033", "WI-V2-H034"
+  ],
+  "assertions": {
+    "noCopiedPrompt": true,
+    "noCloseParaphraseOfV1": true,
+    "noDevelopmentHeldoutSemanticDuplicate": true,
+    "scenarioFamiliesDisjointAcrossDevelopmentAndHeldout": true,
+    "heldoutAnswersAbsentFromModelVisiblePrompt": true
+  },
+  "reviewStatus": "implementation-reviewed-pending-operator-ratification"
+}

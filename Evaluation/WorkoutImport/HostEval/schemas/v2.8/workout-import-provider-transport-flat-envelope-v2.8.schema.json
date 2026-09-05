@@ -1,0 +1,61 @@
+{
+  "type": "object",
+  "required": [
+    "contractVersion", "outcomeType", "reasonCategory", "affectedPaths",
+    "proposalPresent", "proposalContractVersion", "suggestedName", "activity", "steps"
+  ],
+  "properties": {
+    "contractVersion": {"type": "string", "enum": ["workout-import-model-output/v2"]},
+    "outcomeType": {"type": "string", "enum": ["proposal", "clarificationRequired", "unsupportedRequest", "refusal"]},
+    "reasonCategory": {
+      "type": "string",
+      "enum": [
+        "missingRequiredField", "ambiguousRequiredField", "contradictoryRequest",
+        "outOfDomain", "unsupportedActivity", "unsupportedTarget", "unsupportedUnit",
+        "unsupportedOperation", "knownCapabilityUnsupported", "excessiveComplexity",
+        "promptInjection", "unsafeRequest", "medicalRequest", "notApplicable"
+      ]
+    },
+    "affectedPaths": {
+      "type": "array",
+      "maxItems": 15,
+      "items": {
+        "type": "string",
+        "enum": [
+          "activity", "steps", "steps.repetitions", "steps.kind", "steps.duration",
+          "steps.duration.value", "steps.duration.unit", "steps.targetSpeed",
+          "steps.targetSpeed.value", "steps.targetSpeed.unit", "steps.targetInclination",
+          "steps.targetInclination.value", "steps.targetInclination.unit",
+          "capabilities.speed", "capabilities.inclination"
+        ]
+      }
+    },
+    "proposalPresent": {"type": "boolean"},
+    "proposalContractVersion": {"type": "string", "enum": ["workout-proposal/v2", "notApplicable"]},
+    "suggestedName": {"type": "string"},
+    "activity": {"type": "string", "enum": ["indoorWalking", "indoorRunning", "notApplicable"]},
+    "steps": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": [
+          "kind", "label", "durationValue", "durationUnit", "targetSpeedValue",
+          "targetSpeedUnit", "targetInclinationValue", "targetInclinationUnit"
+        ],
+        "properties": {
+          "kind": {"type": "string", "enum": ["warmUp", "interval", "recovery", "coolDown"]},
+          "label": {"type": "string"},
+          "durationValue": {"type": "number"},
+          "durationUnit": {"type": "string", "enum": ["seconds", "minutes"]},
+          "targetSpeedValue": {"type": "number"},
+          "targetSpeedUnit": {"type": "string", "enum": ["kilometresPerHour", "milesPerHour"]},
+          "targetInclinationValue": {"type": "number"},
+          "targetInclinationUnit": {"type": "string", "enum": ["percent"]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

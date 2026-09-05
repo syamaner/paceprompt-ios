@@ -1,0 +1,18 @@
+{
+  "datasetContractVersion": "workout-import-dataset-manifest/v2",
+  "datasetID": "paceprompt-workout-import-development/v2",
+  "purpose": "development-and-fixed-few-shot",
+  "caseCount": 17,
+  "localeCounts": {"en-GB": 9, "en-US": 8},
+  "fewShotCaseIDs": [
+    "WI-V2-D001",
+    "WI-V2-D002",
+    "WI-V2-D003",
+    "WI-V2-D004",
+    "WI-V2-D005",
+    "WI-V2-D013",
+    "WI-V2-D015",
+    "WI-V2-D017"
+  ],
+  "casesSha256": "0b2c92aecdb512c44e5a4c9509ebab68754de21c084e538a866d18e2c7b6075f"
+}
