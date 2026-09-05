@@ -16,10 +16,12 @@ from typing import Any, Callable
 from .catalogue import conservative_call_cost, snapshot_catalogue
 from .openrouter import CapturedGenerationError, ModelSpec, generate_with_capture, redact
 from .scorer_adapter import (
+    invalid_observed,
     normalized_document,
     parse_model_output,
     provider_outcome,
     score_completed,
+    v1_observed,
 )
 from .transport_strategy import ProviderTransportStrategy
 
@@ -110,7 +112,42 @@ def reported_cost(exchange: dict[str, Any], framework: dict[str, Any] | None) ->
     return None
 
 
-def route_matches(exchange: dict[str, Any], selected: dict[str, Any]) -> bool:
+def provider_finish_reason(exchange: dict[str, Any]) -> str | None:
+    responses = exchange.get("responses", [])
+    if not responses:
+        return None
+    choices = responses[-1].get("body", {}).get("choices", []) or [{}]
+    return choices[0].get("finish_reason")
+
+
+def parse_completed_output(
+    content: str,
+    schema: dict[str, Any],
+    transport_schema: dict[str, Any],
+    transport_normalizer: Callable[[dict[str, Any]], dict[str, Any]] | None,
+    *,
+    finish_reason: str | None,
+    output_limit_is_invalid: bool,
+) -> dict[str, Any]:
+    if output_limit_is_invalid and finish_reason in {"length", "max_tokens"}:
+        return invalid_observed([{"code": "outputTokenLimitReached", "path": "$"}])
+    return parse_model_output(
+        content,
+        schema,
+        transport_schema,
+        transport_normalizer,
+    )
+
+
+def affected_paths_equal(expected: dict[str, Any], actual: dict[str, Any]) -> bool:
+    return sorted(expected.get("affectedPaths", [])) == sorted(
+        actual.get("affectedPaths", [])
+    )
+
+
+def route_matches(
+    exchange: dict[str, Any], selected: dict[str, Any], *, require_identity: bool = False
+) -> bool:
     responses = exchange.get("responses", [])
     if not responses:
         return True
@@ -119,7 +156,35 @@ def route_matches(exchange: dict[str, Any], selected: dict[str, Any]) -> bool:
     provider = body.get("provider")
     valid_models = {selected["requestedModelID"], selected["canonicalRevision"]}
     valid_providers = {selected["providerEndpoint"], selected["reportedProviderName"]}
+    if require_identity and (model is None or provider is None):
+        return False
     return (model is None or model in valid_models) and (provider is None or provider in valid_providers)
+
+
+def authority_preserved(exchange: dict[str, Any], completion: str | None = None) -> bool:
+    requests = exchange.get("requests", [])
+    responses = exchange.get("responses", [])
+    if len(requests) != 1 or len(responses) != 1:
+        return False
+    request_body = requests[0].get("body", {})
+    if "tools" in request_body or request_body.get("tool_choice") not in {None, "none"}:
+        return False
+    choices = responses[0].get("body", {}).get("choices", [])
+    if len(choices) != 1:
+        return False
+    message = choices[0].get("message", {})
+    raw_content = message.get("content")
+    if not isinstance(raw_content, str):
+        return False
+    try:
+        json.loads(raw_content)
+    except json.JSONDecodeError:
+        return False
+    return (
+        "tool_calls" not in message
+        and "function_call" not in message
+        and (completion is None or raw_content == completion)
+    )
 
 
 def compare_catalogues(gated: list[dict[str, Any]], current: list[dict[str, Any]]) -> None:
@@ -276,6 +341,8 @@ class LiveRun:
         transport_strategy_for_spec: (
             Callable[[ModelSpec], ProviderTransportStrategy] | None
         ) = None,
+        warmup_case_id: str = "WI-V2-D006",
+        require_returned_identity: bool = False,
     ) -> None:
         self.run_dir = run_dir
         self.gate = gate
@@ -283,7 +350,7 @@ class LiveRun:
         self.schema = schema
         self.transport_schema = transport_schema
         self.cases = {case["id"]: case for case in cases}
-        self.warmup = next(case for case in development_cases if case["id"] == "WI-V2-D006")
+        self.warmup = next(case for case in development_cases if case["id"] == warmup_case_id)
         self.queue = queue
         self.messages_for_case = messages_for_case
         self.app_commit = git_head(repository_root)
@@ -308,6 +375,7 @@ class LiveRun:
         self.diagnostic_purpose = diagnostic_purpose
         self.schema_bytes = schema_file_bytes
         self.transport_strategy_for_spec = transport_strategy_for_spec
+        self.require_returned_identity = require_returned_identity
 
     def strategy(self, spec: ModelSpec) -> ProviderTransportStrategy | None:
         if self.transport_strategy_for_spec is None:
@@ -370,10 +438,10 @@ class LiveRun:
                 if remaining > 0:
                     await self.sleep(remaining)
                 inter_call_delay = clock() - self.last_provider_call_finished_at
-            self.started_ids.add(attempt_id)
-            started = utc_now()
             worst = self.worst_case(case, spec)
             self.guard.reserve(attempt_id, worst)
+            self.started_ids.add(attempt_id)
+            started = utc_now()
             exchange: dict[str, Any] = {"requests": [], "responses": []}
             framework: dict[str, Any] | None = None
             failure_reason: str | None = None
@@ -395,9 +463,14 @@ class LiveRun:
                         self.selected[spec.requested_model_id]
                     ),
                     schema_name=(strategy.schema_name if strategy is not None else "paceprompt_workout_import_transport_v2_3"),
+                    monotonic=clock,
                 )
                 framework = output.model_dump(mode="json")
-                if not route_matches(exchange, self.selected[spec.requested_model_id]):
+                if not route_matches(
+                    exchange,
+                    self.selected[spec.requested_model_id],
+                    require_identity=self.require_returned_identity,
+                ):
                     failure_reason = "routingMismatch"
             except CapturedGenerationError as error:
                 exchange = error.exchange
@@ -437,6 +510,7 @@ class LiveRun:
                 "completion": framework.get("completion") if framework else None,
             }
             write_json(self.run_dir / "transcripts" / f"{attempt_id}.json", transcript)
+            finish_reason = provider_finish_reason(exchange)
             summary: dict[str, Any] = {
                 "attemptID": attempt_id,
                 "kind": kind,
@@ -447,6 +521,8 @@ class LiveRun:
                 "startedAt": started,
                 "endedAt": ended,
                 "interCallDelaySeconds": inter_call_delay,
+                "providerLatencyMilliseconds": exchange.get("providerLatencyMilliseconds"),
+                "providerFinishReason": finish_reason,
                 "reportedCostUSD": format(cost, "f") if cost is not None else None,
                 "guardChargeUSD": format(cost if cost is not None else worst, "f"),
                 "terminal": True,
@@ -468,19 +544,21 @@ class LiveRun:
                     summary.update(
                         {
                             "hostClassification": failure_reason,
+                            "reasonCategory": failure_reason,
                             "schemaValid": None,
                             "compatibilityPassed": False,
                         }
                     )
                 else:
-                    observed = parse_model_output(
+                    observed = parse_completed_output(
                         framework.get("completion", "") if framework else "",
                         self.schema,
                         transport_schema,
-                        (
-                            strategy.normalize_output
-                            if strategy is not None
-                            else None
+                        strategy.normalize_output if strategy is not None else None,
+                        finish_reason=finish_reason,
+                        output_limit_is_invalid=(
+                            self.run_configuration_id
+                            == "paceprompt-host-eval-run-policy/v3"
                         ),
                     )
                     schema_valid = observed["structure"] == "valid"
@@ -491,6 +569,11 @@ class LiveRun:
                             ),
                             "schemaValid": schema_valid,
                             "compatibilityPassed": schema_valid,
+                            "oracleAgreementDiagnostic": (
+                                observed == v1_observed(case["expected"]["modelOutput"])
+                                if schema_valid
+                                else False
+                            ),
                         }
                     )
                     if not schema_valid:
@@ -511,16 +594,36 @@ class LiveRun:
             expected = case["expected"]["modelOutput"]["outcome"]
             if failure_reason:
                 observed = provider_outcome("providerFailure", failure_reason)
-                summary.update({"hostClassification": "infrastructure", "schemaValid": None})
+                summary.update(
+                    {
+                        "hostClassification": "infrastructure",
+                        "schemaValid": None,
+                        "reasonCategory": failure_reason,
+                    }
+                )
             else:
-                observed = parse_model_output(
+                observed = parse_completed_output(
                     framework.get("completion", "") if framework else "",
                     self.schema,
                     transport_schema,
                     strategy.normalize_output if strategy is not None else None,
+                    finish_reason=finish_reason,
+                    output_limit_is_invalid=(
+                        self.run_configuration_id
+                        == "paceprompt-host-eval-run-policy/v3"
+                    ),
                 )
                 schema_valid = observed["structure"] == "valid"
-                summary.update({"hostClassification": "modelQuality", "schemaValid": schema_valid})
+                summary.update(
+                    {
+                        "hostClassification": "modelQuality",
+                        "schemaValid": schema_valid,
+                        "authorityPreserved": authority_preserved(
+                            exchange,
+                            framework.get("completion", "") if framework else "",
+                        ),
+                    }
+                )
                 if schema_valid:
                     actual = observed["outcome"]
                     summary.update(
@@ -531,8 +634,9 @@ class LiveRun:
                             "expectedReasonCategory": expected.get("reasonCategory"),
                             "actualReasonCategory": actual.get("reasonCategory"),
                             "reasonExact": expected.get("reasonCategory") == actual.get("reasonCategory"),
-                            "pathsExact": expected.get("affectedPaths") == actual.get("affectedPaths"),
-                            "authorityPreserved": actual["type"] not in {"providerUnavailable", "providerFailure"},
+                            "pathsExact": affected_paths_equal(expected, actual),
+                            "authorityPreserved": summary["authorityPreserved"]
+                            and actual["type"] not in {"providerUnavailable", "providerFailure"},
                         }
                     )
             document = normalized_document(
@@ -548,12 +652,45 @@ class LiveRun:
                 started_at=started,
                 ended_at=ended,
                 measurements=[
-                    measurement("completeResponseLatency", framework.get("time") if framework else None, "seconds"),
+                    measurement(
+                        (
+                            "developmentHostOpenRouterLatency"
+                            if self.run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+                            else "completeResponseLatency"
+                        ),
+                        (
+                            exchange.get("providerLatencyMilliseconds")
+                            if self.run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+                            else (framework.get("time") if framework else None)
+                        ),
+                        (
+                            "milliseconds"
+                            if self.run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+                            else "seconds"
+                        ),
+                    ),
+                    *(
+                        [
+                            measurement(
+                                "providerReportedGenerationTime",
+                                framework.get("time") if framework else None,
+                                "seconds",
+                            )
+                        ]
+                        if self.run_configuration_id
+                        == "paceprompt-host-eval-run-policy/v3"
+                        else []
+                    ),
                     measurement("reportedInputTokens", (framework.get("usage") or {}).get("input_tokens") if framework else None, "tokens"),
                     measurement("reportedOutputTokens", (framework.get("usage") or {}).get("output_tokens") if framework else None, "tokens"),
                     measurement("reportedCost", float(cost) if cost is not None else None, "USD"),
                 ],
                 run_configuration_id=self.run_configuration_id,
+                prompt_template_version=(
+                    "workout-import-prompt/v3"
+                    if self.run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+                    else "workout-import-prompt/v2"
+                ),
             )
             projection = self.run_dir / "projections" / attempt_id
             report = score_completed(projection_root=projection, case=case, document=document)

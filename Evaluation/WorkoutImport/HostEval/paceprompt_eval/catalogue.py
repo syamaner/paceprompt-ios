@@ -107,13 +107,19 @@ def snapshot_catalogue(
 
 
 def conservative_call_cost(
-    *, input_utf8_bytes: int, input_price: str, output_price: str
+    *,
+    input_utf8_bytes: int,
+    input_price: str,
+    output_price: str,
+    output_tokens: int = 8192,
 ) -> Decimal:
     # Byte count is a conservative upper bound for text tokens with byte-fallback
     # tokenizers. The fixed 4,096-token allowance covers request framing/schema
     # overhead beyond the serialized message text.
     input_upper_bound = Decimal(input_utf8_bytes + 4096)
-    return input_upper_bound * Decimal(input_price) + Decimal(8192) * Decimal(output_price)
+    if output_tokens <= 0 or output_tokens > 8192:
+        raise ValueError("output token estimate must be between 1 and the 8,192 hard cap")
+    return input_upper_bound * Decimal(input_price) + Decimal(output_tokens) * Decimal(output_price)
 
 
 def choose_repetitions(
@@ -125,4 +131,3 @@ def choose_repetitions(
     if one_repetition_worst_case <= limit:
         return 1
     return 0
-

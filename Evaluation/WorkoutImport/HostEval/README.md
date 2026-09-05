@@ -273,6 +273,63 @@ That command makes at most two calls, globally serial, with at least two seconds
 measured on a monotonic clock from the first completed call to the second call's
 start. It writes the measured inter-call delay into the preserved attempt record.
 
+## Confirmatory v3 run
+
+The confirmatory v3 prompt and corpus are separately versioned and hash-sealed.
+The run contains 20 development cases, including eleven ordered few-shot
+examples and fixed warm-up `WI-V3-D020`, plus 79 held-out cases. All 99 cases
+are labelled `en-GB`. The three-model matrix is GPT-5.6 Sol, GPT-5.6 Luna and
+Gemini 3.7 Flash under their own ratified generation and transport profiles.
+
+Offline verification checks the prompt and five corpus hashes, manifest case
+hashes, few-shot order hash, review ratification, locale allocation, scorer
+aliases, semantic and transport schemas, unchanged scorer compatibility and
+model-visible leakage. The deterministic queue contains 711 scored attempts
+and carries the sealed corpus hashes before its own hash is calculated:
+
+```sh
+uv run paceprompt-host-eval verify-v3
+uv run paceprompt-host-eval enumerate-v3
+```
+
+Gate preparation reads only the public OpenRouter catalogue and sends the full
+three payload shapes to a local mock transport. It reads no credential, makes
+zero provider calls and records zero spend:
+
+```sh
+uv run paceprompt-host-eval prepare-v3-gate --run-id <new-run-id>
+```
+
+The v3 preflight estimates all 714 calls using 5,448 completion tokens per
+attempt. Input tokens use the maximum prompt-token-to-compact-request-byte
+ratio observed for each route in the sealed v2.9 run, with a 10% safety margin.
+It either admits all three repetitions under the fixed `$25.00` limit or admits
+none; there is no one-repetition fallback. The separate runtime guard reserves
+the full 8,192-token cap before each serial call and includes already settled
+actual spend in the next reservation.
+
+The live entry point remains inert without all of `--live`, the exact phrase
+sealed into that run's gate, an exact `$25.00` argument, unchanged artefacts and
+catalogue, and `OPENROUTER_API_KEY` in the unshared process environment:
+
+```sh
+uv run paceprompt-host-eval run-v3 --run-id <ratified-run-id> --live \
+  --authorization <exact-run-phrase> --spending-limit-usd 25.00
+```
+
+One serial worker preserves the planned queue order with a two-second gap.
+There are no retries, fallbacks or cached completions. A first HTTP 429 pauses
+only that model, marks its later positions `notStarted/rateLimitPause` without
+re-queuing them, and makes it ineligible on completion. Timeouts do not pause a
+model. Cancellation and spending-limit stops preserve every remaining attempt
+as a terminal not-started record, and the run cannot resume.
+
+The report keeps every scheduled attempt in category floors and composite
+denominators, uses exact rational comparison, nearest-rank development-host p95
+latency over the OpenRouter route, and never selects a provider. Evidence is
+mechanically accepted only after the run-directory integrity audit passes;
+provider selection remains a separate human decision and may remain unset.
+
 ## Direct curl compatibility probe
 
 The separately versioned v2.6 diagnostic bypasses Inspect's live transport while

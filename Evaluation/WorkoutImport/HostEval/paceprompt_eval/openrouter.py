@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import time
 from types import MethodType
 from typing import Any
 
@@ -208,12 +209,17 @@ async def generate_with_capture(
     transport: httpx2.AsyncBaseTransport | None = None,
     max_price_per_million: dict[str, float] | None = None,
     schema_name: str = MODEL_OUTPUT_SCHEMA_NAME,
+    monotonic: Any = None,
 ) -> tuple[ModelOutput, dict[str, Any]]:
     """Generate once through Inspect while retaining the exact HTTP exchange."""
 
-    exchanges: dict[str, list[dict[str, Any]]] = {"requests": [], "responses": []}
+    exchanges: dict[str, Any] = {"requests": [], "responses": []}
+    clock = monotonic or time.monotonic
+    request_started: float | None = None
 
     async def capture_request(request: httpx2.Request) -> None:
+        nonlocal request_started
+        request_started = clock()
         body = await request.aread()
         exchanges["requests"].append(
             {
@@ -238,6 +244,10 @@ async def generate_with_capture(
                 "body": decoded,
             }
         )
+        if request_started is not None:
+            exchanges["providerLatencyMilliseconds"] = max(
+                0, int(round((clock() - request_started) * 1000))
+            )
 
     async with httpx2.AsyncClient(
         timeout=httpx2.Timeout(180.0, connect=15.0),
@@ -256,6 +266,10 @@ async def generate_with_capture(
         try:
             output = await model.generate(messages, tool_choice="none")
         except BaseException as error:
+            if request_started is not None and "providerLatencyMilliseconds" not in exchanges:
+                exchanges["providerLatencyMilliseconds"] = max(
+                    0, int(round((clock() - request_started) * 1000))
+                )
             raise CapturedGenerationError(error, redact(exchanges, (api_key,))) from error
         finally:
             await model.api.aclose()

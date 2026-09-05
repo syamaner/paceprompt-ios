@@ -47,6 +47,7 @@ NOT_STARTED_REASONS = {
     "prerequisiteMismatch",
     "spendingLimitReached",
     "operatorCancelled",
+    "rateLimitPause",
 }
 
 
@@ -376,7 +377,10 @@ def not_started(attempt_id: str, reason: str) -> dict[str, str]:
     return {"attemptID": attempt_id, "status": "notStarted", "reasonCategory": reason}
 
 
-def _manifest(projected_case: dict[str, Any]) -> dict[str, Any]:
+def _manifest(
+    projected_case: dict[str, Any],
+    prompt_template_version: str = "workout-import-prompt/v2",
+) -> dict[str, Any]:
     manifest = {
         "manifestVersion": 1,
         "corpusVersion": "workout-import-corpus/v1",
@@ -384,7 +388,7 @@ def _manifest(projected_case: dict[str, Any]) -> dict[str, Any]:
         "proposalContractVersion": "workout-proposal/v1",
         "resultContractVersion": "workout-import-result/v1",
         "scorerVersion": "workout-import-scorer/v1",
-        "promptTemplateVersion": "workout-import-prompt/v2",
+        "promptTemplateVersion": prompt_template_version,
         "supportedLocales": [projected_case["locale"]],
         "caseIndex": [{"id": projected_case["id"], "category": projected_case["category"]}],
         "hashContract": "workout-import-corpus-hash/v1",
@@ -394,7 +398,11 @@ def _manifest(projected_case: dict[str, Any]) -> dict[str, Any]:
     return manifest
 
 
-def write_projection(projection_root: Path, case: dict[str, Any]) -> Any:
+def write_projection(
+    projection_root: Path,
+    case: dict[str, Any],
+    prompt_template_version: str = "workout-import-prompt/v2",
+) -> Any:
     projected_case = _decimalize(v1_case(case))
     contracts = projection_root / "Contracts"
     corpus = projection_root / "Corpus" / "v1"
@@ -402,7 +410,7 @@ def write_projection(projection_root: Path, case: dict[str, Any]) -> Any:
     corpus.mkdir(parents=True, exist_ok=False)
     for name in ("workout-proposal-v1.schema.json", "workout-import-result-v1.schema.json"):
         shutil.copy2(WORKOUT_IMPORT_ROOT / "Contracts" / name, contracts / name)
-    manifest = _manifest(projected_case)
+    manifest = _manifest(projected_case, prompt_template_version)
     (corpus / "cases.json").write_text(
         json.dumps(_json_number([projected_case]), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -428,6 +436,7 @@ def normalized_document(
     ended_at: str | None = None,
     measurements: list[dict[str, Any]] | None = None,
     run_configuration_id: str = "paceprompt-host-eval-run-policy/v2",
+    prompt_template_version: str = "workout-import-prompt/v2",
 ) -> dict[str, Any]:
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     return {
@@ -438,7 +447,7 @@ def normalized_document(
             "corpusVersion": "workout-import-corpus/v1",
             "corpusHash": "SET_FROM_PROJECTION",
             "proposalContractVersion": "workout-proposal/v1",
-            "promptTemplateVersion": "workout-import-prompt/v2",
+            "promptTemplateVersion": prompt_template_version,
             "scorerVersion": "workout-import-scorer/v1",
             "evidenceLevel": "remoteProvider",
             "deviceClass": "developmentHost",
@@ -478,7 +487,11 @@ def score_completed(
     case: dict[str, Any],
     document: dict[str, Any],
 ) -> dict[str, Any]:
-    corpus = write_projection(projection_root, case)
+    corpus = write_projection(
+        projection_root,
+        case,
+        document["provenance"]["promptTemplateVersion"],
+    )
     document["provenance"]["corpusHash"] = corpus.manifest["corpusHash"]
     report, complete = v1_scorer.score_document(corpus, document)
     if not complete or report.get("status") != "complete":
