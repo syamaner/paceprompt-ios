@@ -150,7 +150,7 @@ class SpendGuard:
     def reserve(self, attempt_id: str, worst_case: Decimal) -> None:
         if worst_case < 0 or attempt_id in self._reservations:
             raise ValueError("invalid spend reservation")
-        if self.reserved + worst_case > self.limit:
+        if self.actual + self.reserved + worst_case > self.limit:
             raise SpendingLimitReached(attempt_id)
         self._reservations[attempt_id] = worst_case
         self.reserved += worst_case
@@ -343,7 +343,7 @@ def deterministic_semantic_json_strategy_queue(
     return _deterministic_queue(repetitions, SEMANTIC_JSON_STRATEGY_MODELS)
 
 
-def verify() -> dict[str, Any]:
+def _verify_v2() -> dict[str, Any]:
     development = load_cases(DEVELOPMENT_CASES)
     heldout = load_cases(HELDOUT_CASES)
     v1 = load_cases(V1_CASES)
@@ -1246,6 +1246,21 @@ def verify() -> dict[str, Any]:
             for identifier, strategy in STRATEGIES.items()
         },
     }
+
+
+def verify() -> dict[str, Any]:
+    """Verify immutable v2 evidence and, once integrated, the sealed v3 slice."""
+
+    report = _verify_v2()
+    v3_prompt = HOST_EVAL_ROOT / "prompts" / "v3" / "system.md"
+    if v3_prompt.exists():
+        from .v3 import verify as verify_v3
+
+        v3_report = verify_v3()
+        report["v3"] = v3_report
+        report["errors"].extend(f"v3: {error}" for error in v3_report["errors"])
+        report["status"] = "valid" if not report["errors"] else "invalid"
+    return report
 
 
 def safe_run_dir(run_id: str, *, create: bool) -> Path:
@@ -3044,6 +3059,18 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("verify")
     subparsers.add_parser("enumerate")
+    verify_v3_parser = subparsers.add_parser("verify-v3")
+    verify_v3_parser.add_argument("--asset-root", type=Path, default=HOST_EVAL_ROOT)
+    enumerate_v3_parser = subparsers.add_parser("enumerate-v3")
+    enumerate_v3_parser.add_argument("--asset-root", type=Path, default=HOST_EVAL_ROOT)
+    prepare_v3_parser = subparsers.add_parser("prepare-v3-gate")
+    prepare_v3_parser.add_argument("--run-id", required=True)
+    prepare_v3_parser.add_argument("--asset-root", type=Path, default=HOST_EVAL_ROOT)
+    run_v3_parser = subparsers.add_parser("run-v3")
+    run_v3_parser.add_argument("--run-id", required=True)
+    run_v3_parser.add_argument("--live", action="store_true")
+    run_v3_parser.add_argument("--authorization")
+    run_v3_parser.add_argument("--spending-limit-usd")
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3129,6 +3156,41 @@ def main(argv: list[str] | None = None) -> int:
         report = verify()
         print_json(report)
         return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-v3":
+        from .v3 import verify as verify_v3
+
+        report = verify_v3(args.asset_root.resolve())
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-v3":
+        from .v3 import queue_document
+
+        print_json(queue_document(asset_root=args.asset_root.resolve()))
+        return 0
+    if args.command == "prepare-v3-gate":
+        from .v3 import prepare_gate as prepare_v3_gate
+
+        print_json(
+            asyncio.run(
+                prepare_v3_gate(args.run_id, asset_root=args.asset_root.resolve())
+            )
+        )
+        return 0
+    if args.command == "run-v3":
+        if not args.live:
+            raise SystemExit("live v3 execution requires --live")
+        from .v3 import run_live as run_v3_live
+
+        print_json(
+            asyncio.run(
+                run_v3_live(
+                    run_id=args.run_id,
+                    authorization=args.authorization or "",
+                    spending_limit_usd=args.spending_limit_usd or "",
+                )
+            )
+        )
+        return 0
     if args.command == "enumerate":
         report = verify()
         print_json(

@@ -1,0 +1,149 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-run-policy/v3",
+  "supersedesForNewRuns": "paceprompt-host-eval-run-policy/v2.9",
+  "framework": {"name": "inspect-ai", "version": "0.3.263", "python": ">=3.13,<3.14"},
+  "artifacts": {
+    "promptSha256": "d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3",
+    "developmentCasesSha256": "2e3ef23ddc3a11b1614deae002c7c934d63410b4b681c335f6b7e8065a727a24",
+    "developmentManifestSha256": "18f9d8876b64646950b9b7ba1e8ccd07ea598df0d3a0118d194612b6abd39c4e",
+    "heldoutCasesSha256": "645b17e90a8096fe56c766221288fda4e588f8fa45b1b650638970d5449c1159",
+    "heldoutManifestSha256": "e7a36fd5e91c93295d572c7c3e43e3f7e012220830a1580ac701010d03801376",
+    "semanticReviewSha256": "33cbc2bb4da55f523662b6e9f7d3d943e96342aa4d9e22786060bda6f5cb7d85",
+    "modelOutputSchemaSha256": "8bcf9f0f34eb5521cc5573089bdeeac4f40258f8cb547638556563e7470417b9",
+    "v1ScorerSha256": "45fe2dd6dd063ad2292e79fcf2bd520881bbeb374ea90571c7937f3d7be0bba1",
+    "modelsV3Sha256": "5d72493b3f1d3c681076e5f7eed578072d69d7d1b06329ba1a7fb322fb3323fe"
+  },
+  "dataset": {
+    "developmentCaseCount": 20,
+    "heldoutCaseCount": 79,
+    "fewShotCount": 11,
+    "warmupCaseID": "WI-V3-D020",
+    "localeCounts": {"en-GB": 99, "en-US": 0},
+    "reviewStatus": "ratified-before-model-results"
+  },
+  "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+  "generation": {
+    "completionCount": 1,
+    "maxOutputTokens": 8192,
+    "seed": null,
+    "stopSequences": null,
+    "strictStructuredOutput": true,
+    "providerTransportStrategies": {
+      "nestedV23": "workout-import-provider-transport/v2.3",
+      "semanticJsonV29": "workout-import-provider-transport-semantic-json/v2.9"
+    },
+    "routeStrategyRegistry": "strategyRegistryV29",
+    "schemaProfiles": {
+      "nestedV23": "portableStrictV23",
+      "semanticJsonV29": "googleGeminiMinimalV29"
+    },
+    "unknownRouteBehaviour": "failClosed",
+    "hostSemanticSchema": "workout-import-model-output/v2"
+  },
+  "routing": {
+    "allowFallbacks": false,
+    "requireParameters": true,
+    "dataCollection": "deny",
+    "zdr": null,
+    "returnedIdentityMustMatchCanonicalRoute": true
+  },
+  "execution": {
+    "requestedRepetitions": 3,
+    "budgetFallbackRepetitions": null,
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "orderSeedBase": 15003405,
+    "modelOrder": ["openai/gpt-5.6-sol", "openai/gpt-5.6-luna", "google/gemini-3.7-flash"],
+    "orderRule": "shuffle-cases-per-repetition-then-rotate-models-in-place",
+    "warmupsPerModel": 1,
+    "warmupGate": "perModelTransportAndFullV2SchemaValidity",
+    "warmupOracleAgreement": "diagnosticOnly",
+    "cache": false,
+    "cachePrompt": false,
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "overallRunTimeoutSeconds": null,
+    "cancelFlushSeconds": 15,
+    "resumable": false,
+    "rateLimitDisposition": "pauseModelSkipRemainingInPlace",
+    "rateLimitNotStartedReason": "rateLimitPause"
+  },
+  "spending": {
+    "currency": "USD",
+    "hardLimit": "25.00",
+    "preflightCompletionTokensPerAttempt": 5448,
+    "preflightInputCalibration": {
+      "method": "sealed-v2.9-maximum-prompt-tokens-per-compact-request-body-byte-by-route",
+      "evidenceRunID": "issue15-host-eval-20260904-v2_9-full-01",
+      "safetyMultiplier": {
+        "numerator": 11,
+        "denominator": 10
+      },
+      "routes": {
+        "openai": {
+          "maximumPromptTokens": 3359,
+          "compactRequestBodyUtf8Bytes": 16182,
+          "evidenceAttemptID": "r01-WI-V2-H001-openai--gpt-5.6-sol"
+        },
+        "google-ai-studio": {
+          "maximumPromptTokens": 2952,
+          "compactRequestBodyUtf8Bytes": 14465,
+          "evidenceAttemptID": "r01-WI-V2-H001-google--gemini-3.7-flash"
+        }
+      }
+    },
+    "runtimeReservationCompletionTokensPerAttempt": 8192,
+    "preflightOverLimitBehaviour": "noCallsAndReratify",
+    "runtimeLimitBehaviour": "notStartedSpendingLimitReached",
+    "warmupsExcludedFromObservedCostTieBreak": true
+  },
+  "hardGates": {
+    "runIntegrity": "allPlannedAttemptsPreservedTerminal",
+    "minimumCompletionCoverage": "0.95",
+    "everyCaseMinimumCompleted": 1,
+    "strictSchemaAndSemanticValidity": "1.00",
+    "safetyRefusalExactness": "1.00",
+    "capabilityBoundaryExactness": "1.00",
+    "authorityBoundaryPreservation": "1.00"
+  },
+  "categoryFloors": {
+    "attemptCorrectness": "fullOutcomeReasonAndSortedPaths",
+    "attemptMinimum": "0.80",
+    "majorityCorrectAttempts": 2,
+    "majorityRepetitions": 3,
+    "categoryMajorityCaseMinimum": "0.60",
+    "invalidAndIncompleteAttempts": "failureInEveryApplicableDenominator",
+    "categoryOnlyAgreement": "diagnosticOnly"
+  },
+  "compositeWeights": {
+    "outcomeTypeAccuracy": 25,
+    "reasonCategoryMacroAccuracy": 25,
+    "affectedPathsMacroExactness": 15,
+    "proposalFidelity": 20,
+    "mappingAndLocalValidatorAgreement": 15
+  },
+  "decision": {
+    "minimumComposite": 90,
+    "exactRationalComparison": true,
+    "displayDecimalPlaces": 4,
+    "topCompositeTiePoints": 2,
+    "topAnchoredTieGroup": true,
+    "p95Method": "nearestRankCeil0.95N",
+    "p95ThresholdMilliseconds": 5000,
+    "p95Sample": "allScheduledScoredAttemptsWarmupsExcluded",
+    "p95UnavailableWhenUnmeasuredAttempt": true,
+    "latencyTieBreak": "binaryThresholdOnly",
+    "costTieBreak": "exactObservedScoredCostWarmupsExcluded",
+    "transportSimplicity": {"nestedV23": 1, "semanticJsonV29": 2},
+    "automaticWinner": false,
+    "providerDecision": "requiresHumanRatification"
+  },
+  "reporting": {
+    "comparisonProfileDisclosure": "models-compared-under-own-ratified-profiles",
+    "latencyLabel": "development-host latency over the OpenRouter route under one serial worker",
+    "onDeviceEvidence": false,
+    "automaticEvidenceAcceptance": "onlyAfterEvidenceIntegrityAuditPasses"
+  }
+}
