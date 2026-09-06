@@ -1,0 +1,217 @@
+# Issue 19 review handoff
+
+Implementation was prepared uncommitted on `codex/issue-19-production-import` in
+`/private/tmp/paceprompt-issue19`, based on verified remote main
+`5fea298b07eedd19b816fd5eb70a8e6ae750ac2e`.
+
+## Review entry points
+
+1. Read the complete current issue 19 and [production contract](production-contract.md).
+   [outbound-request.json](outbound-request.json) makes all request fields and fixed
+   messages reviewable. The response allowlist was written before the adapter.
+2. Inspect `PacePrompt/Import/`: credential storage, request/resource ownership,
+   independent URLSession transport, strict JSON parsing, untrusted proposal mapping,
+   consent/lifecycle state and SwiftUI disclosure are separate components.
+3. Inspect the small `PlansViewModel.reviewImportedPlan` bridge and reuse of
+   `PlanPreviewView`. Import never writes to the repository directly. The existing
+   separate confirmation performs the save; changed capability/input invalidates
+   import preview. Save failure clears the import and retains safe local feedback.
+4. Inspect `PacePromptTests/WorkoutImportTests.swift` and the two import cases in
+   `PacePromptUITests/PlansFlowUITests.swift`. Unit tests use synthetic keychain,
+   repository, generator and transport doubles; URLSession tests install a local
+   URLProtocol that handles every URL. UI tests select an in-memory generator and
+   credential backend under the existing DEBUG-only UI-test launch flag.
+5. Run `python3 scripts/verify_import_resources.py --app-bundle <built PacePrompt.app>`.
+   It independently reprojects the eleven development examples without importing
+   evaluation code, checks pinned hashes and confirms bundle independence.
+
+## Validation commands
+
+All Xcode commands use `CODE_SIGNING_ALLOWED=NO`, the iPhone 17 Pro Max simulator,
+and `/private/tmp/paceprompt-issue19-derived`. No physical installation is included.
+Focused suites: WorkoutImportTests, WorkoutImportBoundaryTests and
+ImportSessionTransportTests, plus the two import UI tests. Complete suite follows,
+then simulator build, Xcode static analysis, repository skills and full-diff review.
+
+Results are recorded below after each gate completes. Logs and xcresult bundles
+remain local under `/private/tmp/paceprompt-issue19-*`.
+
+## Privacy and preservation
+
+Zero provider calls and zero spend. Public documentation/catalogue GETs only;
+no repository .env, real key, authenticated provider request, physical installation,
+treadmill connection/operation, FTMS write, HealthKit or watchOS work.
+The primary checkout's two modified shared schemes are unchanged. No evaluation
+source, sealed prompt/dataset/policy/scorer or original run evidence was modified.
+`/private/tmp/paceprompt-issue17-research` and its ignored .runs remain untouched.
+At the original review boundary, no commit, push, publication or issue-state change
+had been performed. A local commit was subsequently authorised; push, publication
+and issue-state changes remain unauthorised.
+
+## Remaining acceptance boundaries
+
+- Mocked success does not establish live route compatibility, actual returned canonical
+  revision/provider identity, live response metadata, account guardrail compatibility,
+  network timing or remote retention. The canonical-only response check is stronger
+  than historical evaluation. OpenRouter's OpenAPI omits the issue-required top-level
+  provider field; production requires it anyway and fails closed if absent.
+- Keychain accessibility, device-only/no-sync behaviour and lifecycle ordering are
+  implemented using the specified Apple attributes and mocked failure tests. Physical
+  iPhone Data Protection behaviour remains unvalidated. App buffer clearing is not
+  a remote-retention or secure-memory-erasure guarantee.
+- On-device inference is deferred under 14. No open-weight candidate qualified;
+  Sol remains the human selection. The consolidated evaluation used deterministic
+  scoring, not an LLM judge.
+- The complete tracked and untracked slice was subsequently reviewed against the
+  ratified contract. One test-only gap was found and corrected: the unit suite now
+  captures the complete production request and compares its decoded JSON body with
+  `outbound-request.json`, while also asserting method, URL, cache policy, timeout
+  and the exact three-header envelope. No production behaviour or resource byte changed.
+- The local commit was separately authorised with a fresh pre-commit accounting
+  boundary; push remains unauthorised. Any live check still needs a separately sealed
+  run-specific credential/call/spend gate. Do not relax response identity checks to
+  make such a check pass.
+
+## Repository state for review
+
+At the original review boundary, the delivery worktree had seven modified tracked
+files and sixteen new files; nothing was staged, committed or pushed. Tracked changes
+were the Xcode project, Plans UI-test
+support, PlansViewModel, RootTabView, PlansView, SettingsView and PlansFlowUITests.
+New files are seven import Swift components, three fixed resource files, one unit
+test file, four contract/fixture/handoff documents and one offline verifier.
+
+Primary checkout: still on main at the verified base, with only these original
+modifications, whose hashes match the start of this task:
+
+- PacePrompt.xcodeproj/xcshareddata/xcschemes/PacePrompt.xcscheme:
+  `e56435804b205a7156aae4d8d99335b04955ca76ee994fce3bdeb99c66a81f75`
+- PacePrompt.xcodeproj/xcshareddata/xcschemes/PacePromptEvaluation.xcscheme:
+  `fc812c98e219e7b3cc30837ad34542c01476902a0d2068a5a310a140c8c0d5e2`
+
+Other existing worktrees were not changed or removed. In particular, the issue 17
+research worktree remains registered at c2e7df1 and its ignored evidence directory
+is present. Before the separately authorised local commit, the delivery branch added
+no commits relative to the verified base.
+
+## Completed validation
+
+- Focused: 26 tests passed, zero failed/skipped (24 unit tests plus two import UI tests).
+  Result: `/private/tmp/paceprompt-issue19-derived/Logs/Test/Test-PacePrompt-2026.09.06_14-15-42-+0100.xcresult`.
+- Phase-accounting helper: 20 tests passed. All three repository skill validators
+  passed using the existing isolated validator environment with PyYAML 6.0.3.
+- Resource provenance/equivalence and built-bundle independence checks passed.
+- Tracked and new-file whitespace checks passed; complete diff reviewed.
+- Additional staged results follow below.
+
+- Complete production simulator suite: 107 passed, zero failed/skipped.
+  Result: `/private/tmp/paceprompt-issue19-derived/Logs/Test/Test-PacePrompt-2026.09.06_14-18-14-+0100.xcresult`.
+- Existing evaluation simulator suite: 14 passed, zero failed/skipped.
+  Result: `/private/tmp/paceprompt-issue19-derived/Logs/Test/Test-PacePromptEvaluation-2026.09.06_14-23-20-+0100.xcresult`.
+- Release simulator build: passed for generic iOS Simulator, with test doubles
+  excluded. Non-fatal toolchain warnings: AppIntents metadata extraction skipped
+  (no framework dependency), and dsymutil could not locate a cached SwiftShims PCM.
+  This is not a warning-free debug-symbol validation claim.
+- Release Xcode static analysis: passed, no analyzer findings reported.
+- Final Release bundle: pinned resource hashes and evaluation-independence checks passed.
+
+After the test-only correction, the fresh focused unit suite passed 24 tests and the
+two import UI tests passed. The complete production suite again passed 107 tests,
+the evaluation suite again passed 14 tests, and the Release simulator build, Release
+static analysis, resource verifier, bundle-independence check, accounting-helper tests,
+all three repository skill validators and final whitespace checks passed. The new
+result bundles are under `/private/tmp/paceprompt-issue19-derived/Logs/Test/`, dated
+15:14, 15:16 and 15:20 on 2026-09-06. This remains mocked/simulator evidence, not
+live-provider or physical-device acceptance.
+
+Logs: `/private/tmp/paceprompt-issue19-focused-final.log`,
+`/private/tmp/paceprompt-issue19-complete-final.log`,
+`/private/tmp/paceprompt-issue19-evaluation-tests.log`,
+`/private/tmp/paceprompt-issue19-build.log`,
+`/private/tmp/paceprompt-issue19-analysis.log`, and
+`/private/tmp/paceprompt-issue19-accounting-tests.log`.
+
+## Development accounting boundary
+
+The selected root session is
+`01a076c2-21c1-78a0-9d40-caa524fc0178`, model `gpt-6-astra`. No subagents,
+separate tasks, external reviewers or provider inference channels were used.
+The unmodified accounting helper captured the pre-implementation baseline at event 4,
+2026-09-06T12:47:56.329Z, in `/private/tmp/paceprompt-issue19-baseline.json`.
+Final helper results follow below. Historical transcripts, helper logic and ledger
+rows remained unchanged at this implementation boundary. The later authorised commit
+uses a separate pre-commit boundary and commit-measurement row.
+The user authorised an official OpenAI Astra cost calculation and comparison with
+Sol. The earlier statement that a pricing basis was not authorised was incorrect;
+the verified pricing calculation below supersedes it without changing the phase.
+
+The helper validated this task's phase delta successfully (this does not resolve
+historical counter-reset failures). Exact phase: event 4 through event 71,
+2026-09-06T12:47:56.329Z through 2026-09-06T13:25:08.976Z.
+
+| Counter | Tokens |
+| --- | ---: |
+| Total input | 10,920,072 |
+| Cached input, included in total input | 10,751,872 |
+| Cache-write input | 0 |
+| Output | 56,126 |
+| Reasoning output, included in output | 15,006 |
+| Total | 10,976,198 |
+
+67 measured requests; largest input 209,321 tokens. Both official model pages
+specify a 272,000-input-token long-context threshold; zero measured requests cross
+it, so no long-context surcharge applies.
+
+Official OpenAI standard text-token prices checked 2026-09-06, in USD per million:
+
+| Pricing basis | Uncached input | Cached input | Cache writes | Output | Phase estimate |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [GPT-6 Astra](https://developers.openai.com/api/docs/models/gpt-6-astra) | $10.00 | $1.00 | $12.50 | $50.00 | **$15.24** |
+| [GPT-5.6 Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol), same usage | $4.00 | $0.40 | $5.00 | $20.00 | **$6.10** |
+
+Sol's published promotional rates are available at least through 2026-11-21.
+Both models apply 2x input and 1.5x output rates above the threshold; Astra
+explicitly includes cache rates in that input multiplier. Cache writes are zero.
+
+The unmodified accounting helper's `parse_counter` and `request_cost` functions
+price the preserved validated phase totals. Aggregation is valid here because
+every request is below the threshold and uses the same rates. No transcript,
+original helper report or historical ledger was rewritten.
+
+- Astra: (168,200 × 10 + 10,751,872 × 1 + 56,126 × 50) / 1,000,000 = $15.240172.
+- Sol: (168,200 × 4 + 10,751,872 × 0.40 + 56,126 × 20) / 1,000,000 = $6.0960688.
+- Difference before rounding: $9.1441032, or **$9.14**. Astra is **2.5x** the cost;
+  Sol is **60% cheaper** for this identical token mix.
+
+These are token-only standard API-equivalent estimates, not a subscription bill
+or a claim about the actual service tier. Sol is a counterfactual pricing comparison
+on observed Astra tokens; a real Sol implementation could use different tokens.
+Reasoning is already included in output and is not charged twice. Tool charges and
+this pricing follow-up are excluded. OpenRouter provider calls and spend remain zero.
+Calculation evidence: `/private/tmp/paceprompt-issue19-cost-comparison.json`.
+
+Exact helper output: `/private/tmp/paceprompt-issue19-usage.json`.
+Final insertion of these figures and subsequent handoff/check messages are outside
+that measured boundary. A later authorised commit must capture its final boundary and
+add the required stable change-ID ledger row/trailer at that time; that separate
+authorisation was subsequently given and is recorded in `DEVELOPMENT_NOTES.md` as
+`PP-20260906-04`.
+
+## Historical new-session continuation
+
+These were the continuation instructions used for the subsequent review: resume the
+existing worktree `/private/tmp/paceprompt-issue19` on
+`codex/issue-19-production-import`; its implementation was uncommitted and must not
+be discarded or replaced with a fresh worktree. Read current AGENTS.md,
+bounded-slice-delivery and codex-phase-accounting, then this handoff and the
+production contract. Reverify remote main and issue 19 plus accepted dependencies
+6, 10, 11, 15 and 17 before relying on recorded authority. Review the complete
+tracked and untracked diff against the ratified contract; preserve both modified
+primary-checkout schemes and issue 17 research/.runs evidence.
+
+The recorded simulator gates passed; live-provider and physical-device acceptance
+remain outstanding. Review or further local fixes do not authorise commit, push,
+publication, issue closure, real credential access, provider calls/spend or hardware
+operation. Start a separate accounting boundary for new-session work and retain
+the measured implementation phase and Astra/Sol comparison above without merging
+or inventing missing usage. The historical counter-reset problem remains unresolved.

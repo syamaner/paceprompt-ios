@@ -52,6 +52,16 @@
 		AB0000000000000000001012 /* Corpus in Resources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200E /* Corpus */; };
 		AB0000000000000000001013 /* Contracts in Resources */ = {isa = PBXBuildFile; fileRef = AB000000000000000000200F /* Contracts */; };
 		AB0000000000000000001014 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002010 /* Fixtures */; };
+		AD0000000000000000000000 /* StrictImportJSON.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000000; };
+		AD0000000000000000000001 /* WorkoutImportContract.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000001; };
+		AD0000000000000000000002 /* ImportCredentialStore.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000002; };
+		AD0000000000000000000003 /* ImportRequest.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000003; };
+		AD0000000000000000000004 /* OpenRouterImportAdapter.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000004; };
+		AD0000000000000000000005 /* WorkoutImportViewModel.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000005; };
+		AD0000000000000000000006 /* WorkoutImportView.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000006; };
+		AD0000000000000000000007 /* ImportResources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000007; };
+		AD0000000000000000000008 /* WorkoutImportTests.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000008; };
+		AD0000000000000000000009 /* outbound-request.json in Resources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000009; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -127,6 +137,16 @@
 		AB0000000000000000002010 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
 		AB0000000000000000002101 /* PacePromptEvaluation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PacePromptEvaluation.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB0000000000000000002102 /* PacePromptEvaluationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PacePromptEvaluationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AC0000000000000000000000 /* StrictImportJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/StrictImportJSON.swift; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000001 /* WorkoutImportContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/WorkoutImportContract.swift; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000002 /* ImportCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/ImportCredentialStore.swift; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000003 /* ImportRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/ImportRequest.swift; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000004 /* OpenRouterImportAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/OpenRouterImportAdapter.swift; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000005 /* WorkoutImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/WorkoutImportViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000006 /* WorkoutImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/WorkoutImportView.swift; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000007 /* ImportResources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = PacePrompt/Import/ImportResources; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000008 /* WorkoutImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptTests/WorkoutImportTests.swift; sourceTree = SOURCE_ROOT; };
+		AC0000000000000000000009 /* outbound-request.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = docs/import/outbound-request.json; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -171,6 +191,17 @@
 		AA0000000000000000005001 = {
 			isa = PBXGroup;
 			children = (
+				AC0000000000000000000000,
+				AC0000000000000000000001,
+				AC0000000000000000000002,
+				AC0000000000000000000003,
+				AC0000000000000000000004,
+				AC0000000000000000000005,
+				AC0000000000000000000006,
+				AC0000000000000000000007,
+				AC0000000000000000000008,
+				AC0000000000000000000009,
+
 				AA0000000000000000005002 /* PacePrompt */,
 				AA0000000000000000005006 /* PacePromptTests */,
 				AA000000000000000000500A /* PacePromptUITests */,
@@ -491,6 +522,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD0000000000000000000007 /* ImportResources */,
 				AA000000000000000000100F /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -499,6 +531,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD0000000000000000000009 /* outbound-request.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -535,6 +568,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD0000000000000000000006 /* WorkoutImportView.swift */,
+				AD0000000000000000000005 /* WorkoutImportViewModel.swift */,
+				AD0000000000000000000004 /* OpenRouterImportAdapter.swift */,
+				AD0000000000000000000003 /* ImportRequest.swift */,
+				AD0000000000000000000002 /* ImportCredentialStore.swift */,
+				AD0000000000000000000001 /* WorkoutImportContract.swift */,
+				AD0000000000000000000000 /* StrictImportJSON.swift */,
 				AA0000000000000000001001 /* PacePromptApp.swift in Sources */,
 				AA0000000000000000001002 /* RootTabView.swift in Sources */,
 				AA0000000000000000001003 /* HomeView.swift in Sources */,
@@ -560,6 +600,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD0000000000000000000008 /* WorkoutImportTests.swift */,
 				AA0000000000000000001011 /* FTMSParserTests.swift in Sources */,
 				AA0000000000000000001012 /* TreadmillPresentationTests.swift in Sources */,
 				AA0000000000000000001013 /* WorkoutPlanValidatorTests.swift in Sources */,

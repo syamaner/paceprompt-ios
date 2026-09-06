@@ -9,6 +9,40 @@ final class PlansFlowUITests: XCTestCase {
         super.tearDown()
     }
 
+    func testImportDisclosureCancellationThenExactPreviewAndSeparateSave() {
+        launch(capabilities: "known", draft: "valid")
+        app.tabBars.buttons["Plans"].tap()
+        app.buttons["plans.import"].tap()
+        let editor = app.textViews["import.text"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        editor.tap(); editor.typeText("Synthetic treadmill workout")
+        tapWhenVisible(app.buttons["import.disclosure"])
+        XCTAssertTrue(app.navigationBars["Remote-send disclosure"].waitForExistence(timeout: 3))
+        app.navigationBars["Remote-send disclosure"].buttons["Cancel"].tap()
+        XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
+        XCTAssertEqual(editor.value as? String, "")
+        editor.tap(); editor.typeText("Synthetic treadmill workout")
+        tapWhenVisible(app.buttons["import.disclosure"])
+        tapWhenVisible(app.buttons["import.consent"])
+        XCTAssertTrue(app.staticTexts["Complete plan"].waitForExistence(timeout: 3))
+        XCTAssertTrue(findByScrolling(app.staticTexts["3. Cool-down: Synthetic coolDown"]))
+        tapWhenVisible(app.buttons["plan.confirm-save"])
+        XCTAssertTrue(app.staticTexts["Synthetic imported plan"].waitForExistence(timeout: 3))
+    }
+
+    func testImportedProposalWithUnknownCapabilitiesCannotPreviewOrSave() {
+        launch(capabilities: "unknown", draft: "valid")
+        app.tabBars.buttons["Plans"].tap(); app.buttons["plans.import"].tap()
+        let editor = app.textViews["import.text"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        editor.tap(); editor.typeText("Synthetic treadmill workout")
+        tapWhenVisible(app.buttons["import.disclosure"])
+        tapWhenVisible(app.buttons["import.consent"])
+        XCTAssertTrue(app.staticTexts["Local validation"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
+        XCTAssertEqual(editor.value as? String, "")
+    }
+
     func testValidManualPlanPreviewsExactlyAndSavesOnlyAfterConfirmation() {
         launch(capabilities: "known", draft: "valid")
         openCreate()

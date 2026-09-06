@@ -1,0 +1,50 @@
+{
+  "id": "synthetic-completion",
+  "created": 1,
+  "object": "chat.completion",
+  "model": "openai/gpt-5.6-sol-20260709",
+  "provider": "OpenAI",
+  "system_fingerprint": "synthetic-fingerprint",
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "logprobs": null,
+      "message": {
+        "role": "assistant",
+        "model": "openai/gpt-5.6-sol-20260709",
+        "content": "{\"contractVersion\":\"workout-import-model-output/v2\",\"outcome\":{\"affectedPaths\":[],\"proposal\":{\"activity\":\"indoorWalking\",\"contractVersion\":\"workout-proposal/v2\",\"present\":true,\"steps\":[{\"duration\":{\"unit\":\"minutes\",\"value\":2},\"kind\":\"warmUp\",\"label\":\"Warm-up\",\"targetInclination\":{\"unit\":\"percent\",\"value\":0},\"targetSpeed\":{\"unit\":\"kilometresPerHour\",\"value\":3}},{\"duration\":{\"unit\":\"minutes\",\"value\":5},\"kind\":\"interval\",\"label\":\"Interval\",\"targetInclination\":{\"unit\":\"percent\",\"value\":1.5},\"targetSpeed\":{\"unit\":\"kilometresPerHour\",\"value\":5}},{\"duration\":{\"unit\":\"minutes\",\"value\":2},\"kind\":\"coolDown\",\"label\":\"Cool-down\",\"targetInclination\":{\"unit\":\"percent\",\"value\":0},\"targetSpeed\":{\"unit\":\"kilometresPerHour\",\"value\":3}}],\"suggestedName\":\"Kestrel Walk\"},\"reasonCategory\":\"notApplicable\",\"type\":\"proposal\"}}",
+        "reasoning": "",
+        "refusal": null,
+        "reasoning_details": [],
+        "tool_calls": []
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 100,
+    "completion_tokens": 20,
+    "total_tokens": 120,
+    "cost": 0.001,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": null,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": null,
+      "upstream_inference_prompt_cost": 0.001,
+      "upstream_inference_completions_cost": 0
+    }
+  }
+}
