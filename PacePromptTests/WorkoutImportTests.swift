@@ -213,7 +213,7 @@ final class WorkoutImportBoundaryTests: XCTestCase {
             var object = try json(valid); object.removeValue(forKey: key)
             XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(data(object)), key)
         }
-        for model in ["openai/gpt-5.6-sol", "other", ""] {
+        for model in ["other", ""] {
             var o = try json(valid); o["model"] = model; XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(data(o)))
         }
         for provider in ["Azure", "OPENAI", "openai/fast", ""] {
@@ -251,8 +251,6 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         let valid = try json(envelope())
         var missingModel = valid; missingModel.removeValue(forKey: "model")
         XCTAssertEqual(try failure(missingModel), .identityModelMissing)
-        var aliasModel = valid; aliasModel["model"] = WorkoutImportContract.model
-        XCTAssertEqual(try failure(aliasModel), .identityModelAlias)
         var unqualifiedRevision = valid; unqualifiedRevision["model"] = "gpt-5.6-sol-20260709"
         XCTAssertEqual(try failure(unqualifiedRevision), .identityModelRevisionWithoutProvider)
         var nonStringModel = valid; nonStringModel["model"] = 56
@@ -272,11 +270,29 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         choices[0]["message"] = message; wrongMessageModel["choices"] = choices
         XCTAssertEqual(try failure(wrongMessageModel), .identityMessageModel)
 
-        for code in [ImportFailure.identityModelMissing, .identityModelAlias,
+        for code in [ImportFailure.identityModelMissing,
                      .identityModelRevisionWithoutProvider, .identityModelNonString, .identityModelMismatch,
                      .identityProviderMissing, .identityProviderMismatch,
                      .identityServiceTier, .identityMessageModel] {
             XCTAssertFalse(code.rawValue.contains("synthetic-secret"))
+        }
+    }
+
+    func testRequestedAliasIsAcceptedOnlyWithAuthorizedProviderIdentity() throws {
+        let valid = try json(envelope())
+        for provider in ["openai", "OpenAI"] {
+            var object = valid
+            object["model"] = WorkoutImportContract.model
+            object["provider"] = provider
+            XCTAssertNoThrow(try WorkoutImportContract.parseEnvelope(data(object)), provider)
+        }
+        for provider in ["Azure", "OPENAI", "openai/fast", ""] {
+            var object = valid
+            object["model"] = WorkoutImportContract.model
+            object["provider"] = provider
+            XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(data(object))) { error in
+                XCTAssertEqual(error as? ImportFailure, .identityProviderMismatch)
+            }
         }
     }
 
@@ -315,7 +331,7 @@ final class WorkoutImportBoundaryTests: XCTestCase {
     }
 
     func testIdentityDiagnosticsReachFeedbackAsCodesOnly() {
-        let codes: [ImportFailure] = [.identityResponseURL, .identityModelMissing, .identityModelAlias,
+        let codes: [ImportFailure] = [.identityResponseURL, .identityModelMissing,
                                       .identityModelRevisionWithoutProvider, .identityModelNonString, .identityModelMismatch,
                                       .identityProviderMissing, .identityProviderMismatch,
                                       .identityServiceTier, .identityMessageModel, .redirect, .responseContentType]
