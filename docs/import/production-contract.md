@@ -51,7 +51,8 @@ while the provider-side generation record reported the selected canonical revisi
 and OpenAI route. No received value or provider record is retained in the repository.
 
 Choice requires `index` (integer 0), `finish_reason` (`stop`), `message`.
-Optional `native_finish_reason` must be `stop`; optional `logprobs` must be null.
+Optional `native_finish_reason` must be `stop` or OpenAI's provider-native terminal
+status `completed`; optional `logprobs` must be null.
 Message requires `role` (`assistant`) and `content` (one structured JSON string).
 Optional `refusal` and `reasoning` must be null or empty string; optional
 `reasoning_details` and `tool_calls` must be empty arrays. Optional message `model`
@@ -64,11 +65,15 @@ Optional usage requires nonnegative integer `prompt_tokens`, `completion_tokens`
 number/null, `is_byok` boolean. Optional `prompt_tokens_details` is null or a closed
 object containing nonnegative integer `cached_tokens`, `cache_write_tokens`,
 `audio_tokens`, `video_tokens`. Optional `completion_tokens_details` is null or a
-closed object containing nullable nonnegative integers `reasoning_tokens`,
+closed object containing nullable nonnegative integers `reasoning_tokens`, `image_tokens`,
 `audio_tokens`, `accepted_prediction_tokens`, `rejected_prediction_tokens`.
 Optional `cost_details` is null or a closed object of nullable nonnegative numbers
 `upstream_inference_cost`, `upstream_inference_prompt_cost`,
-`upstream_inference_completions_cost`. Metadata is validated then discarded.
+`upstream_inference_completions_cost`, `server_tool_cost`. Optional
+`server_tool_use_details` is null or a closed object of nullable nonnegative integers
+`tool_calls_executed`, `tool_calls_requested`, `web_search_requests`. These accounting
+fields do not enable tools or alter the request; all usage metadata is validated then
+discarded.
 
 Non-200 responses never parse provider error text: 401/402/403/404/429/503 map to
 providerUnavailable with stable local reasons; other HTTP errors to providerFailure.

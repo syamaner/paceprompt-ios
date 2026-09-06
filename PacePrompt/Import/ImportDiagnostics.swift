@@ -283,7 +283,7 @@ enum ImportDiagnosticInspector {
         guard finishAccepted else { return }
 
         let native = classifyString(choice["native_finish_reason"], stage: .nativeFinishReason, sink: sink)
-        let nativeAccepted = native == .missing || native == .stop
+        let nativeAccepted = native == .missing || native == .stop || native == .completed
         sink.record(.check(.nativeFinishReason, nativeAccepted ? .accepted : .rejected))
         guard nativeAccepted else { return }
 

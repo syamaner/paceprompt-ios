@@ -1,5 +1,46 @@
 # Issue 19 review handoff
 
+## Second DEBUG observation and remaining documented fields — 6 September 2026
+
+The immutable post-repair DEBUG build at
+`55cd3a12d6dfc6310a03d80f5067216a7cc3d685` made the separately authorised second
+request with the unchanged `5dfff22f…` request hash. It again completed in the
+one-to-five-second bucket with no retry or redirect. The same endpoint, status,
+content type, JSON, identity, outer-contract and service-tier stages passed; usage
+remained the first rejected stage. This proves the first accounting-field repair was
+not sufficient and preserves the final authorised request for Release acceptance.
+
+Current public OpenRouter responses document `image_tokens` in
+`completion_tokens_details`, including zero for text-only completions, although the
+public OpenAPI omits it. Public OpenAI-route responses also show normalized
+`finish_reason: "stop"` paired with provider-native `native_finish_reason:
+"completed"`. The follow-up repair therefore admits only a nullable nonnegative
+integer `image_tokens` counter and the exact terminal native value `completed`;
+negative, fractional, nonnumeric and unknown accounting fields, and all other native
+finish values, remain rejected. Neither field enables image input/output, tools or
+reasoning, and the frozen request and all local authority remain unchanged.
+
+## Live usage-envelope compatibility — 6 September 2026
+
+The sealed DEBUG observation from remote main
+`03686208b13014224ee2dfbd391db87de7382947` made one request with request SHA-256
+`5dfff22f1a69a87bb3fa4c794aa66b27a10626982546a63eef19f51913039aa5`.
+It completed in the one-to-five-second bucket with no retry or redirect. Endpoint,
+HTTP status, content type, outer JSON syntax, provider/model identity, outer field
+allowlist and contract, and service tier passed; the first rejected stage was the
+closed usage contract, before choice or message validation. The normalized outcome
+was `providerFailure.structure`, preview remained unavailable and nothing was saved.
+
+OpenRouter's unauthenticated public OpenAPI `ChatUsage` schema on the same date has
+one optional top-level accounting object absent from the production allowlist,
+`server_tool_use_details`, and its `CostDetails` schema has one absent accounting
+field, `server_tool_cost`. The repair admits only those documented shapes: a nullable
+closed object of three nullable nonnegative integer counters, and one nullable
+nonnegative cost. Unknown fields, negative, fractional or nonnumeric counters, and
+negative costs still fail closed. This does not add tools to the request, accept tool
+calls in the response message or change the frozen request, provider routing, identity,
+schema, mapping, capability validation, preview or save authority.
+
 ## Issue 26 DEBUG-only redacted validation tracing — 6 September 2026
 
 A separate DEBUG-only inspector now reports closed validation stages without becoming
