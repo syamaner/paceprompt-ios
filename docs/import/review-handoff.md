@@ -1,5 +1,26 @@
 # Issue 19 review handoff
 
+## Live usage-envelope compatibility — 6 September 2026
+
+The sealed DEBUG observation from remote main
+`03686208b13014224ee2dfbd391db87de7382947` made one request with request SHA-256
+`5dfff22f1a69a87bb3fa4c794aa66b27a10626982546a63eef19f51913039aa5`.
+It completed in the one-to-five-second bucket with no retry or redirect. Endpoint,
+HTTP status, content type, outer JSON syntax, provider/model identity, outer field
+allowlist and contract, and service tier passed; the first rejected stage was the
+closed usage contract, before choice or message validation. The normalized outcome
+was `providerFailure.structure`, preview remained unavailable and nothing was saved.
+
+OpenRouter's unauthenticated public OpenAPI `ChatUsage` schema on the same date has
+one optional top-level accounting object absent from the production allowlist,
+`server_tool_use_details`, and its `CostDetails` schema has one absent accounting
+field, `server_tool_cost`. The repair admits only those documented shapes: a nullable
+closed object of three nullable nonnegative integer counters, and one nullable
+nonnegative cost. Unknown fields, negative, fractional or nonnumeric counters, and
+negative costs still fail closed. This does not add tools to the request, accept tool
+calls in the response message or change the frozen request, provider routing, identity,
+schema, mapping, capability validation, preview or save authority.
+
 ## Issue 26 DEBUG-only redacted validation tracing — 6 September 2026
 
 A separate DEBUG-only inspector now reports closed validation stages without becoming

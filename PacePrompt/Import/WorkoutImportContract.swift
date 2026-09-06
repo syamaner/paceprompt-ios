@@ -167,7 +167,8 @@ enum WorkoutImportContract {
     }
     private static func validateUsage(_ wire: ImportJSON) throws {
         let o = try wire.fields(required: ["prompt_tokens", "completion_tokens", "total_tokens"],
-            optional: ["cost", "is_byok", "prompt_tokens_details", "completion_tokens_details", "cost_details"])
+            optional: ["cost", "is_byok", "prompt_tokens_details", "completion_tokens_details", "cost_details",
+                       "server_tool_use_details"])
         let prompt = try o["prompt_tokens"]!.integer(), completion = try o["completion_tokens"]!.integer()
         let (sum, overflow) = prompt.addingReportingOverflow(completion)
         guard prompt >= 0, completion >= 0, !overflow, try o["total_tokens"]!.integer() == sum else { throw ImportFailure.structure }
@@ -175,7 +176,10 @@ enum WorkoutImportContract {
         if let byok = o["is_byok"], case .bool = byok {} else if o["is_byok"] != nil { throw ImportFailure.structure }
         try detail(o["prompt_tokens_details"], keys: ["cached_tokens", "cache_write_tokens", "audio_tokens", "video_tokens"], integer: true, nullable: false)
         try detail(o["completion_tokens_details"], keys: ["reasoning_tokens", "audio_tokens", "accepted_prediction_tokens", "rejected_prediction_tokens"], integer: true, nullable: true)
-        try detail(o["cost_details"], keys: ["upstream_inference_cost", "upstream_inference_prompt_cost", "upstream_inference_completions_cost"], integer: false, nullable: true)
+        try detail(o["cost_details"], keys: ["upstream_inference_cost", "upstream_inference_prompt_cost",
+            "upstream_inference_completions_cost", "server_tool_cost"], integer: false, nullable: true)
+        try detail(o["server_tool_use_details"], keys: ["tool_calls_executed", "tool_calls_requested",
+            "web_search_requests"], integer: true, nullable: true)
     }
 #if DEBUG
     static func parseEnvelopeUsageForDiagnostics(_ wire: ImportJSON) throws {

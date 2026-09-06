@@ -68,7 +68,11 @@ closed object containing nullable nonnegative integers `reasoning_tokens`,
 `audio_tokens`, `accepted_prediction_tokens`, `rejected_prediction_tokens`.
 Optional `cost_details` is null or a closed object of nullable nonnegative numbers
 `upstream_inference_cost`, `upstream_inference_prompt_cost`,
-`upstream_inference_completions_cost`. Metadata is validated then discarded.
+`upstream_inference_completions_cost`, `server_tool_cost`. Optional
+`server_tool_use_details` is null or a closed object of nullable nonnegative integers
+`tool_calls_executed`, `tool_calls_requested`, `web_search_requests`. These accounting
+fields do not enable tools or alter the request; all usage metadata is validated then
+discarded.
 
 Non-200 responses never parse provider error text: 401/402/403/404/429/503 map to
 providerUnavailable with stable local reasons; other HTTP errors to providerFailure.
