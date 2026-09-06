@@ -85,7 +85,7 @@ struct FoundationSavedPlanFileSystem: SavedPlanFileSystem {
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
-            create: false
+            create: true
         )
     }
 
@@ -93,7 +93,13 @@ struct FoundationSavedPlanFileSystem: SavedPlanFileSystem {
         do {
             _ = try fileManager.attributesOfItem(atPath: url.path)
             return true
-        } catch let error as CocoaError where error.code == .fileNoSuchFile {
+        } catch {
+            let cocoaError = error as NSError
+            guard cocoaError.domain == NSCocoaErrorDomain,
+                  cocoaError.code == CocoaError.fileNoSuchFile.rawValue
+                    || cocoaError.code == CocoaError.fileReadNoSuchFile.rawValue else {
+                throw error
+            }
             return false
         }
     }

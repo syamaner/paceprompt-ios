@@ -3,6 +3,31 @@ import XCTest
 @testable import PacePrompt
 
 final class SavedPlanRepositoryTests: XCTestCase {
+    func testFoundationFileSystemCreatesApplicationSupportDirectoryWhenNeeded() throws {
+        let fileManager = RecordingApplicationSupportFileManager()
+        let fileSystem = FoundationSavedPlanFileSystem(fileManager: fileManager)
+
+        let directory = try fileSystem.applicationSupportDirectory()
+
+        XCTAssertEqual(directory, fileManager.applicationSupportURL)
+        XCTAssertEqual(fileManager.requestedCreate, true)
+    }
+
+    func testFoundationFileSystemTreatsCocoaMissingFileErrorsAsAbsent() throws {
+        for errorCode in [
+            CocoaError.fileNoSuchFile.rawValue,
+            CocoaError.fileReadNoSuchFile.rawValue,
+        ] {
+            let fileManager = MissingFileManager(errorCode: errorCode)
+            let fileSystem = FoundationSavedPlanFileSystem(fileManager: fileManager)
+
+            XCTAssertFalse(
+                try fileSystem.fileExists(at: URL(fileURLWithPath: "/synthetic/missing.json")),
+                "Expected NSCocoaErrorDomain code \(errorCode) to mean absent"
+            )
+        }
+    }
+
     func testStoreCodecRoundTripsOnlyVersionedRecordsAndCompletePlansInOrder() throws {
         let codec = SavedPlanJSONCodec()
         let records = [
@@ -452,6 +477,40 @@ final class SavedPlanRepositoryTests: XCTestCase {
 
     private func decimal(_ value: String) -> Decimal {
         Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))!
+    }
+}
+
+private final class RecordingApplicationSupportFileManager: FileManager, @unchecked Sendable {
+    let applicationSupportURL = URL(
+        fileURLWithPath: "/synthetic/Application Support",
+        isDirectory: true
+    )
+    private(set) var requestedCreate: Bool?
+
+    override func url(
+        for directory: FileManager.SearchPathDirectory,
+        in domain: FileManager.SearchPathDomainMask,
+        appropriateFor url: URL?,
+        create shouldCreate: Bool
+    ) throws -> URL {
+        XCTAssertEqual(directory, .applicationSupportDirectory)
+        XCTAssertEqual(domain, .userDomainMask)
+        XCTAssertNil(url)
+        requestedCreate = shouldCreate
+        return applicationSupportURL
+    }
+}
+
+private final class MissingFileManager: FileManager, @unchecked Sendable {
+    private let errorCode: Int
+
+    init(errorCode: Int) {
+        self.errorCode = errorCode
+        super.init()
+    }
+
+    override func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
+        throw NSError(domain: NSCocoaErrorDomain, code: errorCode)
     }
 }
 
