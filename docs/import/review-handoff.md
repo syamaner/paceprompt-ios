@@ -1,5 +1,30 @@
 # Issue 19 review handoff
 
+## Post-live redacted identity diagnostics — 6 September 2026
+
+After the first authorised simulator observation returned the existing aggregate
+`providerFailure(identity)` code, a separate diagnostics slice was prepared from
+remote main `272dc30db219e70d5db9cfae58ca2fcdd7ed8be0`. It does not alter the
+request, accepted identities, response schema, retry policy or local authority.
+
+Redirect and response-content-type failures are now distinct from transport and
+structural failures. The response URL, missing or mismatched top-level model, missing
+or mismatched provider, service tier and optional message model also produce distinct stable local
+codes. Received values, response bodies and native errors remain undisplayed and
+unretained. Synthetic tests cover every code and assert that the URL and test values
+do not enter the normalized outcome. Current OpenRouter documentation still omits
+the issue-required top-level `provider` field from its documented successful Chat
+Completions response, so absence remains a deliberate fail-closed result rather than
+being silently accepted.
+
+This diagnostic preparation made no provider request, read no credential and spent
+$0.00. The retained simulator credential was not inspected or changed. Focused
+tests passed 28/28; the complete production suite passed 113/113; the evaluation
+suite passed 14/14. Release simulator build, static analysis, resource verification,
+all three skill validators, the accounting helper's 20 tests and diff checks passed.
+Exact Codex phase accounting is unmeasured because the unmodified helper rejected a
+cumulative counter decrease between events 77 and 78 before implementation.
+
 Implementation was prepared uncommitted on `codex/issue-19-production-import` in
 `/private/tmp/paceprompt-issue19`, based on verified remote main
 `5fea298b07eedd19b816fd5eb70a8e6ae750ac2e`.

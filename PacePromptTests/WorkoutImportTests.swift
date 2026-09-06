@@ -237,6 +237,93 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(valid.dropLast()))
     }
 
+    func testIdentityFailuresAreFieldSpecificWithoutIncludingReceivedValues() throws {
+        func failure(_ object: [String: Any]) throws -> ImportFailure {
+            do {
+                _ = try WorkoutImportContract.parseEnvelope(data(object))
+                XCTFail("Expected a closed identity failure")
+                return .structure
+            } catch let error as ImportFailure {
+                return error
+            }
+        }
+
+        let valid = try json(envelope())
+        var missingModel = valid; missingModel.removeValue(forKey: "model")
+        XCTAssertEqual(try failure(missingModel), .identityModelMissing)
+        var wrongModel = valid; wrongModel["model"] = "synthetic-secret-model-value"
+        XCTAssertEqual(try failure(wrongModel), .identityModelMismatch)
+        var missingProvider = valid; missingProvider.removeValue(forKey: "provider")
+        XCTAssertEqual(try failure(missingProvider), .identityProviderMissing)
+        var wrongProvider = valid; wrongProvider["provider"] = "synthetic-secret-provider-value"
+        XCTAssertEqual(try failure(wrongProvider), .identityProviderMismatch)
+        var wrongTier = valid; wrongTier["service_tier"] = "synthetic-secret-tier-value"
+        XCTAssertEqual(try failure(wrongTier), .identityServiceTier)
+        var wrongMessageModel = valid
+        var choices = wrongMessageModel["choices"] as! [[String: Any]]
+        var message = choices[0]["message"] as! [String: Any]
+        message["model"] = "synthetic-secret-message-model-value"
+        choices[0]["message"] = message; wrongMessageModel["choices"] = choices
+        XCTAssertEqual(try failure(wrongMessageModel), .identityMessageModel)
+
+        for code in [ImportFailure.identityModelMissing, .identityModelMismatch,
+                     .identityProviderMissing, .identityProviderMismatch,
+                     .identityServiceTier, .identityMessageModel] {
+            XCTAssertFalse(code.rawValue.contains("synthetic-secret"))
+        }
+    }
+
+    func testAdapterReportsResponseURLIdentityWithoutDisclosingURL() throws {
+        let backend = SyntheticKeychain(); backend.data = Data("synthetic-key".utf8)
+        let transport = CapturingTransport()
+        let adapter = OpenRouterImportAdapter(credential: ImportCredentialStore(backend: backend), transport: transport)
+        var outcome: WorkoutImportOutcome?
+        adapter.generate(snapshot()) { outcome = $0 }
+        let wrongURL = URL(string: "https://synthetic-secret.invalid/redirect")!
+        let response = HTTPURLResponse(url: wrongURL, statusCode: 200, httpVersion: "HTTP/1.1",
+                                       headerFields: ["Content-Type": "application/json"])!
+        transport.complete(.success((try envelope(), response)))
+        XCTAssertEqual(outcome, .providerFailure(.identityResponseURL))
+        XCTAssertFalse(String(describing: outcome).contains(wrongURL.absoluteString))
+        XCTAssertEqual(transport.requests.count, 1)
+    }
+
+    func testAdapterReportsRedirectAndContentTypeWithoutResponseDetails() throws {
+        for (response, expected) in [
+            (HTTPURLResponse(url: WorkoutImportContract.endpoint, statusCode: 307, httpVersion: "HTTP/1.1",
+                             headerFields: ["Location": "https://synthetic-secret.invalid/redirect"])!, ImportFailure.redirect),
+            (HTTPURLResponse(url: WorkoutImportContract.endpoint, statusCode: 200, httpVersion: "HTTP/1.1",
+                             headerFields: ["Content-Type": "text/synthetic-secret"])!, .responseContentType)
+        ] {
+            let backend = SyntheticKeychain(); backend.data = Data("synthetic-key".utf8)
+            let transport = CapturingTransport()
+            let adapter = OpenRouterImportAdapter(credential: ImportCredentialStore(backend: backend), transport: transport)
+            var outcome: WorkoutImportOutcome?
+            adapter.generate(snapshot()) { outcome = $0 }
+            transport.complete(.success((Data("synthetic-secret-response".utf8), response)))
+            XCTAssertEqual(outcome, .providerFailure(expected))
+            XCTAssertFalse(String(describing: outcome).contains("synthetic-secret"))
+            XCTAssertEqual(transport.requests.count, 1)
+        }
+    }
+
+    func testIdentityDiagnosticsReachFeedbackAsCodesOnly() {
+        let codes: [ImportFailure] = [.identityResponseURL, .identityModelMissing, .identityModelMismatch,
+                                      .identityProviderMissing, .identityProviderMismatch,
+                                      .identityServiceTier, .identityMessageModel, .redirect, .responseContentType]
+        for code in codes {
+            let generator = SyntheticGenerator()
+            let model = WorkoutImportViewModel(generator: generator,
+                                               plans: PlansViewModel(repository: ImportRepositoryDouble()))
+            model.begin(capabilities: known()); model.text = "Synthetic workout"
+            model.reviewDisclosure(); model.consentAndSend()
+            generator.complete(.providerFailure(code))
+            XCTAssertEqual(model.feedback,
+                           "Remote import failed (\(code.rawValue)). Nothing was saved. A new attempt requires a new disclosure.")
+            XCTAssertFalse(model.feedback?.contains("Synthetic workout") ?? true)
+        }
+    }
+
     func testSentinelsVersionsOutcomePairingPathsAndAdditionalFields() throws {
         var valid = try json(modelOutput())
         var o = valid["outcome"] as! [String: Any]

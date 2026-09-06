@@ -66,16 +66,22 @@ enum WorkoutImportContract {
 
     static func parseEnvelope(_ data: Data) throws -> WorkoutImportOutcome {
         let root = try StrictImportJSON.parse(data)
+        guard let rootFields = root.object else { throw ImportFailure.structure }
+        guard rootFields["model"] != nil else { throw ImportFailure.identityModelMissing }
+        guard rootFields["provider"] != nil else { throw ImportFailure.identityProviderMissing }
         let o = try root.fields(required: ["id", "object", "created", "model", "provider", "choices"],
                                 optional: ["system_fingerprint", "usage", "service_tier"])
-        guard o["model"] == .string(revision), [ImportJSON.string("openai"), .string("OpenAI")].contains(o["provider"]) else {
-            throw ImportFailure.identity
+        guard o["model"] == .string(revision) else { throw ImportFailure.identityModelMismatch }
+        guard [ImportJSON.string("openai"), .string("OpenAI")].contains(o["provider"]) else {
+            throw ImportFailure.identityProviderMismatch
         }
         guard let id = o["id"]?.string, !id.isEmpty, o["object"] == .string("chat.completion"),
               try o["created"]!.integer() >= 0,
               let choices = o["choices"]?.array, choices.count == 1 else { throw ImportFailure.structure }
         if let fingerprint = o["system_fingerprint"], fingerprint != .null, fingerprint.string == nil { throw ImportFailure.structure }
-        if let tier = o["service_tier"], tier != .null, tier != .string("default") { throw ImportFailure.identity }
+        if let tier = o["service_tier"], tier != .null, tier != .string("default") {
+            throw ImportFailure.identityServiceTier
+        }
         if let usage = o["usage"] { try validateUsage(usage) }
         let choice = try choices[0].fields(required: ["index", "finish_reason", "message"], optional: ["native_finish_reason", "logprobs"])
         guard try choice["index"]!.integer() == 0, choice["finish_reason"] == .string("stop") else { throw ImportFailure.structure }
@@ -90,7 +96,9 @@ enum WorkoutImportContract {
         for key in ["reasoning_details", "tool_calls"] {
             if let value = message[key], value != .array([]) { throw ImportFailure.structure }
         }
-        if let model = message["model"], model != .string(revision) { throw ImportFailure.identity }
+        if let model = message["model"], model != .string(revision) {
+            throw ImportFailure.identityMessageModel
+        }
         return try parseModelOutput(Data(content.utf8))
     }
 
