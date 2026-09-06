@@ -251,6 +251,12 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         let valid = try json(envelope())
         var missingModel = valid; missingModel.removeValue(forKey: "model")
         XCTAssertEqual(try failure(missingModel), .identityModelMissing)
+        var aliasModel = valid; aliasModel["model"] = WorkoutImportContract.model
+        XCTAssertEqual(try failure(aliasModel), .identityModelAlias)
+        var unqualifiedRevision = valid; unqualifiedRevision["model"] = "gpt-5.6-sol-20260709"
+        XCTAssertEqual(try failure(unqualifiedRevision), .identityModelRevisionWithoutProvider)
+        var nonStringModel = valid; nonStringModel["model"] = 56
+        XCTAssertEqual(try failure(nonStringModel), .identityModelNonString)
         var wrongModel = valid; wrongModel["model"] = "synthetic-secret-model-value"
         XCTAssertEqual(try failure(wrongModel), .identityModelMismatch)
         var missingProvider = valid; missingProvider.removeValue(forKey: "provider")
@@ -266,7 +272,8 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         choices[0]["message"] = message; wrongMessageModel["choices"] = choices
         XCTAssertEqual(try failure(wrongMessageModel), .identityMessageModel)
 
-        for code in [ImportFailure.identityModelMissing, .identityModelMismatch,
+        for code in [ImportFailure.identityModelMissing, .identityModelAlias,
+                     .identityModelRevisionWithoutProvider, .identityModelNonString, .identityModelMismatch,
                      .identityProviderMissing, .identityProviderMismatch,
                      .identityServiceTier, .identityMessageModel] {
             XCTAssertFalse(code.rawValue.contains("synthetic-secret"))
@@ -308,7 +315,8 @@ final class WorkoutImportBoundaryTests: XCTestCase {
     }
 
     func testIdentityDiagnosticsReachFeedbackAsCodesOnly() {
-        let codes: [ImportFailure] = [.identityResponseURL, .identityModelMissing, .identityModelMismatch,
+        let codes: [ImportFailure] = [.identityResponseURL, .identityModelMissing, .identityModelAlias,
+                                      .identityModelRevisionWithoutProvider, .identityModelNonString, .identityModelMismatch,
                                       .identityProviderMissing, .identityProviderMismatch,
                                       .identityServiceTier, .identityMessageModel, .redirect, .responseContentType]
         for code in codes {

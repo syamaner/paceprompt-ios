@@ -1,5 +1,19 @@
 # Issue 19 review handoff
 
+## Second-stage redacted model classification — 6 September 2026
+
+The authorised simulator observation against remote main `175b8279d5047b6e9ec1f19f94076f667560191d`
+made exactly one provider request and failed closed as `identityModelMismatch` before provider,
+envelope, proposal mapping or local validation could be established. This follow-up diagnostic
+keeps the exact canonical-only acceptance rule while classifying a mismatched top-level model as
+the requested alias, the canonical revision without its provider prefix, a non-string value, or
+another mismatch. Only the stable category reaches UI feedback; the received value and response
+body remain undisplayed and unretained.
+
+This code-only follow-up makes no provider request, reads no credential and incurs no provider
+spend. It does not authorise another live observation or relax any identity, envelope, retry,
+local validation, physical-device, treadmill, FTMS, HealthKit or watchOS boundary.
+
 ## Post-live redacted identity diagnostics — 6 September 2026
 
 After the first authorised simulator observation returned the existing aggregate
