@@ -48,8 +48,15 @@ def verify():
         text = file.read_text()
         assert 'Evaluation/' not in text, file
         if file.parent.name == 'Import':
-            for prohibited in ['print(', 'NSLog(', 'Logger(', 'UserDefaults', 'write(to:', 'FileHandle']:
+            for prohibited in ['print(', 'NSLog(', 'UserDefaults', 'write(to:', 'FileHandle']:
                 assert prohibited not in text, (file, prohibited)
+            if file.name == 'ImportDiagnostics.swift':
+                assert text.startswith('#if DEBUG\n'), file
+                assert text.rstrip().endswith('#endif'), file
+                assert text.count('Logger(') == 1, file
+                assert 'event.code, privacy: .public' in text, file
+            else:
+                assert 'Logger(' not in text, file
     print('PASS: pinned hashes, eleven ordered model-visible examples, complete fixture and source privacy checks')
 
 if __name__ == '__main__':

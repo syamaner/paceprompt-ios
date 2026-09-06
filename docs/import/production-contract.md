@@ -130,3 +130,27 @@ Live evidence established that OpenRouter can return the requested alias in the 
 envelope while its provider-side record attributes the generation to the selected
 canonical revision and OpenAI route. Production therefore accepts only that exact
 alias/provider tuple as equivalent; it does not accept a different alias or provider.
+
+## DEBUG-only redacted validation tracing
+
+Issue 26 adds an observational diagnostic path compiled only when `DEBUG` is set.
+The production parser remains the sole response-acceptance authority: a separate
+inspector emits closed stage, result and classification enums, then the unchanged
+parser independently accepts or rejects the response. The injectable sink therefore
+cannot provide retry, routing, validation, preview or save authority.
+
+The trace distinguishes disclosure and request lifecycle; endpoint, HTTP status class
+and content type; outer JSON syntax and field allowlist; model/provider classification;
+service tier and usage contract; choice count/allowlist/index; finish reasons and
+logprobs; message allowlist, role, content, refusal, reasoning, reasoning details,
+tool calls and optional model identity; structured-content JSON/contract; mapping,
+local validation, preview eligibility and terminal outcome. Request count and elapsed
+time use numeric counts and coarse predefined buckets only.
+
+No diagnostic event can contain prompts, request/response bodies, received identity
+strings, URLs, IDs, workout values, provider errors, native error descriptions,
+credentials, headers or Keychain bytes. The default DEBUG sink writes only stable
+public event codes to Apple unified logging. Those development logs may persist under
+Apple's OS logging policy; PacePrompt adds no in-app history, export, remote logging,
+analytics or telemetry upload. Release compilation excludes the implementation and
+every call site, and Release UI/behaviour remain unchanged.

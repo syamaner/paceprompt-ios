@@ -18,8 +18,20 @@ final class WorkoutImportViewModel: ObservableObject {
     private var previewCapabilities: WorkoutPlanCapabilities?
     private var foreground = true
     private var protectedDataAvailable = true
+#if DEBUG
+    private let diagnostics: any ImportDiagnosticSink
+#endif
 
+#if DEBUG
+    init(generator: any WorkoutImportGenerating, plans: PlansViewModel,
+         diagnostics: any ImportDiagnosticSink = UnifiedImportDiagnosticSink.shared) {
+        self.generator = generator
+        self.plans = plans
+        self.diagnostics = diagnostics
+    }
+#else
     init(generator: any WorkoutImportGenerating, plans: PlansViewModel) { self.generator = generator; self.plans = plans }
+#endif
     func begin(capabilities: WorkoutPlanCapabilities) {
         cancel()
         self.capabilities = capabilities
@@ -47,6 +59,9 @@ final class WorkoutImportViewModel: ObservableObject {
         disclosure = nil // One affirmative decision permits exactly one request.
         outcome = nil; feedback = nil; mappingFailure = false; validationIssues = []
         let id = UUID(); requestID = id; isSending = true
+#if DEBUG
+        diagnostics.record(.check(.disclosure, .accepted))
+#endif
         generator.generate(snapshot) { [weak self] result in
             guard let self, self.requestID == id, self.foreground, self.protectedDataAvailable,
                   snapshot == ImportRequestSnapshot(text: self.text, capabilities: self.capabilities) else { return }
@@ -55,20 +70,42 @@ final class WorkoutImportViewModel: ObservableObject {
             case let .proposal(proposal):
                 do {
                     let plan = try WorkoutProposalMapper.map(proposal)
+#if DEBUG
+                    self.diagnostics.record(.check(.deterministicMapping, .accepted))
+#endif
                     switch self.plans.reviewImportedPlan(plan, against: self.capabilities) {
                     case let .failure(failure):
+#if DEBUG
+                        self.diagnostics.record(.check(.localCapabilityValidation, .rejected))
+                        self.diagnostics.record(.check(.previewEligibility, .rejected))
+                        self.diagnostics.record(.terminal(.localValidationFailure))
+#endif
                         self.terminal("Local validation blocked this plan. Review the listed fields or use manual entry.")
                         self.validationIssues = failure.issues
                     case .success:
+#if DEBUG
+                        self.diagnostics.record(.check(.localCapabilityValidation, .accepted))
+                        self.diagnostics.record(.check(.previewEligibility, .accepted))
+                        self.diagnostics.record(.terminal(.previewEligible))
+#endif
                         self.previewCapabilities = self.capabilities
                         // The untrusted proposal and raw exchange are not retained after mapping.
                         self.outcome = nil
                     }
                 } catch {
+#if DEBUG
+                    self.diagnostics.record(.check(.deterministicMapping, .rejected))
+                    self.diagnostics.record(.check(.previewEligibility, .rejected))
+                    self.diagnostics.record(.terminal(.mappingFailure))
+#endif
                     self.terminal("Exact unit conversion failed. Use representable values and whole canonical seconds, or enter the plan manually.")
                     self.mappingFailure = true
                 }
             default:
+#if DEBUG
+                self.diagnostics.record(.check(.previewEligibility, .rejected))
+                self.diagnostics.record(.terminal(Self.diagnosticTerminal(result)))
+#endif
                 self.terminal(Self.message(result))
                 self.outcome = result // Only closed codes/paths, never provider prose.
             }
@@ -78,8 +115,17 @@ final class WorkoutImportViewModel: ObservableObject {
         guard foreground, protectedDataAvailable, previewCapabilities == capabilities,
               plans.preview != nil else { requestChanged(); return }
         plans.confirmSave()
-        if let error = plans.saveError { terminal(error) }
-        else if plans.preview == nil { cancel() }
+        if let error = plans.saveError {
+#if DEBUG
+            diagnostics.record(.terminal(.saveFailure))
+#endif
+            terminal(error)
+        } else if plans.preview == nil {
+#if DEBUG
+            diagnostics.record(.terminal(.saved))
+#endif
+            cancel()
+        }
     }
     func returnToInput() { requestChanged() }
     func cancel() {
@@ -132,4 +178,16 @@ final class WorkoutImportViewModel: ObservableObject {
         case .proposal: return ""
         }
     }
+#if DEBUG
+    private static func diagnosticTerminal(_ outcome: WorkoutImportOutcome) -> ImportDiagnosticTerminal {
+        switch outcome {
+        case .proposal: .previewEligible
+        case .clarificationRequired: .clarificationRequired
+        case .unsupportedRequest: .unsupportedRequest
+        case .refusal: .refusal
+        case .providerUnavailable: .providerUnavailable
+        case .providerFailure: .providerFailure
+        }
+    }
+#endif
 }

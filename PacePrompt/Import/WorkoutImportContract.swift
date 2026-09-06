@@ -177,6 +177,11 @@ enum WorkoutImportContract {
         try detail(o["completion_tokens_details"], keys: ["reasoning_tokens", "audio_tokens", "accepted_prediction_tokens", "rejected_prediction_tokens"], integer: true, nullable: true)
         try detail(o["cost_details"], keys: ["upstream_inference_cost", "upstream_inference_prompt_cost", "upstream_inference_completions_cost"], integer: false, nullable: true)
     }
+#if DEBUG
+    static func parseEnvelopeUsageForDiagnostics(_ wire: ImportJSON) throws {
+        try validateUsage(wire)
+    }
+#endif
     private static func detail(_ wire: ImportJSON?, keys: Set<String>, integer: Bool, nullable: Bool) throws {
         guard let wire, wire != .null else { return }
         let o = try wire.fields(required: [], optional: keys)
