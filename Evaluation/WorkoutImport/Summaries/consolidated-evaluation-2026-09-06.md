@@ -10,7 +10,125 @@ Sol achieved **99.3817% composite, 237/237 schema-valid responses, 3,625 ms host
 
 On-device inference is deferred, not failed. Production import is not implemented by this report; [issue #19](https://github.com/syamaner/paceprompt-ios/issues/19) is the next gated slice.
 
-## Scope and evidence
+## Classification metrics at a glance
+
+These are **new descriptive diagnostics**, calculated from the already recorded category-confusion counts. They do not replace the frozen composite, change the acceptance gates or retrospectively select a model.
+
+There are 14 semantic classes: `proposal` plus 13 reason categories. **Category accuracy is more specific than the existing outcome-type accuracy**: choosing the right broad outcome but the wrong reason can pass the latter and fail the former. Macro precision, recall and F1 average the 14 classes equally; they are not measures of exact workout-value correctness.
+
+<!-- classification-summary-start -->
+| Model | Recorded label / 237 | Category accuracy % | Macro precision % | Macro recall % | Macro F1 % |
+| --- | --- | --- | --- | --- | --- |
+| google/gemini-3.7-flash | 233/237 | 98.3122 | 100.0000 | 98.0952 | 98.9011 |
+| openai/gpt-5.6-luna | 228/237 | 91.5612 | 97.4846 | 91.0317 | 93.5201 |
+| openai/gpt-5.6-sol | 237/237 | 99.5781 | 99.5536 | 99.5238 | 99.5233 |
+| deepseek/deepseek-v4-flash-0731 | 206/237 | 81.8565 | 95.0791 | 80.3968 | 84.4864 |
+| minimax/minimax-m3 | 189/237 | 70.4641 | 90.7207 | 69.4841 | 76.2240 |
+| mistralai/mistral-small-2603 † | 0/237 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| mistralai/mistral-small-3.2-24b-instruct † | 12/237 | 3.3755 | 41.6667 | 3.6508 | 6.6041 |
+| nvidia/nemotron-3-ultra-550b-a55b † | 11/237 | 4.2194 | 57.1429 | 4.5238 | 8.3254 |
+| nvidia/nemotron-3.5-lightning † | 82/237 | 16.4557 | 56.8555 | 13.6905 | 19.2162 |
+| qwen/qwen-2.5-7b-instruct | 126/237 | 41.7722 | 77.3673 | 39.2460 | 44.3391 |
+| qwen/qwen3.8-27b | 221/237 | 91.9831 | 98.8095 | 91.5873 | 93.6191 |
+| z-ai/glm-5.3-flash † | 1/237 | 0.4219 | 7.1429 | 0.3968 | 0.7519 |
+<!-- classification-summary-end -->
+
+† Paused or prerequisite-blocked: scheduled-denominator accounting only, **no partial ranking**. Rows are grouped by round, not score. The v3/v4 datasets and controls are described below; older v2.9 screening remains separate in the appendix.
+
+Sol's category accuracy is 236/237 = **99.5781%**, with **99.5233% macro-F1** and no recorded non-proposal-to-proposal predictions. These classification metrics do not prove that all affected paths were correct: Sol still had path-level errors in the original detailed scoring.
+
+Gemini's recorded-label-only category accuracy is 100%, but only 233/237 positions had a recorded label. Its scheduled accuracy is 98.3122%. GLM also has 100% recorded-label-only accuracy from just **one** labelled position; that is not evidence of competitive overall performance. The [extended overview](classification-overview.md) places conditional accuracy, coverage and recorded false-proposal counts together.
+
+### Reading the confusion matrices
+
+Rows are expected classes; columns are predicted classes. The diagonal is correct classification. Each cell shows the count and percentage of its expected row; percentages are rounded to whole numbers only in the chart. The Ø column retains positions with no recorded model category. It combines invalid output, transport/infrastructure failures and not-started calls, rather than treating them as successful abstentions. Their operational breakdown remains in the appendix.
+
+![Selected Sol: counts and row-normalised category confusion](charts/confusion/openai--gpt-5.6-sol.svg)
+
+[All 12 confusion matrices and per-class precision, recall, F1 and support](classification-details.md) are available in the detailed appendix. [Machine-readable diagnostics](classification-diagnostics.json) retain exact fractions and conditional-view metrics.
+
+### Metric definitions and failure handling
+
+- For each class, TP is its diagonal count; FP is predictions of that class from other rows; FN is its row total minus TP, including missing predictions.
+- Precision = TP/(TP+FP); recall = TP/(TP+FN); F1 = 2TP/(2TP+FP+FN). Support is the number of expected instances, **not** the number of predictions.
+- Scheduled category accuracy = all diagonal counts / 237. Missing results cannot be correct.
+- Macro averages use the fixed 14 semantic classes. Undefined per-class ratios are shown as Undefined/null; macro averaging substitutes zero for an undefined class. The missing-result column is not an extra true class. A wholly empty conditional view is Undefined, not zero or 100%.
+- Recorded-label-only metrics exclude Ø positions. They are supplementary diagnostics, never replacements for scheduled-denominator metrics. They can include labels captured before a later scorer failure: Nemotron Lightning has 82 recorded labels versus 74 aggregate schema-valid scored responses; Qwen 2.5 has 126 versus 125. They do **not** establish successful scoring or local validation.
+- Safety → proposal counts predictions of `proposal` for `unsafeRequest`, `medicalRequest` or `promptInjection` rows (45 scheduled positions per model). All non-proposal → proposal covers 201 scheduled positions. These are observed category errors, not treadmill actions. Zero observed errors in an incomplete run is not a safety pass.
+- The existing safety gate is stricter: exact outcome, reason and affected paths on every applicable attempt. A correct refusal category can still fail it.
+
+No confidence intervals are fabricated from these aggregate counts. Three outputs for the same case are repeated observations, not three independent user situations.
+
+## Methodology: how the evaluation was built
+
+### The task and expected answers
+
+The task is to turn synthetic workout text into an untrusted structured workout proposal, or the specified clarification/refusal/unsupported outcome. The model must preserve explicit values, units and step order, respect known/unknown capabilities and avoid filling gaps by guessing. Provider infrastructure outcomes are handled separately by the host.
+
+A case contains input text, explicit locale and capabilities, an expected structured model output, and expected canonical mapping/local-validator results. Expected labels and affected paths follow the ratified prompt's ordered decision rules. The evaluator can therefore compare outputs against explicit expected answers rather than asking another model whether they look good.
+
+### Dataset construction and separation
+
+| Dataset element | Size and role |
+| --- | --- |
+| Development | 20 synthetic cases; 11 fixed, ordered few-shot examples |
+| Warm-up | Fixed development case WI-V3-D020; one unscored call per model |
+| Held-out | 79 synthetic cases; never used as few-shot examples |
+| Held-out composition | 12 proposal cases and 67 reason-category cases, including 15 safety cases |
+| Category coverage | Five cases per reason category, except six each for knownCapabilityUnsupported and unsupportedActivity; 12 proposal cases |
+| Language | All 99 development/held-out cases are en-GB |
+| Repetitions | Three per held-out case: 237 scheduled scored attempts per model |
+
+The [development manifest](../HostEval/datasets/v3/development/manifest.json), [held-out manifest](../HostEval/datasets/v3/heldout/manifest.json) and [semantic non-duplication review](../HostEval/datasets/v3/semantic-nonduplication-v3.json) are the construction authority. They record **Claude Fable 5.1 via Claude Code as the authoring assistant and the operator as the second adjudicator**, with amendments and ratification before model results.
+
+The operator corrected ambiguous labels and rewrote cases where rule precedence or similarity to development examples was problematic. Automated verification checks normalised-text and prompt-skeleton collisions against earlier corpora and the development set. The semantic review records nearest-case comparisons. These checks reduce detectable leakage; they do not prove statistical independence or eliminate authoring bias.
+
+The dataset is purpose-built coverage of the contract, not a random sample of real user workouts. The 12 proposal behaviours include mixed units, duration precision, finite repetitions, scoped values, a unique antecedent, unknown capabilities and the exact 64-step boundary. Safety cases include unsafe, medical and prompt-injection requests. Multilingual generalisation and real-user distribution accuracy remain unmeasured.
+
+### Was an LLM used as a judge?
+
+**No LLM-as-judge scored the model responses.** LLM assistance was used upstream to author the prompt/corpus and expected answers; that is distinct from judging outputs after inference.
+
+In plain terms, the scorer is an **answer key plus executable rules**, not another chatbot giving an opinion. For the same frozen case, output and scorer version, it produces the same result. It does not award points for persuasive explanations or fluent wording, and it does not repair an incorrect response to make it pass.
+
+For an illustrative request with an explicitly stated duration and speed, returning the correct `proposal` label is only the first check. The proposed duration and speed must preserve the stated values through the accepted unit conversion, steps must stay in the requested order, and deterministic local validation must produce the expected result for the supplied capabilities. If required information is missing, an invented value is not accepted merely because the workout looks plausible. This illustration is explanatory, not a newly added evaluation case.
+
+| Check | What the fixed rules establish |
+| --- | --- |
+| Structure | The response has the accepted schema, fields and value types |
+| Outcome and reason | It chooses the expected proposal, clarification, refusal or unsupported response and reason |
+| Affected paths | It identifies exactly which fields have a problem |
+| Proposal fidelity | It preserves stated values, units, step order and multiplicity |
+| Mapping and validation | Canonical mapping and capability/range checks agree with the expected local-validator result |
+| Run-level acceptance | Coverage, safety, category floors and the composite meet the pre-ratified gates |
+
+The accepted [deterministic scorer](../Scoring/scorer.py) explicitly operates without a model judge. It checks structure, compares outcomes and exact values/step order, maps proposals and runs the host-side local-validation rules against expected results. The [host runner](../HostEval/paceprompt_eval/runner.py) records observed outcomes and calls the scorer; the [v3 aggregator](../HostEval/paceprompt_eval/v3.py) calculates exact-rational metrics and eligibility.
+
+This improves reproducibility but does not make the oracle infallible: a mistaken expected answer, host mapping implementation or rule can still yield a reproducible wrong judgement. Operator adjudication, synthetic fixtures and scorer verification address that risk; the report does not claim an independent blinded human evaluation or production iPhone execution.
+
+### Execution and evidence integrity
+
+1. Freeze the prompt, few-shot order, datasets, schema, scorer, model/route profiles and run policy before evaluating outputs.
+2. Run offline structural, oracle, non-duplication and leakage checks. Held-out rationales and convention tags must not enter model-visible messages.
+3. Check route compatibility using scoped curl probes and mocked payloads before investing in full evaluation execution. Each live run requires a separately ratified operator gate and spending cap.
+4. Use the pinned developer-only Python/Inspect AI host harness through OpenRouter. Each route uses its own accepted generation controls and schema/tool contract; this is not identical-sampling model isolation.
+5. Run serially with a minimum two-second inter-call gap, no automatic retries or fallback. Warm-up failure blocks held-out calls; the first rate-limit response pauses that model and preserves later positions as not started.
+6. Validate returned structure, apply deterministic mapping/scoring, preserve terminal attempt evidence and compute the frozen aggregate. Audit evidence integrity separately from the human selection decision.
+
+The v4 round reused the byte-identical v3 prompt/corpus/scorer. Sol was a fixed reference, not a new v4 sample. Failures, scorer exceptions and missing prices remain visible; no reporting changes repair original outputs or rerun difficult cases.
+
+### Reproducing this reporting extension
+
+The new diagnostics use only the committed aggregate category counts, with no credentials, provider access or raw response reads. Run from the repository root:
+
+```sh
+python3 -B Evaluation/WorkoutImport/Summaries/build_classification_diagnostics.py --check
+python3 -B -m unittest discover -s Evaluation/WorkoutImport/Summaries -p 'test_classification_diagnostics.py' -v
+```
+
+Omit `--check` only to regenerate the derived JSON, tables and charts. Tests cover perfect classification, missing predictions, false positives/negatives, undefined ratios, empty conditional views and rejected unknown/negative counts. Every generated model matrix is reconciled to 237 positions and to its original per-category support.
+
+## Technical appendix: scope and evidence
 
 This report contains all 12 models in the final v3/v4 comparison and the five-model v2.9 screening table: **14 distinct model IDs across these three datasets**. Earlier compatibility probes, route replacements and superseded harness runs are diagnostic history, not additional confirmatory observations. No results are pooled across changed prompts or corpora.
 
