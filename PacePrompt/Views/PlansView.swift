@@ -3,6 +3,7 @@ import SwiftUI
 struct PlansView: View {
     @ObservedObject var viewModel: PlansViewModel
     let capabilities: WorkoutPlanCapabilities
+    var beginImport: (() -> Void)? = nil
 
     var body: some View {
         Group {
@@ -45,6 +46,13 @@ struct PlansView: View {
         }
         .navigationTitle("Plans")
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if let beginImport {
+                    Button("Import workout", action: beginImport)
+                        .disabled(!viewModel.canMutate)
+                        .accessibilityIdentifier("plans.import")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     viewModel.beginCreate()
@@ -285,9 +293,11 @@ private struct ValidationIssueRow: View {
     }
 }
 
-private struct PlanPreviewView: View {
+struct PlanPreviewView: View {
     @ObservedObject var viewModel: PlansViewModel
     let preview: WorkoutPlanPreview
+    var onConfirm: (() -> Void)? = nil
+    var onBack: (() -> Void)? = nil
 
     var body: some View {
         Form {
@@ -329,10 +339,10 @@ private struct PlanPreviewView: View {
             }
 
             Section {
-                Button("Back to edit") { viewModel.returnToEditing() }
+                Button("Back to edit") { if let onBack { onBack() } else { viewModel.returnToEditing() } }
                     .accessibilityIdentifier("plan.back-to-edit")
                 Button(viewModel.editingRecordID == nil ? "Confirm and save" : "Confirm and update") {
-                    viewModel.confirmSave()
+                    if let onConfirm { onConfirm() } else { viewModel.confirmSave() }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!viewModel.canMutate)

@@ -124,6 +124,19 @@ final class PlansViewModel: ObservableObject {
         }
     }
 
+    // Production import supplies a mapped but unvalidated plan. The existing
+    // validator, preview value and explicit confirmation own persistence.
+    func reviewImportedPlan(_ plan: WorkoutPlan, against capabilities: WorkoutPlanCapabilities)
+        -> Result<Void, WorkoutPlanValidationFailure> {
+        cancelEditor()
+        switch WorkoutPlanValidator.validate(plan, against: capabilities) {
+        case let .failure(failure): return .failure(failure)
+        case let .success(validated):
+            preview = WorkoutPlanPreview(validatedPlan: validated)
+            return .success(())
+        }
+    }
+
     func returnToEditing() {
         preview = nil
         saveError = nil

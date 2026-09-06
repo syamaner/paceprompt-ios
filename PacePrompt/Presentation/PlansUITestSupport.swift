@@ -165,3 +165,33 @@ private final class PlansUITestRepository: SavedPlanRepositoryProtocol {
     }
 }
 #endif
+
+#if DEBUG
+@MainActor
+enum ImportUITestConfiguration {
+    static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--paceprompt-ui-testing") }
+    static func credential() -> ImportCredentialStore { ImportCredentialStore(backend: MemoryKeychain()) }
+    static func generator() -> any WorkoutImportGenerating { FixedGenerator() }
+
+    private final class MemoryKeychain: ImportKeychainBackend {
+        private var data: Data?
+        func contains() throws -> Bool { data != nil }
+        func add(_ data: Data) throws { self.data = data }
+        func replace(_ data: Data) throws { self.data = data }
+        func delete() throws { data = nil }
+        func read() throws -> Data { guard let data else { throw ImportFailure.missingCredential }; return data }
+    }
+    private final class FixedGenerator: WorkoutImportGenerating {
+        func generate(_ request: ImportRequestSnapshot, completion: @escaping @MainActor (WorkoutImportOutcome) -> Void) {
+            let steps: [WorkoutProposal.Step] = [WorkoutStepKind.warmUp, .interval, .coolDown].map { kind in
+                .init(kind: kind, label: "Synthetic \(kind.rawValue)",
+                      duration: .init(number: .number("60"), unit: "seconds"),
+                      speed: .init(number: .number("5"), unit: "kilometresPerHour"),
+                      inclination: .init(number: .number("0"), unit: "percent"))
+            }
+            completion(.proposal(.init(suggestedName: "Synthetic imported plan", activity: .indoorWalking, steps: steps)))
+        }
+        func cancel() {}
+    }
+}
+#endif
