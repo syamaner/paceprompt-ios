@@ -71,7 +71,7 @@ enum WorkoutImportContract {
         guard rootFields["provider"] != nil else { throw ImportFailure.identityProviderMissing }
         let o = try root.fields(required: ["id", "object", "created", "model", "provider", "choices"],
                                 optional: ["system_fingerprint", "usage", "service_tier"])
-        guard o["model"] == .string(revision) else { throw ImportFailure.identityModelMismatch }
+        try validateModelIdentity(o["model"]!)
         guard [ImportJSON.string("openai"), .string("OpenAI")].contains(o["provider"]) else {
             throw ImportFailure.identityProviderMismatch
         }
@@ -100,6 +100,17 @@ enum WorkoutImportContract {
             throw ImportFailure.identityMessageModel
         }
         return try parseModelOutput(Data(content.utf8))
+    }
+
+    private static func validateModelIdentity(_ value: ImportJSON) throws {
+        guard let returned = value.string else { throw ImportFailure.identityModelNonString }
+        switch returned {
+        case revision: return
+        case model: throw ImportFailure.identityModelAlias
+        case String(revision.dropFirst("openai/".count)):
+            throw ImportFailure.identityModelRevisionWithoutProvider
+        default: throw ImportFailure.identityModelMismatch
+        }
     }
 
     static func parseModelOutput(_ data: Data) throws -> WorkoutImportOutcome {

@@ -67,9 +67,10 @@ Optional `cost_details` is null or a closed object of nullable nonnegative numbe
 Non-200 responses never parse provider error text: 401/402/403/404/429/503 map to
 providerUnavailable with stable local reasons; other HTTP errors to providerFailure.
 Transport, timeout, cancellation, redirect, response content type, identity and
-structural failures have separate local codes. Identity failure codes distinguish the response URL, missing or
-mismatched top-level model, missing or mismatched provider, service tier and optional
-message model without retaining or displaying any received value. No error body or
+structural failures have separate local codes. Identity failure codes distinguish the response URL, missing,
+non-string, requested-alias, unqualified-revision or other mismatched top-level model,
+missing or mismatched provider, service tier and optional message model without retaining
+or displaying any received value. No error body or
 native error description is shown or stored.
 
 ## Proposal and local authority
