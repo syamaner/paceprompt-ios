@@ -21,6 +21,14 @@ if str(SCORING_DIR) not in sys.path:
     sys.path.insert(0, str(SCORING_DIR))
 v1_scorer = importlib.import_module("scorer")
 
+
+class ScorerFailure(RuntimeError):
+    """The unchanged scorer rejected a completed normalized document."""
+
+    def __init__(self, report: dict[str, Any]) -> None:
+        self.report = report
+        super().__init__(f"unchanged scorer failed: {report.get('errors', [])}")
+
 PROVIDER_UNAVAILABLE_REASONS = {
     "runtimeUnavailable",
     "networkUnavailable",
@@ -495,5 +503,5 @@ def score_completed(
     document["provenance"]["corpusHash"] = corpus.manifest["corpusHash"]
     report, complete = v1_scorer.score_document(corpus, document)
     if not complete or report.get("status") != "complete":
-        raise RuntimeError(f"unchanged scorer failed: {report.get('errors', [])}")
+        raise ScorerFailure(report)
     return report

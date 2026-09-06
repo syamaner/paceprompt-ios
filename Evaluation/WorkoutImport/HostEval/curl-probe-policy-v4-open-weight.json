@@ -1,0 +1,63 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-open-weight-curl-probe/v4",
+  "purpose": "detect-open-weight-openrouter-route-and-strict-schema-transport-issues-before-evaluation-implementation",
+  "scope": {
+    "models": [
+      "qwen/qwen3.8-27b",
+      "mistralai/mistral-small-2603",
+      "nvidia/nemotron-3.5-lightning",
+      "deepseek/deepseek-v4-flash-0731",
+      "z-ai/glm-5.3-flash",
+      "minimax/minimax-m3",
+      "nvidia/nemotron-3-ultra-550b-a55b",
+      "qwen/qwen-2.5-7b-instruct",
+      "mistralai/mistral-small-3.2-24b-instruct"
+    ],
+    "stagesPerModel": 1,
+    "maximumCalls": 9,
+    "developmentCalls": 0,
+    "heldoutCalls": 0,
+    "prompt": "minimalSyntheticOnly"
+  },
+  "request": {
+    "message": "Return a JSON object whose ok property is true.",
+    "maxOutputTokens": 1024,
+    "temperature": null,
+    "topP": null,
+    "reasoning": null,
+    "strictSchemaName": "paceprompt_open_weight_curl_probe_v4",
+    "strictSchema": {
+      "type": "object",
+      "properties": {"ok": {"type": "boolean", "const": true}},
+      "required": ["ok"],
+      "additionalProperties": false
+    }
+  },
+  "routing": {
+    "exactEndpointTag": true,
+    "allowFallbacks": false,
+    "requireParameters": true,
+    "dataCollection": "deny",
+    "zdr": true,
+    "knownQuantizationFilter": true,
+    "unknownQuantizationFilter": "omit",
+    "endpointPriceCap": "catalogue-price-at-gate-preparation"
+  },
+  "execution": {
+    "transport": "curl",
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "automaticRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 120,
+    "cancelFlushSeconds": 15,
+    "cache": false,
+    "resumable": false,
+    "abortHTTPStatusCodes": [401, 402, 403]
+  },
+  "spending": {
+    "currency": "USD",
+    "hardLimit": "0.25",
+    "enforcement": "worstCaseBeforeEveryCallPlusEndpointPriceCap"
+  }
+}

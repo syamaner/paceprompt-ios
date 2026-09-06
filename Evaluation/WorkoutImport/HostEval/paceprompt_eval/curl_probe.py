@@ -101,6 +101,80 @@ class CurlProbeRun:
         self.attempts: list[dict[str, Any]] = []
         self.last_call_finished_at: float | None = None
 
+    def _diagnostics(self, model_id: str, response: Any) -> dict[str, Any]:
+        expected = self.gate.get("diagnosticExpectedOutput")
+        if expected is None:
+            return {}
+        selected = next(
+            item
+            for item in self.gate["selectedEndpoints"]
+            if item["requestedModelID"] == model_id
+        )
+        body = response if isinstance(response, dict) else {}
+        returned_model = body.get("model")
+        returned_provider = body.get("provider")
+        valid_models = {selected["requestedModelID"], selected["canonicalRevision"]}
+        valid_providers = {
+            selected["providerEndpoint"],
+            selected["reportedProviderName"],
+        }
+        choices = body.get("choices") if isinstance(body.get("choices"), list) else []
+        content = None
+        tool_calls: list[Any] = []
+        if len(choices) == 1 and isinstance(choices[0], dict):
+            message = choices[0].get("message")
+            if isinstance(message, dict):
+                content = message.get("content")
+                if isinstance(message.get("tool_calls"), list):
+                    tool_calls = message["tool_calls"]
+        parsed = None
+        json_valid = False
+        tool_arguments = None
+        tool_name = None
+        diagnostic_transport = self.gate.get(
+            "diagnosticTransport", "messageContentJson"
+        )
+        if diagnostic_transport == "forcedToolArguments":
+            if len(tool_calls) == 1 and isinstance(tool_calls[0], dict):
+                function = tool_calls[0].get("function")
+                if isinstance(function, dict):
+                    tool_name = function.get("name")
+                    tool_arguments = function.get("arguments")
+            if isinstance(tool_arguments, str):
+                try:
+                    parsed = json.loads(tool_arguments)
+                    json_valid = True
+                except json.JSONDecodeError:
+                    pass
+        elif isinstance(content, str):
+            try:
+                parsed = json.loads(content)
+                json_valid = True
+            except json.JSONDecodeError:
+                pass
+        diagnostics = {
+            "returnedModel": returned_model,
+            "returnedProvider": returned_provider,
+            "routeIdentityPresent": returned_model is not None and returned_provider is not None,
+            "routeIdentityMatches": returned_model in valid_models and returned_provider in valid_providers,
+            "choiceCount": len(choices),
+            "contentIsString": isinstance(content, str),
+            "contentJSONValid": (
+                json_valid if diagnostic_transport == "messageContentJson" else False
+            ),
+            "strictSchemaSatisfied": parsed == expected,
+        }
+        if diagnostic_transport == "forcedToolArguments":
+            diagnostics.update(
+                {
+                    "toolCallCount": len(tool_calls),
+                    "toolNameMatches": tool_name == self.gate.get("diagnosticToolName"),
+                    "toolArgumentsIsString": isinstance(tool_arguments, str),
+                    "toolArgumentsJSONValid": json_valid,
+                }
+            )
+        return diagnostics
+
     def _write_state(self, status: str) -> None:
         write_json(
             self.run_dir / "curl-live-state.json",
@@ -121,7 +195,8 @@ class CurlProbeRun:
         delay = float(self.execution_policy["minimumInterCallDelaySeconds"])
         costs = self.gate["costPreflight"]["perAttemptWorstCaseUSD"]
         try:
-            for probe in self.gate["probeManifest"]:
+            remaining_probes: list[dict[str, Any]] = []
+            for index, probe in enumerate(self.gate["probeManifest"]):
                 attempt_id = probe["attemptID"]
                 inter_call_delay: float | None = None
                 if self.last_call_finished_at is not None:
@@ -162,37 +237,64 @@ class CurlProbeRun:
                         "completeResponseLatencySeconds": elapsed,
                     },
                 )
+                attempt = {
+                    "attemptID": attempt_id,
+                    "modelID": probe["modelID"],
+                    "stageID": probe["stageID"],
+                    "startedAt": started,
+                    "endedAt": ended,
+                    "interCallDelaySeconds": inter_call_delay,
+                    "curlExitCode": exit_code,
+                    "statusCode": status_code,
+                    "httpAccepted": exit_code == 0 and 200 <= status_code < 300,
+                    "reportedCostUSD": (
+                        format(reported_cost, "f") if reported_cost is not None else None
+                    ),
+                    "guardChargeUSD": format(
+                        reported_cost if reported_cost is not None else worst, "f"
+                    ),
+                    "terminal": True,
+                }
+                attempt.update(self._diagnostics(probe["modelID"], response))
+                self.attempts.append(attempt)
+                self._write_state("runningCurlProbe")
+                if status_code in set(self.execution_policy.get("abortHTTPStatusCodes", [])):
+                    remaining_probes = self.gate["probeManifest"][index + 1 :]
+                    break
+            for probe in remaining_probes:
                 self.attempts.append(
                     {
-                        "attemptID": attempt_id,
+                        "attemptID": probe["attemptID"],
                         "modelID": probe["modelID"],
                         "stageID": probe["stageID"],
-                        "startedAt": started,
-                        "endedAt": ended,
-                        "interCallDelaySeconds": inter_call_delay,
-                        "curlExitCode": exit_code,
-                        "statusCode": status_code,
-                        "httpAccepted": exit_code == 0 and 200 <= status_code < 300,
-                        "reportedCostUSD": (
-                            format(reported_cost, "f") if reported_cost is not None else None
-                        ),
-                        "guardChargeUSD": format(
-                            reported_cost if reported_cost is not None else worst, "f"
-                        ),
+                        "status": "notStarted",
+                        "reasonCategory": "globalHTTPAbort",
+                        "reportedCostUSD": None,
+                        "guardChargeUSD": "0",
                         "terminal": True,
                     }
                 )
-                self._write_state("runningCurlProbe")
+            if remaining_probes:
+                self._write_state("abortedByGlobalHTTPStatus")
         except (asyncio.CancelledError, KeyboardInterrupt):
             self._write_state("cancelledNonResumable")
             raise
         report = {
-            "reportContractVersion": "paceprompt-host-eval-curl-probe-report/v2.6",
+            "reportContractVersion": self.gate.get(
+                "reportContractVersion", "paceprompt-host-eval-curl-probe-report/v2.6"
+            ),
             "purpose": self.gate["purpose"],
-            "heldoutCalls": 0,
+            "heldoutCalls": self.gate.get("scope", {}).get("heldoutCalls", 0),
             "attempts": self.attempts,
             "providerDecision": "requiresHumanRatification",
         }
+        final_status = (
+            "abortedByGlobalHTTPStatusAwaitingHumanEvidenceRatification"
+            if remaining_probes
+            else "completeAwaitingHumanEvidenceRatification"
+        )
+        if "reportContractVersion" in self.gate:
+            report["status"] = final_status
         write_json(self.run_dir / "curl-probe-report.json", report)
-        self._write_state("completeAwaitingHumanEvidenceRatification")
+        self._write_state(final_status)
         return report

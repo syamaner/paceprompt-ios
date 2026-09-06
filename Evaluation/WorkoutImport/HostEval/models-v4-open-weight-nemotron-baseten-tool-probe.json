@@ -1,0 +1,7 @@
+{
+  "modelSetVersion": "paceprompt-host-eval-open-weight-nemotron-baseten-tool-models/v4",
+  "ratifiedAt": "2026-09-05",
+  "models": [
+    {"requestedModelID": "nvidia/nemotron-3-ultra-550b-a55b", "canonicalRevision": "nvidia/nemotron-3-ultra-550b-a55b-20260604", "providerEndpoint": "baseten/fp4", "quantization": "fp4", "role": "compatibilityDiagnostic", "temperature": null, "topP": null, "reasoning": null}
+  ]
+}

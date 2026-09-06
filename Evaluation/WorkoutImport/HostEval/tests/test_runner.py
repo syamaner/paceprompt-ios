@@ -278,6 +278,97 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(runner.attempts[-1]["scorerOverall"], "passed")
             self.assertEqual(report["providerDecision"], "requiresHumanRatification")
 
+    def test_live_run_preserves_scorer_failure_and_continues(self) -> None:
+        case = next(
+            item
+            for item in load_cases(HELDOUT_CASES)
+            if item["expected"]["modelOutput"]["outcome"]["type"] == "proposal"
+        )
+        spec = load_model_specs(MODELS)[0]
+        selected = {
+            "requestedModelID": spec.requested_model_id,
+            "canonicalRevision": spec.canonical_revision,
+            "providerEndpoint": spec.provider_endpoint,
+            "reportedProviderName": "OpenAI",
+            "inputPricePerToken": "0.000002",
+            "outputPricePerToken": "0.00001",
+        }
+        value = provider_transport_output(case["expected"]["modelOutput"])
+        value["outcome"]["proposal"]["suggestedName"] = ""
+        output = ModelOutput(
+            model=spec.canonical_revision or spec.requested_model_id,
+            completion=json.dumps(value),
+            usage=ModelUsage(
+                input_tokens=10,
+                output_tokens=10,
+                total_tokens=20,
+                total_cost=0.001,
+            ),
+            time=0.1,
+        )
+        exchange = {
+            "requests": [{"method": "POST", "headers": {}, "body": {}}],
+            "responses": [
+                {
+                    "statusCode": 200,
+                    "body": {
+                        "model": spec.canonical_revision,
+                        "provider": "OpenAI",
+                        "usage": {"cost": 0.001},
+                    },
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir = Path(directory) / "scorer-failure"
+            run_dir.mkdir()
+            runner = LiveRun(
+                run_dir=run_dir,
+                gate={"selectedEndpoints": [selected]},
+                api_key="mock-local-only",
+                schema=strict_json_load(MODEL_SCHEMA),
+                transport_schema=strict_json_load(TRANSPORT_SCHEMA),
+                cases=[case],
+                development_cases=load_cases(DEVELOPMENT_CASES),
+                queue=[],
+                specs=(spec,),
+                messages_for_case=model_messages,
+                repository_root=REPOSITORY_ROOT,
+                schema_file_bytes=len(TRANSPORT_SCHEMA.read_bytes()),
+                execution_policy={
+                    "globalConcurrency": 1,
+                    "minimumInterCallDelaySeconds": 2,
+                    "cancelFlushSeconds": 15,
+                },
+                run_configuration_id="paceprompt-host-eval-run-policy/v3",
+                spending_limit_usd="20.00",
+            )
+            runner.setup()
+            with patch(
+                "paceprompt_eval.runner.generate_with_capture",
+                new=AsyncMock(return_value=(output, exchange)),
+            ):
+                result = __import__("asyncio").run(
+                    runner.call(
+                        attempt_id="r01-scorer-failure",
+                        kind="scored",
+                        case=case,
+                        spec=spec,
+                        repetition=1,
+                    )
+                )
+            scorer_report = json.loads(
+                (run_dir / "scorer-reports" / "r01-scorer-failure.json").read_text()
+            )
+            normalized_result_written = (
+                run_dir / "normalized-results" / "r01-scorer-failure.json"
+            ).is_file()
+
+        self.assertEqual(result["hostClassification"], "scorerFailure")
+        self.assertEqual(result["pipelineClassification"], "scorerFailure")
+        self.assertEqual(scorer_report["status"], "scorerFailure")
+        self.assertTrue(normalized_result_written)
+
     def test_failed_warmup_prevents_that_models_heldout_calls(self) -> None:
         case = load_cases(HELDOUT_CASES)[0]
         spec = load_model_specs(MODELS)[0]
