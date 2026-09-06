@@ -32,6 +32,10 @@ indirect enum ImportJSON: Equatable {
 enum ImportFailure: String, Error {
     case structure, identity, mapping, transport, timeout, cancelled, missingCredential
     case authentication, credits, restrictedRoute, rateLimited, unavailable, resources
+    case redirect, responseContentType
+    case identityResponseURL, identityModelMissing, identityModelMismatch
+    case identityProviderMissing, identityProviderMismatch
+    case identityServiceTier, identityMessageModel
 }
 
 enum ExactImportDecimal {

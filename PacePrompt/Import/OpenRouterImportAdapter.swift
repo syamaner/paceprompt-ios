@@ -118,9 +118,12 @@ final class OpenRouterImportAdapter: WorkoutImportGenerating {
                 switch result {
                 case let .failure(error): completion(.providerFailure(error))
                 case let .success((data, response)):
-                    guard response.url == WorkoutImportContract.endpoint else { completion(.providerFailure(.identity)); return }
+                    guard response.url == WorkoutImportContract.endpoint else {
+                        completion(.providerFailure(.identityResponseURL)); return
+                    }
                     guard response.statusCode == 200 else {
                         switch response.statusCode {
+                        case 301, 302, 303, 307, 308: completion(.providerFailure(.redirect))
                         case 401: completion(.providerUnavailable(.authentication))
                         case 402: completion(.providerUnavailable(.credits))
                         case 403: completion(.providerUnavailable(.restrictedRoute))
@@ -130,7 +133,9 @@ final class OpenRouterImportAdapter: WorkoutImportGenerating {
                         }
                         return
                     }
-                    guard response.mimeType?.lowercased() == "application/json" else { completion(.providerFailure(.structure)); return }
+                    guard response.mimeType?.lowercased() == "application/json" else {
+                        completion(.providerFailure(.responseContentType)); return
+                    }
                     do { completion(try WorkoutImportContract.parseEnvelope(data)) }
                     catch let error as ImportFailure { completion(.providerFailure(error)) }
                     catch { completion(.providerFailure(.structure)) }
