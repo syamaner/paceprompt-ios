@@ -100,11 +100,27 @@ final class OpenRouterImportAdapter: WorkoutImportGenerating {
     private let transport: any ImportTransport
     private let resources: () throws -> ImportResources
     private var identifier: UUID?
+#if DEBUG
+    private let diagnostics: any ImportDiagnosticSink
+    private var diagnosticRequestCount = 0
+    private var diagnosticStartedAt: TimeInterval?
+#endif
 
+#if DEBUG
+    init(credential: ImportCredentialStore, transport: (any ImportTransport)? = nil,
+         resources: @escaping () throws -> ImportResources = { try ImportResources() },
+         diagnostics: any ImportDiagnosticSink = UnifiedImportDiagnosticSink.shared) {
+        self.credential = credential
+        self.transport = transport ?? SessionImportTransport()
+        self.resources = resources
+        self.diagnostics = diagnostics
+    }
+#else
     init(credential: ImportCredentialStore, transport: (any ImportTransport)? = nil,
          resources: @escaping () throws -> ImportResources = { try ImportResources() }) {
         self.credential = credential; self.transport = transport ?? SessionImportTransport(); self.resources = resources
     }
+#endif
     func generate(_ snapshot: ImportRequestSnapshot, completion: @escaping @MainActor (WorkoutImportOutcome) -> Void) {
         cancel()
         let id = UUID()
@@ -112,15 +128,37 @@ final class OpenRouterImportAdapter: WorkoutImportGenerating {
         do {
             var request = try resources().request(for: snapshot)
             try credential.authorize(&request)
+#if DEBUG
+            diagnosticRequestCount += 1
+            diagnosticStartedAt = ProcessInfo.processInfo.systemUptime
+            diagnostics.record(.requestCount(diagnosticRequestCount))
+            diagnostics.record(.check(.requestLifecycle, .started))
+#endif
             transport.send(request) { [weak self] result in
                 guard let self, self.identifier == id else { return }
                 self.identifier = nil
+#if DEBUG
+                self.diagnostics.record(.check(.transport, .completed))
+                if let started = self.diagnosticStartedAt {
+                    self.diagnostics.record(.elapsed(.init(seconds: ProcessInfo.processInfo.systemUptime - started)))
+                }
+                self.diagnosticStartedAt = nil
+                self.diagnostics.record(.check(.requestLifecycle, .completed))
+#endif
                 switch result {
                 case let .failure(error): completion(.providerFailure(error))
                 case let .success((data, response)):
                     guard response.url == WorkoutImportContract.endpoint else {
+#if DEBUG
+                        self.diagnostics.record(.check(.endpoint, .rejected))
+#endif
                         completion(.providerFailure(.identityResponseURL)); return
                     }
+#if DEBUG
+                    self.diagnostics.record(.check(.endpoint, .accepted))
+                    self.diagnostics.record(.statusClass(.init(response.statusCode)))
+                    self.diagnostics.record(.check(.status, response.statusCode == 200 ? .accepted : .rejected))
+#endif
                     guard response.statusCode == 200 else {
                         switch response.statusCode {
                         case 301, 302, 303, 307, 308: completion(.providerFailure(.redirect))
@@ -134,8 +172,15 @@ final class OpenRouterImportAdapter: WorkoutImportGenerating {
                         return
                     }
                     guard response.mimeType?.lowercased() == "application/json" else {
+#if DEBUG
+                        self.diagnostics.record(.check(.contentType, .rejected))
+#endif
                         completion(.providerFailure(.responseContentType)); return
                     }
+#if DEBUG
+                    self.diagnostics.record(.check(.contentType, .accepted))
+                    ImportDiagnosticInspector.inspectEnvelope(data, sink: self.diagnostics)
+#endif
                     do { completion(try WorkoutImportContract.parseEnvelope(data)) }
                     catch let error as ImportFailure { completion(.providerFailure(error)) }
                     catch { completion(.providerFailure(.structure)) }
@@ -147,5 +192,17 @@ final class OpenRouterImportAdapter: WorkoutImportGenerating {
             completion(failure == .missingCredential ? .providerUnavailable(failure) : .providerFailure(failure))
         }
     }
-    func cancel() { identifier = nil; transport.cancel() }
+    func cancel() {
+#if DEBUG
+        let wasActive = identifier != nil
+#endif
+        identifier = nil
+        transport.cancel()
+#if DEBUG
+        if wasActive {
+            diagnosticStartedAt = nil
+            diagnostics.record(.check(.requestLifecycle, .cancelled))
+        }
+#endif
+    }
 }

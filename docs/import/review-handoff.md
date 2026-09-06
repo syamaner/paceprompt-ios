@@ -1,5 +1,40 @@
 # Issue 19 review handoff
 
+## Issue 26 DEBUG-only redacted validation tracing — 6 September 2026
+
+A separate DEBUG-only inspector now reports closed validation stages without becoming
+part of the production parser. Its injectable sink receives only stable enums, request
+count and coarse elapsed buckets. The default DEBUG sink writes stable public codes to
+Apple unified logging; OS logging retention may apply. No prompt, request/response,
+received identity, URL, ID, workout value, provider/native error, credential, header or
+Keychain bytes can enter an event.
+
+Synthetic tests drive every declared stage through the adapter and presentation path,
+prove preview/save separation and a single request, and seed secret markers into user,
+envelope, message and structured-content fields without disclosure. Separate fixtures
+classify `native_finish_reason: "completed"` and rejected neighbours while preserving
+the current production rule that only `"stop"` is accepted when the field is present.
+Extra envelope/message fields and malformed structured content remain rejected.
+
+The new implementation and all call sites are conditional on `DEBUG`; Release UI and
+behaviour are unchanged. The inspector's output never changes routing, retries,
+acceptance, deterministic mapping, local validation, preview or persistence. This
+code-only milestone makes no provider request, reads no real credential, incurs no
+OpenRouter spend and adds no physical-device, treadmill, FTMS, HealthKit or watchOS
+authority.
+
+Validation on Xcode 26.6 (`17F113`) and the iPhone 17 Pro Max iOS 26.5 simulator:
+
+- focused import boundary tests: 25/25 passed;
+- complete `PacePrompt` tests: 117/117 passed;
+- complete developer-only evaluation tests: 14/14 passed;
+- unsigned generic-simulator Release build and Release static analysis: succeeded;
+- pinned-resource/source-privacy and built-bundle verification: passed;
+- Release executable search: no diagnostic type, subsystem-code or log-category
+  strings, and no evaluation artifact was bundled;
+- phase-accounting helper tests: 20/20 passed; and
+- `git diff --check`: passed.
+
 ## Provider-bound requested-alias amendment — 6 September 2026
 
 The third authorised simulator observation made exactly one request and failed closed

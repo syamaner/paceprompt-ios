@@ -348,6 +348,106 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         }
     }
 
+    func testDebugDiagnosticsCoverEveryStageWithoutChangingPreviewOrSaveAuthority() throws {
+        let sink = RecordingImportDiagnosticSink()
+        let backend = SyntheticKeychain()
+        backend.data = Data("synthetic-secret-credential".utf8)
+        let transport = CapturingTransport()
+        let adapter = OpenRouterImportAdapter(
+            credential: ImportCredentialStore(backend: backend),
+            transport: transport,
+            diagnostics: sink
+        )
+        let repository = ImportRepositoryDouble()
+        let plans = PlansViewModel(repository: repository)
+        let model = WorkoutImportViewModel(generator: adapter, plans: plans, diagnostics: sink)
+
+        model.begin(capabilities: known())
+        model.text = "synthetic-secret-workout"
+        model.reviewDisclosure()
+        model.consentAndSend()
+        XCTAssertEqual(transport.requests.count, 1)
+        XCTAssertEqual(transport.requests.only?.url, WorkoutImportContract.endpoint)
+
+        var accepted = try json(envelope())
+        accepted["id"] = "synthetic-secret-response-id"
+        accepted["system_fingerprint"] = "synthetic-secret-fingerprint"
+        transport.complete(.success((try data(accepted), response(200))))
+
+        XCTAssertNotNil(plans.preview)
+        XCTAssertTrue(repository.records.isEmpty)
+        XCTAssertEqual(Set(sink.events.compactMap(\.stage)), Set(ImportDiagnosticStage.allCases))
+        XCTAssertEqual(sink.events.filter { if case .requestCount = $0 { true } else { false } }, [.requestCount(1)])
+        XCTAssertTrue(sink.events.contains(.terminal(.previewEligible)))
+        XCTAssertFalse(sink.events.map(\.code).joined(separator: "|").contains("synthetic-secret"))
+
+        model.confirmSave()
+        XCTAssertEqual(repository.records.count, 1)
+        XCTAssertTrue(sink.events.contains(.terminal(.saved)))
+        XCTAssertEqual(transport.requests.count, 1)
+    }
+
+    func testNativeFinishReasonDiagnosticsClassifyCompletedAndRejectAdjacentValues() throws {
+        let cases: [(Any, ImportDiagnosticClassification, Bool)] = [
+            ("stop", .stop, true),
+            ("completed", .completed, false),
+            ("length", .otherString, false),
+            (NSNull(), .nullValue, false),
+            (1, .nonString, false),
+        ]
+        for (value, classification, accepted) in cases {
+            var object = try json(envelope())
+            var choices = object["choices"] as! [[String: Any]]
+            choices[0]["native_finish_reason"] = value
+            object["choices"] = choices
+            let payload = try data(object)
+            let sink = RecordingImportDiagnosticSink()
+            ImportDiagnosticInspector.inspectEnvelope(payload, sink: sink)
+            XCTAssertTrue(sink.events.contains(.classification(.nativeFinishReason, classification)))
+            XCTAssertTrue(sink.events.contains(.check(.nativeFinishReason, accepted ? .accepted : .rejected)))
+            if accepted {
+                XCTAssertNoThrow(try WorkoutImportContract.parseEnvelope(payload))
+            } else {
+                XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(payload)) { error in
+                    XCTAssertEqual(error as? ImportFailure, .structure)
+                }
+            }
+        }
+    }
+
+    func testDiagnosticsIdentifyClosedFieldAndStructuredContentFailuresWithoutDisclosure() throws {
+        let secret = "synthetic-secret-marker"
+        var envelopeExtra = try json(envelope())
+        envelopeExtra[secret] = true
+
+        var messageExtra = try json(envelope())
+        var messageChoices = messageExtra["choices"] as! [[String: Any]]
+        var message = messageChoices[0]["message"] as! [String: Any]
+        message[secret] = true
+        messageChoices[0]["message"] = message
+        messageExtra["choices"] = messageChoices
+
+        var malformedContent = try json(envelope())
+        var malformedChoices = malformedContent["choices"] as! [[String: Any]]
+        var malformedMessage = malformedChoices[0]["message"] as! [String: Any]
+        malformedMessage["content"] = "{\"\(secret)\":"
+        malformedChoices[0]["message"] = malformedMessage
+        malformedContent["choices"] = malformedChoices
+
+        for (object, stage) in [
+            (envelopeExtra, ImportDiagnosticStage.outerFieldAllowlist),
+            (messageExtra, .messageFieldAllowlist),
+            (malformedContent, .structuredContentJSON),
+        ] {
+            let payload = try data(object)
+            let sink = RecordingImportDiagnosticSink()
+            ImportDiagnosticInspector.inspectEnvelope(payload, sink: sink)
+            XCTAssertTrue(sink.events.contains(.check(stage, .rejected)))
+            XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(payload))
+            XCTAssertFalse(sink.events.map(\.code).joined(separator: "|").contains(secret))
+        }
+    }
+
     func testSentinelsVersionsOutcomePairingPathsAndAdditionalFields() throws {
         var valid = try json(modelOutput())
         var o = valid["outcome"] as! [String: Any]
@@ -550,6 +650,10 @@ private func response(_ status: Int) -> HTTPURLResponse {
     func send(_ request: URLRequest, completion: @escaping @MainActor (Result<(Data, HTTPURLResponse), ImportFailure>) -> Void) { requests.append(request); self.completion = completion }
     func complete(_ result: Result<(Data, HTTPURLResponse), ImportFailure>) { completion?(result) }
     func cancel() {} // Deliberately adversarial: permits late completion after cancellation.
+}
+private final class RecordingImportDiagnosticSink: ImportDiagnosticSink {
+    private(set) var events: [ImportDiagnosticEvent] = []
+    func record(_ event: ImportDiagnosticEvent) { events.append(event) }
 }
 @MainActor private final class SyntheticGenerator: WorkoutImportGenerating {
     var requests: [ImportRequestSnapshot] = []

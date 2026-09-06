@@ -62,6 +62,7 @@
 		AD0000000000000000000007 /* ImportResources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000007; };
 		AD0000000000000000000008 /* WorkoutImportTests.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000008; };
 		AD0000000000000000000009 /* outbound-request.json in Resources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000009; };
+		AD000000000000000000000A /* ImportDiagnostics.swift */ = {isa = PBXBuildFile; fileRef = AC000000000000000000000A; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -147,6 +148,7 @@
 		AC0000000000000000000007 /* ImportResources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = PacePrompt/Import/ImportResources; sourceTree = SOURCE_ROOT; };
 		AC0000000000000000000008 /* WorkoutImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptTests/WorkoutImportTests.swift; sourceTree = SOURCE_ROOT; };
 		AC0000000000000000000009 /* outbound-request.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = docs/import/outbound-request.json; sourceTree = SOURCE_ROOT; };
+		AC000000000000000000000A /* ImportDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/ImportDiagnostics.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -568,6 +570,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD000000000000000000000A /* ImportDiagnostics.swift */,
 				AD0000000000000000000006 /* WorkoutImportView.swift */,
 				AD0000000000000000000005 /* WorkoutImportViewModel.swift */,
 				AD0000000000000000000004 /* OpenRouterImportAdapter.swift */,
