@@ -390,7 +390,7 @@ final class WorkoutImportBoundaryTests: XCTestCase {
     func testNativeFinishReasonDiagnosticsClassifyCompletedAndRejectAdjacentValues() throws {
         let cases: [(Any, ImportDiagnosticClassification, Bool)] = [
             ("stop", .stop, true),
-            ("completed", .completed, false),
+            ("completed", .completed, true),
             ("length", .otherString, false),
             (NSNull(), .nullValue, false),
             (1, .nonString, false),
@@ -520,7 +520,8 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         let usage: [String: Any] = [
             "prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120, "cost": 0.001, "is_byok": false,
             "prompt_tokens_details": ["cached_tokens": 0, "cache_write_tokens": 0, "audio_tokens": 0, "video_tokens": 0],
-            "completion_tokens_details": ["reasoning_tokens": 0, "audio_tokens": NSNull(), "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0],
+            "completion_tokens_details": ["reasoning_tokens": 0, "image_tokens": 0, "audio_tokens": NSNull(),
+                                          "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0],
             "cost_details": ["upstream_inference_cost": NSNull(), "upstream_inference_prompt_cost": 0.001,
                              "upstream_inference_completions_cost": 0, "server_tool_cost": NSNull()],
             "server_tool_use_details": ["tool_calls_executed": NSNull(), "tool_calls_requested": 0,
@@ -538,6 +539,13 @@ final class WorkoutImportBoundaryTests: XCTestCase {
             var changed = usage
             var details = changed["server_tool_use_details"] as! [String: Any]
             details["tool_calls_executed"] = value; changed["server_tool_use_details"] = details
+            object["usage"] = changed
+            XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(data(object)))
+        }
+        for value in [-1 as Any, 0.5, "0"] {
+            var changed = usage
+            var details = changed["completion_tokens_details"] as! [String: Any]
+            details["image_tokens"] = value; changed["completion_tokens_details"] = details
             object["usage"] = changed
             XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(data(object)))
         }

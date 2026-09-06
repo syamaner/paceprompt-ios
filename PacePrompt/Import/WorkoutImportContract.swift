@@ -82,7 +82,8 @@ enum WorkoutImportContract {
         if let usage = o["usage"] { try validateUsage(usage) }
         let choice = try choices[0].fields(required: ["index", "finish_reason", "message"], optional: ["native_finish_reason", "logprobs"])
         guard try choice["index"]!.integer() == 0, choice["finish_reason"] == .string("stop") else { throw ImportFailure.structure }
-        if let native = choice["native_finish_reason"], native != .string("stop") { throw ImportFailure.structure }
+        if let native = choice["native_finish_reason"],
+           native != .string("stop"), native != .string("completed") { throw ImportFailure.structure }
         if let logs = choice["logprobs"], logs != .null { throw ImportFailure.structure }
         let message = try choice["message"]!.fields(required: ["role", "content"],
             optional: ["refusal", "reasoning", "reasoning_details", "tool_calls", "model"])
@@ -175,7 +176,8 @@ enum WorkoutImportContract {
         if let cost = o["cost"], cost != .null, try cost.decimal() < 0 { throw ImportFailure.structure }
         if let byok = o["is_byok"], case .bool = byok {} else if o["is_byok"] != nil { throw ImportFailure.structure }
         try detail(o["prompt_tokens_details"], keys: ["cached_tokens", "cache_write_tokens", "audio_tokens", "video_tokens"], integer: true, nullable: false)
-        try detail(o["completion_tokens_details"], keys: ["reasoning_tokens", "audio_tokens", "accepted_prediction_tokens", "rejected_prediction_tokens"], integer: true, nullable: true)
+        try detail(o["completion_tokens_details"], keys: ["reasoning_tokens", "image_tokens", "audio_tokens",
+            "accepted_prediction_tokens", "rejected_prediction_tokens"], integer: true, nullable: true)
         try detail(o["cost_details"], keys: ["upstream_inference_cost", "upstream_inference_prompt_cost",
             "upstream_inference_completions_cost", "server_tool_cost"], integer: false, nullable: true)
         try detail(o["server_tool_use_details"], keys: ["tool_calls_executed", "tool_calls_requested",

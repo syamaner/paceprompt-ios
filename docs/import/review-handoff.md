@@ -1,5 +1,25 @@
 # Issue 19 review handoff
 
+## Second DEBUG observation and remaining documented fields — 6 September 2026
+
+The immutable post-repair DEBUG build at
+`55cd3a12d6dfc6310a03d80f5067216a7cc3d685` made the separately authorised second
+request with the unchanged `5dfff22f…` request hash. It again completed in the
+one-to-five-second bucket with no retry or redirect. The same endpoint, status,
+content type, JSON, identity, outer-contract and service-tier stages passed; usage
+remained the first rejected stage. This proves the first accounting-field repair was
+not sufficient and preserves the final authorised request for Release acceptance.
+
+Current public OpenRouter responses document `image_tokens` in
+`completion_tokens_details`, including zero for text-only completions, although the
+public OpenAPI omits it. Public OpenAI-route responses also show normalized
+`finish_reason: "stop"` paired with provider-native `native_finish_reason:
+"completed"`. The follow-up repair therefore admits only a nullable nonnegative
+integer `image_tokens` counter and the exact terminal native value `completed`;
+negative, fractional, nonnumeric and unknown accounting fields, and all other native
+finish values, remain rejected. Neither field enables image input/output, tools or
+reasoning, and the frozen request and all local authority remain unchanged.
+
 ## Live usage-envelope compatibility — 6 September 2026
 
 The sealed DEBUG observation from remote main
