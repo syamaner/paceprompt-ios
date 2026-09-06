@@ -362,6 +362,154 @@ a `$2.00` conservative spend ceiling.
 Mocked validation and implementation do not grant permission to satisfy that
 gate. Provider calls and spending require separate explicit human approval.
 
+## Issue #17 open-weight curl probe
+
+The separately versioned v4 probe checks the nine human-ratified open-weight
+model revisions and exact OpenRouter endpoint tags before any full evaluation
+profiles are implemented. It sends one minimal synthetic strict-schema request
+per route. It does not use the development set, held-out set, frozen workout
+prompt or scorer.
+
+Preparation refreshes public catalogue metadata, verifies the frozen v3 assets,
+writes nine complete hashed request bodies under the ignored run directory and
+enforces a conservative `$0.25` ceiling without reading a credential:
+
+```sh
+uv run paceprompt-host-eval prepare-open-weight-curl-probe-gate \
+  --run-id <new-run-id>
+```
+
+Each payload fixes the exact endpoint tag, disables fallback, requires every
+parameter, denies data-collection routes, requires ZDR and caps the endpoint
+price at the preparation snapshot. Known quantisation is pinned; the Phala
+Qwen2.5 route intentionally omits a quantisation filter because its catalogue
+metadata is unknown. Temperature, top-p and reasoning controls are absent so
+the first probe isolates basic route and strict-JSON compatibility.
+
+The live entry point remains inert without `--live`, the exact phrase sealed
+into that run's gate, an exact `$0.25` argument, unchanged payloads and
+catalogue, and `OPENROUTER_API_KEY` in the local unshared environment:
+
+```sh
+uv run paceprompt-host-eval run-open-weight-curl-probe \
+  --run-id <ratified-run-id> --live \
+  --authorization <exact-run-phrase> --spending-limit-usd 0.25
+```
+
+Calls are serial with a two-second gap, no retries, a 15-second connection
+timeout and a 120-second attempt timeout. HTTP 401, 402 or 403 stops the run and
+preserves every remaining attempt as `notStarted/globalHTTPAbort`; individual
+route errors remain terminal evidence without automatic substitution. The
+report records returned route identity, JSON validity and exact `{"ok": true}`
+schema satisfaction, then stops for human review before evaluation work.
+
+After run `issue17-open-weight-curl-probe-20260905-03` proved five routes and
+found four upstream-capacity failures, the separately ratified `replacement`
+profile keeps those five successful identities locked as prior evidence. It
+probes only DeepInfra FP4 for GLM 5.3 Flash, CoreWeave FP4 for MiniMax M3, the
+sole qualifying DeepInfra FP4 Nemotron Ultra route once more, and DeepInfra FP8
+for Mistral Small 3.2:
+
+```sh
+uv run paceprompt-host-eval prepare-open-weight-curl-probe-gate \
+  --profile replacement --run-id <new-run-id>
+```
+
+Its live command also requires `--profile replacement`, its separately sealed
+phrase and the unchanged `$0.25` ceiling. The prior report hash and all five
+locked passing route identities are part of the replacement gate.
+
+The separately ratified `nemotron-baseten` profile tests the remaining
+Nemotron Ultra candidate on BaseTen FP4 without claiming native strict-output
+support. It forces one named function whose arguments carry the same minimal
+schema, then parses and validates those arguments locally. The profile is
+sealed to both the replacement gate and report, which in turn lock the eight
+already successful routes:
+
+```sh
+uv run paceprompt-host-eval prepare-open-weight-curl-probe-gate \
+  --profile nemotron-baseten --run-id <new-run-id>
+```
+
+Fallback remains disabled. A successful diagnostic proves only that the exact
+BaseTen route can return the required forced-tool envelope; it does not prove
+full workout-prompt quality.
+
+## Issue #17 open-weight evaluation v4
+
+The [candidate matrix](open-weight-candidate-matrix-v4.md) records the
+publisher artefacts, licence boundary, hosted-route identity limits, current
+indicative prices and the reasons each ratified candidate remains worth
+measuring.
+
+The full v4 extension reuses the byte-identical prompt v3, 20 development
+cases, 79 held-out cases, semantic review, model-output schema, nested v2.3
+transport schema and deterministic scorer. It adds nine open-weight candidate
+routes without rerunning or replacing the human-selected Sol reference.
+
+Response-envelope contracts are route-specific and fail closed:
+
+- Eight routes carry the complete nested transport schema through native
+  `response_format.json_schema` and require `max_tokens`, `response_format`
+  and `structured_outputs` in the selected endpoint's catalogue record.
+- Nemotron Ultra on BaseTen carries the same complete schema through one
+  forced `submit_workout_import_result` function and requires `max_tokens`,
+  `tools` and `tool_choice`. The harness reads only that named call's argument
+  string, then applies the same transport normalization, semantic schema and
+  scorer used by native responses. Inspect's lossy `ToolParams` conversion is
+  deliberately bypassed so `maxItems` and every other schema keyword remain
+  present in the wire payload.
+
+Every model profile separately pins its canonical revision, endpoint tag,
+quantisation when reported, required parameter set, response contract, maximum
+output, omitted sampling/reasoning fields and `zdr: true`. Unknown routes,
+contracts, parameter profiles and materially different duplicate endpoint tags
+are rejected. The only duplicate-tag exception is BaseTen's two catalogue
+records, and only while every non-telemetry field is identical.
+
+Offline configuration and deterministic queue verification make no network or
+credential access:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-open-weight-v4
+uv run --frozen paceprompt-host-eval enumerate-open-weight-v4
+```
+
+Gate preparation performs a read-only public catalogue refresh and writes nine
+complete mocked payloads, the 2,133-attempt scored queue, nine warm-ups, hashes
+and the conservative 2,142-call cost preflight under the ignored run directory:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-open-weight-v4-gate \
+  --run-id <new-run-id>
+```
+
+The preflight treats every serialized request byte as a possible input token,
+adds 4,096 framing tokens, and reserves the full 8,192 output-token cap for
+every call. It has no reduced-repetition fallback. A total above the fixed
+`$25.00` ceiling produces a blocked gate and no calls.
+
+Live execution remains inert without `--live`, the exact run-specific phrase
+from an admitted sealed gate and the exact `$25.00` limit:
+
+```sh
+uv run --env-file <local-env-path> --frozen paceprompt-host-eval \
+  run-open-weight-v4 --run-id <ratified-run-id> --live \
+  --authorization <exact-run-phrase> --spending-limit-usd 25.00
+```
+
+The run uses one serial worker, a two-second minimum gap, zero retries, three
+indivisible repetitions and one transport/schema warm-up per model. A failed
+warm-up prevents that model's held-out calls. A first 429 pauses only that model
+and preserves later entries in place as `notStarted/rateLimitPause`; timeout,
+cancellation and spending-stop evidence use the unchanged v3 denominator
+rules. Raw exchanges and normalized evidence remain under `.runs` only.
+
+The v4 report keeps Sol's sealed #15 metrics as fixed reference evidence,
+reports native and forced-tool transport complexity separately, selects no
+automatic winner and cannot change the production provider. Any displacement
+of Sol remains a separate human decision after the evidence audit.
+
 ## Frozen protocol
 
 - 17 development cases and 34 held-out cases, with eight fixed few-shot

@@ -14,8 +14,16 @@ import subprocess
 from typing import Any, Callable
 
 from .catalogue import conservative_call_cost, snapshot_catalogue
-from .openrouter import CapturedGenerationError, ModelSpec, generate_with_capture, redact
+from .openrouter import (
+    FORCED_TOOL_ARGUMENTS,
+    NATIVE_JSON_SCHEMA,
+    CapturedGenerationError,
+    ModelSpec,
+    generate_with_capture,
+    redact,
+)
 from .scorer_adapter import (
+    ScorerFailure,
     invalid_observed,
     normalized_document,
     parse_model_output,
@@ -120,6 +128,36 @@ def provider_finish_reason(exchange: dict[str, Any]) -> str | None:
     return choices[0].get("finish_reason")
 
 
+def completed_content(
+    exchange: dict[str, Any], framework: dict[str, Any] | None, spec: ModelSpec
+) -> str:
+    """Return the schema document from the route's ratified response envelope."""
+
+    if spec.response_contract == NATIVE_JSON_SCHEMA:
+        completion = framework.get("completion") if framework else None
+        if isinstance(completion, str):
+            return completion
+        responses = exchange.get("responses", [])
+        choices = responses[-1].get("body", {}).get("choices", []) if responses else []
+        content = choices[0].get("message", {}).get("content") if len(choices) == 1 else None
+        return content if isinstance(content, str) else ""
+    if spec.response_contract == FORCED_TOOL_ARGUMENTS:
+        responses = exchange.get("responses", [])
+        choices = responses[-1].get("body", {}).get("choices", []) if responses else []
+        if len(choices) != 1:
+            return ""
+        message = choices[0].get("message", {})
+        calls = message.get("tool_calls", [])
+        if len(calls) != 1:
+            return ""
+        function = calls[0].get("function", {})
+        arguments = function.get("arguments")
+        if function.get("name") != spec.forced_tool_name or not isinstance(arguments, str):
+            return ""
+        return arguments
+    raise ValueError(f"unknown response contract {spec.response_contract!r}")
+
+
 def parse_completed_output(
     content: str,
     schema: dict[str, Any],
@@ -161,30 +199,78 @@ def route_matches(
     return (model is None or model in valid_models) and (provider is None or provider in valid_providers)
 
 
-def authority_preserved(exchange: dict[str, Any], completion: str | None = None) -> bool:
+def authority_preserved(
+    exchange: dict[str, Any],
+    completion: str | None = None,
+    spec: ModelSpec | None = None,
+    transport_schema: dict[str, Any] | None = None,
+) -> bool:
     requests = exchange.get("requests", [])
     responses = exchange.get("responses", [])
     if len(requests) != 1 or len(responses) != 1:
         return False
     request_body = requests[0].get("body", {})
-    if "tools" in request_body or request_body.get("tool_choice") not in {None, "none"}:
-        return False
     choices = responses[0].get("body", {}).get("choices", [])
     if len(choices) != 1:
         return False
     message = choices[0].get("message", {})
-    raw_content = message.get("content")
-    if not isinstance(raw_content, str):
+    contract = spec.response_contract if spec is not None else NATIVE_JSON_SCHEMA
+    if contract == NATIVE_JSON_SCHEMA:
+        if "tools" in request_body or request_body.get("tool_choice") not in {None, "none"}:
+            return False
+        if transport_schema is not None and spec is not None and spec.required_parameters:
+            response_schema = request_body.get("response_format", {}).get(
+                "json_schema", {}
+            )
+            if (
+                response_schema.get("strict") is not True
+                or response_schema.get("schema") != transport_schema
+            ):
+                return False
+        raw_content = message.get("content")
+        if not isinstance(raw_content, str):
+            return False
+        try:
+            json.loads(raw_content)
+        except json.JSONDecodeError:
+            return False
+        return (
+            "tool_calls" not in message
+            and "function_call" not in message
+            and (completion is None or raw_content == completion)
+        )
+    if contract != FORCED_TOOL_ARGUMENTS or spec is None or spec.forced_tool_name is None:
+        return False
+    tools = request_body.get("tools", [])
+    tool_choice = request_body.get("tool_choice")
+    if (
+        len(tools) != 1
+        or tools[0].get("type") != "function"
+        or tools[0].get("function", {}).get("name") != spec.forced_tool_name
+        or (
+            transport_schema is not None
+            and tools[0].get("function", {}).get("parameters") != transport_schema
+        )
+        or tool_choice
+        != {"type": "function", "function": {"name": spec.forced_tool_name}}
+    ):
+        return False
+    calls = message.get("tool_calls", [])
+    if len(calls) != 1 or "function_call" in message:
+        return False
+    function = calls[0].get("function", {})
+    arguments = function.get("arguments")
+    if (
+        function.get("name") != spec.forced_tool_name
+        or not isinstance(arguments, str)
+        or message.get("content") not in {None, ""}
+    ):
         return False
     try:
-        json.loads(raw_content)
+        json.loads(arguments)
     except json.JSONDecodeError:
         return False
-    return (
-        "tool_calls" not in message
-        and "function_call" not in message
-        and (completion is None or raw_content == completion)
-    )
+    return completion is None or arguments == completion
 
 
 def compare_catalogues(gated: list[dict[str, Any]], current: list[dict[str, Any]]) -> None:
@@ -197,6 +283,9 @@ def compare_catalogues(gated: list[dict[str, Any]], current: list[dict[str, Any]
         "configuredQuantization",
         "reportedQuantization",
         "supportedParameters",
+        "matchingEndpointCount",
+        "equivalentDuplicateEndpointTag",
+        "materialEndpointSha256",
     )
     gated_by_model = {item["requestedModelID"]: item for item in gated}
     current_by_model = {item["requestedModelID"]: item for item in current}
@@ -343,6 +432,9 @@ class LiveRun:
         ) = None,
         warmup_case_id: str = "WI-V2-D006",
         require_returned_identity: bool = False,
+        host_latency_profile: bool = False,
+        output_limit_is_invalid: bool = False,
+        prompt_template_version: str | None = None,
     ) -> None:
         self.run_dir = run_dir
         self.gate = gate
@@ -376,6 +468,17 @@ class LiveRun:
         self.schema_bytes = schema_file_bytes
         self.transport_strategy_for_spec = transport_strategy_for_spec
         self.require_returned_identity = require_returned_identity
+        self.host_latency_profile = host_latency_profile or (
+            run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+        )
+        self.output_limit_is_invalid = output_limit_is_invalid or (
+            run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+        )
+        self.prompt_template_version = prompt_template_version or (
+            "workout-import-prompt/v3"
+            if self.host_latency_profile
+            else "workout-import-prompt/v2"
+        )
 
     def strategy(self, spec: ModelSpec) -> ProviderTransportStrategy | None:
         if self.transport_strategy_for_spec is None:
@@ -505,9 +608,11 @@ class LiveRun:
             write_json(self.run_dir / "requests" / f"{attempt_id}.json", exchange.get("requests", []))
             write_json(self.run_dir / "responses" / f"{attempt_id}.json", exchange.get("responses", []))
             write_json(self.run_dir / "framework-logs" / f"{attempt_id}.json", framework or {})
+            completion = completed_content(exchange, framework, spec)
             transcript = {
                 "messages": [message.model_dump(mode="json") for message in messages],
-                "completion": framework.get("completion") if framework else None,
+                "completion": completion if framework else None,
+                "responseContract": spec.response_contract,
             }
             write_json(self.run_dir / "transcripts" / f"{attempt_id}.json", transcript)
             finish_reason = provider_finish_reason(exchange)
@@ -537,6 +642,7 @@ class LiveRun:
                     if strategy is not None
                     else "paceprompt_workout_import_transport_v2_3"
                 ),
+                "responseContract": spec.response_contract,
                 "frameworkLogRecordCount": len(framework_log_handler.records),
             }
             if kind == "warmup":
@@ -551,24 +657,34 @@ class LiveRun:
                     )
                 else:
                     observed = parse_completed_output(
-                        framework.get("completion", "") if framework else "",
+                        completion,
                         self.schema,
                         transport_schema,
                         strategy.normalize_output if strategy is not None else None,
                         finish_reason=finish_reason,
-                        output_limit_is_invalid=(
-                            self.run_configuration_id
-                            == "paceprompt-host-eval-run-policy/v3"
-                        ),
+                        output_limit_is_invalid=self.output_limit_is_invalid,
                     )
                     schema_valid = observed["structure"] == "valid"
+                    structural_authority = (
+                        authority_preserved(
+                            exchange,
+                            completion,
+                            spec,
+                            transport_schema,
+                        )
+                        if spec.required_parameters
+                        else True
+                    )
                     summary.update(
                         {
                             "hostClassification": (
-                                "unscoredWarmup" if schema_valid else "warmupModelQualityFailure"
+                                "unscoredWarmup"
+                                if schema_valid and structural_authority
+                                else "warmupModelQualityFailure"
                             ),
                             "schemaValid": schema_valid,
-                            "compatibilityPassed": schema_valid,
+                            "authorityPreserved": structural_authority,
+                            "compatibilityPassed": schema_valid and structural_authority,
                             "oracleAgreementDiagnostic": (
                                 observed == v1_observed(case["expected"]["modelOutput"])
                                 if schema_valid
@@ -576,13 +692,17 @@ class LiveRun:
                             ),
                         }
                     )
-                    if not schema_valid:
+                    if not schema_valid or not structural_authority:
                         write_json(
                             self.run_dir / "failures" / f"{attempt_id}.json",
                             {
-                                "type": "WarmupSchemaFailure",
-                                "reasonCategory": "strictSchemaViolation",
-                                "errors": observed["errors"],
+                                "type": "WarmupCompatibilityFailure",
+                                "reasonCategory": (
+                                    "strictSchemaViolation"
+                                    if not schema_valid
+                                    else "responseContractMismatch"
+                                ),
+                                "errors": observed.get("errors", []),
                             },
                         )
                 self.attempts.append(summary)
@@ -603,15 +723,12 @@ class LiveRun:
                 )
             else:
                 observed = parse_completed_output(
-                    framework.get("completion", "") if framework else "",
+                    completion,
                     self.schema,
                     transport_schema,
                     strategy.normalize_output if strategy is not None else None,
                     finish_reason=finish_reason,
-                    output_limit_is_invalid=(
-                        self.run_configuration_id
-                        == "paceprompt-host-eval-run-policy/v3"
-                    ),
+                    output_limit_is_invalid=self.output_limit_is_invalid,
                 )
                 schema_valid = observed["structure"] == "valid"
                 summary.update(
@@ -620,7 +737,9 @@ class LiveRun:
                         "schemaValid": schema_valid,
                         "authorityPreserved": authority_preserved(
                             exchange,
-                            framework.get("completion", "") if framework else "",
+                            completion,
+                            spec,
+                            transport_schema,
                         ),
                     }
                 )
@@ -655,17 +774,17 @@ class LiveRun:
                     measurement(
                         (
                             "developmentHostOpenRouterLatency"
-                            if self.run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+                            if self.host_latency_profile
                             else "completeResponseLatency"
                         ),
                         (
                             exchange.get("providerLatencyMilliseconds")
-                            if self.run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+                            if self.host_latency_profile
                             else (framework.get("time") if framework else None)
                         ),
                         (
                             "milliseconds"
-                            if self.run_configuration_id == "paceprompt-host-eval-run-policy/v3"
+                            if self.host_latency_profile
                             else "seconds"
                         ),
                     ),
@@ -677,8 +796,7 @@ class LiveRun:
                                 "seconds",
                             )
                         ]
-                        if self.run_configuration_id
-                        == "paceprompt-host-eval-run-policy/v3"
+                        if self.host_latency_profile
                         else []
                     ),
                     measurement("reportedInputTokens", (framework.get("usage") or {}).get("input_tokens") if framework else None, "tokens"),
@@ -686,16 +804,37 @@ class LiveRun:
                     measurement("reportedCost", float(cost) if cost is not None else None, "USD"),
                 ],
                 run_configuration_id=self.run_configuration_id,
-                prompt_template_version=(
-                    "workout-import-prompt/v3"
-                    if self.run_configuration_id == "paceprompt-host-eval-run-policy/v3"
-                    else "workout-import-prompt/v2"
-                ),
+                prompt_template_version=self.prompt_template_version,
             )
             projection = self.run_dir / "projections" / attempt_id
-            report = score_completed(projection_root=projection, case=case, document=document)
+            try:
+                report = score_completed(
+                    projection_root=projection,
+                    case=case,
+                    document=document,
+                )
+            except ScorerFailure as error:
+                report = error.report
+                summary.update(
+                    {
+                        "hostClassification": "scorerFailure",
+                        "scorerOverall": "scorerFailure",
+                        "pipelineClassification": "scorerFailure",
+                    }
+                )
+                write_json(
+                    self.run_dir / "failures" / f"{attempt_id}.json",
+                    {
+                        "type": "ScorerFailure",
+                        "errors": report.get("errors", []),
+                    },
+                )
             write_json(self.run_dir / "normalized-results" / f"{attempt_id}.json", document)
             write_json(self.run_dir / "scorer-reports" / f"{attempt_id}.json", report)
+            if report.get("status") != "complete":
+                self.attempts.append(summary)
+                await self.save_state("running")
+                return summary
             case_result = report["caseResults"][0]
             if summary.get("schemaValid"):
                 rules = case_result["rules"]

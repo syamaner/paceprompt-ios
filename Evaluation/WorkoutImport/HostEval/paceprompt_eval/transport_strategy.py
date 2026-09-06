@@ -243,6 +243,7 @@ STRATEGIES: Mapping[TransportStrategyID, ProviderTransportStrategy] = MappingPro
 V2_7_REGISTRY_ID = "strategyRegistryV27"
 V2_8_REGISTRY_ID = "strategyRegistryV28"
 V2_9_REGISTRY_ID = "strategyRegistryV29"
+V4_OPEN_WEIGHT_REGISTRY_ID = "strategyRegistryV4OpenWeight"
 
 
 V2_7_ROUTE_STRATEGIES: Mapping[ProviderRoute, TransportStrategyID] = MappingProxyType(
@@ -296,6 +297,57 @@ V2_9_ROUTE_STRATEGIES: Mapping[ProviderRoute, TransportStrategyID] = MappingProx
 )
 
 
+V4_OPEN_WEIGHT_ROUTE_STRATEGIES: Mapping[
+    ProviderRoute, TransportStrategyID
+] = MappingProxyType(
+    {
+        ProviderRoute(
+            "qwen/qwen3.8-27b", "qwen/qwen3.8-27b-20260814", "parasail/fp8"
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "mistralai/mistral-small-2603",
+            "mistralai/mistral-small-2603",
+            "venice/fp8",
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "nvidia/nemotron-3.5-lightning",
+            "nvidia/nemotron-3.5-lightning-20260807",
+            "deepinfra/bf16",
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "deepseek/deepseek-v4-flash-0731",
+            "deepseek/deepseek-v4-flash-20260731",
+            "open-inference/fp8",
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "z-ai/glm-5.3-flash",
+            "z-ai/glm-5.3-flash-20260826",
+            "deepinfra/fp4",
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "minimax/minimax-m3",
+            "minimax/minimax-m3-20260531",
+            "coreweave/fp4",
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "nvidia/nemotron-3-ultra-550b-a55b",
+            "nvidia/nemotron-3-ultra-550b-a55b-20260604",
+            "baseten/fp4",
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "qwen/qwen-2.5-7b-instruct",
+            "qwen/qwen-2.5-7b-instruct",
+            "phala",
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "mistralai/mistral-small-3.2-24b-instruct",
+            "mistralai/mistral-small-3.2-24b-instruct-2506",
+            "deepinfra/fp8",
+        ): TransportStrategyID.NESTED_V2_3,
+    }
+)
+
+
 ROUTE_STRATEGY_REGISTRIES: Mapping[
     str, Mapping[ProviderRoute, TransportStrategyID]
 ] = MappingProxyType(
@@ -303,6 +355,7 @@ ROUTE_STRATEGY_REGISTRIES: Mapping[
         V2_7_REGISTRY_ID: V2_7_ROUTE_STRATEGIES,
         V2_8_REGISTRY_ID: V2_8_ROUTE_STRATEGIES,
         V2_9_REGISTRY_ID: V2_9_ROUTE_STRATEGIES,
+        V4_OPEN_WEIGHT_REGISTRY_ID: V4_OPEN_WEIGHT_ROUTE_STRATEGIES,
     }
 )
 

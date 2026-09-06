@@ -1,0 +1,10 @@
+{
+  "modelSetVersion": "paceprompt-host-eval-open-weight-curl-reprobe-models/v4",
+  "ratifiedAt": "2026-09-05",
+  "models": [
+    {"requestedModelID": "z-ai/glm-5.3-flash", "canonicalRevision": "z-ai/glm-5.3-flash-20260826", "providerEndpoint": "deepinfra/fp4", "quantization": "fp4", "role": "compatibilityDiagnostic", "temperature": null, "topP": null, "reasoning": null},
+    {"requestedModelID": "minimax/minimax-m3", "canonicalRevision": "minimax/minimax-m3-20260531", "providerEndpoint": "coreweave/fp4", "quantization": "fp4", "role": "compatibilityDiagnostic", "temperature": null, "topP": null, "reasoning": null},
+    {"requestedModelID": "nvidia/nemotron-3-ultra-550b-a55b", "canonicalRevision": "nvidia/nemotron-3-ultra-550b-a55b-20260604", "providerEndpoint": "deepinfra/fp4", "quantization": "fp4", "role": "compatibilityDiagnostic", "temperature": null, "topP": null, "reasoning": null},
+    {"requestedModelID": "mistralai/mistral-small-3.2-24b-instruct", "canonicalRevision": "mistralai/mistral-small-3.2-24b-instruct-2506", "providerEndpoint": "deepinfra/fp8", "quantization": "fp8", "role": "compatibilityDiagnostic", "temperature": null, "topP": null, "reasoning": null}
+  ]
+}

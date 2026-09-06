@@ -21,11 +21,15 @@ from inspect_ai.model import (
     ResponseSchema,
     get_model,
 )
+from inspect_ai.tool import ToolFunction, ToolInfo
 
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL_OUTPUT_SCHEMA_NAME = "paceprompt_workout_import_transport_v2_3"
 MOCK_API_KEY = "paceprompt-mock-key-never-live"
+NATIVE_JSON_SCHEMA = "nativeJsonSchema"
+FORCED_TOOL_ARGUMENTS = "forcedToolArguments"
+SUPPORTED_RESPONSE_CONTRACTS = {NATIVE_JSON_SCHEMA, FORCED_TOOL_ARGUMENTS}
 
 
 class CapturedGenerationError(RuntimeError):
@@ -47,9 +51,26 @@ class ModelSpec:
     reasoning: dict[str, Any] | None
     transport_strategy_id: str | None = None
     transport_registry_id: str | None = None
+    response_contract: str = NATIVE_JSON_SCHEMA
+    forced_tool_name: str | None = None
+    required_parameters: tuple[str, ...] = ()
+    zdr: bool | None = None
+    max_output_tokens: int = 8192
 
     @classmethod
     def from_json(cls, value: dict[str, Any]) -> "ModelSpec":
+        response_contract = value.get("responseContract", NATIVE_JSON_SCHEMA)
+        if response_contract not in SUPPORTED_RESPONSE_CONTRACTS:
+            raise ValueError(f"unknown response contract {response_contract!r}")
+        forced_tool_name = value.get("forcedToolName")
+        if response_contract == FORCED_TOOL_ARGUMENTS:
+            if not isinstance(forced_tool_name, str) or not forced_tool_name:
+                raise ValueError("forced-tool response contract requires forcedToolName")
+        elif forced_tool_name is not None:
+            raise ValueError("native JSON-schema response contract cannot declare forcedToolName")
+        required_parameters = tuple(value.get("requiredParameters", ()))
+        if len(required_parameters) != len(set(required_parameters)):
+            raise ValueError("requiredParameters contains duplicates")
         return cls(
             requested_model_id=value["requestedModelID"],
             canonical_revision=value["canonicalRevision"],
@@ -61,6 +82,11 @@ class ModelSpec:
             reasoning=value["reasoning"],
             transport_strategy_id=value.get("transportStrategy"),
             transport_registry_id=value.get("transportRegistry"),
+            response_contract=response_contract,
+            forced_tool_name=forced_tool_name,
+            required_parameters=required_parameters,
+            zdr=value.get("zdr"),
+            max_output_tokens=value.get("maxOutputTokens", 8192),
         )
 
 
@@ -81,6 +107,8 @@ def provider_controls(
     }
     if spec.quantization is not None:
         controls["quantizations"] = [spec.quantization]
+    if spec.zdr is not None:
+        controls["zdr"] = spec.zdr
     if max_price_per_million is not None:
         controls["max_price"] = max_price_per_million
     return controls
@@ -113,15 +141,19 @@ def generation_config(
         attempt_timeout=180,
         max_connections=1,
         adaptive_connections=False,
-        max_tokens=8192,
+        max_tokens=spec.max_output_tokens,
         temperature=spec.temperature,
         top_p=spec.top_p,
         reasoning_effort=reasoning.get("effort"),
-        response_schema=ResponseSchema(
-            name=schema_name,
-            description="One untrusted PacePrompt workout-import outcome.",
-            json_schema=schema,
-            strict=True,
+        response_schema=(
+            ResponseSchema(
+                name=schema_name,
+                description="One untrusted PacePrompt workout-import outcome.",
+                json_schema=schema,
+                strict=True,
+            )
+            if spec.response_contract == NATIVE_JSON_SCHEMA
+            else None
         ),
         cache=False,
         cache_prompt=False,
@@ -180,15 +212,36 @@ def build_model(
         if spec.requested_model_id in {"openai/gpt-5.6-sol", "openai/gpt-5.6-luna"}:
             if "max_completion_tokens" in params:
                 params["max_tokens"] = params.pop("max_completion_tokens")
-        params["response_format"] = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": schema_name,
-                "description": "One untrusted PacePrompt workout-import outcome.",
-                "schema": deepcopy(schema),
-                "strict": True,
-            },
-        }
+        if spec.response_contract == NATIVE_JSON_SCHEMA:
+            params["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_name,
+                    "description": "One untrusted PacePrompt workout-import outcome.",
+                    "schema": deepcopy(schema),
+                    "strict": True,
+                },
+            }
+        elif spec.response_contract == FORCED_TOOL_ARGUMENTS:
+            if spec.forced_tool_name is None:
+                raise ValueError("forced-tool response contract has no tool name")
+            extra_body = params.setdefault("extra_body", {})
+            extra_body["tools"] = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": spec.forced_tool_name,
+                        "description": (
+                            "Return one untrusted PacePrompt workout-import outcome."
+                        ),
+                        "parameters": deepcopy(schema),
+                    },
+                }
+            ]
+            extra_body["tool_choice"] = {
+                "type": "function",
+                "function": {"name": spec.forced_tool_name},
+            }
         if not (reasoning and reasoning.get("exclude")):
             return params
         extra_body = params.setdefault("extra_body", {})
@@ -198,6 +251,20 @@ def build_model(
 
     model.api.completion_params = MethodType(completion_params, model.api)
     return model
+
+
+def generation_tools(
+    spec: ModelSpec, schema: dict[str, Any]
+) -> tuple[list[ToolInfo], str | ToolFunction]:
+    if spec.response_contract == NATIVE_JSON_SCHEMA:
+        return [], "none"
+    if spec.response_contract != FORCED_TOOL_ARGUMENTS or spec.forced_tool_name is None:
+        raise ValueError(f"unsupported response contract for {spec.requested_model_id}")
+    # The Inspect ToolParams model drops valid JSON Schema keywords including
+    # maxItems. The exact tool definition is therefore injected through the
+    # OpenAI-compatible extra_body above; the raw exchange remains the source
+    # of truth for parsing and validation.
+    return [], "none"
 
 
 async def generate_with_capture(
@@ -264,7 +331,10 @@ async def generate_with_capture(
             schema_name=schema_name,
         )
         try:
-            output = await model.generate(messages, tool_choice="none")
+            tools, tool_choice = generation_tools(spec, schema)
+            output = await model.generate(
+                messages, tools=tools, tool_choice=tool_choice
+            )
         except BaseException as error:
             if request_started is not None and "providerLatencyMilliseconds" not in exchanges:
                 exchanges["providerLatencyMilliseconds"] = max(
@@ -319,6 +389,26 @@ async def capture_wire_payload(
         captured["headers"] = dict(request.headers)
         captured["timeout"] = dict(request.extensions.get("timeout", {}))
         captured["body"] = json.loads((await request.aread()).decode("utf-8"))
+        message: dict[str, Any]
+        if spec.response_contract == FORCED_TOOL_ARGUMENTS:
+            message = {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "mock-tool-call",
+                        "type": "function",
+                        "function": {
+                            "name": spec.forced_tool_name,
+                            "arguments": response_content,
+                        },
+                    }
+                ],
+            }
+            finish_reason = "tool_calls"
+        else:
+            message = {"role": "assistant", "content": response_content}
+            finish_reason = "stop"
         return httpx2.Response(
             200,
             request=request,
@@ -331,8 +421,8 @@ async def capture_wire_payload(
                 "choices": [
                     {
                         "index": 0,
-                        "finish_reason": "stop",
-                        "message": {"role": "assistant", "content": response_content},
+                        "finish_reason": finish_reason,
+                        "message": message,
                     }
                 ],
                 "usage": {
@@ -354,7 +444,8 @@ async def capture_wire_payload(
             max_price_per_million=max_price_per_million,
             schema_name=schema_name,
         )
-        await model.generate(messages, tool_choice="none")
+        tools, tool_choice = generation_tools(spec, schema)
+        await model.generate(messages, tools=tools, tool_choice=tool_choice)
         await model.api.aclose()
     if not captured:
         raise RuntimeError("mock transport did not capture an outbound request")
@@ -397,7 +488,7 @@ def assert_payload_controls(
     if body["model"] != spec.requested_model_id:
         raise AssertionError("requested model changed")
     token_field = "max_completion_tokens" if "max_completion_tokens" in body else "max_tokens"
-    if body[token_field] != 8192 or {"max_tokens", "max_completion_tokens"} <= set(body):
+    if body[token_field] != spec.max_output_tokens or {"max_tokens", "max_completion_tokens"} <= set(body):
         raise AssertionError("output-token limit changed")
     if "n" in body or "seed" in body or "stop" in body:
         raise AssertionError("unratified generation control appeared")
@@ -408,18 +499,41 @@ def assert_payload_controls(
         raise AssertionError("sampling controls changed")
     if body.get("provider") != provider_controls(spec, max_price_per_million):
         raise AssertionError("provider controls changed")
-    if "zdr" in body["provider"]:
-        raise AssertionError("unratified ZDR control appeared")
-    response_format = body.get("response_format", {})
-    if response_format.get("type") != "json_schema":
-        raise AssertionError("structured output is not json_schema")
-    json_schema = response_format.get("json_schema", {})
-    if json_schema.get("name") != schema_name:
-        raise AssertionError("schema name changed")
-    if json_schema.get("strict") is not True:
-        raise AssertionError("schema strictness changed")
-    if json_schema.get("schema") != schema:
-        raise AssertionError("complete schema body changed")
+    if spec.response_contract == NATIVE_JSON_SCHEMA:
+        response_format = body.get("response_format", {})
+        if response_format.get("type") != "json_schema":
+            raise AssertionError("structured output is not json_schema")
+        json_schema = response_format.get("json_schema", {})
+        if json_schema.get("name") != schema_name:
+            raise AssertionError("schema name changed")
+        if json_schema.get("strict") is not True:
+            raise AssertionError("schema strictness changed")
+        if json_schema.get("schema") != schema:
+            raise AssertionError("complete schema body changed")
+        if "tools" in body or body.get("tool_choice") not in {None, "none"}:
+            raise AssertionError("native JSON-schema route unexpectedly uses tools")
+    elif spec.response_contract == FORCED_TOOL_ARGUMENTS:
+        if "response_format" in body:
+            raise AssertionError("forced-tool route unexpectedly uses response_format")
+        expected_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": spec.forced_tool_name,
+                    "description": "Return one untrusted PacePrompt workout-import outcome.",
+                    "parameters": schema,
+                },
+            }
+        ]
+        if body.get("tools") != expected_tools:
+            raise AssertionError("forced-tool schema changed")
+        if body.get("tool_choice") != {
+            "type": "function",
+            "function": {"name": spec.forced_tool_name},
+        }:
+            raise AssertionError("forced-tool choice changed")
+    else:
+        raise AssertionError("unknown response contract")
     if payload.get("timeout") != {"connect": 15.0, "read": 180.0, "write": 180.0, "pool": 180.0}:
         raise AssertionError("HTTP timeout controls changed")
     if payload["headers"].get("x-stainless-retry-count") != "0":

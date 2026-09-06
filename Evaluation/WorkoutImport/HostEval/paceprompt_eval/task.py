@@ -3071,6 +3071,15 @@ def main(argv: list[str] | None = None) -> int:
     run_v3_parser.add_argument("--live", action="store_true")
     run_v3_parser.add_argument("--authorization")
     run_v3_parser.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-open-weight-v4")
+    subparsers.add_parser("enumerate-open-weight-v4")
+    prepare_open_weight_v4 = subparsers.add_parser("prepare-open-weight-v4-gate")
+    prepare_open_weight_v4.add_argument("--run-id", required=True)
+    run_open_weight_v4 = subparsers.add_parser("run-open-weight-v4")
+    run_open_weight_v4.add_argument("--run-id", required=True)
+    run_open_weight_v4.add_argument("--live", action="store_true")
+    run_open_weight_v4.add_argument("--authorization")
+    run_open_weight_v4.add_argument("--spending-limit-usd")
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3081,6 +3090,15 @@ def main(argv: list[str] | None = None) -> int:
     prepare_diagnostic.add_argument("--run-id", required=True)
     prepare_curl = subparsers.add_parser("prepare-curl-probe-gate")
     prepare_curl.add_argument("--run-id", required=True)
+    prepare_open_weight_curl = subparsers.add_parser(
+        "prepare-open-weight-curl-probe-gate"
+    )
+    prepare_open_weight_curl.add_argument("--run-id", required=True)
+    prepare_open_weight_curl.add_argument(
+        "--profile",
+        choices=("initial", "replacement", "nemotron-baseten"),
+        default="initial",
+    )
     prepare_strategy = subparsers.add_parser("prepare-strategy-diagnostic-gate")
     prepare_strategy.add_argument("--run-id", required=True)
     prepare_flat_full = subparsers.add_parser("prepare-flat-strategy-gate")
@@ -3119,6 +3137,16 @@ def main(argv: list[str] | None = None) -> int:
     curl_probe.add_argument("--live", action="store_true")
     curl_probe.add_argument("--authorization")
     curl_probe.add_argument("--spending-limit-usd")
+    open_weight_curl_probe = subparsers.add_parser("run-open-weight-curl-probe")
+    open_weight_curl_probe.add_argument("--run-id", required=True)
+    open_weight_curl_probe.add_argument("--live", action="store_true")
+    open_weight_curl_probe.add_argument("--authorization")
+    open_weight_curl_probe.add_argument("--spending-limit-usd")
+    open_weight_curl_probe.add_argument(
+        "--profile",
+        choices=("initial", "replacement", "nemotron-baseten"),
+        default="initial",
+    )
     strategy_diagnostic = subparsers.add_parser("run-strategy-diagnostic")
     strategy_diagnostic.add_argument("--run-id", required=True)
     strategy_diagnostic.add_argument("--live", action="store_true")
@@ -3191,6 +3219,37 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
         return 0
+    if args.command == "verify-open-weight-v4":
+        from .v4 import verify as verify_open_weight_v4
+
+        report = verify_open_weight_v4()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-open-weight-v4":
+        from .v4 import queue_document as open_weight_v4_queue
+
+        print_json(open_weight_v4_queue())
+        return 0
+    if args.command == "prepare-open-weight-v4-gate":
+        from .v4 import prepare_gate as prepare_open_weight_v4_gate
+
+        print_json(asyncio.run(prepare_open_weight_v4_gate(args.run_id)))
+        return 0
+    if args.command == "run-open-weight-v4":
+        if not args.live:
+            raise SystemExit("live open-weight v4 execution requires --live")
+        from .v4 import run_live as run_open_weight_v4_live
+
+        print_json(
+            asyncio.run(
+                run_open_weight_v4_live(
+                    run_id=args.run_id,
+                    authorization=args.authorization or "",
+                    spending_limit_usd=args.spending_limit_usd or "",
+                )
+            )
+        )
+        return 0
     if args.command == "enumerate":
         report = verify()
         print_json(
@@ -3217,6 +3276,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "prepare-curl-probe-gate":
         print_json(asyncio.run(prepare_curl_probe_gate(args.run_id)))
+        return 0
+    if args.command == "prepare-open-weight-curl-probe-gate":
+        from .open_weight_probe import prepare_gate, profile_for_name
+
+        print_json(
+            asyncio.run(
+                prepare_gate(args.run_id, profile=profile_for_name(args.profile))
+            )
+        )
         return 0
     if args.command == "prepare-strategy-diagnostic-gate":
         print_json(asyncio.run(prepare_strategy_diagnostic_gate(args.run_id)))
@@ -3287,6 +3355,22 @@ def main(argv: list[str] | None = None) -> int:
                     run_id=args.run_id,
                     authorization=args.authorization or "",
                     spending_limit_usd=args.spending_limit_usd or "",
+                )
+            )
+        )
+        return 0
+    if args.command == "run-open-weight-curl-probe":
+        if not args.live:
+            raise SystemExit("live open-weight curl-probe execution requires --live")
+        from .open_weight_probe import profile_for_name, run_live as run_open_weight_probe_live
+
+        print_json(
+            asyncio.run(
+                run_open_weight_probe_live(
+                    run_id=args.run_id,
+                    authorization=args.authorization or "",
+                    spending_limit_usd=args.spending_limit_usd or "",
+                    profile=profile_for_name(args.profile),
                 )
             )
         )

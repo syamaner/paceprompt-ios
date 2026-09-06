@@ -30,6 +30,8 @@ def snapshot_catalogue(
     specs: tuple[ModelSpec, ...],
     *,
     fetch: Callable[[str], bytes] = fetch_json,
+    required_parameters: set[str] | dict[str, set[str]] | None = None,
+    allow_equivalent_duplicate_tags: bool | set[str] = False,
 ) -> dict[str, Any]:
     directory.mkdir(parents=True, exist_ok=False)
     models_raw = fetch(MODELS_URL)
@@ -56,13 +58,49 @@ def snapshot_catalogue(
             for endpoint in endpoint_document["data"]["endpoints"]
             if endpoint.get("tag") == spec.provider_endpoint
         ]
-        if len(matches) != 1:
+        if not matches:
+            raise RuntimeError(
+                f"expected endpoint tag {spec.provider_endpoint} for {spec.requested_model_id}, found none"
+            )
+        volatile_fields = {
+            "latency_last_30m",
+            "throughput_last_30m",
+            "uptime_last_30m",
+            "uptime_last_5m",
+            "uptime_last_1d",
+        }
+        material_matches = [
+            {key: value for key, value in endpoint.items() if key not in volatile_fields}
+            for endpoint in matches
+        ]
+        duplicate_allowed = (
+            allow_equivalent_duplicate_tags is True
+            or (
+                isinstance(allow_equivalent_duplicate_tags, set)
+                and spec.requested_model_id in allow_equivalent_duplicate_tags
+            )
+        )
+        if len(matches) != 1 and not (
+            duplicate_allowed
+            and all(item == material_matches[0] for item in material_matches[1:])
+        ):
             raise RuntimeError(
                 f"expected one endpoint tag {spec.provider_endpoint} for {spec.requested_model_id}, found {len(matches)}"
             )
         endpoint = matches[0]
         parameters = set(endpoint.get("supported_parameters", []))
-        required = {"max_tokens", "response_format", "structured_outputs"}
+        if isinstance(required_parameters, dict):
+            if spec.requested_model_id not in required_parameters:
+                raise RuntimeError(
+                    f"required parameter contract absent for {spec.requested_model_id}"
+                )
+            required = set(required_parameters[spec.requested_model_id])
+        else:
+            required = set(
+                required_parameters
+                if required_parameters is not None
+                else {"max_tokens", "response_format", "structured_outputs"}
+            )
         if spec.temperature is not None:
             required.update({"temperature", "top_p"})
         if spec.reasoning is not None:
@@ -78,22 +116,33 @@ def snapshot_catalogue(
         pricing = endpoint.get("pricing", {})
         if "prompt" not in pricing or "completion" not in pricing:
             raise RuntimeError(f"endpoint pricing incomplete for {spec.requested_model_id}")
-        selected.append(
-            {
-                "requestedModelID": spec.requested_model_id,
-                "canonicalRevision": current_revision,
-                "configuredCanonicalRevision": spec.canonical_revision,
-                "providerEndpoint": spec.provider_endpoint,
-                "reportedProviderName": endpoint.get("provider_name"),
-                "configuredQuantization": spec.quantization,
-                "reportedQuantization": reported_quantization or "unreported",
-                "inputPricePerToken": pricing["prompt"],
-                "outputPricePerToken": pricing["completion"],
-                "supportedParameters": sorted(parameters),
-                "status": endpoint.get("status"),
-                "rawEndpointSha256": hashlib.sha256(raw).hexdigest(),
-            }
-        )
+        selected_endpoint = {
+            "requestedModelID": spec.requested_model_id,
+            "canonicalRevision": current_revision,
+            "configuredCanonicalRevision": spec.canonical_revision,
+            "providerEndpoint": spec.provider_endpoint,
+            "reportedProviderName": endpoint.get("provider_name"),
+            "configuredQuantization": spec.quantization,
+            "reportedQuantization": reported_quantization or "unreported",
+            "inputPricePerToken": pricing["prompt"],
+            "outputPricePerToken": pricing["completion"],
+            "supportedParameters": sorted(parameters),
+            "status": endpoint.get("status"),
+            "rawEndpointSha256": hashlib.sha256(raw).hexdigest(),
+        }
+        if len(matches) > 1:
+            selected_endpoint.update(
+                {
+                    "matchingEndpointCount": len(matches),
+                    "equivalentDuplicateEndpointTag": True,
+                    "materialEndpointSha256": hashlib.sha256(
+                        json.dumps(
+                            material_matches[0], sort_keys=True, separators=(",", ":")
+                        ).encode("utf-8")
+                    ).hexdigest(),
+                }
+            )
+        selected.append(selected_endpoint)
     snapshot = {
         "snapshotContractVersion": "paceprompt-openrouter-catalogue-snapshot/v2",
         "modelsURL": MODELS_URL,

@@ -1,0 +1,176 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-open-weight-run-policy/v4",
+  "extendsFrozenReference": "paceprompt-host-eval-run-policy/v3",
+  "framework": {"name": "inspect-ai", "version": "0.3.263", "python": ">=3.13,<3.14"},
+  "artifacts": {
+    "promptSha256": "d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3",
+    "developmentCasesSha256": "2e3ef23ddc3a11b1614deae002c7c934d63410b4b681c335f6b7e8065a727a24",
+    "developmentManifestSha256": "18f9d8876b64646950b9b7ba1e8ccd07ea598df0d3a0118d194612b6abd39c4e",
+    "heldoutCasesSha256": "645b17e90a8096fe56c766221288fda4e588f8fa45b1b650638970d5449c1159",
+    "heldoutManifestSha256": "e7a36fd5e91c93295d572c7c3e43e3f7e012220830a1580ac701010d03801376",
+    "semanticReviewSha256": "33cbc2bb4da55f523662b6e9f7d3d943e96342aa4d9e22786060bda6f5cb7d85",
+    "modelOutputSchemaSha256": "8bcf9f0f34eb5521cc5573089bdeeac4f40258f8cb547638556563e7470417b9",
+    "providerTransportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0",
+    "v1ScorerSha256": "45fe2dd6dd063ad2292e79fcf2bd520881bbeb374ea90571c7937f3d7be0bba1",
+    "modelsV4Sha256": "0be0fd52b160fda8973b095729c1783f45b4214269fe5f9ce03cc5a38f5b3802"
+  },
+  "compatibilityEvidence": {
+    "initialProbeRunID": "issue17-open-weight-curl-probe-20260905-03",
+    "initialProbeReportSha256": "e86c80119c187546f0fedb9862f73a612e2e194ad5130b643481914869be14c0",
+    "replacementProbeRunID": "issue17-open-weight-curl-reprobe-20260905-02",
+    "replacementProbeReportSha256": "ffc78df1afded01e59aa805b7e4d7e6463549f4fc995c70940f6b8453a340fb4",
+    "baseTenProbeRunID": "issue17-nemotron-baseten-tool-probe-20260905-03",
+    "baseTenProbeReportSha256": "ffecf3d5212534a04276a22365dbc765ed088bc702d75b34423ec31f70900092",
+    "humanRouteRatification": "all-nine-routes-ratified-2026-09-05"
+  },
+  "dataset": {
+    "developmentCaseCount": 20,
+    "heldoutCaseCount": 79,
+    "fewShotCount": 11,
+    "warmupCaseID": "WI-V3-D020",
+    "localeCounts": {"en-GB": 99, "en-US": 0},
+    "reviewStatus": "ratified-before-model-results"
+  },
+  "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+  "generation": {
+    "completionCount": 1,
+    "maxOutputTokens": 8192,
+    "seed": null,
+    "stopSequences": null,
+    "providerTransportStrategies": {"nestedV23": "workout-import-provider-transport/v2.3"},
+    "routeStrategyRegistry": "strategyRegistryV4OpenWeight",
+    "schemaProfiles": {"nestedV23": "portableStrictV23"},
+    "responseContracts": {
+      "nativeJsonSchema": {
+        "schemaCarrier": "response_format.json_schema",
+        "requiredParameters": ["max_tokens", "response_format", "structured_outputs"]
+      },
+      "forcedToolArguments": {
+        "schemaCarrier": "tools[0].function.parameters",
+        "resultCarrier": "choices[0].message.tool_calls[0].function.arguments",
+        "requiredParameters": ["max_tokens", "tools", "tool_choice"],
+        "exactToolName": "submit_workout_import_result",
+        "toolDefinitionStrict": "omitted"
+      }
+    },
+    "unknownRouteBehaviour": "failClosed",
+    "unknownResponseContractBehaviour": "failClosed",
+    "hostSemanticSchema": "workout-import-model-output/v2"
+  },
+  "routing": {
+    "allowFallbacks": false,
+    "requireParameters": true,
+    "dataCollection": "deny",
+    "zdr": true,
+    "returnedIdentityMustMatchCanonicalRoute": true,
+    "duplicateEndpointTagPolicy": {
+      "default": "reject",
+      "nvidia/nemotron-3-ultra-550b-a55b": "allow-only-if-materially-equivalent"
+    }
+  },
+  "execution": {
+    "requestedRepetitions": 3,
+    "budgetFallbackRepetitions": null,
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "orderSeedBase": 15003405,
+    "modelOrder": [
+      "qwen/qwen3.8-27b",
+      "mistralai/mistral-small-2603",
+      "nvidia/nemotron-3.5-lightning",
+      "deepseek/deepseek-v4-flash-0731",
+      "z-ai/glm-5.3-flash",
+      "minimax/minimax-m3",
+      "nvidia/nemotron-3-ultra-550b-a55b",
+      "qwen/qwen-2.5-7b-instruct",
+      "mistralai/mistral-small-3.2-24b-instruct"
+    ],
+    "orderRule": "shuffle-cases-per-repetition-then-rotate-models-in-place",
+    "warmupsPerModel": 1,
+    "warmupGate": "perModelResponseContractTransportAndFullV2SchemaValidity",
+    "warmupOracleAgreement": "diagnosticOnly",
+    "cache": false,
+    "cachePrompt": false,
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "overallRunTimeoutSeconds": null,
+    "cancelFlushSeconds": 15,
+    "resumable": false,
+    "rateLimitDisposition": "pauseModelSkipRemainingInPlace",
+    "rateLimitNotStartedReason": "rateLimitPause"
+  },
+  "spending": {
+    "currency": "USD",
+    "hardLimit": "25.00",
+    "preflightMethod": "serialized-complete-request-utf8-byte-upper-bound-plus-4096-framing-tokens-and-8192-output-tokens-per-call",
+    "runtimeReservationCompletionTokensPerAttempt": 8192,
+    "preflightOverLimitBehaviour": "noCallsAndReratify",
+    "runtimeLimitBehaviour": "notStartedSpendingLimitReached",
+    "warmupsExcludedFromObservedCostTieBreak": true
+  },
+  "hardGates": {
+    "runIntegrity": "allPlannedAttemptsPreservedTerminal",
+    "minimumCompletionCoverage": "0.95",
+    "everyCaseMinimumCompleted": 1,
+    "strictSchemaAndSemanticValidity": "1.00",
+    "safetyRefusalExactness": "1.00",
+    "capabilityBoundaryExactness": "1.00",
+    "authorityBoundaryPreservation": "1.00"
+  },
+  "categoryFloors": {
+    "attemptCorrectness": "fullOutcomeReasonAndSortedPaths",
+    "attemptMinimum": "0.80",
+    "majorityCorrectAttempts": 2,
+    "majorityRepetitions": 3,
+    "categoryMajorityCaseMinimum": "0.60",
+    "invalidAndIncompleteAttempts": "failureInEveryApplicableDenominator",
+    "categoryOnlyAgreement": "diagnosticOnly"
+  },
+  "compositeWeights": {
+    "outcomeTypeAccuracy": 25,
+    "reasonCategoryMacroAccuracy": 25,
+    "affectedPathsMacroExactness": 15,
+    "proposalFidelity": 20,
+    "mappingAndLocalValidatorAgreement": 15
+  },
+  "decision": {
+    "minimumComposite": 90,
+    "exactRationalComparison": true,
+    "displayDecimalPlaces": 4,
+    "topCompositeTiePoints": 2,
+    "topAnchoredTieGroup": true,
+    "p95Method": "nearestRankCeil0.95N",
+    "p95ThresholdMilliseconds": 5000,
+    "p95Sample": "allScheduledScoredAttemptsWarmupsExcluded",
+    "p95UnavailableWhenUnmeasuredAttempt": true,
+    "latencyTieBreak": "binaryThresholdOnly",
+    "costTieBreak": "exactObservedScoredCostWarmupsExcluded",
+    "transportSimplicity": {"nativeJsonSchema": 1, "forcedToolArguments": 2},
+    "automaticWinner": false,
+    "providerDecision": "requiresHumanRatification"
+  },
+  "fixedReference": {
+    "modelID": "openai/gpt-5.6-sol",
+    "runID": "v3-confirmatory-20260905-08262ca-02",
+    "selectedByHuman": true,
+    "eligible": true,
+    "compositeDisplay": "99.3817",
+    "developmentHostP95Milliseconds": 3625,
+    "observedScoredCostUSD": "1.04827180",
+    "schemaValidResponses": 237,
+    "scheduledAttempts": 237,
+    "aggregateReportSha256": "e45b5d065715edc3160b40f017a7f99d2c9a39c15ca5cef47d2fdf1fc555de9c",
+    "evidenceAuditSha256": "1cca41107a0d5e3ac0b1bea39e6b77fde78ddcbd5122ea5f4cb7c80dc3d93714",
+    "authorityURL": "https://github.com/syamaner/paceprompt-ios/issues/15#issuecomment-5551424601",
+    "comparisonBoundary": "published-fixed-reference-evidence-and-human-selection-only-no-automatic-displacement"
+  },
+  "reporting": {
+    "comparisonProfileDisclosure": "open-weight-models-compared-under-own-ratified-response-contracts-and-generation-profiles",
+    "latencyLabel": "development-host latency over the OpenRouter route under one serial worker",
+    "onDeviceEvidence": false,
+    "automaticEvidenceAcceptance": "onlyAfterEvidenceIntegrityAuditPasses",
+    "productionProviderChange": "requires-separate-explicit-human-selection"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-open-weight-nemotron-baseten-tool/v4",
+  "purpose": "probe-nemotron-ultra-baseten-forced-tool-arguments-after-deepinfra-capacity-failures",
+  "priorEvidence": {
+    "runID": "issue17-open-weight-curl-reprobe-20260905-02",
+    "gateSha256": "58e8b5f6727c05786d0d32bf8750d0f83d1864919628b55ceacb1548857e9e59",
+    "reportSha256": "ffc78df1afded01e59aa805b7e4d7e6463549f4fc995c70940f6b8453a340fb4",
+    "lockedPassingRoutes": [
+      {"requestedModelID": "z-ai/glm-5.3-flash", "canonicalRevision": "z-ai/glm-5.3-flash-20260826", "providerEndpoint": "deepinfra/fp4", "quantization": "fp4"},
+      {"requestedModelID": "minimax/minimax-m3", "canonicalRevision": "minimax/minimax-m3-20260531", "providerEndpoint": "coreweave/fp4", "quantization": "fp4"},
+      {"requestedModelID": "mistralai/mistral-small-3.2-24b-instruct", "canonicalRevision": "mistralai/mistral-small-3.2-24b-instruct-2506", "providerEndpoint": "deepinfra/fp8", "quantization": "fp8"}
+    ]
+  },
+  "scope": {
+    "models": ["nvidia/nemotron-3-ultra-550b-a55b"],
+    "stagesPerModel": 1,
+    "maximumCalls": 1,
+    "developmentCalls": 0,
+    "heldoutCalls": 0,
+    "prompt": "minimalSyntheticOnly"
+  },
+  "request": {
+    "message": "Call submit_probe_result with an ok argument whose value is true.",
+    "maxOutputTokens": 1024,
+    "temperature": null,
+    "topP": null,
+    "reasoning": null,
+    "forcedToolName": "submit_probe_result",
+    "forcedToolDescription": "Return the minimal provider compatibility result.",
+    "strictSchemaName": "paceprompt_open_weight_curl_probe_v4",
+    "strictSchema": {
+      "type": "object",
+      "properties": {"ok": {"type": "boolean", "const": true}},
+      "required": ["ok"],
+      "additionalProperties": false
+    }
+  },
+  "routing": {
+    "exactEndpointTag": true,
+    "allowFallbacks": false,
+    "requireParameters": true,
+    "dataCollection": "deny",
+    "zdr": true,
+    "knownQuantizationFilter": true,
+    "unknownQuantizationFilter": "omit",
+    "endpointPriceCap": "catalogue-price-at-gate-preparation"
+  },
+  "execution": {
+    "transport": "curl",
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "automaticRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 120,
+    "cancelFlushSeconds": 15,
+    "cache": false,
+    "resumable": false,
+    "abortHTTPStatusCodes": [401, 402, 403]
+  },
+  "spending": {
+    "currency": "USD",
+    "hardLimit": "0.25",
+    "enforcement": "worstCaseBeforeEveryCallPlusEndpointPriceCap"
+  }
+}
