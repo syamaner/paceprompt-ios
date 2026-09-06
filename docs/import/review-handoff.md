@@ -1,5 +1,22 @@
 # Issue 19 review handoff
 
+## Provider-bound requested-alias amendment — 6 September 2026
+
+The third authorised simulator observation made exactly one request and failed closed
+as `identityModelAlias`. The separately viewed provider-side generation record reported
+the selected canonical revision and OpenAI route. This establishes an OpenRouter
+identity-representation mismatch: the API envelope can use the requested alias even
+when the provider-side record attributes the generation to the selected revision.
+
+The amended parser validates model and provider as one tuple. It accepts either the
+canonical revision or the exact requested alias only when `provider` is exactly
+`openai` or `OpenAI`. Missing, non-string, unqualified and unrelated model identities,
+and missing or different providers, still fail closed. No received identity value,
+response body, credential or provider record is logged or retained. Request routing,
+privacy controls, schema validation, local mapping/validation and save authority are
+unchanged. Development-mode redacted validation tracing is deferred to a separate
+issue rather than added to this production fix.
+
 ## Second-stage redacted model classification — 6 September 2026
 
 The authorised simulator observation against remote main `175b8279d5047b6e9ec1f19f94076f667560191d`
@@ -89,10 +106,10 @@ and issue-state changes remain unauthorised.
 
 ## Remaining acceptance boundaries
 
-- Mocked success does not establish live route compatibility, actual returned canonical
-  revision/provider identity, live response metadata, account guardrail compatibility,
-  network timing or remote retention. The canonical-only response check is stronger
-  than historical evaluation. OpenRouter's OpenAPI omits the issue-required top-level
+- Mocked success does not establish complete live route/envelope compatibility, live
+  response metadata, account guardrail compatibility, network timing or remote retention.
+  The provider-bound requested-alias amendment is narrower than historical evaluation,
+  which did not require the production provider field. OpenRouter's OpenAPI omits the issue-required top-level
   provider field; production requires it anyway and fails closed if absent.
 - Keychain accessibility, device-only/no-sync behaviour and lifecycle ordering are
   implemented using the specified Apple attributes and mocked failure tests. Physical
@@ -108,8 +125,8 @@ and issue-state changes remain unauthorised.
   and the exact three-header envelope. No production behaviour or resource byte changed.
 - The local commit was separately authorised with a fresh pre-commit accounting
   boundary; push remains unauthorised. Any live check still needs a separately sealed
-  run-specific credential/call/spend gate. Do not relax response identity checks to
-  make such a check pass.
+  run-specific credential/call/spend gate. Any further identity change requires new
+  evidence and an explicit contract amendment.
 
 ## Repository state for review
 

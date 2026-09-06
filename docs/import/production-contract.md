@@ -36,13 +36,19 @@ showing every permitted optional metadata field. It is not a provider transcript
 Success requires HTTP 200 and application/json, with a single complete UTF-8 JSON
 object and no duplicate keys at any depth. Required top-level keys:
 `id` (nonempty string), `object` (`chat.completion`), `created` (nonnegative integer),
-`model` (`openai/gpt-5.6-sol-20260709`), `provider` (`openai` or exactly `OpenAI`),
+`model` (`openai/gpt-5.6-sol-20260709` or the requested alias
+`openai/gpt-5.6-sol`), `provider` (`openai` or exactly `OpenAI`),
 `choices` (exactly one item). Optional top-level keys: `system_fingerprint`
 (string/null), `usage` (closed object described below), `service_tier`
 (null or `default`). No other fields are accepted, including opt-in router metadata.
 The required provider field is issue 19's explicit identity requirement even though
 OpenRouter's OpenAPI ChatResult does not currently enumerate it; absence fails closed.
-This documentation gap and canonical-only identity remain live-gate uncertainties.
+The model and provider are validated as one identity tuple: the requested alias is
+accepted only with the pinned provider identity, while an absent, non-string,
+unqualified or different model and an absent or different provider fail closed.
+This narrow amendment follows a live response classified as `identityModelAlias`
+while the provider-side generation record reported the selected canonical revision
+and OpenAI route. No received value or provider record is retained in the repository.
 
 Choice requires `index` (integer 0), `finish_reason` (`stop`), `message`.
 Optional `native_finish_reason` must be `stop`; optional `logprobs` must be null.
@@ -68,7 +74,7 @@ Non-200 responses never parse provider error text: 401/402/403/404/429/503 map t
 providerUnavailable with stable local reasons; other HTTP errors to providerFailure.
 Transport, timeout, cancellation, redirect, response content type, identity and
 structural failures have separate local codes. Identity failure codes distinguish the response URL, missing,
-non-string, requested-alias, unqualified-revision or other mismatched top-level model,
+non-string, unqualified-revision or other mismatched top-level model,
 missing or mismatched provider, service tier and optional message model without retaining
 or displaying any received value. No error body or
 native error description is shown or stored.
@@ -120,4 +126,7 @@ paceprompt_eval/{v3,scorer_adapter}.py. Verification is development-only.
 
 The consolidated evaluation used deterministic scoring, not an LLM judge. No
 open-weight candidate qualified; on-device inference is deferred under 14.
-Historical alias acceptance does not prove production canonical-only compatibility.
+Live evidence established that OpenRouter can return the requested alias in the API
+envelope while its provider-side record attributes the generation to the selected
+canonical revision and OpenAI route. Production therefore accepts only that exact
+alias/provider tuple as equivalent; it does not accept a different alias or provider.

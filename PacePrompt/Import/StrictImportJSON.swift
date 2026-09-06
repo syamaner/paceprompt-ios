@@ -33,7 +33,7 @@ enum ImportFailure: String, Error {
     case structure, identity, mapping, transport, timeout, cancelled, missingCredential
     case authentication, credits, restrictedRoute, rateLimited, unavailable, resources
     case redirect, responseContentType
-    case identityResponseURL, identityModelMissing, identityModelAlias
+    case identityResponseURL, identityModelMissing
     case identityModelRevisionWithoutProvider, identityModelNonString, identityModelMismatch
     case identityProviderMissing, identityProviderMismatch
     case identityServiceTier, identityMessageModel
