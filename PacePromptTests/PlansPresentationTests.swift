@@ -232,6 +232,80 @@ final class PlansPresentationTests: XCTestCase {
         XCTAssertFalse(model.canMutate)
     }
 
+    func testSavedPlanDeletionRequiresConfirmationAndCancellationDoesNotMutate() {
+        let original = record(name: "Synthetic original")
+        let repository = FakeSavedPlanRepository(records: [original])
+        let model = PlansViewModel(repository: repository)
+
+        model.requestDeletion(of: original)
+
+        XCTAssertEqual(model.pendingDeletion, original)
+        XCTAssertEqual(repository.deleteCallIDs, [])
+
+        model.cancelDeletion()
+
+        XCTAssertNil(model.pendingDeletion)
+        XCTAssertEqual(repository.deleteCallIDs, [])
+        XCTAssertEqual(repository.records, [original])
+        XCTAssertEqual(model.records, [original])
+    }
+
+    func testConfirmedDeletionUsesBoundIdentityAfterListReordering() {
+        let first = record(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!,
+            name: "Synthetic first"
+        )
+        let second = record(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000012")!,
+            name: "Synthetic second"
+        )
+        let repository = FakeSavedPlanRepository(records: [first, second])
+        let model = PlansViewModel(repository: repository)
+        model.requestDeletion(of: first)
+        repository.records = [second, first]
+        model.reload()
+
+        model.confirmDeletion()
+
+        XCTAssertEqual(repository.deleteCallIDs, [first.id])
+        XCTAssertEqual(repository.records, [second])
+        XCTAssertEqual(model.records, [second])
+        XCTAssertNil(model.pendingDeletion)
+        XCTAssertNil(model.deletionError)
+    }
+
+    func testDeletionFailurePreservesDisplayedRecordsAndReportsNoConfirmation() {
+        let original = record(name: "Synthetic original")
+        let repository = FakeSavedPlanRepository(records: [original])
+        repository.deleteFailure = .writeFailed(.atomicReplacement)
+        let model = PlansViewModel(repository: repository)
+        model.requestDeletion(of: original)
+
+        model.confirmDeletion()
+
+        XCTAssertEqual(repository.deleteCallIDs, [original.id])
+        XCTAssertEqual(repository.records, [original])
+        XCTAssertEqual(model.records, [original])
+        XCTAssertTrue(model.deletionError?.contains("Deletion was not confirmed") == true)
+        XCTAssertTrue(model.deletionError?.contains("atomic replacement") == true)
+    }
+
+    func testBlockedStorageCannotOpenOrConfirmDeletion() {
+        let original = record(name: "Synthetic readable")
+        let repository = FakeSavedPlanRepository(
+            records: [original],
+            staging: .staleArtifactPresent
+        )
+        let model = PlansViewModel(repository: repository)
+
+        model.requestDeletion(of: original)
+        model.confirmDeletion()
+
+        XCTAssertNil(model.pendingDeletion)
+        XCTAssertEqual(repository.deleteCallIDs, [])
+        XCTAssertEqual(repository.records, [original])
+    }
+
     private func assertBlocked(
         capabilities: WorkoutPlanCapabilities,
         expectedCodes: [WorkoutPlanValidationIssue.Code]
@@ -282,10 +356,13 @@ final class PlansPresentationTests: XCTestCase {
         )
     }
 
-    private func record(name: String) -> SavedPlanRecord {
+    private func record(
+        id: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000011")!,
+        name: String
+    ) -> SavedPlanRecord {
         let plan = try! ManualWorkoutDraftParser.parse(validDraft(), locale: Locale(identifier: "en_GB")).get()
         return SavedPlanRecord(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!,
+            id: id,
             createdAt: Date(timeIntervalSince1970: 1_700_000_000),
             modifiedAt: Date(timeIntervalSince1970: 1_700_000_000),
             plan: WorkoutPlan(
@@ -316,8 +393,10 @@ private final class FakeSavedPlanRepository: SavedPlanRepositoryProtocol {
     var staging: SavedPlanStagingState
     var createFailure: SavedPlanMutationFailure?
     var replaceFailure: SavedPlanMutationFailure?
+    var deleteFailure: SavedPlanMutationFailure?
     private(set) var createCallCount = 0
     private(set) var replaceCallCount = 0
+    private(set) var deleteCallIDs: [UUID] = []
 
     init(
         records: [SavedPlanRecord] = [],
@@ -368,5 +447,14 @@ private final class FakeSavedPlanRepository: SavedPlanRepositoryProtocol {
         )
         records[index] = replacement
         return replacement
+    }
+
+    func delete(id: UUID) throws {
+        deleteCallIDs.append(id)
+        if let deleteFailure { throw deleteFailure }
+        guard let index = records.firstIndex(where: { $0.id == id }) else {
+            throw SavedPlanMutationFailure.recordNotFound(id)
+        }
+        records.remove(at: index)
     }
 }
