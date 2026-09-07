@@ -68,6 +68,10 @@
 		AF0000000000000000000001 /* WorkoutExecutionSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001001 /* WorkoutExecutionSummary.swift */; };
 		AF0000000000000000000002 /* WorkoutHistoryRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001002 /* WorkoutHistoryRepository.swift */; };
 		AF0000000000000000000003 /* WorkoutHistoryRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */; };
+		B40000000000000000001001 /* HomePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002001 /* HomePresentation.swift */; };
+		B40000000000000000001002 /* HomeUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002002 /* HomeUITestSupport.swift */; };
+		B40000000000000000001003 /* HomePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002003 /* HomePresentationTests.swift */; };
+		B40000000000000000001004 /* HomeFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002004 /* HomeFlowUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -159,6 +163,10 @@
 		AF0000000000000000001001 /* WorkoutExecutionSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionSummary.swift; sourceTree = "<group>"; };
 		AF0000000000000000001002 /* WorkoutHistoryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryRepository.swift; sourceTree = "<group>"; };
 		AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryRepositoryTests.swift; sourceTree = "<group>"; };
+		B40000000000000000002001 /* HomePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePresentation.swift; sourceTree = "<group>"; };
+		B40000000000000000002002 /* HomeUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeUITestSupport.swift; sourceTree = "<group>"; };
+		B40000000000000000002003 /* HomePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePresentationTests.swift; sourceTree = "<group>"; };
+		B40000000000000000002004 /* HomeFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeFlowUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -261,6 +269,8 @@
 		AA0000000000000000005004 /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
+				B40000000000000000002001 /* HomePresentation.swift */,
+				B40000000000000000002002 /* HomeUITestSupport.swift */,
 				AA0000000000000000002017 /* PlansViewModel.swift */,
 				AA0000000000000000002019 /* PlansUITestSupport.swift */,
 				AA000000000000000000200C /* TreadmillSetupViewModel.swift */,
@@ -295,6 +305,7 @@
 		AA0000000000000000005006 /* PacePromptTests */ = {
 			isa = PBXGroup;
 			children = (
+				B40000000000000000002003 /* HomePresentationTests.swift */,
 				AA0000000000000000002011 /* FTMSParserTests.swift */,
 				AA0000000000000000002012 /* TreadmillPresentationTests.swift */,
 				AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */,
@@ -330,6 +341,7 @@
 		AA000000000000000000500A /* PacePromptUITests */ = {
 			isa = PBXGroup;
 			children = (
+				B40000000000000000002004 /* HomeFlowUITests.swift */,
 				AA000000000000000000201A /* PlansFlowUITests.swift */,
 			);
 			path = PacePromptUITests;
@@ -593,6 +605,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B40000000000000000001001 /* HomePresentation.swift in Sources */,
+				B40000000000000000001002 /* HomeUITestSupport.swift in Sources */,
 				AD000000000000000000000A /* ImportDiagnostics.swift */,
 				AD0000000000000000000006 /* WorkoutImportView.swift */,
 				AD0000000000000000000005 /* WorkoutImportViewModel.swift */,
@@ -629,6 +643,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B40000000000000000001003 /* HomePresentationTests.swift in Sources */,
 				AD0000000000000000000008 /* WorkoutImportTests.swift */,
 				AA0000000000000000001011 /* FTMSParserTests.swift in Sources */,
 				AA0000000000000000001012 /* TreadmillPresentationTests.swift in Sources */,
@@ -644,6 +659,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B40000000000000000001004 /* HomeFlowUITests.swift in Sources */,
 				AA000000000000000000101A /* PlansFlowUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

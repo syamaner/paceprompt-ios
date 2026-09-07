@@ -7,8 +7,8 @@ struct PacePromptApp: App {
     private let workoutCapabilitiesOverride: WorkoutPlanCapabilities?
 
     init() {
-        _treadmill = StateObject(wrappedValue: TreadmillSetupViewModel())
 #if DEBUG
+        _treadmill = StateObject(wrappedValue: HomeUITestConfiguration.makeTreadmill())
         let configuration = PlansUITestConfiguration.current
         _plans = StateObject(
             wrappedValue: PlansViewModel(
@@ -18,6 +18,7 @@ struct PacePromptApp: App {
         )
         workoutCapabilitiesOverride = configuration.capabilities
 #else
+        _treadmill = StateObject(wrappedValue: TreadmillSetupViewModel())
         _plans = StateObject(wrappedValue: PlansViewModel())
         workoutCapabilitiesOverride = nil
 #endif
