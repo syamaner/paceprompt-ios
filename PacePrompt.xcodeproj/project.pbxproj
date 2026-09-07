@@ -65,6 +65,9 @@
 		AD000000000000000000000A /* ImportDiagnostics.swift */ = {isa = PBXBuildFile; fileRef = AC000000000000000000000A; };
 		AE0000000000000000000001 /* SavedPlanExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0000000000000000001001 /* SavedPlanExport.swift */; };
 		AE0000000000000000000002 /* SavedPlanExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0000000000000000001002 /* SavedPlanExportTests.swift */; };
+		AF0000000000000000000001 /* WorkoutExecutionSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001001 /* WorkoutExecutionSummary.swift */; };
+		AF0000000000000000000002 /* WorkoutHistoryRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001002 /* WorkoutHistoryRepository.swift */; };
+		AF0000000000000000000003 /* WorkoutHistoryRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -153,6 +156,9 @@
 		AC000000000000000000000A /* ImportDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/ImportDiagnostics.swift; sourceTree = SOURCE_ROOT; };
 		AE0000000000000000001001 /* SavedPlanExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlanExport.swift; sourceTree = "<group>"; };
 		AE0000000000000000001002 /* SavedPlanExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlanExportTests.swift; sourceTree = "<group>"; };
+		AF0000000000000000001001 /* WorkoutExecutionSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionSummary.swift; sourceTree = "<group>"; };
+		AF0000000000000000001002 /* WorkoutHistoryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryRepository.swift; sourceTree = "<group>"; };
+		AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryRepositoryTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -225,6 +231,7 @@
 				AA0000000000000000002002 /* RootTabView.swift */,
 				AA0000000000000000005003 /* Bluetooth */,
 				AA0000000000000000005009 /* Plans */,
+				AF0000000000000000005001 /* History */,
 				AA0000000000000000005004 /* Presentation */,
 				AA0000000000000000005005 /* Views */,
 			);
@@ -240,6 +247,15 @@
 				AA000000000000000000200B /* FTMSClient.swift */,
 			);
 			path = Bluetooth;
+			sourceTree = "<group>";
+		};
+		AF0000000000000000005001 /* History */ = {
+			isa = PBXGroup;
+			children = (
+				AF0000000000000000001001 /* WorkoutExecutionSummary.swift */,
+				AF0000000000000000001002 /* WorkoutHistoryRepository.swift */,
+			);
+			path = History;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000005004 /* Presentation */ = {
@@ -284,6 +300,7 @@
 				AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */,
 				AA0000000000000000002015 /* SavedPlanRepositoryTests.swift */,
 				AE0000000000000000001002 /* SavedPlanExportTests.swift */,
+				AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */,
 				AA0000000000000000002018 /* PlansPresentationTests.swift */,
 			);
 			path = PacePromptTests;
@@ -600,6 +617,8 @@
 				AA000000000000000000100E /* WorkoutPlanValidator.swift in Sources */,
 				AA0000000000000000001014 /* SavedPlanRepository.swift in Sources */,
 				AE0000000000000000000001 /* SavedPlanExport.swift in Sources */,
+				AF0000000000000000000001 /* WorkoutExecutionSummary.swift in Sources */,
+				AF0000000000000000000002 /* WorkoutHistoryRepository.swift in Sources */,
 				AA0000000000000000001016 /* ManualWorkoutPlan.swift in Sources */,
 				AA0000000000000000001017 /* PlansViewModel.swift in Sources */,
 				AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */,
@@ -616,6 +635,7 @@
 				AA0000000000000000001013 /* WorkoutPlanValidatorTests.swift in Sources */,
 				AA0000000000000000001015 /* SavedPlanRepositoryTests.swift in Sources */,
 				AE0000000000000000000002 /* SavedPlanExportTests.swift in Sources */,
+				AF0000000000000000000003 /* WorkoutHistoryRepositoryTests.swift in Sources */,
 				AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

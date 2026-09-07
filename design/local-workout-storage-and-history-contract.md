@@ -1,6 +1,6 @@
 # Local workout storage and history contract
 
-Status: accepted documentation-only product contract for GitHub issue [#5](https://github.com/syamaner/paceprompt-ios/issues/5). This document does not implement persistence, a Plans or History product flow, workout execution, natural-language import, export, synchronisation, HealthKit, watchOS or treadmill control.
+Status: accepted product contract from GitHub issue [#5](https://github.com/syamaner/paceprompt-ios/issues/5). Its saved-plan repository, Plans flow, selected-plan export and execution-summary repository portions are implemented by separately bounded issues; it does not authorise History presentation, automatic history recording, workout execution, synchronisation, HealthKit, watchOS or treadmill control.
 
 ## Scope and authority
 
@@ -41,9 +41,9 @@ The future repository must accept only a successfully validated plan from the de
 
 Validation at save time does not make a plan permanently executable. The issue #4 execution design still requires revalidation against a fresh capability snapshot and every separately accepted safety guard before execution.
 
-## Future execution-summary data
+## Execution-summary data
 
-No execution record is written in the current app or by the first saved-plan repository slice. A later history slice may introduce a separately versioned `workout-history.json` collection with one record per deliberate workout attempt. The minimum summary record is:
+Issue [#37](https://github.com/syamaner/paceprompt-ios/issues/37) introduces a separately versioned `workout-history.json` collection for one record per deliberate workout attempt. Nothing in the current app automatically creates a record; a future execution authority must supply each complete summary. The minimum summary record is:
 
 | Field | Contract |
 | --- | --- |
@@ -151,7 +151,7 @@ The accepted contract enables, but does not authorise, these separately bounded 
 
 1. issue [#10](https://github.com/syamaner/paceprompt-ios/issues/10): a pure, versioned saved-plan repository with atomic Foundation JSON I/O, protection/backup attributes, explicit repository states and synthetic fault tests;
 2. issue [#11](https://github.com/syamaner/paceprompt-ios/issues/11): manual plan creation, deterministic validation, readable preview, explicit confirmation and save in the Plans tab, using that repository;
-3. a future execution-summary schema and incremental history repository aligned with the accepted issue #4 reducer;
+3. issue [#37](https://github.com/syamaner/paceprompt-ios/issues/37): the versioned execution-summary schema and incremental history repository boundary, without execution integration or History presentation;
 4. Plans and History listing, editing, deletion, clear-history, reset and recovery presentation;
 5. deliberate previewable JSON export through the system share sheet;
 6. separately contracted natural-language import and credential handling under issue #6; and
