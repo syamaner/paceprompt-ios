@@ -39,6 +39,18 @@ final class TreadmillSetupViewModel: ObservableObject {
 
     var diagnosticCapacity: Int { diagnosticLimit }
 
+    var homePresentation: HomePresentation {
+        HomePresentation(
+            availability: availability,
+            connection: connectionState,
+            characteristics: characteristics,
+            featureFlags: featureFlags,
+            speedRange: speedRange,
+            inclinationRange: inclinationRange,
+            lastError: lastError
+        )
+    }
+
     var workoutPlanCapabilities: WorkoutPlanCapabilities {
         WorkoutPlanCapabilities(
             speed: Self.speedCapability(featureFlags: featureFlags, range: speedRange),
