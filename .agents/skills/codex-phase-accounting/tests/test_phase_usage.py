@@ -76,6 +76,24 @@ def session_records(
     return records
 
 
+def session_records_with_reset() -> list[dict[str, object]]:
+    before = session_records(
+        [
+            counter(10, 4, 1, cache_write_input_tokens=0, reasoning_output_tokens=0),
+            counter(20, 5, 2, cache_write_input_tokens=0, reasoning_output_tokens=1),
+        ]
+    )
+    after = session_records(
+        [
+            counter(7, 2, 1, cache_write_input_tokens=0, reasoning_output_tokens=0),
+            counter(11, 3, 2, cache_write_input_tokens=0, reasoning_output_tokens=1),
+        ]
+    )[2:]
+    for index, record in enumerate(after, start=3):
+        record["timestamp"] = f"2026-09-03T10:00:{index:02d}Z"
+    return [*before, *after]
+
+
 class PhaseUsageTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -202,6 +220,105 @@ class PhaseUsageTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 2)
         self.assertIn("outside the available range", completed.stderr)
+
+    def test_historical_reset_before_baseline_is_reported_and_allowed(self) -> None:
+        session = self.write_records(session_records_with_reset())
+        latest_baseline = self.directory / "latest-baseline.json"
+        latest = self.run_tool(
+            "snapshot", session, "--output", latest_baseline
+        )
+        self.assertEqual(latest.returncode, 0, latest.stderr)
+        self.assertEqual(json.loads(latest.stdout)["token_count_event"], 4)
+
+        baseline = self.directory / "baseline.json"
+        captured = self.run_tool(
+            "snapshot", session, "--token-count-event", 3, "--output", baseline
+        )
+        self.assertEqual(captured.returncode, 0, captured.stderr)
+        snapshot = json.loads(captured.stdout)
+        self.assertEqual(
+            snapshot["historical_counter_resets"],
+            [
+                {
+                    "decreased_counters": [
+                        "input_tokens",
+                        "cached_input_tokens",
+                        "output_tokens",
+                        "total_tokens",
+                        "reasoning_output_tokens",
+                    ],
+                    "previous_token_count_event": 2,
+                    "timestamp": "2026-09-03T10:00:03Z",
+                    "token_count_event": 3,
+                }
+            ],
+        )
+
+        arguments = self.report_arguments(session)
+        arguments[2:2] = ["--baseline", baseline]
+        completed = self.run_tool(*arguments)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["usage"]["input_tokens"], 11)
+        self.assertEqual(report["usage"]["cached_input_tokens"], 3)
+        self.assertEqual(report["usage"]["output_tokens"], 2)
+        self.assertEqual(report["usage"]["total_tokens"], 13)
+        self.assertEqual(report["requests"]["count"], 1)
+        self.assertEqual(
+            report["boundary"]["historical_counter_resets"],
+            snapshot["historical_counter_resets"],
+        )
+
+    def test_snapshot_and_report_reject_reset_inside_boundary(self) -> None:
+        session = self.write_records(session_records_with_reset())
+        rejected_snapshot = self.run_tool(
+            "snapshot",
+            session,
+            "--token-count-event",
+            2,
+            "--output",
+            self.directory / "rejected-baseline.json",
+        )
+        self.assertEqual(rejected_snapshot.returncode, 2)
+        self.assertIn(
+            "precedes session counter reset(s) 2->3", rejected_snapshot.stderr
+        )
+
+        baseline = self.directory / "manual-baseline.json"
+        baseline.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "session_id": "synthetic-session",
+                    "token_count_event": 2,
+                    "timestamp": "2026-09-03T10:00:02Z",
+                    "counters": counter(
+                        30,
+                        9,
+                        3,
+                        cache_write_input_tokens=0,
+                        reasoning_output_tokens=1,
+                    ),
+                }
+            )
+        )
+        arguments = self.report_arguments(session)
+        arguments[2:2] = ["--baseline", baseline]
+        rejected_report = self.run_tool(*arguments)
+        self.assertEqual(rejected_report.returncode, 2)
+        self.assertIn(
+            "measured boundary crosses session counter reset(s) 2->3",
+            rejected_report.stderr,
+        )
+
+    def test_whole_session_rejects_counter_reset(self) -> None:
+        session = self.write_records(session_records_with_reset())
+        completed = self.run_tool(*self.report_arguments(session))
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn(
+            "whole-session accounting crosses session counter reset(s) 2->3",
+            completed.stderr,
+        )
 
     def test_missing_optional_counters_are_distinct_from_reported_zero(self) -> None:
         missing_session = self.write_records(
@@ -375,7 +492,7 @@ class PhaseUsageTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 2)
         self.assertIn("last_token_usage is incomplete", completed.stderr)
 
-    def test_decreasing_baseline_is_rejected(self) -> None:
+    def test_baseline_counters_must_match_selected_event(self) -> None:
         session = self.write_records(
             session_records(
                 [counter(10, 0, 1, cache_write_input_tokens=0, reasoning_output_tokens=0)]
@@ -403,7 +520,7 @@ class PhaseUsageTests(unittest.TestCase):
         arguments[2:2] = ["--baseline", baseline]
         completed = self.run_tool(*arguments)
         self.assertEqual(completed.returncode, 2)
-        self.assertIn("decreased relative to the baseline", completed.stderr)
+        self.assertIn("baseline does not match its selected session event", completed.stderr)
 
     def test_request_totals_must_reconcile_to_cumulative_usage(self) -> None:
         records = session_records(
