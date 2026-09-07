@@ -10,6 +10,8 @@ final class PlansViewModel: ObservableObject {
     @Published private(set) var inputIssues: [ManualWorkoutInputIssue] = []
     @Published private(set) var validationIssues: [WorkoutPlanValidationIssue] = []
     @Published private(set) var saveError: String?
+    @Published private(set) var pendingDeletion: SavedPlanRecord?
+    @Published private(set) var deletionError: String?
 
     private let repository: any SavedPlanRepositoryProtocol
     private let makeNewDraft: () -> ManualWorkoutDraft
@@ -61,6 +63,38 @@ final class PlansViewModel: ObservableObject {
         editingRecordID = record.id
         draft = ManualWorkoutDraft(plan: record.plan)
         clearTransientResults()
+    }
+
+    func requestDeletion(of record: SavedPlanRecord) {
+        guard canMutate, records.contains(where: { $0.id == record.id }) else { return }
+        pendingDeletion = record
+        deletionError = nil
+    }
+
+    func cancelDeletion() {
+        pendingDeletion = nil
+    }
+
+    func confirmDeletion() {
+        guard let pendingDeletion else { return }
+        self.pendingDeletion = nil
+        deletionError = nil
+
+        guard canMutate else {
+            deletionError = "Deletion was not confirmed because saved-plan storage is not writable. No plan was removed from this list. Resolve the storage issue and retry."
+            return
+        }
+
+        do {
+            try repository.delete(id: pendingDeletion.id)
+            repositoryStatus = repository.list()
+        } catch {
+            deletionError = Self.deletionMessage(for: error)
+        }
+    }
+
+    func dismissDeletionError() {
+        deletionError = nil
     }
 
     func addStep() {
@@ -187,6 +221,20 @@ final class PlansViewModel: ObservableObject {
             return "Saved-plan storage is not currently writable. Existing plans were left unchanged. Return to Plans and retry after the storage issue is resolved."
         case let .writeFailed(stage):
             return "The plan could not be \(editing ? "updated" : "saved") during \(stage.displayName). Existing plans were left unchanged. Try again."
+        }
+    }
+
+    private static func deletionMessage(for error: Error) -> String {
+        guard let failure = error as? SavedPlanMutationFailure else {
+            return "Deletion was not confirmed. The existing plan remains listed. Try again."
+        }
+        switch failure {
+        case .recordNotFound:
+            return "Deletion was not confirmed because this saved plan is no longer available. No other plan was deleted."
+        case .blocked:
+            return "Deletion was not confirmed because saved-plan storage is not writable. No plan was removed from this list. Resolve the storage issue and retry."
+        case let .writeFailed(stage):
+            return "Deletion was not confirmed during \(stage.displayName). The existing plan remains listed. Try again."
         }
     }
 }

@@ -129,6 +129,27 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Synthetic progression"].waitForExistence(timeout: 2))
     }
 
+    func testSavedPlanDeletionNamesRecordCancelsThenDeletesOnlyAfterConfirmation() {
+        launch(capabilities: "known", draft: "valid", repository: "delete")
+        let identifier = "00000000-0000-0000-0000-000000000010"
+        let row = app.buttons["plans.record.\(identifier)"]
+        XCTAssertTrue(row.waitForExistence(timeout: 2))
+
+        row.swipeLeft()
+        app.buttons["plans.delete.\(identifier)"].tap()
+        XCTAssertTrue(app.staticTexts["Delete Synthetic progression?"].waitForExistence(timeout: 2))
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 2))
+
+        row.swipeLeft()
+        app.buttons["plans.delete.\(identifier)"].tap()
+        XCTAssertTrue(app.staticTexts["Delete Synthetic progression?"].waitForExistence(timeout: 2))
+        app.buttons["Delete plan"].tap()
+
+        XCTAssertTrue(app.staticTexts["No saved plans"].waitForExistence(timeout: 2))
+        XCTAssertFalse(row.exists)
+    }
+
     func testRepositoryFailuresAreNotShownAsEmptyAndDisableMutation() {
         assertRepositoryBlocked(repository: "protected", title: "Plans are locked")
         assertRepositoryBlocked(repository: "corrupt", title: "Saved plans are corrupt")

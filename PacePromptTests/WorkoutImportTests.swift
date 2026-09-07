@@ -698,6 +698,7 @@ private final class ImportRepositoryDouble: SavedPlanRepositoryProtocol {
         records.append(record); return record
     }
     func replace(id: UUID, with plan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord { throw SavedPlanMutationFailure.recordNotFound(id) }
+    func delete(id: UUID) throws { throw SavedPlanMutationFailure.recordNotFound(id) }
 }
 
 @MainActor

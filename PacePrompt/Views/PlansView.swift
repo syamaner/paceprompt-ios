@@ -71,6 +71,29 @@ struct PlansView: View {
         ) {
             PlanEditorView(viewModel: viewModel, capabilities: capabilities)
         }
+        .alert(
+            deletionConfirmationTitle,
+            isPresented: Binding(
+                get: { viewModel.pendingDeletion != nil },
+                set: { if !$0 { viewModel.cancelDeletion() } }
+            )
+        ) {
+            Button("Cancel", role: .cancel) {
+                viewModel.cancelDeletion()
+            }
+            Button("Delete plan", role: .destructive) {
+                viewModel.confirmDeletion()
+            }
+        } message: {
+            if let record = viewModel.pendingDeletion {
+                Text("This permanently deletes \(record.plan.suggestedName) from this iPhone. This action cannot be undone.")
+            }
+        }
+    }
+
+    private var deletionConfirmationTitle: String {
+        guard let record = viewModel.pendingDeletion else { return "Delete saved plan?" }
+        return "Delete \(record.plan.suggestedName)?"
     }
 
     private var emptyView: some View {
@@ -99,6 +122,14 @@ struct PlansView: View {
             if viewModel.repositoryStatus.staging != .absent {
                 Section { repositoryMutationWarning }
             }
+            if let deletionError = viewModel.deletionError {
+                Section("Deletion failed") {
+                    ValidationIssueRow(message: deletionError)
+                    Button("Dismiss") { viewModel.dismissDeletionError() }
+                        .accessibilityIdentifier("plans.dismiss-deletion-error")
+                }
+                .accessibilityIdentifier("plans.deletion-error")
+            }
             Section("Saved plans") {
                 ForEach(records, id: \.id) { record in
                     Button {
@@ -109,6 +140,15 @@ struct PlansView: View {
                     .buttonStyle(.plain)
                     .disabled(!viewModel.canMutate)
                     .accessibilityIdentifier("plans.record.\(record.id.uuidString)")
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            viewModel.requestDeletion(of: record)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        .disabled(!viewModel.canMutate)
+                        .accessibilityIdentifier("plans.delete.\(record.id.uuidString)")
+                    }
                 }
             }
         }

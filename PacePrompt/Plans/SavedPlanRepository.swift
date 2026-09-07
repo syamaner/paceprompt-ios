@@ -196,6 +196,7 @@ protocol SavedPlanRepositoryProtocol {
         id: UUID,
         with validatedPlan: WorkoutPlanValidator.ValidatedPlan
     ) throws -> SavedPlanRecord
+    func delete(id: UUID) throws
 }
 
 final class SavedPlanRepository: SavedPlanRepositoryProtocol {

@@ -96,7 +96,9 @@ private final class PlansUITestRepository: SavedPlanRepositoryProtocol {
 
     init(scenario: String?) {
         self.scenario = scenario
-        records = scenario == "edit-failure" ? [Self.seedRecord()] : []
+        records = ["edit-failure", "delete", "delete-failure"].contains(scenario)
+            ? [Self.seedRecord()]
+            : []
     }
 
     func list() -> SavedPlanRepositoryStatus {
@@ -148,6 +150,16 @@ private final class PlansUITestRepository: SavedPlanRepositoryProtocol {
         )
         records[index] = replacement
         return replacement
+    }
+
+    func delete(id: UUID) throws {
+        if scenario == "delete-failure" {
+            throw SavedPlanMutationFailure.writeFailed(.atomicReplacement)
+        }
+        guard let index = records.firstIndex(where: { $0.id == id }) else {
+            throw SavedPlanMutationFailure.recordNotFound(id)
+        }
+        records.remove(at: index)
     }
 
     private static func seedRecord() -> SavedPlanRecord {
