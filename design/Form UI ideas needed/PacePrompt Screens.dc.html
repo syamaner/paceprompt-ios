@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/roastpilot-design-system-a6c9090e-388d-4465-9ee0-1071a14cd585/_ds_bundle.css">
+<link rel="stylesheet" href="_ds/roastpilot-design-system-a6c9090e-388d-4465-9ee0-1071a14cd585/styles.css">
+<script src="_ds/roastpilot-design-system-a6c9090e-388d-4465-9ee0-1071a14cd585/_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: var(--background); color: var(--foreground); }
+  a { color: var(--roast-fan); text-decoration: none; }
+  a:hover { color: var(--foreground); }
+</style>
+</helmet>
+
+<section style="padding: 64px 56px 80px; display: flex; flex-direction: column; gap: 40px; background: var(--background); color: var(--foreground); border-bottom: 1px solid var(--border)">
+
+  <div style="display: flex; flex-direction: column; gap: 14px; max-width: 860px">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground)">Turn 2 · Apple Watch · future concept</span>
+    <h1 style="margin: 0; font-size: 40px; font-weight: 650; letter-spacing: -.03em; line-height: 1.1">Watch companion, read-only</h1>
+    <div style="display: flex; gap: 13px; padding: 16px 18px; background: var(--card); border: 1px dashed var(--roast-heat); border-radius: var(--radius)">
+      <span data-sf-symbol="exclamationmark.triangle.fill" title="SF Symbol: exclamationmark.triangle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; color: var(--roast-heat); font-size: 15px; margin-top: 2px"></span>
+      <p style="margin: 0; font-size: 14px; line-height: 1.55; text-wrap: pretty">Not part of the current production application. This concept does not authorise a watchOS target, HealthKit access or treadmill control, and nothing here is implementation authority. The production family is turn 1 below.</p>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 44px; align-items: flex-start">
+
+    <div id="2a" style="display: flex; flex-direction: column; gap: 14px; width: 236px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">2a</span>
+        <span style="font-size: 15px; font-weight: 600">Live glance</span>
+      </div>
+      <div style="width: 214px; height: 258px; border-radius: 46px; background: #17171a; padding: 15px; box-sizing: border-box; box-shadow: 0 24px 48px rgba(0,0,0,.45)">
+        <div style="height: 100%; border-radius: 33px; background: #000; padding: 12px 13px; box-sizing: border-box; display: flex; flex-direction: column; gap: 7px; color: var(--foreground)">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums">
+            <span style="color: var(--roast-heat); font-weight: 650">INTERVAL 6/10</span>
+            <span style="color: var(--muted-foreground)">06:55</span>
+          </div>
+          <div style="font-size: 42px; font-weight: 680; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums">1:34</div>
+          <div style="display: flex; gap: 2px; height: 5px">
+            <div style="flex: 6; border-radius: 3px; background: var(--roast-heat)"></div>
+            <div style="flex: 4; border-radius: 3px; background: #2a2a2e"></div>
+          </div>
+          <div style="font-size: 10px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Next · recovery 2:00</div>
+          <div style="display: flex; align-items: baseline; gap: 5px; font-variant-numeric: tabular-nums">
+            <span style="font-size: 30px; font-weight: 680; color: var(--roast-fault); line-height: 1">148</span>
+            <span style="font-size: 10px; color: var(--muted-foreground)">bpm · Watch session</span>
+          </div>
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 3px">
+            <span style="font-size: 9px; font-weight: 650; letter-spacing: .08em; color: var(--muted-foreground)">REPORTED BY TREADMILL · 1 s AGO</span>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">
+              <span>8.0 km/h</span><span style="color: var(--roast-fan)">2.0%</span><span>5.82 km</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Read-only. Speed, inclination and distance are labelled as reported values with their age, never as commands or continuous truth.</p>
+      </sc-if>
+    </div>
+
+    <div id="2b" style="display: flex; flex-direction: column; gap: 14px; width: 236px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">2b</span>
+        <span style="font-size: 15px; font-weight: 600">Glance · missing and stale</span>
+      </div>
+      <div style="width: 214px; height: 258px; border-radius: 46px; background: #17171a; padding: 15px; box-sizing: border-box; box-shadow: 0 24px 48px rgba(0,0,0,.45)">
+        <div style="height: 100%; border-radius: 33px; background: #000; padding: 12px 13px; box-sizing: border-box; display: flex; flex-direction: column; gap: 7px; color: var(--foreground)">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums">
+            <span style="color: var(--roast-heat); font-weight: 650">INTERVAL 6/10</span>
+            <span style="color: var(--muted-foreground)">06:55</span>
+          </div>
+          <div style="font-size: 42px; font-weight: 680; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums">1:34</div>
+          <div style="display: flex; gap: 2px; height: 5px">
+            <div style="flex: 6; border-radius: 3px; background: var(--roast-heat)"></div>
+            <div style="flex: 4; border-radius: 3px; background: #2a2a2e"></div>
+          </div>
+          <div style="font-size: 10px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Next · recovery 2:00</div>
+          <div style="display: flex; align-items: baseline; gap: 5px">
+            <span style="font-size: 26px; font-weight: 680; color: var(--muted-foreground); line-height: 1">—</span>
+            <span style="font-size: 10px; color: var(--muted-foreground)">bpm unavailable · no authorised session</span>
+          </div>
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 3px">
+            <span style="font-size: 9px; font-weight: 650; letter-spacing: .08em; color: var(--muted-foreground)">LAST REPORTED · 47 s AGO · STALE</span>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; opacity: .5">
+              <span>8.0 km/h</span><span>2.0%</span><span>5.82 km</span>
+            </div>
+            <span style="font-size: 9px; color: var(--muted-foreground)">Bluetooth silent — treat as unknown</span>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Heart rate absent is an em dash, never zero. Stale telemetry dims, keeps its age and says silence means unknown.</p>
+      </sc-if>
+    </div>
+
+    <div id="2c" style="display: flex; flex-direction: column; gap: 14px; width: 236px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">2c</span>
+        <span style="font-size: 15px; font-weight: 600">Session status · read-only</span>
+      </div>
+      <div style="width: 214px; height: 258px; border-radius: 46px; background: #17171a; padding: 15px; box-sizing: border-box; box-shadow: 0 24px 48px rgba(0,0,0,.45)">
+        <div style="height: 100%; border-radius: 33px; background: #000; padding: 12px 13px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; color: var(--foreground)">
+          <span style="font-size: 9px; font-weight: 650; letter-spacing: .09em; color: var(--muted-foreground)">SESSION STATUS</span>
+          <div style="display: flex; align-items: center; gap: 7px">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-nominal)"></span>
+            <span style="flex: 1; font-size: 11px">iPhone</span>
+            <span style="font-size: 11px; color: var(--roast-nominal)">Reachable</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 7px">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--muted-foreground)"></span>
+            <span style="flex: 1; font-size: 11px">Treadmill evidence</span>
+            <span style="font-size: 11px; color: var(--muted-foreground)">Stale</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 7px">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-heat)"></span>
+            <span style="flex: 1; font-size: 11px">Workout</span>
+            <span style="font-size: 11px; color: var(--roast-heat)">Running · phone</span>
+          </div>
+          <div style="margin-top: auto; border: 1px solid var(--roast-fault); border-radius: 12px; padding: 9px 10px; display: flex; flex-direction: column; gap: 3px">
+            <span style="font-size: 10px; font-weight: 700; color: var(--roast-fault)">MACHINE STATE UNCERTAIN</span>
+            <span style="font-size: 10px; line-height: 1.4">Use the treadmill console and safety key.</span>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Replaces the old control face. Treadmill evidence reads current, stale, unavailable or disconnected; workout state comes from the phone execution authority. No Start, Stop, Pause, Resume, speed, inclination or Request Control — the only imperative points at the physical console.</p>
+      </sc-if>
+    </div>
+
+    <div id="2d" style="display: flex; flex-direction: column; gap: 14px; width: 300px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">2d</span>
+        <span style="font-size: 15px; font-weight: 600">Deferred concept</span>
+      </div>
+      <div style="border: 1px dashed var(--roast-heat); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 16px; background: rgba(255,255,255,.015)">
+        <p style="margin: 0; font-size: 12px; line-height: 1.5; color: var(--roast-heat); text-wrap: pretty">Deferred control concept — not implementation authority. Requires an accepted Watch interaction contract, authorised FTMS execution, physical FR30z evidence and explicit failure-handling rules.</p>
+        <div style="width: 214px; height: 258px; border-radius: 46px; background: #17171a; padding: 15px; box-sizing: border-box; opacity: .5; position: relative; align-self: center">
+          <div style="position: absolute; right: -4px; top: 74px; width: 7px; height: 42px; border-radius: 4px; background: #3a3a3f"></div>
+          <div style="height: 100%; border-radius: 33px; background: #000; padding: 16px 14px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: var(--foreground)">
+            <span style="font-size: 10px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-heat)">Speed</span>
+            <span style="font-size: 48px; font-weight: 680; line-height: 1; letter-spacing: -.04em; color: var(--roast-heat); font-variant-numeric: tabular-nums">8.4</span>
+            <span style="font-size: 10px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">crown adjust · concept only</span>
+            <div style="width: 100%; height: 5px; border-radius: 3px; background: #2a2a2e; overflow: hidden">
+              <div style="width: 84%; height: 100%; background: var(--roast-heat)"></div>
+            </div>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted-foreground)">Kept for exploration only, dimmed and quarantined: no send state, no stop action, and no path from this panel into the production family.</p>
+      </div>
+    </div>
+
+    <div id="2e" style="display: flex; flex-direction: column; gap: 14px; width: 360px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">2e</span>
+        <span style="font-size: 15px; font-weight: 600">Architecture note</span>
+      </div>
+      <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 11px">
+        <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">If this is ever built</span>
+        <div style="display: flex; gap: 9px; font-size: 13px; line-height: 1.5"><span style="color: var(--roast-fan)">•</span><span>A future Watch companion may own the primary <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">HKWorkoutSession</span> and provide heart rate and active energy.</span></div>
+        <div style="display: flex; gap: 9px; font-size: 13px; line-height: 1.5"><span style="color: var(--roast-fan)">•</span><span>The iPhone remains the treadmill orchestration authority.</span></div>
+        <div style="display: flex; gap: 9px; font-size: 13px; line-height: 1.5"><span style="color: var(--roast-fan)">•</span><span>The Watch must not infer command success or treadmill state.</span></div>
+        <div style="display: flex; gap: 9px; font-size: 13px; line-height: 1.5"><span style="color: var(--roast-fault)">•</span><span>Watch availability is never required for physical safety.</span></div>
+        <div style="display: flex; gap: 9px; font-size: 13px; line-height: 1.5"><span style="color: var(--roast-fan)">•</span><span>The iPhone and Watch must not create duplicate HealthKit workouts.</span></div>
+        <div style="display: flex; gap: 9px; font-size: 13px; line-height: 1.5"><span style="color: var(--roast-fault)">•</span><span>Loss of Watch or phone connectivity must not trigger automatic treadmill commands, reconnection or workout resumption.</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section style="padding: 64px 56px 96px; display: flex; flex-direction: column; gap: 48px; background: var(--background); color: var(--foreground)">
+
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 820px">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground)">Turn 1 · PacePrompt · current slice · production</span>
+    <h1 style="margin: 0; font-size: 40px; font-weight: 650; letter-spacing: -.03em; line-height: 1.1">Fourteen screens, one grammar</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--muted-foreground); text-wrap: pretty">Plans in, validated locally, nothing written to the machine. Every status below is drawn from the same five-tone vocabulary, and unknown never borrows the look of confirmed. Reference screens by id in chat — <a href="#1c">1c</a>, <a href="#1m">1m</a>, and so on.</p>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 18px; padding: 26px 28px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius)">
+    <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Status vocabulary</span>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px">
+      <span style="display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; background: var(--background); border: 1px solid var(--border); font-size: 13px; font-weight: 600"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-nominal)"></span>Available · connected · confirmed</span>
+      <span style="display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; background: var(--background); border: 1px solid var(--border); font-size: 13px; font-weight: 600"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-heat)"></span>Attention · needs consent · warning</span>
+      <span style="display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; background: var(--background); border: 1px solid var(--border); font-size: 13px; font-weight: 600"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-fan)"></span>Inclination · information</span>
+      <span style="display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; background: var(--background); border: 1px solid var(--border); font-size: 13px; font-weight: 600"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--muted-foreground)"></span>Unknown · unavailable · waiting · inactive</span>
+      <span style="display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; background: var(--background); border: 1px solid var(--border); font-size: 13px; font-weight: 600"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-fault)"></span>Failure · destructive</span>
+    </div>
+    <div style="height: 1px; background: var(--border)"></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 26px; font-size: 13px; color: var(--muted-foreground)">
+      <span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 3px; height: 18px; border-radius: 3px; background: var(--muted-foreground)"></span>Warm-up · cool-down</span>
+      <span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 3px; height: 18px; border-radius: 3px; background: var(--roast-heat)"></span>Interval</span>
+      <span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 3px; height: 18px; border-radius: 3px; background: var(--roast-fan)"></span>Recovery</span>
+      <span>Numeric values use tabular figures throughout.</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 18px; padding: 26px 28px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius)">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Icon inventory · SF Symbols</span>
+      <p style="margin: 0; max-width: 780px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty">Every icon in these frames is a dashed placeholder carrying its intended symbol in a <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace">data-sf-symbol</span> attribute (also its hover title) — SF Symbols cannot render here. In SwiftUI each becomes <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace">Image(systemName:)</span> at the same placement and colour role.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 10px 26px">
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Home tab</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">house</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Plans tab</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">list.bullet.rectangle</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">History tab</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">clock.arrow.circlepath</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Settings tab</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">gearshape</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Treadmill</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">figure.run</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Scan, scanning, connecting</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">dot.radiowaves.left.and.right</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Connected, selected</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">checkmark.circle.fill</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Failure, warning</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">exclamationmark.triangle.fill</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Unavailable, unsupported</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">exclamationmark.circle.fill</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Bluetooth state</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">antenna.radiowaves.left.and.right</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Export, share</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">square.and.arrow.up</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Import workout</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">square.and.arrow.down</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">New plan, add step</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">plus</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Delete</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">trash</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Retry</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">arrow.clockwise</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Protected, read-only, safety</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">lock.shield</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Reorder handle</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">line.3.horizontal</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Stored credential</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">key.horizontal</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Secure field reveal</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">eye.slash</span></div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border)"><span style="font-size: 13px; color: var(--muted-foreground)">Explanatory note</span><span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">info.circle</span></div>
+    </div>
+    <p style="margin: 0; max-width: 780px; font-size: 12px; line-height: 1.5; color: var(--muted-foreground)">Treadmill status stays neutral through idle, scanning, connecting and capability reads; <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace">checkmark.circle.fill</span> in mint appears only once a current connection and both capability reads have succeeded. Bluetooth availability is never drawn as treadmill readiness.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 56px; align-items: flex-start">
+
+    <div id="1a" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1a</span>
+        <span style="font-size: 15px; font-weight: 600">Home · Bluetooth on, treadmill idle</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Two facts, kept separate on purpose: the radio is one card, the machine is another. Bluetooth being green says nothing about control, so the treadmill card stays grey until a scan has actually found something.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 60px 18px 0; box-sizing: border-box">
+          <h1 style="margin: 0 0 20px; font-size: 32px; font-weight: 650; letter-spacing: -.03em">PacePrompt</h1>
+
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; gap: 14px">
+              <span style="width: 26px; height: 26px; border-radius: 8px; background: rgba(52,211,153,.14); display: flex; align-items: center; justify-content: center; color: var(--roast-nominal); font-size: 14px; font-weight: 700"><span data-sf-symbol="antenna.radiowaves.left.and.right" title="SF Symbol: antenna.radiowaves.left.and.right" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+                <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Bluetooth</span>
+                <span style="font-size: 17px; font-weight: 600; color: var(--roast-nominal)">Available</span>
+                <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">Radio powered on and authorised for this app.</span>
+              </div>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; gap: 14px">
+              <span style="width: 26px; height: 26px; border-radius: 8px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); font-size: 15px"><span data-sf-symbol="figure.run" title="SF Symbol: figure.run" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+                <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Treadmill</span>
+                <span style="font-size: 17px; font-weight: 600; color: var(--muted-foreground)">Idle</span>
+                <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">No scan started. Capability is unknown until you scan.</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: center; height: 52px; margin-top: 16px; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-size: 17px; font-weight: 650">Set up treadmill</div>
+
+          <div style="flex: 1"></div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 16px; display: flex; gap: 12px; margin-bottom: 14px">
+            <span style="color: var(--muted-foreground); font-size: 14px"><span data-sf-symbol="lock.shield" title="SF Symbol: lock.shield" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty">This version cannot start, stop or control the treadmill. It reads capability and prepares plans only — the physical console and safety key remain authoritative.</p>
+          </div>
+
+          <div style="display: flex; border-top: 1px solid var(--border); padding: 9px 0 26px; margin: 0 -18px; background: rgba(255,255,255,.02)">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="house" title="SF Symbol: house" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px; font-weight: 600">Home</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="list.bullet.rectangle" title="SF Symbol: list.bullet.rectangle" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Plans</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="clock.arrow.circlepath" title="SF Symbol: clock.arrow.circlepath" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">History</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="gearshape" title="SF Symbol: gearshape" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Settings</span>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1b" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1b</span>
+        <span style="font-size: 15px; font-weight: 600">Home · other status pairs</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 828px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">The same two cards across the states that actually occur. Connected shows what was read; failed says what to do; unauthorised routes to Settings rather than pretending a retry will help.</p>
+      </sc-if>
+      <div style="display: flex; gap: 24px; align-items: flex-start">
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; gap: 12px; background: var(--background); padding: 60px 18px 30px; box-sizing: border-box; overflow: hidden">
+          <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Treadmill · scanning</span>
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span data-sf-symbol="dot.radiowaves.left.and.right" title="SF Symbol: dot.radiowaves.left.and.right" style="width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center"><span style="width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--muted-foreground); border-top-color: transparent"></span></span>
+            <div style="flex: 1">
+              <div style="font-size: 16px; font-weight: 600; color: var(--muted-foreground)">Scanning</div>
+              <div style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Started by you · 6 s elapsed</div>
+            </div>
+          </div>
+
+          <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Treadmill · connecting</span>
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span data-sf-symbol="dot.radiowaves.left.and.right" title="SF Symbol: dot.radiowaves.left.and.right" style="width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center"><span style="width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--muted-foreground); border-top-color: transparent"></span></span>
+            <div style="flex: 1">
+              <div style="font-size: 16px; font-weight: 600; color: var(--muted-foreground)">Connecting</div>
+              <div style="font-size: 13px; color: var(--muted-foreground)">FR30z-8814 · capability not yet read</div>
+            </div>
+          </div>
+
+          <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Treadmill · connected</span>
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="width: 24px; height: 24px; border-radius: 8px; background: rgba(52,211,153,.14); display: flex; align-items: center; justify-content: center; color: var(--roast-nominal); font-size: 13px"><span data-sf-symbol="checkmark.circle.fill" title="SF Symbol: checkmark.circle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1">
+              <div style="font-size: 16px; font-weight: 600; color: var(--roast-nominal)">Connected</div>
+              <div style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Reebok FR30z · speed 0.8–16.0 · incline 0–12.0%</div>
+            </div>
+          </div>
+
+          <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Treadmill · disconnected</span>
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); font-size: 13px"><span data-sf-symbol="exclamationmark.circle.fill" title="SF Symbol: exclamationmark.circle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1">
+              <div style="font-size: 16px; font-weight: 600; color: var(--muted-foreground)">Disconnected</div>
+              <div style="font-size: 13px; color: var(--muted-foreground)">Capability from the last session is no longer current.</div>
+            </div>
+          </div>
+
+          <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Treadmill · failed</span>
+          <div style="background: var(--card); border: 1px solid var(--roast-fault); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="width: 24px; height: 24px; border-radius: 8px; background: rgba(248,113,113,.14); display: flex; align-items: center; justify-content: center; color: var(--roast-fault); font-size: 13px"><span data-sf-symbol="exclamationmark.triangle.fill" title="SF Symbol: exclamationmark.triangle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+              <div>
+                <div style="font-size: 16px; font-weight: 600; color: var(--roast-fault)">Connection failed</div>
+                <div style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">Feature read timed out. Wake the console and try again.</div>
+              </div>
+              <div style="align-self: flex-start; display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600; gap: 8px"><span data-sf-symbol="arrow.clockwise" title="SF Symbol: arrow.clockwise" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span>Retry</div>
+            </div>
+          </div>
+
+        </div>
+      </x-import>
+
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; gap: 12px; background: var(--background); padding: 60px 18px 30px; box-sizing: border-box; overflow: hidden">
+          <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Bluetooth · available, powered off, unauthorised</span>
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="width: 24px; height: 24px; border-radius: 8px; background: rgba(52,211,153,.14); display: flex; align-items: center; justify-content: center; color: var(--roast-nominal); font-size: 13px"><span data-sf-symbol="antenna.radiowaves.left.and.right" title="SF Symbol: antenna.radiowaves.left.and.right" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1">
+              <div style="font-size: 16px; font-weight: 600; color: var(--roast-nominal)">Available</div>
+              <div style="font-size: 13px; color: var(--muted-foreground)">Radio powered on and authorised for this app.</div>
+            </div>
+          </div>
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); font-size: 13px"><span data-sf-symbol="antenna.radiowaves.left.and.right" title="SF Symbol: antenna.radiowaves.left.and.right" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1">
+              <div style="font-size: 16px; font-weight: 600; color: var(--muted-foreground)">Powered off</div>
+              <div style="font-size: 13px; color: var(--muted-foreground)">Turn Bluetooth on in Control Centre or Settings.</div>
+            </div>
+          </div>
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); font-size: 13px"><span data-sf-symbol="exclamationmark.circle.fill" title="SF Symbol: exclamationmark.circle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+              <div>
+                <div style="font-size: 16px; font-weight: 600; color: var(--muted-foreground)">Not authorised</div>
+                <div style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">PacePrompt has no Bluetooth permission. Retrying will not help.</div>
+              </div>
+              <div style="align-self: flex-start; display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600">Open iOS Settings</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+      </div>
+    </div>
+
+    <div id="1c" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1c</span>
+        <span style="font-size: 15px; font-weight: 600">Plans · populated</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Rows carry only what is stored: name, activity, ordered step count, total duration. Delete stays a swipe — shown revealed on the last row — and never a visible button competing with the plan name.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 60px 18px 0; box-sizing: border-box">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px">
+            <h1 style="margin: 0; font-size: 32px; font-weight: 650; letter-spacing: -.03em">Plans</h1>
+            <div style="display: flex; align-items: center; gap: 14px; color: var(--roast-fan); font-size: 19px">
+              <span><span data-sf-symbol="square.and.arrow.down" title="SF Symbol: square.and.arrow.down" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span><span data-sf-symbol="square.and.arrow.up" title="SF Symbol: square.and.arrow.up" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 22px"><span data-sf-symbol="plus" title="SF Symbol: plus" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 16px; display: flex; align-items: center; gap: 12px">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 5px">
+                <span style="font-size: 17px; font-weight: 600">Pyramid 5 × 3</span>
+                <div style="display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">
+                  <span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-heat)"></span>Indoor running</span>
+                  <span>·</span><span>23 steps</span><span>·</span><span>43:00</span>
+                </div>
+              </div>
+              <span style="color: var(--muted-foreground); font-size: 14px">›</span>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 16px; display: flex; align-items: center; gap: 12px">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 5px">
+                <span style="font-size: 17px; font-weight: 600">Hill walk · 6%</span>
+                <div style="display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">
+                  <span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-fan)"></span>Indoor walking</span>
+                  <span>·</span><span>9 steps</span><span>·</span><span>32:00</span>
+                </div>
+              </div>
+              <span style="color: var(--muted-foreground); font-size: 14px">›</span>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 16px; display: flex; align-items: center; gap: 12px">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 5px">
+                <span style="font-size: 17px; font-weight: 600">Easy 30</span>
+                <div style="display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">
+                  <span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-heat)"></span>Indoor running</span>
+                  <span>·</span><span>3 steps</span><span>·</span><span>30:00</span>
+                </div>
+              </div>
+              <span style="color: var(--muted-foreground); font-size: 14px">›</span>
+            </div>
+
+            <div style="display: flex; gap: 8px; align-items: stretch">
+              <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 16px; display: flex; flex-direction: column; gap: 5px; opacity: .6">
+                <span style="font-size: 17px; font-weight: 600">Tempo ladder</span>
+                <div style="display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">
+                  <span>Indoor running</span><span>·</span><span>11 steps</span><span>·</span><span>38:00</span>
+                </div>
+              </div>
+              <div style="width: 84px; border-radius: var(--radius); background: var(--destructive); color: var(--destructive-foreground); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 13px; font-weight: 650">
+                <span style="font-size: 15px"><span data-sf-symbol="trash" title="SF Symbol: trash" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>Delete
+              </div>
+            </div>
+          </div>
+
+          <p style="margin: 14px 2px 0; font-size: 12px; color: var(--muted-foreground)">Swipe a plan to delete. Deletion asks for confirmation first.</p>
+
+          <div style="flex: 1"></div>
+
+          <div style="display: flex; border-top: 1px solid var(--border); padding: 9px 0 26px; margin: 0 -18px; background: rgba(255,255,255,.02)">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="house" title="SF Symbol: house" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Home</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="list.bullet.rectangle" title="SF Symbol: list.bullet.rectangle" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px; font-weight: 600">Plans</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="clock.arrow.circlepath" title="SF Symbol: clock.arrow.circlepath" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">History</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="gearshape" title="SF Symbol: gearshape" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Settings</span>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1d" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1d</span>
+        <span style="font-size: 15px; font-weight: 600">Plans · empty + delete confirmation</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">The empty state describes the actual loop — build, review every target, confirm — so the first plan is not a leap of faith. Confirmation names the plan and its step count, because that is what makes the loss concrete.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 60px 18px 0; box-sizing: border-box; position: relative">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px">
+            <h1 style="margin: 0; font-size: 32px; font-weight: 650; letter-spacing: -.03em">Plans</h1>
+            <div style="display: flex; align-items: center; gap: 14px; color: var(--roast-fan); font-size: 19px">
+              <span><span data-sf-symbol="square.and.arrow.down" title="SF Symbol: square.and.arrow.down" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="opacity: .35"><span data-sf-symbol="square.and.arrow.up" title="SF Symbol: square.and.arrow.up" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 22px"><span data-sf-symbol="plus" title="SF Symbol: plus" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            </div>
+          </div>
+
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 12px 80px; text-align: center">
+            <span style="width: 60px; height: 60px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); font-size: 24px"><span data-sf-symbol="list.bullet.rectangle" title="SF Symbol: list.bullet.rectangle" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 21px; font-weight: 650; letter-spacing: -.02em">No plans yet</span>
+              <p style="margin: 0; font-size: 14px; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty">Build an indoor walking or running interval plan, review every exact target, and confirm before anything is saved to this device.</p>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; height: 52px; padding: 0 28px; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-size: 17px; font-weight: 650">Create plan</div>
+            <span style="font-size: 13px; color: var(--roast-fan)">or import a workout description</span>
+          </div>
+
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; top: 0; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; padding: 18px; box-sizing: border-box">
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 8px">
+              <div style="background: #1f1f22; border-radius: 15px; overflow: hidden; text-align: center">
+                <div style="padding: 16px 20px 14px; display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid rgba(255,255,255,.09)">
+                  <span style="font-size: 14px; font-weight: 650">Delete “Tempo ladder”?</span>
+                  <span style="font-size: 12px; line-height: 1.45; color: var(--muted-foreground)">This permanently removes the plan and its 11 steps from this device. It cannot be undone.</span>
+                </div>
+                <div style="padding: 15px; font-size: 17px; font-weight: 600; color: var(--roast-fault)">Delete plan</div>
+              </div>
+              <div style="background: #2b2b2f; border-radius: 15px; padding: 15px; text-align: center; font-size: 17px; font-weight: 650; margin-bottom: 14px">Cancel</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1e" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1e</span>
+        <span style="font-size: 15px; font-weight: 600">Plans · blocked states</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 828px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">None of these may look like "no plans yet". Each names the fault, states plainly that stored data was preserved, and offers retry only where a retry can succeed.</p>
+      </sc-if>
+      <div style="display: flex; gap: 24px; align-items: flex-start">
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; gap: 12px; background: var(--background); padding: 60px 18px 30px; box-sizing: border-box; overflow: hidden">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -.03em">Plans</h1>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="color: var(--muted-foreground); font-size: 15px"><span data-sf-symbol="lock.shield" title="SF Symbol: lock.shield" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 16px; font-weight: 600">Plans are locked</span>
+              <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">Protected data is unavailable until this iPhone is unlocked. Your saved plans are untouched.</span>
+              <div style="align-self: flex-start; display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600; gap: 8px"><span data-sf-symbol="arrow.clockwise" title="SF Symbol: arrow.clockwise" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span>Try again</div>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--roast-fault); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="color: var(--roast-fault); font-size: 15px"><span data-sf-symbol="exclamationmark.triangle.fill" title="SF Symbol: exclamationmark.triangle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 16px; font-weight: 600; color: var(--roast-fault)">Could not read plans</span>
+              <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">The plan store could not be opened. Nothing was written or deleted.</span>
+              <div style="align-self: flex-start; display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600; gap: 8px"><span data-sf-symbol="arrow.clockwise" title="SF Symbol: arrow.clockwise" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span>Retry read</div>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--roast-heat); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="color: var(--roast-heat); font-size: 15px"><span data-sf-symbol="exclamationmark.triangle.fill" title="SF Symbol: exclamationmark.triangle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 16px; font-weight: 600; color: var(--roast-heat)">2 plans could not be decoded</span>
+              <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">Their stored records are corrupt. They are hidden, not deleted, and the remaining 3 plans loaded normally.</span>
+              <div style="display: flex; gap: 8px">
+                <div style="display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600">Show details</div>
+                <div style="display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600">Export raw</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--roast-heat); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="color: var(--roast-heat); font-size: 15px"><span data-sf-symbol="exclamationmark.triangle.fill" title="SF Symbol: exclamationmark.triangle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 16px; font-weight: 600; color: var(--roast-heat)">Last save finished partially</span>
+              <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">One plan was written and one was not. Existing plans were preserved; review before editing further.</span>
+              <div style="align-self: flex-start; display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600">Review affected plans</div>
+            </div>
+          </div>
+
+        </div>
+      </x-import>
+
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; gap: 12px; background: var(--background); padding: 60px 18px 30px; box-sizing: border-box; overflow: hidden">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -.03em">Plans</h1>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; gap: 13px">
+            <span style="color: var(--muted-foreground); font-size: 15px"><span data-sf-symbol="exclamationmark.circle.fill" title="SF Symbol: exclamationmark.circle.fill" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 16px; font-weight: 600">Saved by a newer version</span>
+              <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">These plans use schema v4; this build reads up to v3. They are kept as-is and cannot be shown safely.</span>
+              <span style="font-size: 13px; color: var(--muted-foreground)">Update PacePrompt to open them.</span>
+            </div>
+          </div>
+        </div>
+      </x-import>
+      </div>
+    </div>
+
+    <div id="1f" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1f</span>
+        <span style="font-size: 15px; font-weight: 600">Manual plan editor</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Step cards stay scannable by putting the three exact numbers on one tabular row — nothing is summarised away or hidden behind a disclosure. Problems collect in one block above the primary action, and invalid values are rejected rather than quietly corrected.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 22px 18px 30px; box-sizing: border-box; gap: 14px">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div style="width: 38px; height: 5px; border-radius: 99px; background: var(--border); align-self: center"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+              <span style="color: var(--roast-fan)">Cancel</span>
+              <span style="font-weight: 600">Edit plan</span>
+              <span style="color: var(--muted-foreground); opacity: .35">Save</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Plan name</span>
+              <span style="font-size: 17px; font-weight: 600">Pyramid 5 × 3</span>
+            </div>
+            <div style="display: flex; gap: 4px; background: var(--secondary); border-radius: 11px; padding: 3px">
+              <span style="flex: 1; text-align: center; padding: 11px; border-radius: 9px; font-size: 14px; color: var(--muted-foreground)">Indoor walking</span>
+              <span style="flex: 1; text-align: center; padding: 11px; border-radius: 9px; background: var(--background); font-size: 14px; font-weight: 600">Indoor running</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Steps · 23 ordered</span>
+            <span style="font-size: 13px; color: var(--roast-fan)">Reorder</span>
+          </div>
+
+          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow: hidden">
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 13px; display: flex; gap: 11px; align-items: flex-start">
+              <span style="width: 3px; align-self: stretch; border-radius: 3px; background: var(--muted-foreground)"></span>
+              <span style="font-size: 12px; font-weight: 650; color: var(--muted-foreground); font-variant-numeric: tabular-nums; padding-top: 2px">01</span>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 5px">
+                <div style="display: flex; align-items: baseline; gap: 8px">
+                  <span style="font-size: 15px; font-weight: 600">Warm-up</span>
+                  <span style="font-size: 13px; color: var(--muted-foreground)">Easy start</span>
+                </div>
+                <div style="display: flex; gap: 14px; font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">
+                  <span>600 s</span><span>5.5 km/h</span><span>1.0 %</span>
+                </div>
+              </div>
+              <span style="color: var(--muted-foreground); font-size: 14px; padding-top: 2px"><span data-sf-symbol="line.3.horizontal" title="SF Symbol: line.3.horizontal" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--roast-fault); border-radius: var(--radius); padding: 12px 13px; display: flex; gap: 11px; align-items: flex-start">
+              <span style="width: 3px; align-self: stretch; border-radius: 3px; background: var(--roast-fan)"></span>
+              <span style="font-size: 12px; font-weight: 650; color: var(--muted-foreground); font-variant-numeric: tabular-nums; padding-top: 2px">02</span>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 5px">
+                <div style="display: flex; align-items: baseline; gap: 8px">
+                  <span style="font-size: 15px; font-weight: 600">Recovery</span>
+                  <span style="font-size: 13px; color: var(--muted-foreground)">Walk</span>
+                </div>
+                <div style="display: flex; gap: 14px; font-size: 13px; font-variant-numeric: tabular-nums">
+                  <span style="color: var(--muted-foreground)">120 s</span>
+                  <span style="color: var(--roast-fault); font-weight: 600">18.0 km/h</span>
+                  <span style="color: var(--muted-foreground)">1.0 %</span>
+                </div>
+              </div>
+              <span style="color: var(--muted-foreground); font-size: 14px; padding-top: 2px"><span data-sf-symbol="line.3.horizontal" title="SF Symbol: line.3.horizontal" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            </div>
+
+            <div style="padding: 6px 13px; font-size: 13px; color: var(--muted-foreground)">21 more steps · scroll</div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; height: 46px; border: 1px dashed var(--border); border-radius: var(--radius); color: var(--roast-fan); font-size: 15px; font-weight: 600">
+            <span style="font-size: 16px"><span data-sf-symbol="plus" title="SF Symbol: plus" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>Add step
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--roast-fault); border-radius: var(--radius); padding: 13px 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-fault)">Fix before preview · 2</span>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45">
+              <span style="color: var(--roast-fault)">•</span>
+              <span>Step 02 speed 18.0 exceeds the connected treadmill maximum of 16.0 km/h.</span>
+            </div>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45">
+              <span style="color: var(--roast-fault)">•</span>
+              <span>Step 17 duration must be a whole number of seconds above zero.</span>
+            </div>
+            <span style="font-size: 12px; color: var(--muted-foreground)">Invalid values are rejected — PacePrompt never clamps or corrects a target for you.</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: var(--radius); background: var(--secondary); color: var(--muted-foreground); font-size: 17px; font-weight: 650">Review exact plan</div>
+            <p style="margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted-foreground); text-align: center">Review validates the whole plan against the currently known treadmill capability. It does not save.</p>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1g" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1g</span>
+        <span style="font-size: 15px; font-weight: 600">Plan preview</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">The exact validated plan and nothing else — every step keeps its duration, speed and inclination. Distance is labelled estimated because it is derived, and the confirm button is the only thing on the screen that writes.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 22px 18px 30px; box-sizing: border-box; gap: 14px">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div style="width: 38px; height: 5px; border-radius: 99px; background: var(--border); align-self: center"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+              <span style="color: var(--roast-fan)">‹ Back to edit</span>
+              <span style="font-weight: 600">Review</span>
+              <span style="width: 34px"></span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px">
+            <h2 style="margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -.025em">Pyramid 5 × 3</h2>
+            <span style="display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--secondary); font-size: 12px; font-weight: 600">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-heat)"></span>Indoor running
+            </span>
+          </div>
+
+          <div style="display: flex; gap: 8px">
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Duration</div>
+              <div style="font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums">43:00</div>
+            </div>
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Est. distance</div>
+              <div style="font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums">6.8 km</div>
+            </div>
+            <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 12px">
+              <div style="font-size: 11px; color: var(--muted-foreground)">Steps</div>
+              <div style="font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums">23</div>
+            </div>
+          </div>
+
+          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 7px; overflow: hidden">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Exact plan · every step</span>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--muted-foreground)"></div>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600">01 · Warm-up</div>
+                  <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">5.5 km/h · 1.0 %</div>
+                </div>
+                <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">10:00</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--roast-heat)"></div>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600">02 · Interval · Rep 1</div>
+                  <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">10.0 km/h · 1.0 %</div>
+                </div>
+                <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">3:00</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--roast-fan)"></div>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600">03 · Recovery · Walk</div>
+                  <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">5.5 km/h · 1.0 %</div>
+                </div>
+                <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">2:00</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--roast-heat)"></div>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600">04 · Interval · Rep 2</div>
+                  <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">10.0 km/h · 2.0 %</div>
+                </div>
+                <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">3:00</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: stretch; gap: 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px">
+              <div style="width: 3px; border-radius: 3px; background: var(--roast-fan)"></div>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600">05 · Recovery · Walk</div>
+                  <div style="font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">5.5 km/h · 2.0 %</div>
+                </div>
+                <div style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums">2:00</div>
+              </div>
+            </div>
+
+            <div style="padding: 8px 13px; font-size: 13px; color: var(--muted-foreground)">18 more steps · scroll</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; align-items: center; justify-content: center; height: 54px; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-size: 17px; font-weight: 650">Confirm and update</div>
+            <p style="margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted-foreground); text-align: center">Only this action writes to local storage. Validated against capability read at 06:04 — the machine is not being contacted now.</p>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1h" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1h</span>
+        <span style="font-size: 15px; font-weight: 600">Import · editor + awaiting result</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Local checks run before anything leaves. The primary action opens the disclosure — it is never the send itself — and the waiting state names the stage rather than showing a spinner alone.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 22px 18px 30px; box-sizing: border-box; gap: 14px">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div style="width: 38px; height: 5px; border-radius: 99px; background: var(--border); align-self: center"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+              <span style="color: var(--roast-fan)">Cancel</span>
+              <span style="font-weight: 600">Import workout</span>
+              <span style="width: 34px"></span>
+            </div>
+          </div>
+
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty">Describe the workout in plain English. Leave out names, locations and anything personal — this text is what would be sent.</p>
+
+          <div style="background: var(--card); border: 1px solid var(--roast-fan); border-radius: var(--radius); padding: 13px 14px; display: flex; flex-direction: column; gap: 8px; min-height: 172px">
+            <p style="margin: 0; font-size: 15px; line-height: 1.55">10 min easy, then 5 × 3 min at 12 k with 2 min walk recoveries, climbing 1% each rep, 8 min cool down</p>
+            <div style="flex: 1"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">
+              <span>104 / 2000 characters</span><span>Keyboard</span>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; display: flex; flex-direction: column; gap: 9px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Local checks</span>
+            <div style="display: flex; align-items: center; gap: 9px; font-size: 13px">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-nominal)"></span>
+              <span>Length and unit vocabulary understood</span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.45">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-heat); margin-top: 6px"></span>
+              <span style="color: var(--roast-heat)">“12 k” read as 12.0 km/h — confirm on review</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 9px; font-size: 13px">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--muted-foreground)"></span>
+              <span style="color: var(--muted-foreground)">Capability state: connected · 0.8–16.0 km/h · 0–12.0 %</span>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; gap: 12px; align-items: flex-start">
+            <span style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted-foreground); border-top-color: transparent; margin-top: 2px"></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 7px">
+              <span style="font-size: 15px; font-weight: 600">Awaiting remote result</span>
+              <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground)">Sent 4 s ago after your consent. No plan exists until the proposal returns and passes local validation.</span>
+              <div style="align-self: flex-start; display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600">Cancel request</div>
+            </div>
+          </div>
+
+          <div style="flex: 1"></div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; align-items: center; justify-content: center; height: 54px; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-size: 17px; font-weight: 650">Review remote-send disclosure</div>
+            <p style="margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted-foreground); text-align: center">Nothing is sent yet. You will see the exact text and give consent on the next screen.</p>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1i" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1i</span>
+        <span style="font-size: 15px; font-weight: 600">Remote-send disclosure</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Two columns of truth: what leaves, and what stays. The exact text is quoted verbatim so consent is given to something specific, and the two actions carry equal visual weight.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 22px 18px 30px; box-sizing: border-box; gap: 13px">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div style="width: 38px; height: 5px; border-radius: 99px; background: var(--border); align-self: center"></div>
+            <span style="font-size: 15px; font-weight: 600; text-align: center">Before this leaves your iPhone</span>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 13px; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Exact text to be sent</span>
+            <p style="margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5">10 min easy, then 5 × 3 min at 12 k with 2 min walk recoveries, climbing 1% each rep, 8 min cool down</p>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--roast-heat); border-radius: var(--radius); padding: 13px 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-heat)">Leaves the device</span>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-heat)">•</span><span>The exact text above, unchanged.</span></div>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-heat)">•</span><span>Processed by OpenRouter and OpenAI on the fixed Sol route.</span></div>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-heat)">•</span><span>Fixed instructions, schema, examples, locale and unit vocabulary.</span></div>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-heat)">•</span><span>Capability states only — connected, speed range, inclination range.</span></div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--roast-nominal)">Stays on this device</span>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-nominal)">•</span><span>Saved plans and history.</span></div>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-nominal)">•</span><span>Health data and device identifiers.</span></div>
+            <div style="display: flex; gap: 8px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-nominal)">•</span><span>Your treadmill's capability ranges.</span></div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 13px; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Transmitted capability states</span>
+            <div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">
+              connection = connected<br>speed_min_kph = 0.8 · speed_max_kph = 16.0<br>incline_min_pct = 0.0 · incline_max_pct = 12.0
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px; padding: 0 2px">
+            <div style="display: flex; gap: 8px; font-size: 12px; line-height: 1.45; color: var(--muted-foreground)"><span>•</span><span>There is no zero-retention guarantee for remote processing.</span></div>
+            <div style="display: flex; gap: 8px; font-size: 12px; line-height: 1.45; color: var(--muted-foreground)"><span>•</span><span>Charges may apply to your OpenRouter account.</span></div>
+            <div style="display: flex; gap: 8px; font-size: 12px; line-height: 1.45; color: var(--muted-foreground)"><span>•</span><span>The returned proposal is untrusted and is validated locally before you see a plan.</span></div>
+          </div>
+
+          <div style="flex: 1"></div>
+
+          <div style="display: flex; gap: 10px">
+            <div style="flex: 1; display: flex; align-items: center; justify-content: center; height: 54px; border-radius: var(--radius); background: var(--secondary); font-size: 16px; font-weight: 650">Cancel</div>
+            <div style="flex: 1.25; display: flex; align-items: center; justify-content: center; text-align: center; height: 54px; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-size: 15px; font-weight: 650">I agree — send this request</div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1j" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1j</span>
+        <span style="font-size: 15px; font-weight: 600">Export · selection, then exact review</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 828px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Stage two lists the filename, record count and the exact fields included, so the share sheet is not the first place you learn what is in the file. The copy stops short of promising a successful backup.</p>
+      </sc-if>
+      <div style="display: flex; gap: 24px; align-items: flex-start">
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+          <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 22px 18px 30px; box-sizing: border-box; gap: 14px">
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <div style="width: 38px; height: 5px; border-radius: 99px; background: var(--border); align-self: center"></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+                <span style="color: var(--roast-fan)">Cancel</span>
+                <span style="font-weight: 600">Export plans</span>
+                <span style="color: var(--roast-fan)">All</span>
+              </div>
+            </div>
+
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Choose plans · 2 selected</span>
+
+            <div style="display: flex; flex-direction: column; gap: 9px">
+              <div style="background: var(--card); border: 1px solid var(--roast-fan); border-radius: var(--radius); padding: 14px 15px; display: flex; align-items: center; gap: 13px">
+                <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--roast-fan); color: #06222a; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700" data-sf-symbol="checkmark.circle.fill" title="SF Symbol: checkmark.circle.fill">✓</span>
+                <div style="flex: 1">
+                  <div style="font-size: 16px; font-weight: 600">Pyramid 5 × 3</div>
+                  <div style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Indoor running · 23 steps · 43:00</div>
+                </div>
+              </div>
+              <div style="background: var(--card); border: 1px solid var(--roast-fan); border-radius: var(--radius); padding: 14px 15px; display: flex; align-items: center; gap: 13px">
+                <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--roast-fan); color: #06222a; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700" data-sf-symbol="checkmark.circle.fill" title="SF Symbol: checkmark.circle.fill">✓</span>
+                <div style="flex: 1">
+                  <div style="font-size: 16px; font-weight: 600">Hill walk · 6%</div>
+                  <div style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Indoor walking · 9 steps · 32:00</div>
+                </div>
+              </div>
+              <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px; display: flex; align-items: center; gap: 13px">
+                <span style="width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--border)"></span>
+                <div style="flex: 1">
+                  <div style="font-size: 16px; font-weight: 600">Easy 30</div>
+                  <div style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Indoor running · 3 steps · 30:00</div>
+                </div>
+              </div>
+              <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px; display: flex; align-items: center; gap: 13px">
+                <span style="width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--border)"></span>
+                <div style="flex: 1">
+                  <div style="font-size: 16px; font-weight: 600">Tempo ladder</div>
+                  <div style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Indoor running · 11 steps · 38:00</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="flex: 1"></div>
+
+            <div style="display: flex; align-items: center; justify-content: center; height: 54px; border-radius: var(--radius); background: var(--secondary); font-size: 17px; font-weight: 650">Review exact export</div>
+          </div>
+        </x-import>
+
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+          <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 22px 18px 30px; box-sizing: border-box; gap: 14px">
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <div style="width: 38px; height: 5px; border-radius: 99px; background: var(--border); align-self: center"></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+                <span style="color: var(--roast-fan)">‹ Back</span>
+                <span style="font-weight: 600">Exact export</span>
+                <span style="width: 34px"></span>
+              </div>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 11px">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px">
+                <span style="font-size: 12px; color: var(--muted-foreground)">Filename</span>
+                <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; text-align: right">paceprompt-plans-2026-09-07.json</span>
+              </div>
+              <div style="height: 1px; background: var(--border)"></div>
+              <div style="display: flex; justify-content: space-between"><span style="font-size: 12px; color: var(--muted-foreground)">Category</span><span style="font-size: 13px; font-weight: 600">Workout plans</span></div>
+              <div style="display: flex; justify-content: space-between"><span style="font-size: 12px; color: var(--muted-foreground)">Records</span><span style="font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums">2</span></div>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Included fields</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px">
+                <span style="padding: 5px 9px; border-radius: 7px; background: var(--secondary)">name</span>
+                <span style="padding: 5px 9px; border-radius: 7px; background: var(--secondary)">activity</span>
+                <span style="padding: 5px 9px; border-radius: 7px; background: var(--secondary)">steps[].order</span>
+                <span style="padding: 5px 9px; border-radius: 7px; background: var(--secondary)">steps[].type</span>
+                <span style="padding: 5px 9px; border-radius: 7px; background: var(--secondary)">steps[].label</span>
+                <span style="padding: 5px 9px; border-radius: 7px; background: var(--secondary)">steps[].duration_s</span>
+                <span style="padding: 5px 9px; border-radius: 7px; background: var(--secondary)">steps[].speed_kph</span>
+                <span style="padding: 5px 9px; border-radius: 7px; background: var(--secondary)">steps[].incline_pct</span>
+              </div>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 9px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Plans in this file</span>
+              <div style="display: flex; align-items: center; gap: 9px; font-size: 14px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-heat)"></span>Pyramid 5 × 3</div>
+              <div style="display: flex; align-items: center; gap: 9px; font-size: 14px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--roast-fan)"></span>Hill walk · 6%</div>
+            </div>
+
+            <div style="flex: 1"></div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div style="display: flex; align-items: center; justify-content: center; height: 54px; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-size: 17px; font-weight: 650">Share JSON copy</div>
+              <p style="margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted-foreground); text-align: center">Sharing writes a temporary protected copy and leaves your saved plans unchanged. Opening the share sheet does not confirm that a backup was stored.</p>
+            </div>
+          </div>
+        </x-import>
+      </div>
+    </div>
+
+    <div id="1k" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1k</span>
+        <span style="font-size: 15px; font-weight: 600">Settings</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Four groups, no toggles that do not exist. "FTMS control: Disabled" is stated as a product fact in About rather than implied by absence.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 60px 18px 0; box-sizing: border-box; gap: 16px">
+          <h1 style="margin: 0; font-size: 32px; font-weight: 650; letter-spacing: -.03em">Settings</h1>
+
+          <div style="display: flex; flex-direction: column; gap: 7px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground); padding-left: 2px">Connections</span>
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden">
+              <div style="padding: 14px 15px; display: flex; align-items: center; gap: 11px; border-bottom: 1px solid var(--border)">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--roast-nominal)"></span>
+                <span style="flex: 1; font-size: 15px; display: flex; align-items: center; gap: 8px"><span data-sf-symbol="figure.run" title="SF Symbol: figure.run" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span>Treadmill</span>
+                <span style="font-size: 14px; color: var(--muted-foreground)">Connected</span>
+              </div>
+              <div style="padding: 14px 15px; display: flex; align-items: center; gap: 11px">
+                <span style="flex: 1; font-size: 15px">Treadmill setup and diagnostics</span>
+                <span style="color: var(--muted-foreground); font-size: 14px">›</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground); padding-left: 2px">Remote workout import</span>
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px; display: flex; align-items: center; gap: 11px">
+              <div style="flex: 1">
+                <div style="font-size: 15px">OpenRouter credential</div>
+                <div style="font-size: 13px; color: var(--muted-foreground)">Key stored on this device</div>
+              </div>
+              <span style="color: var(--muted-foreground); font-size: 14px">›</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground); padding-left: 2px">Privacy</span>
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px; display: flex; flex-direction: column; gap: 9px">
+              <div style="display: flex; gap: 9px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-nominal)">•</span><span>Saved plans stay on this iPhone. There is no account and no sync.</span></div>
+              <div style="display: flex; gap: 9px; font-size: 13px; line-height: 1.45"><span style="color: var(--roast-heat)">•</span><span>Remote import happens only after you read and accept the disclosure for that single request.</span></div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground); padding-left: 2px">About</span>
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden">
+              <div style="padding: 14px 15px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border)">
+                <span style="font-size: 15px">Version</span>
+                <span style="font-size: 14px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">1.0 · plan authoring slice</span>
+              </div>
+              <div style="padding: 14px 15px; display: flex; align-items: center; justify-content: space-between">
+                <span style="font-size: 15px">FTMS control</span>
+                <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: var(--muted-foreground)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--muted-foreground)"></span>Disabled</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex: 1"></div>
+
+          <div style="display: flex; border-top: 1px solid var(--border); padding: 9px 0 26px; margin: 0 -18px; background: rgba(255,255,255,.02)">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="house" title="SF Symbol: house" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Home</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="list.bullet.rectangle" title="SF Symbol: list.bullet.rectangle" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Plans</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="clock.arrow.circlepath" title="SF Symbol: clock.arrow.circlepath" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">History</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="gearshape" title="SF Symbol: gearshape" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px; font-weight: 600">Settings</span>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1l" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1l</span>
+        <span style="font-size: 15px; font-weight: 600">OpenRouter credential</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">The stored value is never rendered, not even masked from the real string — the state line says only that a key is present and when it was stored. The secure field appears solely in the add/replace state shown below it.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 60px 18px 30px; box-sizing: border-box; gap: 15px">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+            <span style="color: var(--roast-fan)">‹ Settings</span>
+            <span style="font-weight: 600">OpenRouter</span>
+            <span style="width: 44px"></span>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; gap: 13px">
+            <span style="width: 26px; height: 26px; border-radius: 8px; background: rgba(52,211,153,.14); display: flex; align-items: center; justify-content: center; color: var(--roast-nominal); font-size: 13px"><span data-sf-symbol="key.horizontal" title="SF Symbol: key.horizontal" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Credential</span>
+              <span style="font-size: 17px; font-weight: 600; color: var(--roast-nominal)">Key stored</span>
+              <span style="font-size: 13px; line-height: 1.45; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Added 12 Aug 2026 · never displayed, never synced</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 9px">
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px; display: flex; align-items: center; justify-content: space-between">
+              <span style="font-size: 15px; font-weight: 600; color: var(--roast-fan)">Replace key</span>
+              <span style="color: var(--muted-foreground); font-size: 14px">›</span>
+            </div>
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px; display: flex; align-items: center; justify-content: space-between">
+              <span style="font-size: 15px; font-weight: 600; color: var(--roast-fan)">Refresh credential status</span>
+              <span style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">Checked 06:02</span>
+            </div>
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px">
+              <span style="font-size: 15px; font-weight: 600; color: var(--roast-fault)">Delete key</span>
+            </div>
+          </div>
+
+          <div style="height: 1px; background: var(--border); margin: 2px 0"></div>
+
+          <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">While adding or replacing</span>
+
+          <div style="background: var(--card); border: 1px solid var(--roast-fan); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 11px">
+            <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">New key</span>
+            <div style="display: flex; align-items: center; gap: 10px; background: var(--background); border: 1px solid var(--border); border-radius: 11px; padding: 13px 14px">
+              <span style="flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; letter-spacing: .12em">••••••••••••••••</span>
+              <span style="color: var(--muted-foreground); font-size: 14px"><span data-sf-symbol="eye.slash" title="SF Symbol: eye.slash" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            </div>
+            <div style="display: flex; gap: 9px">
+              <div style="flex: 1; display: flex; align-items: center; justify-content: center; height: 46px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600">Cancel</div>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: center; height: 46px; border-radius: 11px; background: var(--primary); color: var(--primary-foreground); font-size: 15px; font-weight: 650">Store key</div>
+            </div>
+          </div>
+
+          <div style="flex: 1"></div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 16px; display: flex; gap: 12px">
+            <span style="color: var(--muted-foreground); font-size: 14px"><span data-sf-symbol="lock.shield" title="SF Symbol: lock.shield" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty">The key is held in this device's Keychain and is not synchronised to iCloud or any other device. Storing it sends no request — nothing reaches OpenRouter until you consent to a specific import.</p>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1m" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1m</span>
+        <span style="font-size: 15px; font-weight: 600">Treadmill setup · read-only diagnostics</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 828px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">Decoded capability sits in normal type; raw bytes and UUIDs are monospaced and visually separated. Subscribed and data received are two distinct rows, and "no packets received" is coloured as unknown, never as zero. No Start, Stop, Pause or Request Control appears anywhere.</p>
+      </sc-if>
+      <div style="display: flex; gap: 24px; align-items: flex-start">
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+          <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 60px 18px 30px; box-sizing: border-box; gap: 14px">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+              <span style="color: var(--roast-fan)">‹ Settings</span>
+              <span style="font-weight: 600">Treadmill setup</span>
+              <span style="width: 44px"></span>
+            </div>
+
+            <div style="display: flex; gap: 8px">
+              <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 13px; display: flex; flex-direction: column; gap: 4px">
+                <span style="font-size: 11px; color: var(--muted-foreground)">Bluetooth</span>
+                <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; color: var(--roast-nominal)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-nominal)"></span>Available</span>
+              </div>
+              <div style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 13px; display: flex; flex-direction: column; gap: 4px">
+                <span style="font-size: 11px; color: var(--muted-foreground)">Connection</span>
+                <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; color: var(--roast-nominal)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-nominal)"></span>Connected</span>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 9px">
+              <div style="flex: 1; display: flex; align-items: center; justify-content: center; height: 46px; border-radius: 11px; background: var(--secondary); font-size: 15px; font-weight: 600; gap: 8px"><span data-sf-symbol="dot.radiowaves.left.and.right" title="SF Symbol: dot.radiowaves.left.and.right" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span>Scan for treadmills</div>
+              <div style="display: flex; align-items: center; justify-content: center; height: 46px; padding: 0 16px; border-radius: 11px; border: 1px solid var(--border); font-size: 15px; font-weight: 600; color: var(--muted-foreground)">Disconnect</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Discovered · scan started by you</span>
+              <div style="background: var(--card); border: 1px solid var(--roast-nominal); border-radius: var(--radius); padding: 13px 14px; display: flex; align-items: center; gap: 11px">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--roast-nominal)"></span>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+                  <span style="font-size: 15px; font-weight: 600">Reebok FR30z</span>
+                  <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted-foreground)">A81F2C40-9B3E-4D71-8E02-5C7A11D9F4B6</span>
+                </div>
+                <span style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">−54 dBm</span>
+              </div>
+              <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; display: flex; align-items: center; gap: 11px">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--muted-foreground)"></span>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+                  <span style="font-size: 15px; font-weight: 600">FR30z-8814</span>
+                  <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted-foreground)">6D0B7E19-22AF-45C8-91D3-0E4488AB27C1</span>
+                </div>
+                <span style="font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">−78 dBm</span>
+              </div>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 11px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Fitness machine feature · decoded</span>
+              <div style="display: flex; gap: 10px">
+                <div style="flex: 1">
+                  <div style="font-size: 11px; color: var(--muted-foreground)">Speed range</div>
+                  <div style="font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums">0.8–16.0 <span style="font-size: 12px; font-weight: 400; color: var(--muted-foreground)">km/h</span></div>
+                  <div style="font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">step 0.1</div>
+                </div>
+                <div style="flex: 1">
+                  <div style="font-size: 11px; color: var(--muted-foreground)">Inclination range</div>
+                  <div style="font-size: 17px; font-weight: 650; color: var(--roast-fan); font-variant-numeric: tabular-nums">0.0–12.0 <span style="font-size: 12px; font-weight: 400; color: var(--muted-foreground)">%</span></div>
+                  <div style="font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">step 0.5</div>
+                </div>
+              </div>
+              <div style="height: 1px; background: var(--border)"></div>
+              <div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.6; color: var(--muted-foreground)">
+                0x2ACC · feature = 0x0000 0286<br>speed 0x2AD5 = 08 00 A0 00 01 00<br>incline 0x2AD6 = 00 00 78 00 05 00
+              </div>
+            </div>
+
+            <div style="flex: 1"></div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 16px; display: flex; gap: 12px">
+              <span style="color: var(--muted-foreground); font-size: 14px"><span data-sf-symbol="lock.shield" title="SF Symbol: lock.shield" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+              <p style="margin: 0; font-size: 13px; line-height: 1.5; text-wrap: pretty">Read-only capability check. PacePrompt never writes to FTMS Control Point <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace">0x2AD9</span>. The physical console and safety key remain authoritative.</p>
+            </div>
+          </div>
+        </x-import>
+
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+          <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 60px 18px 30px; box-sizing: border-box; gap: 13px">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+              <span style="color: var(--roast-fan)">‹ Setup</span>
+              <span style="font-weight: 600">Diagnostics</span>
+              <span style="color: var(--roast-fan)"><span data-sf-symbol="square.and.arrow.up" title="SF Symbol: square.and.arrow.up" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Passive subscriptions</span>
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-nominal)"></span>
+                <span style="flex: 1; font-size: 14px">Treadmill Data <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted-foreground)">0x2ACD</span></span>
+                <span style="font-size: 12px; color: var(--roast-nominal)">Subscribed</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding-left: 17px">
+                <span style="flex: 1; font-size: 13px; color: var(--muted-foreground)">Data received</span>
+                <span style="font-size: 12px; color: var(--roast-nominal); font-variant-numeric: tabular-nums">42 packets</span>
+              </div>
+              <div style="height: 1px; background: var(--border)"></div>
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--roast-nominal)"></span>
+                <span style="flex: 1; font-size: 14px">Machine Status <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted-foreground)">0x2ADA</span></span>
+                <span style="font-size: 12px; color: var(--roast-nominal)">Subscribed</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding-left: 17px">
+                <span style="flex: 1; font-size: 13px; color: var(--muted-foreground)">Data received</span>
+                <span style="font-size: 12px; color: var(--muted-foreground)">No packets received — unknown</span>
+              </div>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 9px">
+              <div style="display: flex; align-items: center; justify-content: space-between">
+                <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Packet log · in memory</span>
+                <span style="font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums">42 held · 200 max</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 7px">
+                <div style="display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted-foreground)">06:04:12.418 · 0x2ACD · 08 00 3C 00 00 00 0A 00</span>
+                  <span style="font-size: 12px">Instantaneous speed 6.0 km/h · inclination 1.0 %</span>
+                </div>
+                <div style="height: 1px; background: var(--border)"></div>
+                <div style="display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted-foreground)">06:04:11.402 · 0x2ACD · 08 00 3C 00 00 00 0A 00</span>
+                  <span style="font-size: 12px">Instantaneous speed 6.0 km/h · inclination 1.0 %</span>
+                </div>
+                <div style="height: 1px; background: var(--border)"></div>
+                <div style="display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted-foreground)">06:04:10.396 · 0x2ACD · 08 00 00 00 00 00 0A 00</span>
+                  <span style="font-size: 12px">Instantaneous speed 0.0 km/h · inclination 1.0 %</span>
+                </div>
+              </div>
+              <span style="font-size: 11px; color: var(--muted-foreground)">Decoded values above are separate from the raw bytes they came from. The log is not saved and clears when the app quits.</span>
+            </div>
+
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 9px">
+              <span style="font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-foreground)">Characteristics discovered</span>
+              <div style="display: flex; align-items: baseline; gap: 8px">
+                <span style="flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px">0x2ACC Fitness Machine Feature</span>
+                <span style="font-size: 11px; color: var(--muted-foreground)">read</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 8px">
+                <span style="flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px">0x2ACD Treadmill Data</span>
+                <span style="font-size: 11px; color: var(--muted-foreground)">notify</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 8px">
+                <span style="flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px">0x2AD5 Supported Speed Range</span>
+                <span style="font-size: 11px; color: var(--muted-foreground)">read</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 8px">
+                <span style="flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px">0x2AD6 Supported Inclination Range</span>
+                <span style="font-size: 11px; color: var(--muted-foreground)">read</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 8px; opacity: .55">
+                <span style="flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px">0x2AD9 Control Point</span>
+                <span style="font-size: 11px; color: var(--muted-foreground)">present · never written</span>
+              </div>
+            </div>
+
+            <div style="flex: 1"></div>
+
+            <div style="display: flex; gap: 8px">
+              <div style="flex: 1; display: flex; align-items: center; justify-content: center; height: 46px; border-radius: 11px; background: var(--secondary); font-size: 14px; font-weight: 600">Copy</div>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: center; height: 46px; border-radius: 11px; background: var(--secondary); font-size: 14px; font-weight: 600">Share</div>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: center; height: 46px; border-radius: 11px; border: 1px solid var(--border); color: var(--muted-foreground); font-size: 14px; font-weight: 600">Clear</div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+    </div>
+
+    <div id="1n" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--secondary); color: var(--foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums">1n</span>
+        <span style="font-size: 15px; font-weight: 600">History · honest placeholder</span>
+      </div>
+      <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; max-width: 402px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground)">No invented rows, no statistics, no repeat or export. It says why the tab is empty and stops, so nobody reads it as data loss.</p>
+      </sc-if>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="402px" height="874px" hint-size="402px,874px">
+        <div style="height: 100%; display: flex; flex-direction: column; background: var(--background); padding: 60px 18px 0; box-sizing: border-box">
+          <h1 style="margin: 0; font-size: 32px; font-weight: 650; letter-spacing: -.03em">History</h1>
+
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 16px 80px; text-align: center">
+            <span style="width: 60px; height: 60px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); font-size: 24px"><span data-sf-symbol="clock.arrow.circlepath" title="SF Symbol: clock.arrow.circlepath" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 21px; font-weight: 650; letter-spacing: -.02em">No history yet</span>
+              <p style="margin: 0; font-size: 14px; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty">Workout execution and automatic history recording are not available in this version, so there is nothing to record. Your saved plans are unaffected.</p>
+            </div>
+          </div>
+
+          <div style="display: flex; border-top: 1px solid var(--border); padding: 9px 0 26px; margin: 0 -18px; background: rgba(255,255,255,.02)">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="house" title="SF Symbol: house" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Home</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="list.bullet.rectangle" title="SF Symbol: list.bullet.rectangle" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Plans</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="clock.arrow.circlepath" title="SF Symbol: clock.arrow.circlepath" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px; font-weight: 600">History</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted-foreground)">
+              <span style="font-size: 17px"><span data-sf-symbol="gearshape" title="SF Symbol: gearshape" style="display: inline-block; width: 1em; height: 1em; border-radius: .22em; border: 1px dashed currentColor; opacity: .72; vertical-align: -.12em"></span></span><span style="font-size: 10px">Settings</span>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showNotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Board&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { showNotes: this.props.showNotes ?? true };
+  }
+}
+
+</script>
+</body>
+</html>
