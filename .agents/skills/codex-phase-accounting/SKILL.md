@@ -21,6 +21,8 @@ python3 .agents/skills/codex-phase-accounting/scripts/phase_usage.py snapshot \
 
 Keep the baseline outside Git. Do not substitute a file chosen only because it is the newest session. If the helper is itself being introduced, read [the bootstrap procedure](references/bootstrap.md) before editing.
 
+The helper records counter-reset edges. A reset entirely before the selected baseline does not invalidate a later phase: `snapshot` includes it as `historical_counter_resets`, and `report` verifies only the monotonic events after the exact baseline. Do not move a boundary forward merely to avoid a reset. If the intended phase crosses a reset, the helper rejects it and that phase remains unmeasured.
+
 ## Produce the phase report
 
 After implementation, tests, analysis and review, run:
@@ -38,6 +40,8 @@ python3 .agents/skills/codex-phase-accounting/scripts/phase_usage.py report \
 ```
 
 Omit `--baseline` only for a deliberately labelled whole-session measurement. The helper validates cumulative and request counters, preserves missing optional counters as `null`, checks that request totals reconcile to the phase delta, and reports every measured request input size. A request crosses the supplied threshold only when its input is greater than the threshold.
+
+Whole-session reporting rejects any counter reset because discontinuous cumulative totals cannot be aggregated exactly. Delta reporting allows resets at or before its captured baseline, reports them as historical evidence, and rejects any reset after the baseline as an in-phase discontinuity.
 
 Codex can emit an unchanged cumulative snapshot after context maintenance with all metered `last_token_usage` components explicitly zero and a standalone `total_tokens` context-size value. The helper validates and reports that record as a repeated cumulative snapshot, but does not count it as a request, usage or cost. It also reports and excludes an idempotently replayed token event only when the complete canonical `info` payload exactly matches the immediately preceding token event. That replay is not counted as a request, usage or cost. Any non-identical unchanged snapshot with a non-zero metered component remains an actionable error.
 
@@ -75,6 +79,6 @@ python3 -B -m unittest discover \
   -s .agents/skills/codex-phase-accounting/tests -v
 ```
 
-Also run the repository's skill validator. Stop with the helper's actionable error instead of repairing malformed data or estimating a missing value.
+Also run the repository's skill validator. Never repair the transcript, interpolate counters or estimate a missing value. A historical reset before an exact baseline is evidence, not malformed phase data; use the helper's verified delta. Stop and mark the phase unmeasured only when the intended boundary crosses a reset or another actionable validation error remains.
 
 The helper and its tests use only the Python standard library. Codex's bundled skill validator additionally imports PyYAML; install the pinned development-only dependency from `requirements-dev.txt` into an isolated environment, then invoke the bundled validator with that environment's Python. Do not add PyYAML as a helper runtime dependency.

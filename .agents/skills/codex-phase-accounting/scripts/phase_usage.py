@@ -80,6 +80,23 @@ class Session:
     session_id: str
     models: tuple[str, ...]
     token_events: tuple[TokenEvent, ...]
+    counter_resets: tuple["CounterReset", ...]
+
+
+@dataclass(frozen=True)
+class CounterReset:
+    previous_token_count_event: int
+    token_count_event: int
+    timestamp: str | None
+    decreased_counters: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "previous_token_count_event": self.previous_token_count_event,
+            "token_count_event": self.token_count_event,
+            "timestamp": self.timestamp,
+            "decreased_counters": list(self.decreased_counters),
+        }
 
 
 @dataclass(frozen=True)
@@ -325,7 +342,19 @@ def load_session(path: Path) -> Session:
         )
     if not token_events:
         raise AccountingError("selected session contains no complete token_count events")
+    counter_resets: list[CounterReset] = []
     for previous, current in zip(token_events, token_events[1:]):
+        decreased = decreased_counter_fields(current.total, previous.total)
+        if decreased:
+            counter_resets.append(
+                CounterReset(
+                    previous_token_count_event=previous.ordinal,
+                    token_count_event=current.ordinal,
+                    timestamp=current.timestamp,
+                    decreased_counters=decreased,
+                )
+            )
+            continue
         subtract_counter(
             current.total,
             previous.total,
@@ -334,7 +363,13 @@ def load_session(path: Path) -> Session:
                 f"and {current.ordinal}"
             ),
         )
-    return Session(path.resolve(), session_ids[0], tuple(models), tuple(token_events))
+    return Session(
+        path.resolve(),
+        session_ids[0],
+        tuple(models),
+        tuple(token_events),
+        tuple(counter_resets),
+    )
 
 
 def subtract_counter(current: Counter, baseline: Counter, *, label: str) -> Counter:
@@ -405,6 +440,24 @@ def counter_mismatch(actual: Counter, expected: Counter) -> list[str]:
     ]
 
 
+def decreased_counter_fields(current: Counter, previous: Counter) -> tuple[str, ...]:
+    fields = REQUIRED_COUNTER_FIELDS + OPTIONAL_COUNTER_FIELDS
+    return tuple(
+        field
+        for field in fields
+        if getattr(current, field) is not None
+        and getattr(previous, field) is not None
+        and getattr(current, field) < getattr(previous, field)
+    )
+
+
+def reset_edges(resets: Sequence[CounterReset]) -> str:
+    return ", ".join(
+        f"{reset.previous_token_count_event}->{reset.token_count_event}"
+        for reset in resets
+    )
+
+
 def snapshot_dict(session: Session, token_count_event: int | None = None) -> dict[str, Any]:
     ordinal = (
         len(session.token_events)
@@ -415,6 +468,15 @@ def snapshot_dict(session: Session, token_count_event: int | None = None) -> dic
         raise AccountingError(
             f"token-count event {ordinal} is outside the available range "
             f"1..{len(session.token_events)}"
+        )
+    resets_after_boundary = tuple(
+        reset for reset in session.counter_resets if reset.token_count_event > ordinal
+    )
+    if resets_after_boundary:
+        raise AccountingError(
+            f"selected baseline at token-count event {ordinal} precedes session "
+            f"counter reset(s) {reset_edges(resets_after_boundary)}; the intended "
+            "phase cannot be measured across a reset"
         )
     event = session.token_events[ordinal - 1]
     counters = event.total.as_dict()
@@ -427,6 +489,11 @@ def snapshot_dict(session: Session, token_count_event: int | None = None) -> dic
         "token_count_event": event.ordinal,
         "timestamp": event.timestamp,
         "counters": counters,
+        "historical_counter_resets": [
+            reset.as_dict()
+            for reset in session.counter_resets
+            if reset.token_count_event <= ordinal
+        ],
     }
 
 
@@ -476,6 +543,12 @@ def select_boundary(
 ) -> tuple[str, Counter, tuple[TokenEvent, ...], dict[str, Any]]:
     final_event = session.token_events[-1]
     if baseline is None:
+        if session.counter_resets:
+            raise AccountingError(
+                "whole-session accounting crosses session counter reset(s) "
+                f"{reset_edges(session.counter_resets)}; supply an exact baseline "
+                "captured at or after the last reset"
+            )
         usage = final_event.total
         events = session.token_events
         start = {
@@ -489,9 +562,6 @@ def select_boundary(
             raise AccountingError(
                 "baseline session_id does not match the explicitly selected session"
             )
-        usage = subtract_counter(
-            final_event.total, baseline.counters, label="phase counters"
-        )
         if baseline.token_count_event > len(session.token_events):
             raise AccountingError(
                 "baseline token_count_event is not present in the selected session"
@@ -507,6 +577,20 @@ def select_boundary(
                 "baseline does not match its selected session event: "
                 + ", ".join(details)
             )
+        resets_inside_boundary = tuple(
+            reset
+            for reset in session.counter_resets
+            if reset.token_count_event > baseline.token_count_event
+        )
+        if resets_inside_boundary:
+            raise AccountingError(
+                "measured boundary crosses session counter reset(s) "
+                f"{reset_edges(resets_inside_boundary)}; retain the intended "
+                "boundary and report it as unmeasured"
+            )
+        usage = subtract_counter(
+            final_event.total, baseline.counters, label="phase counters"
+        )
         events = session.token_events[baseline.token_count_event :]
         start = {
             "mode": "delta",
@@ -726,6 +810,12 @@ def build_report(
                 "timestamp": session.token_events[-1].timestamp,
                 "counters": session.token_events[-1].total.as_dict(),
             },
+            "historical_counter_resets": [
+                reset.as_dict()
+                for reset in session.counter_resets
+                if baseline is not None
+                and reset.token_count_event <= baseline.token_count_event
+            ],
         },
         "selected_session": str(session.path),
         "session_id": session.session_id,
@@ -822,6 +912,8 @@ def print_human_report(report: dict[str, Any]) -> None:
     print(f"boundary_mode={boundary['mode']}")
     print(f"boundary_label={boundary['label']}")
     print(f"session_id={report['session_id']}")
+    historical_resets = boundary["historical_counter_resets"]
+    print(f"historical_counter_resets={len(historical_resets)}")
     print(f"input_tokens={usage['input_tokens']}")
     print(f"cached_input_tokens={usage['cached_input_tokens']}")
     print(f"uncached_input_tokens={usage['uncached_input_tokens']}")
