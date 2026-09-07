@@ -150,6 +150,34 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertFalse(row.exists)
     }
 
+    func testSavedPlanExportRequiresSelectionAndExactPreviewBeforeShare() {
+        launch(capabilities: "known", draft: "valid", repository: "export")
+
+        let exportButton = app.buttons["plans.export"]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 2))
+        exportButton.tap()
+
+        let reviewButton = app.buttons["export.review"]
+        XCTAssertTrue(reviewButton.waitForExistence(timeout: 2))
+        XCTAssertFalse(reviewButton.isEnabled)
+        app.buttons["export.select.00000000-0000-0000-0000-000000000010"].tap()
+        XCTAssertTrue(reviewButton.isEnabled)
+        reviewButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Exact export"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "PacePrompt-saved-plans.json")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "savedPlans")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label == %@", "Records, 1")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["savedPlans[].plan.schemaVersion"].exists)
+        XCTAssertTrue(
+            findByScrolling(app.staticTexts["savedPlans[].plan.steps[].targetInclination.unit"])
+        )
+        XCTAssertTrue(app.buttons["export.share"].exists)
+
+        app.buttons["export.cancel"].tap()
+        XCTAssertTrue(app.staticTexts["Synthetic progression"].waitForExistence(timeout: 2))
+    }
+
     func testRepositoryFailuresAreNotShownAsEmptyAndDisableMutation() {
         assertRepositoryBlocked(repository: "protected", title: "Plans are locked")
         assertRepositoryBlocked(repository: "corrupt", title: "Saved plans are corrupt")
