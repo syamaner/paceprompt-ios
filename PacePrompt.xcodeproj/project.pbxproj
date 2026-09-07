@@ -63,6 +63,8 @@
 		AD0000000000000000000008 /* WorkoutImportTests.swift */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000008; };
 		AD0000000000000000000009 /* outbound-request.json in Resources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000009; };
 		AD000000000000000000000A /* ImportDiagnostics.swift */ = {isa = PBXBuildFile; fileRef = AC000000000000000000000A; };
+		AE0000000000000000000001 /* SavedPlanExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0000000000000000001001 /* SavedPlanExport.swift */; };
+		AE0000000000000000000002 /* SavedPlanExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0000000000000000001002 /* SavedPlanExportTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -149,6 +151,8 @@
 		AC0000000000000000000008 /* WorkoutImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptTests/WorkoutImportTests.swift; sourceTree = SOURCE_ROOT; };
 		AC0000000000000000000009 /* outbound-request.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = docs/import/outbound-request.json; sourceTree = SOURCE_ROOT; };
 		AC000000000000000000000A /* ImportDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Import/ImportDiagnostics.swift; sourceTree = SOURCE_ROOT; };
+		AE0000000000000000001001 /* SavedPlanExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlanExport.swift; sourceTree = "<group>"; };
+		AE0000000000000000001002 /* SavedPlanExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlanExportTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -254,6 +258,7 @@
 				AA000000000000000000200D /* WorkoutPlan.swift */,
 				AA000000000000000000200E /* WorkoutPlanValidator.swift */,
 				AA0000000000000000002014 /* SavedPlanRepository.swift */,
+				AE0000000000000000001001 /* SavedPlanExport.swift */,
 				AA0000000000000000002016 /* ManualWorkoutPlan.swift */,
 			);
 			path = Plans;
@@ -278,6 +283,7 @@
 				AA0000000000000000002012 /* TreadmillPresentationTests.swift */,
 				AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */,
 				AA0000000000000000002015 /* SavedPlanRepositoryTests.swift */,
+				AE0000000000000000001002 /* SavedPlanExportTests.swift */,
 				AA0000000000000000002018 /* PlansPresentationTests.swift */,
 			);
 			path = PacePromptTests;
@@ -593,6 +599,7 @@
 				AA000000000000000000100D /* WorkoutPlan.swift in Sources */,
 				AA000000000000000000100E /* WorkoutPlanValidator.swift in Sources */,
 				AA0000000000000000001014 /* SavedPlanRepository.swift in Sources */,
+				AE0000000000000000000001 /* SavedPlanExport.swift in Sources */,
 				AA0000000000000000001016 /* ManualWorkoutPlan.swift in Sources */,
 				AA0000000000000000001017 /* PlansViewModel.swift in Sources */,
 				AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */,
@@ -608,6 +615,7 @@
 				AA0000000000000000001012 /* TreadmillPresentationTests.swift in Sources */,
 				AA0000000000000000001013 /* WorkoutPlanValidatorTests.swift in Sources */,
 				AA0000000000000000001015 /* SavedPlanRepositoryTests.swift in Sources */,
+				AE0000000000000000000002 /* SavedPlanExportTests.swift in Sources */,
 				AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

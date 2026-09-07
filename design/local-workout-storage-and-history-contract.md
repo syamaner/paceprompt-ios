@@ -131,7 +131,7 @@ There is no migration in the first repository slice. A future migration requires
 
 ## Manual export
 
-Export is deferred to a later UI slice. The accepted boundary is:
+Export is implemented only through separately authorised UI slices. The accepted boundary is:
 
 - no automatic export, upload, transmission or background sharing;
 - a deliberate user action chooses selected saved plans, selected history records, or the complete local workout store;
@@ -142,6 +142,8 @@ Export is deferred to a later UI slice. The accepted boundary is:
 - export is a copy, not evidence of backup success and not a deletion action.
 
 If the store is locked, unreadable, corrupt or unsupported, normal structured export fails visibly rather than emitting an empty or partial JSON file. The separately labelled recovery export described above may share preserved raw bytes only after explicit preview and confirmation.
+
+Implementation status: issue #35 delivers only the selected-saved-plans subset of this boundary. Complete-store export, history export and recovery export remain deferred and separately bounded.
 
 ## Deferred implementation responsibilities
 

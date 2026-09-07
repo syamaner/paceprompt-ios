@@ -96,7 +96,7 @@ private final class PlansUITestRepository: SavedPlanRepositoryProtocol {
 
     init(scenario: String?) {
         self.scenario = scenario
-        records = ["edit-failure", "delete", "delete-failure"].contains(scenario)
+        records = ["edit-failure", "delete", "delete-failure", "export"].contains(scenario)
             ? [Self.seedRecord()]
             : []
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct PlansView: View {
     @ObservedObject var viewModel: PlansViewModel
@@ -47,6 +48,15 @@ struct PlansView: View {
         .navigationTitle("Plans")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
+                Button {
+                    viewModel.beginExport()
+                } label: {
+                    Label("Export plans", systemImage: "square.and.arrow.up")
+                }
+                .disabled(!viewModel.canBeginExport)
+                .accessibilityIdentifier("plans.export")
+            }
+            ToolbarItem(placement: .primaryAction) {
                 if let beginImport {
                     Button("Import workout", action: beginImport)
                         .disabled(!viewModel.canMutate)
@@ -70,6 +80,18 @@ struct PlansView: View {
             )
         ) {
             PlanEditorView(viewModel: viewModel, capabilities: capabilities)
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { viewModel.isExportPresented },
+                set: {
+                    if !$0, viewModel.isExportPresented {
+                        viewModel.cancelExport()
+                    }
+                }
+            )
+        ) {
+            SavedPlanExportFlowView(viewModel: viewModel)
         }
         .alert(
             deletionConfirmationTitle,
@@ -130,6 +152,14 @@ struct PlansView: View {
                 }
                 .accessibilityIdentifier("plans.deletion-error")
             }
+            if let exportError = viewModel.exportError, !viewModel.isExportPresented {
+                Section("Export cleanup failed") {
+                    ValidationIssueRow(message: exportError)
+                    Button("Dismiss") { viewModel.dismissExportError() }
+                        .accessibilityIdentifier("plans.dismiss-export-error")
+                }
+                .accessibilityIdentifier("plans.export-error")
+            }
             Section("Saved plans") {
                 ForEach(records, id: \.id) { record in
                     Button {
@@ -175,6 +205,146 @@ struct PlansView: View {
                 .accessibilityIdentifier("plans.retry")
         }
     }
+}
+
+private struct SavedPlanExportFlowView: View {
+    @ObservedObject var viewModel: PlansViewModel
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let preview = viewModel.exportPreview {
+                    exportPreview(preview)
+                } else {
+                    exportSelection
+                }
+            }
+            .navigationTitle(viewModel.exportPreview == nil ? "Export saved plans" : "Review export")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { viewModel.cancelExport() }
+                        .accessibilityIdentifier("export.cancel")
+                }
+            }
+        }
+        .interactiveDismissDisabled()
+        .sheet(item: shareArtifactBinding) { artifact in
+            SavedPlanActivityView(url: artifact.url) {
+                viewModel.completeSharing()
+            }
+        }
+    }
+
+    private var shareArtifactBinding: Binding<SavedPlanExportArtifact?> {
+        Binding(
+            get: { viewModel.shareArtifact },
+            set: { if $0 == nil, viewModel.shareArtifact != nil { viewModel.completeSharing() } }
+        )
+    }
+
+    private var exportSelection: some View {
+        Form {
+            Section("Choose plans") {
+                ForEach(viewModel.records, id: \.id) { record in
+                    Button {
+                        viewModel.toggleExportSelection(record)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(record.plan.suggestedName)
+                                    .foregroundStyle(.primary)
+                                Text(record.plan.activity.displayName)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(
+                                systemName: viewModel.selectedExportRecordIDs.contains(record.id)
+                                    ? "checkmark.circle.fill"
+                                    : "circle"
+                            )
+                            .accessibilityHidden(true)
+                        }
+                    }
+                    .accessibilityLabel(
+                        "\(record.plan.suggestedName), \(viewModel.selectedExportRecordIDs.contains(record.id) ? "selected" : "not selected")"
+                    )
+                    .accessibilityIdentifier("export.select.\(record.id.uuidString)")
+                }
+            }
+
+            exportErrorSection
+
+            Section {
+                Button("Review exact export") { viewModel.reviewExport() }
+                    .frame(maxWidth: .infinity)
+                    .disabled(!viewModel.canPreviewExport)
+                    .accessibilityIdentifier("export.review")
+            } footer: {
+                Text("No file is created until you review these choices and separately choose Share.")
+            }
+        }
+    }
+
+    private func exportPreview(_ preview: SavedPlanExportPreview) -> some View {
+        Form {
+            Section("Exact export") {
+                LabeledContent("Filename", value: preview.fileName)
+                LabeledContent("Category", value: preview.category)
+                LabeledContent("Records", value: preview.recordCount.formatted())
+            }
+
+            Section("Included fields") {
+                ForEach(preview.includedFields, id: \.self) { field in
+                    Text(field)
+                }
+            }
+
+            Section("Selected plans") {
+                ForEach(preview.records, id: \.id) { record in
+                    Text(record.plan.suggestedName)
+                }
+            }
+
+            exportErrorSection
+
+            Section {
+                Button("Back to selection") { viewModel.returnToExportSelection() }
+                    .accessibilityIdentifier("export.back")
+                Button("Share JSON copy") { viewModel.prepareExportForSharing() }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("export.share")
+            } footer: {
+                Text("Sharing creates a temporary protected copy. PacePrompt removes it when the share sheet finishes or is cancelled. Your saved plans are not changed.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var exportErrorSection: some View {
+        if let exportError = viewModel.exportError {
+            Section("Export failed") {
+                ValidationIssueRow(message: exportError)
+            }
+            .accessibilityIdentifier("export.error")
+        }
+    }
+}
+
+private struct SavedPlanActivityView: UIViewControllerRepresentable {
+    let url: URL
+    let completion: @MainActor () -> Void
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, _, _, _ in
+            Task { @MainActor in completion() }
+        }
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 private struct SavedPlanRow: View {

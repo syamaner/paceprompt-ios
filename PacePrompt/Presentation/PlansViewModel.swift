@@ -12,16 +12,27 @@ final class PlansViewModel: ObservableObject {
     @Published private(set) var saveError: String?
     @Published private(set) var pendingDeletion: SavedPlanRecord?
     @Published private(set) var deletionError: String?
+    @Published private(set) var isExportPresented = false
+    @Published private(set) var selectedExportRecordIDs: Set<UUID> = []
+    @Published private(set) var exportPreview: SavedPlanExportPreview?
+    @Published private(set) var shareArtifact: SavedPlanExportArtifact?
+    @Published private(set) var exportError: String?
 
     private let repository: any SavedPlanRepositoryProtocol
+    private let exporter: any SavedPlanExporting
     private let makeNewDraft: () -> ManualWorkoutDraft
+    private let now: () -> Date
 
     init(
         repository: any SavedPlanRepositoryProtocol = SavedPlanRepository(),
-        makeNewDraft: @escaping () -> ManualWorkoutDraft = { .empty }
+        exporter: any SavedPlanExporting = SavedPlanExporter(),
+        makeNewDraft: @escaping () -> ManualWorkoutDraft = { .empty },
+        now: @escaping () -> Date = Date.init
     ) {
         self.repository = repository
+        self.exporter = exporter
         self.makeNewDraft = makeNewDraft
+        self.now = now
         repositoryStatus = repository.list()
     }
 
@@ -46,6 +57,18 @@ final class PlansViewModel: ObservableObject {
     }
 
     var isEditorPresented: Bool { draft != nil }
+
+    var canBeginExport: Bool {
+        guard repositoryStatus.staging == .absent,
+              case let .available(records) = repositoryStatus.canonical else {
+            return false
+        }
+        return !records.isEmpty
+    }
+
+    var canPreviewExport: Bool {
+        isExportPresented && !selectedExportRecordIDs.isEmpty
+    }
 
     func reload() {
         repositoryStatus = repository.list()
@@ -95,6 +118,106 @@ final class PlansViewModel: ObservableObject {
 
     func dismissDeletionError() {
         deletionError = nil
+    }
+
+    func beginExport() {
+        guard canBeginExport else { return }
+        isExportPresented = true
+        selectedExportRecordIDs = []
+        exportPreview = nil
+        shareArtifact = nil
+        exportError = nil
+    }
+
+    func toggleExportSelection(_ record: SavedPlanRecord) {
+        guard isExportPresented,
+              exportPreview == nil,
+              records.contains(where: { $0.id == record.id }) else {
+            return
+        }
+        if selectedExportRecordIDs.contains(record.id) {
+            selectedExportRecordIDs.remove(record.id)
+        } else {
+            selectedExportRecordIDs.insert(record.id)
+        }
+        exportError = nil
+    }
+
+    func reviewExport() {
+        exportError = nil
+        guard canPreviewExport,
+              repositoryStatus.staging == .absent,
+              case let .available(currentRecords) = repositoryStatus.canonical else {
+            exportError = "Saved plans are not currently available for structured export. No file was created."
+            return
+        }
+
+        let selectedRecords = currentRecords.filter { selectedExportRecordIDs.contains($0.id) }
+        guard selectedRecords.count == selectedExportRecordIDs.count else {
+            exportError = "A selected plan is no longer available. Review the current saved plans and select them again. No file was created."
+            return
+        }
+
+        exportPreview = SavedPlanExportPreview(
+            createdAt: now(),
+            fileName: SavedPlanExportSchema.fileName,
+            records: selectedRecords
+        )
+    }
+
+    func returnToExportSelection() {
+        exportPreview = nil
+        exportError = nil
+    }
+
+    func prepareExportForSharing() {
+        exportError = nil
+        guard let exportPreview else { return }
+
+        let latestStatus = repository.list()
+        repositoryStatus = latestStatus
+        guard latestStatus.staging == .absent,
+              case let .available(currentRecords) = latestStatus.canonical,
+              currentRecords.filter({ selectedExportRecordIDs.contains($0.id) }) == exportPreview.records else {
+            self.exportPreview = nil
+            exportError = "Saved plans changed or became unavailable after preview. Review the current records again. No file was created."
+            return
+        }
+
+        do {
+            shareArtifact = try exporter.prepare(exportPreview)
+        } catch {
+            exportError = Self.exportMessage(for: error)
+        }
+    }
+
+    func completeSharing() {
+        guard let shareArtifact else { return }
+        self.shareArtifact = nil
+        do {
+            try exporter.cleanup(shareArtifact)
+            clearExportFlow()
+        } catch {
+            clearExportFlow(preservingError: Self.exportMessage(for: error))
+        }
+    }
+
+    func cancelExport() {
+        guard let shareArtifact else {
+            clearExportFlow()
+            return
+        }
+        self.shareArtifact = nil
+        do {
+            try exporter.cleanup(shareArtifact)
+            clearExportFlow()
+        } catch {
+            clearExportFlow(preservingError: Self.exportMessage(for: error))
+        }
+    }
+
+    func dismissExportError() {
+        exportError = nil
     }
 
     func addStep() {
@@ -210,6 +333,14 @@ final class PlansViewModel: ObservableObject {
         clearValidationResults()
     }
 
+    private func clearExportFlow(preservingError error: String? = nil) {
+        isExportPresented = false
+        selectedExportRecordIDs = []
+        exportPreview = nil
+        shareArtifact = nil
+        exportError = error
+    }
+
     private static func message(for error: Error, editing: Bool) -> String {
         guard let failure = error as? SavedPlanMutationFailure else {
             return "The plan could not be \(editing ? "updated" : "saved"). Existing plans were left unchanged. Try again."
@@ -235,6 +366,28 @@ final class PlansViewModel: ObservableObject {
             return "Deletion was not confirmed because saved-plan storage is not writable. No plan was removed from this list. Resolve the storage issue and retry."
         case let .writeFailed(stage):
             return "Deletion was not confirmed during \(stage.displayName). The existing plan remains listed. Try again."
+        }
+    }
+
+    private static func exportMessage(for error: Error) -> String {
+        guard let failure = error as? SavedPlanExportFailure else {
+            return "The export file could not be prepared. Saved plans were left unchanged. Try again."
+        }
+        switch failure {
+        case .noRecords:
+            return "Choose at least one saved plan before exporting. No file was created."
+        case .encoding:
+            return "The selected plans could not be encoded. Saved plans were left unchanged and no file was shared."
+        case .directoryPreparation:
+            return "Protected temporary storage could not be prepared. Saved plans were left unchanged and no file was shared."
+        case .previousArtifactCleanup:
+            return "A previous temporary export could not be removed, so it was not replaced or shared."
+        case .protectedWrite:
+            return "The export could not be written to protected temporary storage. Saved plans were left unchanged."
+        case .fileProtection:
+            return "Complete file protection could not be verified, so the temporary export was not shared."
+        case .cleanup:
+            return "The temporary export could not be removed after sharing. Retry export cleanup before creating another copy."
         }
     }
 }
