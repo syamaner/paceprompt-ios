@@ -51,6 +51,25 @@ final class PlansViewModel: ObservableObject {
 
     var isEditorPresented: Bool { draft != nil }
 
+    var editorPresentation: ManualPlanEditorPresentation? {
+        guard let draft else { return nil }
+        return ManualPlanEditorPresentation(
+            draft: draft,
+            editing: editingRecordID != nil,
+            inputIssues: inputIssues,
+            validationIssues: validationIssues
+        )
+    }
+
+    var reviewPresentation: ManualPlanReviewPresentation? {
+        guard let preview else { return nil }
+        return ManualPlanReviewPresentation(
+            preview: preview,
+            editing: editingRecordID != nil,
+            canConfirm: canMutate
+        )
+    }
+
     var canBeginExport: Bool {
         libraryPresentation.canExport
     }

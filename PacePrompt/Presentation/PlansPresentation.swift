@@ -68,6 +68,271 @@ struct PlansDeletionPresentation: Equatable {
     }
 }
 
+enum ManualPlanProblemKind: Equatable {
+    case input
+    case validation(WorkoutPlanValidationIssue.Code)
+}
+
+enum ManualPlanStepField: String, Hashable {
+    case kind
+    case label
+    case duration
+    case speed
+    case inclination
+
+    var displayName: String {
+        switch self {
+        case .kind: "type"
+        case .label: "label"
+        case .duration: "duration"
+        case .speed: "speed"
+        case .inclination: "inclination"
+        }
+    }
+}
+
+struct ManualPlanIssuePresentation: Equatable {
+    let kind: ManualPlanProblemKind
+    let path: String
+    let context: String
+    let message: String
+    let stepIndex: Int?
+    let field: ManualPlanStepField?
+
+    init(input issue: ManualWorkoutInputIssue) {
+        self.init(kind: .input, path: issue.path, message: issue.message)
+    }
+
+    init(validation issue: WorkoutPlanValidationIssue) {
+        self.init(kind: .validation(issue.code), path: issue.path, message: issue.message)
+    }
+
+    private init(kind: ManualPlanProblemKind, path: String, message: String) {
+        self.kind = kind
+        self.path = path
+        self.message = message
+
+        let location = Self.location(for: path)
+        stepIndex = location.stepIndex
+        field = location.field
+        context = Self.context(for: path, stepIndex: location.stepIndex, field: location.field)
+    }
+
+    private static func location(for path: String) -> (stepIndex: Int?, field: ManualPlanStepField?) {
+        guard path.hasPrefix("steps["),
+              let closingBracket = path.firstIndex(of: "]"),
+              let index = Int(path[path.index(path.startIndex, offsetBy: 6)..<closingBracket]) else {
+            return (nil, nil)
+        }
+
+        let field: ManualPlanStepField?
+        if path.hasSuffix(".kind") {
+            field = .kind
+        } else if path.hasSuffix(".label") {
+            field = .label
+        } else if path.hasSuffix(".duration.value") {
+            field = .duration
+        } else if path.hasSuffix(".targetSpeed.value") {
+            field = .speed
+        } else if path.hasSuffix(".targetInclination.value") {
+            field = .inclination
+        } else {
+            field = nil
+        }
+        return (index, field)
+    }
+
+    private static func context(
+        for path: String,
+        stepIndex: Int?,
+        field: ManualPlanStepField?
+    ) -> String {
+        if let stepIndex {
+            let order = String(format: "%02d", stepIndex + 1)
+            if let field {
+                return "Step \(order) · \(field.displayName.capitalized)"
+            }
+            return "Step \(order)"
+        }
+        if path == "suggestedName" { return "Plan name" }
+        if path == "steps" { return "Ordered steps" }
+        if path.hasPrefix("capabilities.") { return "Capability snapshot" }
+        if path == "schemaVersion" { return "Plan format" }
+        return "Plan"
+    }
+}
+
+struct ManualPlanEditorStepPresentation: Equatable, Identifiable {
+    let id: UUID
+    let index: Int
+    let order: String
+    let kind: WorkoutStepKind
+    let kindTitle: String
+    let label: String
+    let duration: String
+    let speed: String
+    let inclination: String
+    let problemFields: [ManualPlanStepField]
+    let hasProblem: Bool
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+
+    var problemSummary: String? {
+        guard !problemFields.isEmpty else { return hasProblem ? "Step needs attention" : nil }
+        return "Needs attention: \(problemFields.map(\.displayName).joined(separator: ", "))"
+    }
+
+    var accessibilityValue: String {
+        "\(kindTitle), \(label), \(duration) seconds, \(speed) kilometres per hour, \(inclination) percent"
+    }
+}
+
+struct ManualPlanEditorPresentation: Equatable {
+    let title: String
+    let activity: String
+    let orderedStepCount: String
+    let steps: [ManualPlanEditorStepPresentation]
+    let issues: [ManualPlanIssuePresentation]
+    let planNameHasProblem: Bool
+    let reviewActionEnabled: Bool
+    let reviewFooter: String
+
+    init(
+        draft: ManualWorkoutDraft,
+        editing: Bool,
+        inputIssues: [ManualWorkoutInputIssue],
+        validationIssues: [WorkoutPlanValidationIssue]
+    ) {
+        title = editing ? "Edit plan" : "New plan"
+        activity = draft.activity.displayName
+        orderedStepCount = "Steps · \(draft.steps.count) ordered"
+        let mappedIssues = inputIssues.map(ManualPlanIssuePresentation.init(input:))
+            + validationIssues.map(ManualPlanIssuePresentation.init(validation:))
+        issues = mappedIssues
+        planNameHasProblem = mappedIssues.contains { $0.path == "suggestedName" }
+        reviewActionEnabled = mappedIssues.isEmpty
+        reviewFooter = "Review validates the whole plan against the currently known capability snapshot. It does not save, contact or control the treadmill."
+
+        steps = draft.steps.enumerated().map { index, step in
+            let stepIssues = mappedIssues.filter { $0.stepIndex == index }
+            let problemFields = Array(Set(stepIssues.compactMap(\.field))).sorted {
+                Self.fieldOrder($0) < Self.fieldOrder($1)
+            }
+            return ManualPlanEditorStepPresentation(
+                id: step.id,
+                index: index,
+                order: String(format: "%02d", index + 1),
+                kind: step.kind,
+                kindTitle: step.kind.displayName,
+                label: step.label,
+                duration: step.durationSeconds,
+                speed: step.speedKilometresPerHour,
+                inclination: step.inclinationPercent,
+                problemFields: problemFields,
+                hasProblem: !stepIssues.isEmpty,
+                canMoveUp: index > 0,
+                canMoveDown: index < draft.steps.count - 1
+            )
+        }
+    }
+
+    private static func fieldOrder(_ field: ManualPlanStepField) -> Int {
+        switch field {
+        case .kind: 0
+        case .label: 1
+        case .duration: 2
+        case .speed: 3
+        case .inclination: 4
+        }
+    }
+}
+
+struct ManualPlanReviewStepPresentation: Equatable, Identifiable {
+    let id: Int
+    let order: String
+    let kind: WorkoutStepKind
+    let kindTitle: String
+    let label: String
+    let duration: String
+    let exactDuration: String
+    let speed: String
+    let inclination: String
+
+    var title: String {
+        label.isEmpty ? "\(order) · \(kindTitle)" : "\(order) · \(kindTitle) · \(label)"
+    }
+
+    var targets: String {
+        "\(speed) km/h · \(inclination) %"
+    }
+
+    var accessibilityValue: String {
+        "\(kindTitle), \(label), \(exactDuration), \(speed) kilometres per hour, \(inclination) percent"
+    }
+}
+
+struct ManualPlanReviewPresentation: Equatable {
+    let name: String
+    let activity: String
+    let activitySymbol: String
+    let totalDuration: String
+    let estimatedDistance: String
+    let stepCount: String
+    let steps: [ManualPlanReviewStepPresentation]
+    let confirmationTitle: String
+    let confirmationEnabled: Bool
+    let confirmationFooter: String
+
+    init(
+        preview: WorkoutPlanPreview,
+        editing: Bool,
+        canConfirm: Bool,
+        locale: Locale = .autoupdatingCurrent
+    ) {
+        name = preview.plan.suggestedName
+        activity = preview.plan.activity.displayName
+        activitySymbol = preview.plan.activity == .indoorWalking ? "figure.walk" : "figure.run"
+        totalDuration = manualPlanDurationText(
+            seconds: NSDecimalNumber(decimal: preview.totalDurationSeconds).int64Value
+        )
+        estimatedDistance = "\(PlanValueFormatter.estimatedDistanceText(preview.estimatedDistanceKilometres, locale: locale)) km"
+        stepCount = preview.plan.steps.count.formatted(.number.locale(locale))
+        confirmationTitle = editing ? "Confirm and update" : "Confirm and save"
+        confirmationEnabled = canConfirm
+        confirmationFooter = "Validated against the currently known capability snapshot. Review and confirmation do not contact or control the treadmill. Only confirmation writes to local storage."
+        steps = preview.plan.steps.enumerated().map { index, step in
+            ManualPlanReviewStepPresentation(
+                id: index,
+                order: String(format: "%02d", index + 1),
+                kind: step.kind,
+                kindTitle: step.kind.displayName,
+                label: step.label,
+                duration: manualPlanDurationText(seconds: Int64(step.duration.value)),
+                exactDuration: "\(step.duration.value) seconds",
+                speed: manualPlanTargetText(step.targetSpeed.value, locale: locale),
+                inclination: manualPlanTargetText(step.targetInclination.value, locale: locale)
+            )
+        }
+    }
+
+}
+
+private func manualPlanDurationText(seconds: Int64) -> String {
+    let hours = seconds / 3_600
+    let minutes = seconds % 3_600 / 60
+    let remainingSeconds = seconds % 60
+    if hours > 0 {
+        return String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
+    }
+    return String(format: "%d:%02d", minutes, remainingSeconds)
+}
+
+private func manualPlanTargetText(_ value: Decimal, locale: Locale) -> String {
+    let text = PlanValueFormatter.localizedText(value, locale: locale)
+    let separator = locale.decimalSeparator ?? "."
+    return text.contains(separator) ? text : "\(text)\(separator)0"
+}
+
 enum PlansLibraryContent: Equatable {
     case empty
     case populated([PlansPlanRowPresentation])
@@ -208,5 +473,29 @@ private extension SavedPlanCanonicalState {
     var hasRecords: Bool {
         guard case let .available(records) = self else { return false }
         return !records.isEmpty
+    }
+}
+
+extension WorkoutActivity {
+    static var allCases: [WorkoutActivity] { [.indoorWalking, .indoorRunning] }
+
+    var displayName: String {
+        switch self {
+        case .indoorWalking: "Indoor walking"
+        case .indoorRunning: "Indoor running"
+        }
+    }
+}
+
+extension WorkoutStepKind {
+    static var allCases: [WorkoutStepKind] { [.warmUp, .interval, .recovery, .coolDown] }
+
+    var displayName: String {
+        switch self {
+        case .warmUp: "Warm-up"
+        case .interval: "Interval"
+        case .recovery: "Recovery"
+        case .coolDown: "Cool-down"
+        }
     }
 }

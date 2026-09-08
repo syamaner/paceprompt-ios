@@ -149,6 +149,130 @@ final class PlansPresentationTests: XCTestCase {
         )
     }
 
+    func testEditorPresentationKeepsIdentityActivityOrderExactValuesAndProblemAssociation() {
+        let draft = validDraft()
+        let inputIssue = ManualWorkoutInputIssue(
+            path: "steps[0].duration.value",
+            message: "Enter step 1 duration as a whole number of seconds."
+        )
+        let validationIssue = WorkoutPlanValidationIssue(
+            code: .targetOutOfRange,
+            path: "steps[1].targetSpeed.value",
+            message: "Synthetic exact out-of-range speed."
+        )
+
+        let presentation = ManualPlanEditorPresentation(
+            draft: draft,
+            editing: true,
+            inputIssues: [inputIssue],
+            validationIssues: [validationIssue]
+        )
+
+        XCTAssertEqual(presentation.title, "Edit plan")
+        XCTAssertEqual(presentation.activity, "Indoor running")
+        XCTAssertEqual(presentation.orderedStepCount, "Steps · 3 ordered")
+        XCTAssertEqual(presentation.steps.map(\.id), draft.steps.map(\.id))
+        XCTAssertEqual(presentation.steps.map(\.order), ["01", "02", "03"])
+        XCTAssertEqual(presentation.steps.map(\.kindTitle), ["Warm-up", "Interval", "Cool-down"])
+        XCTAssertEqual(presentation.steps[1].label, "Effort")
+        XCTAssertEqual(presentation.steps[1].duration, "360")
+        XCTAssertEqual(presentation.steps[1].speed, "10.5")
+        XCTAssertEqual(presentation.steps[1].inclination, "1.0")
+        XCTAssertEqual(presentation.steps[0].problemFields, [.duration])
+        XCTAssertEqual(presentation.steps[1].problemFields, [.speed])
+        XCTAssertEqual(presentation.issues.map(\.context), ["Step 01 · Duration", "Step 02 · Speed"])
+        XCTAssertFalse(presentation.reviewActionEnabled)
+        XCTAssertTrue(presentation.reviewFooter.contains("currently known capability snapshot"))
+        XCTAssertTrue(presentation.reviewFooter.contains("does not save, contact or control"))
+    }
+
+    func testReviewPresentationUsesStableExactCanonicalFactsAndSeparateLabels() throws {
+        let plan = try ManualWorkoutDraftParser.parse(
+            validDraft(),
+            locale: Locale(identifier: "en_GB")
+        ).get()
+        let validated = try WorkoutPlanValidator.validate(plan, against: knownCapabilities()).get()
+        let preview = WorkoutPlanPreview(validatedPlan: validated)
+
+        let create = ManualPlanReviewPresentation(
+            preview: preview,
+            editing: false,
+            canConfirm: true,
+            locale: Locale(identifier: "en_GB")
+        )
+        let edit = ManualPlanReviewPresentation(
+            preview: preview,
+            editing: true,
+            canConfirm: false,
+            locale: Locale(identifier: "en_GB")
+        )
+
+        XCTAssertEqual(create.name, "Synthetic progression")
+        XCTAssertEqual(create.activity, "Indoor running")
+        XCTAssertEqual(create.totalDuration, "18:00")
+        XCTAssertEqual(create.estimatedDistance, "1.95 km")
+        XCTAssertEqual(create.stepCount, "3")
+        XCTAssertEqual(create.steps.map(\.order), ["01", "02", "03"])
+        XCTAssertEqual(create.steps[1].title, "02 · Interval · Effort")
+        XCTAssertEqual(create.steps[1].duration, "6:00")
+        XCTAssertEqual(create.steps[1].exactDuration, "360 seconds")
+        XCTAssertEqual(create.steps[1].speed, "10.5")
+        XCTAssertEqual(create.steps[1].inclination, "1.0")
+        XCTAssertEqual(create.confirmationTitle, "Confirm and save")
+        XCTAssertTrue(create.confirmationEnabled)
+        XCTAssertEqual(edit.confirmationTitle, "Confirm and update")
+        XCTAssertFalse(edit.confirmationEnabled)
+        XCTAssertTrue(create.confirmationFooter.contains("currently known capability snapshot"))
+        XCTAssertFalse(create.confirmationFooter.localizedCaseInsensitiveContains(" at "))
+    }
+
+    func testCapabilityProblemPresentationsPreserveUnknownUnsupportedMalformedAndRangeCodes() {
+        let issues: [WorkoutPlanValidationIssue] = [
+            .init(code: .capabilityUnknown, path: "capabilities.speed", message: "Unknown"),
+            .init(code: .targetUnsupported, path: "capabilities.speed", message: "Unsupported"),
+            .init(code: .invalidCapabilityRange, path: "capabilities.speed", message: "Malformed"),
+            .init(code: .targetOutOfRange, path: "steps[1].targetSpeed.value", message: "Out of range"),
+        ]
+
+        let presentation = ManualPlanEditorPresentation(
+            draft: validDraft(),
+            editing: false,
+            inputIssues: [],
+            validationIssues: issues
+        )
+
+        XCTAssertEqual(
+            presentation.issues.map(\.kind),
+            [
+                .validation(.capabilityUnknown),
+                .validation(.targetUnsupported),
+                .validation(.invalidCapabilityRange),
+                .validation(.targetOutOfRange),
+            ]
+        )
+        XCTAssertEqual(
+            presentation.issues.map(\.context),
+            ["Capability snapshot", "Capability snapshot", "Capability snapshot", "Step 02 · Speed"]
+        )
+    }
+
+    func testBackToEditPreservesTheExactDraftAndDoesNotMutateStorage() {
+        let repository = FakeSavedPlanRepository()
+        let model = PlansViewModel(repository: repository)
+        model.beginCreate()
+        let expected = validDraft()
+        model.draft = expected
+        model.validateForPreview(against: knownCapabilities(), locale: Locale(identifier: "en_GB"))
+        XCTAssertNotNil(model.preview)
+
+        model.returnToEditing()
+
+        XCTAssertEqual(model.draft, expected)
+        XCTAssertNil(model.preview)
+        XCTAssertTrue(repository.records.isEmpty)
+        XCTAssertEqual(repository.createCallCount, 0)
+    }
+
     func testLocalisedManualEntryBuildsExplicitDomainUnitsAndExactPreviewTotals() throws {
         let draft = validDraft(decimalSeparator: ",")
 

@@ -48,7 +48,7 @@ struct PlansUITestConfiguration {
     }
 
     fileprivate static func draft(for scenario: String?) -> ManualWorkoutDraft {
-        guard scenario == "valid" || scenario == "invalid" else { return .empty }
+        guard scenario == "valid" || scenario == "invalid" || scenario == "long" else { return .empty }
         var draft = ManualWorkoutDraft(
             suggestedName: "Synthetic progression",
             activity: .indoorRunning,
@@ -62,6 +62,39 @@ struct PlansUITestConfiguration {
         if scenario == "invalid" {
             draft.steps[1].speedKilometresPerHour = "20.1"
             draft.steps[1].inclinationPercent = "1.2"
+        }
+        if scenario == "long" {
+            var steps: [ManualWorkoutStepDraft] = [
+                .init(kind: .warmUp, label: "Long warm-up", durationSeconds: "300", speedKilometresPerHour: "5.0", inclinationPercent: "0.0")
+            ]
+            for repetition in 1...8 {
+                steps.append(
+                    .init(
+                        kind: .interval,
+                        label: "Effort \(repetition)",
+                        durationSeconds: "120",
+                        speedKilometresPerHour: "10.0",
+                        inclinationPercent: "1.0"
+                    )
+                )
+                steps.append(
+                    .init(
+                        kind: .recovery,
+                        label: "Recover \(repetition)",
+                        durationSeconds: "60",
+                        speedKilometresPerHour: "5.0",
+                        inclinationPercent: "0.0"
+                    )
+                )
+            }
+            steps.append(
+                .init(kind: .coolDown, label: "Long cool-down", durationSeconds: "300", speedKilometresPerHour: "4.0", inclinationPercent: "0.0")
+            )
+            draft = ManualWorkoutDraft(
+                suggestedName: "Synthetic long plan",
+                activity: .indoorRunning,
+                steps: steps
+            )
         }
         return draft
     }

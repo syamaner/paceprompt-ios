@@ -60,6 +60,65 @@ final class PlansFlowUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["Edit plan"].waitForExistence(timeout: 2))
         XCTAssertEqual(app.textFields["plan.name"].value as? String, "Synthetic progression")
+        XCTAssertTrue(app.buttons["plan.cancel"].exists)
+        XCTAssertTrue(app.buttons["plan.reorder"].exists)
+        XCTAssertEqual(app.textFields["plan.step.0.duration"].value as? String, "360 s")
+    }
+
+    func testNewPlanHierarchyActivityAndExactFieldEditing() {
+        launch(capabilities: "known", draft: "valid")
+        openCreate()
+
+        XCTAssertTrue(app.navigationBars["New plan"].exists)
+        XCTAssertTrue(app.buttons["plan.cancel"].exists)
+        XCTAssertTrue(app.buttons["Indoor running"].isSelected)
+        app.buttons["Indoor walking"].tap()
+        XCTAssertTrue(app.buttons["Indoor walking"].isSelected)
+
+        let speed = app.textFields["plan.step.0.speed"]
+        XCTAssertTrue(findByScrolling(speed))
+        XCTAssertEqual(speed.value as? String, "5.0 km/h")
+        replaceText(in: speed, with: "5.5")
+        XCTAssertEqual(speed.value as? String, "5.5 km/h")
+
+        let inclination = app.textFields["plan.step.0.inclination"]
+        XCTAssertEqual(inclination.value as? String, "0.0 %")
+        XCTAssertTrue(element("plan.step.0.card").exists)
+    }
+
+    func testAddDeleteAndReorderControlsKeepOrderedCardsExplicit() {
+        launch(capabilities: "known", draft: "valid")
+        openCreate()
+
+        app.buttons["plan.reorder"].tap()
+        let moveDown = app.buttons["plan.step.1.move-down"]
+        XCTAssertTrue(findByScrolling(moveDown))
+        moveDown.tap()
+        XCTAssertTrue(element("plan.step.1.card").waitForExistence(timeout: 2))
+        XCTAssertTrue((element("plan.step.1.card").value as? String)?.contains("Recovery") == true)
+
+        let delete = app.buttons["plan.step.1.delete"]
+        XCTAssertTrue(delete.exists)
+        delete.tap()
+        XCTAssertTrue(app.staticTexts["Steps · 3 ordered"].waitForExistence(timeout: 2))
+
+        tapWhenVisible(app.buttons["plan.add-step"])
+        XCTAssertTrue(app.staticTexts["Steps · 4 ordered"].waitForExistence(timeout: 2))
+        XCTAssertTrue(findByScrolling(app.textFields["plan.step.3.inclination"]))
+    }
+
+    func testLongPlanScrollsThroughEveryOrderedStepIntoExactReview() {
+        launch(capabilities: "known", draft: "long")
+        openCreate()
+
+        XCTAssertTrue(app.staticTexts["Steps · 18 ordered"].exists)
+        XCTAssertTrue(findByScrolling(element("plan.step.17.card"), attempts: 30))
+        XCTAssertTrue(app.textFields["plan.step.17.duration"].exists)
+        tapWhenVisible(app.buttons["plan.review"], attempts: 30)
+
+        XCTAssertTrue(app.navigationBars["Review"].waitForExistence(timeout: 2))
+        XCTAssertTrue(findByScrolling(element("plan.review.step.17"), attempts: 30))
+        XCTAssertTrue((element("plan.review.step.17").value as? String)?.contains("300 seconds") == true)
     }
 
     func testImportDisclosureCancellationThenExactPreviewAndSeparateSave() {
@@ -109,11 +168,13 @@ final class PlansFlowUITests: XCTestCase {
         }
         XCTAssertEqual(name.value as? String, "Synthetic progression revised")
         reviewPlan()
-        XCTAssertTrue(app.staticTexts["Complete plan"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["1. Warm-up: Prepare"].exists)
-        XCTAssertTrue(findByScrolling(app.staticTexts["Duration, 1260 seconds"]))
-        XCTAssertTrue(findByScrolling(app.staticTexts["Estimated distance, 2.2 km"]))
-        XCTAssertTrue(findByScrolling(app.staticTexts["4. Cool-down: Settle"]))
+        XCTAssertTrue(app.staticTexts["Synthetic progression revised"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["01 · Warm-up · Prepare"].exists)
+        XCTAssertTrue(app.staticTexts["21:00"].exists)
+        XCTAssertTrue(app.staticTexts["2.2 km"].exists)
+        XCTAssertTrue(findByScrolling(element("plan.review.step.3")))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "currently known capability snapshot")).firstMatch.exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "capability read at")).firstMatch.exists)
 
         tapWhenVisible(app.buttons["plan.confirm-save"])
 
@@ -142,6 +203,44 @@ final class PlansFlowUITests: XCTestCase {
             draft: "invalid",
             message: "Step 2 speed is 20.1 km/h. Enter a value from 0.5 to 20 km/h."
         )
+    }
+
+    func testValidationGuidanceIsGroupedAssociatedAndBlocksPreviewUntilEdited() {
+        launch(capabilities: "known", draft: "invalid")
+        openCreate()
+        reviewPlan(expectPreview: false)
+
+        XCTAssertTrue(element("plan.validation-errors").waitForExistence(timeout: 2))
+        XCTAssertTrue(findByScrolling(element("plan.validation.issue.0")))
+        XCTAssertTrue(element("plan.validation.issue.0").label.contains("Step 02 · Speed"))
+        XCTAssertTrue(findByScrolling(element("plan.validation.issue.1")))
+        XCTAssertTrue(element("plan.validation.issue.1").label.contains("Step 02 · Inclination"))
+        XCTAssertTrue(findByScrolling(app.staticTexts["Needs attention: speed, inclination"]))
+        let review = app.buttons["plan.review"]
+        XCTAssertTrue(findByScrolling(review))
+        XCTAssertFalse(review.isEnabled)
+        XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
+    }
+
+    func testBackToEditPreservesDraftAndEditUsesSeparateUpdateConfirmation() {
+        launch(capabilities: "known", draft: "valid", repository: "populated")
+        app.buttons["plans.record.00000000-0000-0000-0000-000000000010"].tap()
+        let name = app.textFields["plan.name"]
+        name.tap()
+        name.typeText(" revised")
+        if app.keyboards.buttons["Return"].exists {
+            app.keyboards.buttons["Return"].tap()
+        }
+        XCTAssertEqual(name.value as? String, "Synthetic progression revised")
+        reviewPlan()
+
+        XCTAssertTrue(app.buttons["plan.confirm-save"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.buttons["plan.confirm-save"].label, "Confirm and update")
+        app.buttons["plan.back-to-edit"].tap()
+
+        XCTAssertTrue(app.navigationBars["Edit plan"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.textFields["plan.name"].value as? String, "Synthetic progression revised")
+        XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
     }
 
     func testCancellationFromPreviewLeavesStorageEmpty() {
@@ -277,23 +376,36 @@ final class PlansFlowUITests: XCTestCase {
     private func reviewPlan(expectPreview: Bool = true) {
         tapWhenVisible(app.buttons["plan.review"])
         if expectPreview {
-            XCTAssertTrue(app.staticTexts["Complete plan"].waitForExistence(timeout: 2))
+            XCTAssertTrue(app.navigationBars["Review"].waitForExistence(timeout: 2))
         }
     }
 
-    private func tapWhenVisible(_ element: XCUIElement) {
-        for _ in 0..<8 where !element.isHittable {
+    private func tapWhenVisible(_ element: XCUIElement, attempts: Int = 8) {
+        for _ in 0..<attempts where !element.isHittable {
             app.swipeUp()
         }
         XCTAssertTrue(element.waitForExistence(timeout: 2))
         element.tap()
     }
 
-    private func findByScrolling(_ element: XCUIElement) -> Bool {
-        for _ in 0..<8 {
+    private func findByScrolling(_ element: XCUIElement, attempts: Int = 8) -> Bool {
+        for _ in 0..<attempts {
             if element.exists { return true }
             app.swipeUp()
         }
         return element.waitForExistence(timeout: 2)
+    }
+
+    private func element(_ identifier: String) -> XCUIElement {
+        app.descendants(matching: .any)[identifier]
+    }
+
+    private func replaceText(in field: XCUIElement, with value: String) {
+        field.tap()
+        field.press(forDuration: 1)
+        let selectAll = app.menuItems["Select All"]
+        XCTAssertTrue(selectAll.waitForExistence(timeout: 2))
+        selectAll.tap()
+        field.typeText(value)
     }
 }

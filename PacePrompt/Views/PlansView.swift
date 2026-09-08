@@ -466,17 +466,38 @@ private struct PlanEditorView: View {
         NavigationStack {
             Group {
                 if let preview = viewModel.preview {
-                    PlanPreviewView(viewModel: viewModel, preview: preview)
+                    ManualPlanReviewView(viewModel: viewModel, preview: preview)
                 } else {
                     PlanEntryView(viewModel: viewModel, capabilities: capabilities)
                 }
             }
-            .navigationTitle(viewModel.editingRecordID == nil ? "New plan" : "Edit plan")
+            .navigationTitle(
+                viewModel.preview == nil
+                    ? (viewModel.editorPresentation?.title ?? "Plan")
+                    : "Review"
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { viewModel.cancelEditor() }
-                        .accessibilityIdentifier("plan.cancel")
+                    if viewModel.preview == nil {
+                        Button("Cancel") { viewModel.cancelEditor() }
+                            .accessibilityIdentifier("plan.cancel")
+                    } else {
+                        Button {
+                            viewModel.returnToEditing()
+                        } label: {
+                            Label("Back to edit", systemImage: "chevron.backward")
+                        }
+                        .accessibilityHint("Returns to the unchanged manual plan draft without saving")
+                        .accessibilityIdentifier("plan.back-to-edit")
+                    }
+                }
+                if viewModel.preview != nil {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Cancel") { viewModel.cancelEditor() }
+                            .accessibilityHint("Closes the plan editor without saving")
+                            .accessibilityIdentifier("plan.cancel")
+                    }
                 }
             }
         }
@@ -487,6 +508,7 @@ private struct PlanEditorView: View {
 private struct PlanEntryView: View {
     @ObservedObject var viewModel: PlansViewModel
     let capabilities: WorkoutPlanCapabilities
+    @Environment(\.editMode) private var editMode
 
     private var draft: Binding<ManualWorkoutDraft> {
         Binding(
@@ -495,23 +517,81 @@ private struct PlanEntryView: View {
         )
     }
 
-    var body: some View {
-        Form {
-            Section("Workout") {
-                TextField("Plan name", text: draft.suggestedName)
-                    .textInputAutocapitalization(.sentences)
-                    .accessibilityIdentifier("plan.name")
-                Picker("Activity", selection: draft.activity) {
-                    ForEach(WorkoutActivity.allCases, id: \.self) { activity in
-                        Text(activity.displayName).tag(activity)
-                    }
-                }
-                .accessibilityIdentifier("plan.activity")
-            }
+    private var presentation: ManualPlanEditorPresentation {
+        viewModel.editorPresentation ?? ManualPlanEditorPresentation(
+            draft: .empty,
+            editing: false,
+            inputIssues: [],
+            validationIssues: []
+        )
+    }
 
-            Section("Ordered steps") {
+    private var isReordering: Bool {
+        editMode?.wrappedValue.isEditing == true
+    }
+
+    var body: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Plan name")
+                            .font(.caption.weight(.semibold))
+                            .textCase(.uppercase)
+                            .foregroundStyle(presentation.planNameHasProblem ? .red : .secondary)
+                        TextField("Plan name", text: draft.suggestedName)
+                            .font(.headline)
+                            .textInputAutocapitalization(.sentences)
+                            .accessibilityLabel("Plan name")
+                            .accessibilityHint("Enter a name for this manual plan")
+                            .accessibilityIdentifier("plan.name")
+                    }
+                    Divider()
+                    Picker("Indoor activity", selection: draft.activity) {
+                        ForEach(WorkoutActivity.allCases, id: \.self) { activity in
+                            Text(activity.displayName).tag(activity)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel("Indoor activity")
+                    .accessibilityValue(presentation.activity)
+                    .accessibilityHint("Choose indoor walking or indoor running")
+                    .accessibilityIdentifier("plan.activity")
+                }
+                .padding(16)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(
+                            presentation.planNameHasProblem ? Color.red : Color.secondary.opacity(0.2),
+                            lineWidth: 1
+                        )
+                }
+                .accessibilityElement(children: .contain)
+            }
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+
+            Section {
                 ForEach(Array(draft.wrappedValue.steps.indices), id: \.self) { index in
-                    StepEntryView(index: index, step: draft.steps[index])
+                    StepEntryView(
+                        presentation: presentation.steps[index],
+                        step: draft.steps[index],
+                        isReordering: isReordering,
+                        moveUp: {
+                            viewModel.moveSteps(from: IndexSet(integer: index), to: index - 1)
+                        },
+                        moveDown: {
+                            viewModel.moveSteps(from: IndexSet(integer: index), to: index + 2)
+                        },
+                        delete: {
+                            viewModel.deleteSteps(at: IndexSet(integer: index))
+                        }
+                    )
+                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
                 .onDelete(perform: viewModel.deleteSteps)
                 .onMove(perform: viewModel.moveSteps)
@@ -519,34 +599,95 @@ private struct PlanEntryView: View {
                 Button {
                     viewModel.addStep()
                 } label: {
-                    Label("Add step", systemImage: "plus.circle")
+                    Label("Add step", systemImage: "plus")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
+                .buttonStyle(.bordered)
+                .accessibilityHint("Adds a new ordered step without changing existing values")
                 .accessibilityIdentifier("plan.add-step")
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } header: {
+                HStack {
+                    Text(presentation.orderedStepCount)
+                    Spacer()
+                    Button(isReordering ? "Done" : "Reorder") {
+                        editMode?.wrappedValue = isReordering ? .inactive : .active
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .textCase(nil)
+                    .accessibilityHint(
+                        isReordering
+                            ? "Finishes reordering steps"
+                            : "Shows controls to move or delete ordered steps"
+                    )
+                    .accessibilityIdentifier("plan.reorder")
+                }
             }
 
-            if !viewModel.inputIssues.isEmpty || !viewModel.validationIssues.isEmpty {
-                Section("Fix before preview") {
-                    ForEach(Array(viewModel.inputIssues.enumerated()), id: \.offset) { _, issue in
-                        ValidationIssueRow(message: issue.message)
+            if !presentation.issues.isEmpty {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Fix before preview · \(presentation.issues.count)", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.bold))
+                            .textCase(.uppercase)
+                            .foregroundStyle(.red)
+                        ForEach(Array(presentation.issues.enumerated()), id: \.offset) { index, issue in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(issue.context)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.red)
+                                Text(issue.message)
+                                    .font(.subheadline)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("\(issue.context). \(issue.message)")
+                            .accessibilityIdentifier("plan.validation.issue.\(index)")
+                        }
+                        Text("Invalid values are rejected. PacePrompt never clamps, repairs or replaces a target for you.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    ForEach(Array(viewModel.validationIssues.enumerated()), id: \.offset) { _, issue in
-                        ValidationIssueRow(message: issue.message)
+                    .padding(16)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.red.opacity(0.8), lineWidth: 1)
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("plan.validation-errors")
                 }
-                .accessibilityIdentifier("plan.validation-errors")
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
 
             Section {
                 Button("Review exact plan") {
                     viewModel.validateForPreview(against: capabilities)
                 }
-                .frame(maxWidth: .infinity)
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .buttonStyle(.borderedProminent)
+                .disabled(!presentation.reviewActionEnabled)
+                .accessibilityHint("Validates the draft without saving or contacting the treadmill")
                 .accessibilityIdentifier("plan.review")
             } footer: {
-                Text("Review validates the complete plan against the treadmill capability state currently shown in Settings. It does not save anything.")
+                Text(presentation.reviewFooter)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
-        .toolbar { EditButton() }
+        .listStyle(.plain)
+        .scrollDismissesKeyboard(.interactively)
         .onChange(of: viewModel.draft) { _, _ in
             viewModel.draftDidChange()
         }
@@ -554,32 +695,207 @@ private struct PlanEntryView: View {
 }
 
 private struct StepEntryView: View {
-    let index: Int
+    let presentation: ManualPlanEditorStepPresentation
     @Binding var step: ManualWorkoutStepDraft
+    let isReordering: Bool
+    let moveUp: () -> Void
+    let moveDown: () -> Void
+    let delete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Step \(index + 1)")
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(presentation.order)
+                    .font(.caption.monospacedDigit().weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                Picker("Step \(presentation.order) type", selection: $step.kind) {
+                    ForEach(WorkoutStepKind.allCases, id: \.self) { kind in
+                        Text(kind.displayName).tag(kind)
+                    }
+                }
                 .font(.headline)
-            Picker("Type", selection: $step.kind) {
-                ForEach(WorkoutStepKind.allCases, id: \.self) { kind in
-                    Text(kind.displayName).tag(kind)
+                .pickerStyle(.menu)
+                .accessibilityLabel("Step \(presentation.index + 1) type")
+                .accessibilityValue(presentation.kindTitle)
+                .accessibilityHint("Choose warm-up, interval, recovery or cool-down")
+                .accessibilityIdentifier("plan.step.\(presentation.index).kind")
+                Spacer(minLength: 0)
+                Image(systemName: "line.3.horizontal")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+
+            TextField("Step label", text: $step.label)
+                .textInputAutocapitalization(.sentences)
+                .padding(10)
+                .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 9))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 9)
+                        .stroke(fieldBorder(.label), lineWidth: 1)
+                }
+                .accessibilityLabel("Step \(presentation.index + 1) label")
+                .accessibilityValue(presentation.label)
+                .accessibilityHint("Enter the exact label for this step")
+                .accessibilityIdentifier("plan.step.\(presentation.index).label")
+
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 10) {
+                    exactField(
+                        title: "Duration",
+                        unit: "s",
+                        value: $step.durationSeconds,
+                        field: .duration,
+                        keyboard: .numbersAndPunctuation
+                    )
+                    exactField(
+                        title: "Speed",
+                        unit: "km/h",
+                        value: $step.speedKilometresPerHour,
+                        field: .speed,
+                        keyboard: .decimalPad
+                    )
+                    exactField(
+                        title: "Inclination",
+                        unit: "%",
+                        value: $step.inclinationPercent,
+                        field: .inclination,
+                        keyboard: .numbersAndPunctuation
+                    )
+                }
+                VStack(spacing: 10) {
+                    exactField(
+                        title: "Duration",
+                        unit: "seconds",
+                        value: $step.durationSeconds,
+                        field: .duration,
+                        keyboard: .numbersAndPunctuation
+                    )
+                    exactField(
+                        title: "Speed",
+                        unit: "km/h",
+                        value: $step.speedKilometresPerHour,
+                        field: .speed,
+                        keyboard: .decimalPad
+                    )
+                    exactField(
+                        title: "Inclination",
+                        unit: "%",
+                        value: $step.inclinationPercent,
+                        field: .inclination,
+                        keyboard: .numbersAndPunctuation
+                    )
                 }
             }
-            .accessibilityIdentifier("plan.step.\(index).kind")
-            TextField("Label", text: $step.label)
-                .accessibilityIdentifier("plan.step.\(index).label")
-            TextField("Duration (seconds)", text: $step.durationSeconds)
-                .keyboardType(.numbersAndPunctuation)
-                .accessibilityIdentifier("plan.step.\(index).duration")
-            TextField("Speed (km/h)", text: $step.speedKilometresPerHour)
-                .keyboardType(.decimalPad)
-                .accessibilityIdentifier("plan.step.\(index).speed")
-            TextField("Inclination (%)", text: $step.inclinationPercent)
-                .keyboardType(.numbersAndPunctuation)
-                .accessibilityIdentifier("plan.step.\(index).inclination")
+
+            if let problemSummary = presentation.problemSummary {
+                Label(problemSummary, systemImage: "exclamationmark.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("plan.step.\(presentation.index).problem")
+            }
+
+            if isReordering {
+                HStack(spacing: 12) {
+                    Button(action: moveUp) {
+                        Label("Move up", systemImage: "arrow.up")
+                            .frame(minHeight: 32)
+                    }
+                    .disabled(!presentation.canMoveUp)
+                    .accessibilityLabel("Move step \(presentation.index + 1) up")
+                    .accessibilityHint("Moves this step one position earlier")
+                    .accessibilityIdentifier("plan.step.\(presentation.index).move-up")
+
+                    Button(action: moveDown) {
+                        Label("Move down", systemImage: "arrow.down")
+                            .frame(minHeight: 32)
+                    }
+                    .disabled(!presentation.canMoveDown)
+                    .accessibilityLabel("Move step \(presentation.index + 1) down")
+                    .accessibilityHint("Moves this step one position later")
+                    .accessibilityIdentifier("plan.step.\(presentation.index).move-down")
+
+                    Spacer(minLength: 0)
+
+                    Button(role: .destructive, action: delete) {
+                        Label("Delete", systemImage: "trash")
+                            .frame(minHeight: 32)
+                    }
+                    .accessibilityLabel("Delete step \(presentation.index + 1)")
+                    .accessibilityHint("Deletes this exact step from the draft")
+                    .accessibilityIdentifier("plan.step.\(presentation.index).delete")
+                }
+                .buttonStyle(.bordered)
+            }
         }
-        .padding(.vertical, 4)
+        .padding(14)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(
+                    presentation.hasProblem ? Color.red : Color.secondary.opacity(0.2),
+                    lineWidth: 1
+                )
+        }
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(accent)
+                .frame(width: 3)
+                .padding(.vertical, 12)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Step \(presentation.index + 1), \(presentation.kindTitle)")
+        .accessibilityValue(presentation.accessibilityValue)
+        .accessibilityIdentifier("plan.step.\(presentation.index).card")
+    }
+
+    @ViewBuilder
+    private func exactField(
+        title: String,
+        unit: String,
+        value: Binding<String>,
+        field: ManualPlanStepField,
+        keyboard: UIKeyboardType
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(presentation.problemFields.contains(field) ? .red : .secondary)
+            HStack(spacing: 4) {
+                TextField(title, text: value)
+                    .keyboardType(keyboard)
+                    .textFieldStyle(.plain)
+                    .font(.body.monospacedDigit())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("Step \(presentation.index + 1) \(title.lowercased())")
+                    .accessibilityValue("\(value.wrappedValue) \(unit)")
+                    .accessibilityHint("Enter the exact \(title.lowercased()) value")
+                    .accessibilityIdentifier("plan.step.\(presentation.index).\(field.rawValue)")
+                Text(unit)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+            }
+            .padding(9)
+            .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 9))
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .stroke(fieldBorder(field), lineWidth: 1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func fieldBorder(_ field: ManualPlanStepField) -> Color {
+        presentation.problemFields.contains(field) ? .red : .clear
+    }
+
+    private var accent: Color {
+        switch presentation.kind {
+        case .warmUp, .coolDown: .secondary
+        case .interval: .orange
+        case .recovery: .cyan
+        }
     }
 }
 
@@ -589,6 +905,167 @@ private struct ValidationIssueRow: View {
     var body: some View {
         Label(message, systemImage: "exclamationmark.circle")
             .foregroundStyle(.red)
+    }
+}
+
+private struct ManualPlanReviewView: View {
+    @ObservedObject var viewModel: PlansViewModel
+    let preview: WorkoutPlanPreview
+
+    private var presentation: ManualPlanReviewPresentation {
+        viewModel.reviewPresentation ?? ManualPlanReviewPresentation(
+            preview: preview,
+            editing: viewModel.editingRecordID != nil,
+            canConfirm: viewModel.canMutate
+        )
+    }
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(presentation.name)
+                        .font(.largeTitle.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("plan.review.name")
+                    Label(presentation.activity, systemImage: presentation.activitySymbol)
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.secondary.opacity(0.14), in: Capsule())
+                        .accessibilityIdentifier("plan.review.activity")
+                }
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 8) {
+                        reviewFact(title: "Duration", value: presentation.totalDuration, identifier: "duration")
+                        reviewFact(title: "Estimated distance", value: presentation.estimatedDistance, identifier: "distance")
+                        reviewFact(title: "Steps", value: presentation.stepCount, identifier: "steps")
+                    }
+                    VStack(spacing: 8) {
+                        reviewFact(title: "Duration", value: presentation.totalDuration, identifier: "duration")
+                        reviewFact(title: "Estimated distance", value: presentation.estimatedDistance, identifier: "distance")
+                        reviewFact(title: "Steps", value: presentation.stepCount, identifier: "steps")
+                    }
+                }
+
+                Text("Exact plan · every step")
+                    .font(.caption.weight(.semibold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(.secondary)
+
+                ForEach(presentation.steps) { step in
+                    ManualPlanReviewStepCard(step: step)
+                }
+
+                if let saveError = viewModel.saveError {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Save failed", systemImage: "exclamationmark.triangle.fill")
+                            .font(.headline)
+                            .foregroundStyle(.red)
+                        Text(saveError)
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(16)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.red.opacity(0.8), lineWidth: 1)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("plan.save-error")
+                }
+
+                Button(presentation.confirmationTitle) {
+                    viewModel.confirmSave()
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .buttonStyle(.borderedProminent)
+                .disabled(!presentation.confirmationEnabled)
+                .accessibilityHint("Writes this exact validated plan to local storage")
+                .accessibilityIdentifier("plan.confirm-save")
+
+                Text(presentation.confirmationFooter)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("plan.review.capability-note")
+            }
+            .padding(16)
+        }
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private func reviewFact(title: String, value: String, identifier: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(value)
+                .font(.title3.monospacedDigit().weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("plan.review.\(identifier)")
+    }
+}
+
+private struct ManualPlanReviewStepCard: View {
+    let step: ManualPlanReviewStepPresentation
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(accent)
+                .frame(width: 3)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(step.title)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(step.targets)
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(step.exactDuration)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Text(step.duration)
+                .font(.headline.monospacedDigit())
+                .fixedSize()
+        }
+        .padding(14)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Step \(step.id + 1), \(step.title)")
+        .accessibilityValue(step.accessibilityValue)
+        .accessibilityIdentifier("plan.review.step.\(step.id)")
+    }
+
+    private var accent: Color {
+        switch step.kind {
+        case .warmUp, .coolDown: .secondary
+        case .interval: .orange
+        case .recovery: .cyan
+        }
     }
 }
 
@@ -649,30 +1126,6 @@ struct PlanPreviewView: View {
             } footer: {
                 Text("Only this separate confirmation action writes the validated plan to local storage.")
             }
-        }
-    }
-}
-
-private extension WorkoutActivity {
-    static var allCases: [WorkoutActivity] { [.indoorWalking, .indoorRunning] }
-
-    var displayName: String {
-        switch self {
-        case .indoorWalking: "Indoor walking"
-        case .indoorRunning: "Indoor running"
-        }
-    }
-}
-
-private extension WorkoutStepKind {
-    static var allCases: [WorkoutStepKind] { [.warmUp, .interval, .recovery, .coolDown] }
-
-    var displayName: String {
-        switch self {
-        case .warmUp: "Warm-up"
-        case .interval: "Interval"
-        case .recovery: "Recovery"
-        case .coolDown: "Cool-down"
         }
     }
 }
