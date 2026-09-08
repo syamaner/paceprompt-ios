@@ -71,6 +71,21 @@ Requirements used for this slice:
 - iPhoneOS and iPhoneSimulator SDK 26.5
 - iOS 17 minimum deployment target for the production app
 - iOS 26 minimum deployment target for the developer-only Foundation Models evaluation app
+- `uv` with Python 3.13 support for the offline host-evaluation tests
+
+Before merging any change, run the complete local validation entry point:
+
+```sh
+scripts/validate_local.sh
+```
+
+It runs every checked-in offline Python test, all production unit and UI tests
+with coverage, the unsigned Release simulator build, static analysis and all
+developer-only evaluation tests. It makes no model-provider call. By default it
+uses an available iPhone 17 Pro simulator on iOS 26.5 and retains isolated build,
+result-bundle and coverage evidence under a new temporary directory. Set
+`PACEPROMPT_SIMULATOR_DESTINATION` or `PACEPROMPT_VALIDATION_ROOT` to use another
+listed simulator or an explicit evidence directory.
 
 List the available simulator destinations:
 
@@ -122,11 +137,22 @@ Use another listed iPhone simulator if that model is not installed.
 
 ## Continuous integration and coverage
 
-GitHub Actions runs the production unit and UI tests, a Release simulator build,
-static analysis, the deterministic corpus checks and the developer-only evaluation
-tests on the standard macOS 26 runner with Xcode 26.6. All Xcode builds are unsigned,
-and the evaluation gates use only checked-in synthetic fixtures; CI has no provider
-credential and makes no model-provider call.
+Temporary issue #69 policy: ordinary pull requests and pushes to `main` run only
+the fast repository checks. Complete validation is required locally through
+`scripts/validate_local.sh`; the pull-request template records its exact evidence.
+This avoids waiting for the slow hosted Xcode suite on every merge without skipping
+or weakening any local test. Local evidence is not independent hosted evidence, so
+this policy is explicit and reversible rather than a claim that the two environments
+are equivalent.
+
+The Actions **Run workflow** control retains the complete hosted production unit/UI
+suite, Release simulator build, static analysis, deterministic corpus checks,
+developer-only evaluation tests and informational Codecov upload on the standard
+macOS 26 runner with Xcode 26.6. Use that manual path whenever hosted confirmation
+is warranted and restore its pull-request/main triggers when the high-throughput
+period ends. All Xcode builds are unsigned, and evaluation gates use only checked-in
+synthetic fixtures; neither local nor hosted validation has a provider credential or
+makes a model-provider call.
 
 The coverage artifact is exported from the production `PacePrompt.app` binary only.
 Test targets, evaluation and design/documentation files, and DEBUG-only UI-test
