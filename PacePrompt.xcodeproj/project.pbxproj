@@ -73,6 +73,8 @@
 		B40000000000000000001003 /* HomePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002003 /* HomePresentationTests.swift */; };
 		B40000000000000000001004 /* HomeFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002004 /* HomeFlowUITests.swift */; };
 		B50000000000000000001001 /* PlansPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B50000000000000000002001 /* PlansPresentation.swift */; };
+		B60000000000000000001001 /* WorkoutExecutionReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60000000000000000002001 /* WorkoutExecutionReducer.swift */; };
+		B60000000000000000001002 /* WorkoutExecutionReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -118,6 +120,8 @@
 		AA0000000000000000002016 /* ManualWorkoutPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualWorkoutPlan.swift; sourceTree = "<group>"; };
 		AA0000000000000000002017 /* PlansViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansViewModel.swift; sourceTree = "<group>"; };
 		B50000000000000000002001 /* PlansPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansPresentation.swift; sourceTree = "<group>"; };
+		B60000000000000000002001 /* WorkoutExecutionReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionReducer.swift; sourceTree = "<group>"; };
+		B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionReducerTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000200F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000002011 /* FTMSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSParserTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002012 /* TreadmillPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreadmillPresentationTests.swift; sourceTree = "<group>"; };
@@ -242,6 +246,7 @@
 				AA0000000000000000005003 /* Bluetooth */,
 				AA0000000000000000005009 /* Plans */,
 				AF0000000000000000005001 /* History */,
+				B60000000000000000005001 /* Execution */,
 				AA0000000000000000005004 /* Presentation */,
 				AA0000000000000000005005 /* Views */,
 			);
@@ -266,6 +271,14 @@
 				AF0000000000000000001002 /* WorkoutHistoryRepository.swift */,
 			);
 			path = History;
+			sourceTree = "<group>";
+		};
+		B60000000000000000005001 /* Execution */ = {
+			isa = PBXGroup;
+			children = (
+				B60000000000000000002001 /* WorkoutExecutionReducer.swift */,
+			);
+			path = Execution;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000005004 /* Presentation */ = {
@@ -315,6 +328,7 @@
 				AA0000000000000000002015 /* SavedPlanRepositoryTests.swift */,
 				AE0000000000000000001002 /* SavedPlanExportTests.swift */,
 				AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */,
+				B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */,
 				AA0000000000000000002018 /* PlansPresentationTests.swift */,
 			);
 			path = PacePromptTests;
@@ -637,6 +651,7 @@
 				AE0000000000000000000001 /* SavedPlanExport.swift in Sources */,
 				AF0000000000000000000001 /* WorkoutExecutionSummary.swift in Sources */,
 				AF0000000000000000000002 /* WorkoutHistoryRepository.swift in Sources */,
+				B60000000000000000001001 /* WorkoutExecutionReducer.swift in Sources */,
 				AA0000000000000000001016 /* ManualWorkoutPlan.swift in Sources */,
 				AA0000000000000000001017 /* PlansViewModel.swift in Sources */,
 				AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */,
@@ -655,6 +670,7 @@
 				AA0000000000000000001015 /* SavedPlanRepositoryTests.swift in Sources */,
 				AE0000000000000000000002 /* SavedPlanExportTests.swift in Sources */,
 				AF0000000000000000000003 /* WorkoutHistoryRepositoryTests.swift in Sources */,
+				B60000000000000000001002 /* WorkoutExecutionReducerTests.swift in Sources */,
 				AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
