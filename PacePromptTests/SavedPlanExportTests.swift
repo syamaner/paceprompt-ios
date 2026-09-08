@@ -253,6 +253,10 @@ final class SavedPlanExportPresentationTests: XCTestCase {
             "The temporary export could not be removed after sharing. Retry export cleanup before creating another copy."
         )
         XCTAssertEqual(repository.mutationCount, 0)
+        XCTAssertEqual(
+            model.libraryPresentation.content,
+            .populated([PlansPlanRowPresentation(record: record)])
+        )
     }
 }
 

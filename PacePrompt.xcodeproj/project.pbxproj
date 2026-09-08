@@ -72,6 +72,7 @@
 		B40000000000000000001002 /* HomeUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002002 /* HomeUITestSupport.swift */; };
 		B40000000000000000001003 /* HomePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002003 /* HomePresentationTests.swift */; };
 		B40000000000000000001004 /* HomeFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002004 /* HomeFlowUITests.swift */; };
+		B50000000000000000001001 /* PlansPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B50000000000000000002001 /* PlansPresentation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,6 +117,7 @@
 		AA0000000000000000002014 /* SavedPlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlanRepository.swift; sourceTree = "<group>"; };
 		AA0000000000000000002016 /* ManualWorkoutPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualWorkoutPlan.swift; sourceTree = "<group>"; };
 		AA0000000000000000002017 /* PlansViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansViewModel.swift; sourceTree = "<group>"; };
+		B50000000000000000002001 /* PlansPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansPresentation.swift; sourceTree = "<group>"; };
 		AA000000000000000000200F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000002011 /* FTMSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSParserTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002012 /* TreadmillPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreadmillPresentationTests.swift; sourceTree = "<group>"; };
@@ -271,6 +273,7 @@
 			children = (
 				B40000000000000000002001 /* HomePresentation.swift */,
 				B40000000000000000002002 /* HomeUITestSupport.swift */,
+				B50000000000000000002001 /* PlansPresentation.swift */,
 				AA0000000000000000002017 /* PlansViewModel.swift */,
 				AA0000000000000000002019 /* PlansUITestSupport.swift */,
 				AA000000000000000000200C /* TreadmillSetupViewModel.swift */,
@@ -607,6 +610,7 @@
 			files = (
 				B40000000000000000001001 /* HomePresentation.swift in Sources */,
 				B40000000000000000001002 /* HomeUITestSupport.swift in Sources */,
+				B50000000000000000001001 /* PlansPresentation.swift in Sources */,
 				AD000000000000000000000A /* ImportDiagnostics.swift */,
 				AD0000000000000000000006 /* WorkoutImportView.swift */,
 				AD0000000000000000000005 /* WorkoutImportViewModel.swift */,

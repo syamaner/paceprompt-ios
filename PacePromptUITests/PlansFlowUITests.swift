@@ -9,6 +9,59 @@ final class PlansFlowUITests: XCTestCase {
         super.tearDown()
     }
 
+    func testPopulatedLibraryShowsCanonicalRowAndToolbarActions() {
+        launch(capabilities: "known", draft: "valid", repository: "populated")
+
+        XCTAssertTrue(app.navigationBars["Plans"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["plans.import"].isEnabled)
+        XCTAssertTrue(app.buttons["plans.export"].isEnabled)
+        XCTAssertTrue(app.buttons["plans.new"].isEnabled)
+
+        let row = app.buttons["plans.record.00000000-0000-0000-0000-000000000010"]
+        XCTAssertTrue(row.waitForExistence(timeout: 2))
+        XCTAssertEqual(row.label, "Synthetic progression")
+        XCTAssertEqual(row.value as? String, "Indoor running, 4 steps, 21:00")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "km")).firstMatch.exists)
+    }
+
+    func testEmptyLibraryShowsDesignAlignedActionsAndDisabledExport() {
+        launch(capabilities: "known", draft: "valid")
+
+        XCTAssertTrue(app.staticTexts["No plans yet"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "review every exact target")).firstMatch.exists)
+        XCTAssertTrue(app.buttons["plans.create-empty"].isEnabled)
+        XCTAssertTrue(app.buttons["plans.import-empty"].isEnabled)
+        XCTAssertFalse(app.buttons["plans.export"].isEnabled)
+    }
+
+    func testEveryBlockedAndWarningRepositoryStateRemainsDistinct() {
+        assertRepositoryBlocked(repository: "protected", title: "Plans are locked", retry: true)
+        assertRepositoryBlocked(repository: "read-failure", title: "Could not read plans", retry: true)
+        assertRepositoryBlocked(repository: "corrupt", title: "Saved plans are corrupt")
+        assertRepositoryBlocked(repository: "partial-write", title: "Last save finished partially")
+        assertRepositoryBlocked(repository: "unsupported-store", title: "Saved by a newer version")
+        assertRepositoryBlocked(repository: "unsupported-plan", title: "A plan uses a newer version")
+
+        for scenario in ["stale-staging", "staging-unavailable"] {
+            app?.terminate()
+            launch(capabilities: "known", draft: "valid", repository: scenario)
+            XCTAssertTrue(app.otherElements["plans.staging-warning"].waitForExistence(timeout: 2))
+            XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000010"].exists)
+            XCTAssertFalse(app.buttons["plans.new"].isEnabled)
+            XCTAssertFalse(app.buttons["plans.import"].isEnabled)
+            XCTAssertFalse(app.buttons["plans.export"].isEnabled)
+            XCTAssertFalse(app.staticTexts["No plans yet"].exists)
+        }
+    }
+
+    func testPopulatedRowStillOpensExistingEditor() {
+        launch(capabilities: "known", draft: "valid", repository: "populated")
+        app.buttons["plans.record.00000000-0000-0000-0000-000000000010"].tap()
+
+        XCTAssertTrue(app.navigationBars["Edit plan"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.textFields["plan.name"].value as? String, "Synthetic progression")
+    }
+
     func testImportDisclosureCancellationThenExactPreviewAndSeparateSave() {
         launch(capabilities: "known", draft: "valid")
         app.tabBars.buttons["Plans"].tap()
@@ -27,7 +80,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Complete plan"].waitForExistence(timeout: 3))
         XCTAssertTrue(findByScrolling(app.staticTexts["3. Cool-down: Synthetic coolDown"]))
         tapWhenVisible(app.buttons["plan.confirm-save"])
-        XCTAssertTrue(app.staticTexts["Synthetic imported plan"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000011"].waitForExistence(timeout: 3))
     }
 
     func testImportedProposalWithUnknownCapabilitiesCannotPreviewOrSave() {
@@ -64,7 +117,7 @@ final class PlansFlowUITests: XCTestCase {
 
         tapWhenVisible(app.buttons["plan.confirm-save"])
 
-        XCTAssertTrue(app.staticTexts["Synthetic progression revised"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000011"].waitForExistence(timeout: 2))
         XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
     }
 
@@ -98,8 +151,8 @@ final class PlansFlowUITests: XCTestCase {
 
         app.buttons["plan.cancel"].tap()
 
-        XCTAssertTrue(app.staticTexts["No saved plans"].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.staticTexts["Synthetic progression"].exists)
+        XCTAssertTrue(app.staticTexts["No plans yet"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label == %@", "Synthetic progression")).firstMatch.exists)
     }
 
     func testSaveFailureStaysInPreviewAndReportsPreservedStorage() {
@@ -126,7 +179,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Save failed"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "no longer available to edit")).firstMatch.exists)
         app.buttons["plan.cancel"].tap()
-        XCTAssertTrue(app.staticTexts["Synthetic progression"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000010"].waitForExistence(timeout: 2))
     }
 
     func testSavedPlanDeletionNamesRecordCancelsThenDeletesOnlyAfterConfirmation() {
@@ -138,6 +191,7 @@ final class PlansFlowUITests: XCTestCase {
         row.swipeLeft()
         app.buttons["plans.delete.\(identifier)"].tap()
         XCTAssertTrue(app.staticTexts["Delete Synthetic progression?"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["This permanently removes the plan and its 4 steps from this iPhone. It cannot be undone."].exists)
         app.buttons["Cancel"].tap()
         XCTAssertTrue(row.waitForExistence(timeout: 2))
 
@@ -146,7 +200,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Delete Synthetic progression?"].waitForExistence(timeout: 2))
         app.buttons["Delete plan"].tap()
 
-        XCTAssertTrue(app.staticTexts["No saved plans"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["No plans yet"].waitForExistence(timeout: 2))
         XCTAssertFalse(row.exists)
     }
 
@@ -175,13 +229,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.buttons["export.share"].exists)
 
         app.buttons["export.cancel"].tap()
-        XCTAssertTrue(app.staticTexts["Synthetic progression"].waitForExistence(timeout: 2))
-    }
-
-    func testRepositoryFailuresAreNotShownAsEmptyAndDisableMutation() {
-        assertRepositoryBlocked(repository: "protected", title: "Plans are locked")
-        assertRepositoryBlocked(repository: "corrupt", title: "Saved plans are corrupt")
-        assertRepositoryBlocked(repository: "unsupported", title: "Saved-plan version is unsupported")
+        XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000010"].waitForExistence(timeout: 2))
     }
 
     private func assertValidationBlocked(capabilities: String, draft: String, message: String) {
@@ -195,13 +243,16 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
     }
 
-    private func assertRepositoryBlocked(repository: String, title: String) {
+    private func assertRepositoryBlocked(repository: String, title: String, retry: Bool = false) {
         app?.terminate()
         launch(capabilities: "known", draft: "valid", repository: repository)
 
         XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.staticTexts["No saved plans"].exists)
+        XCTAssertFalse(app.staticTexts["No plans yet"].exists)
         XCTAssertFalse(app.buttons["plans.new"].isEnabled)
+        XCTAssertFalse(app.buttons["plans.import"].isEnabled)
+        XCTAssertFalse(app.buttons["plans.export"].isEnabled)
+        XCTAssertEqual(app.buttons["plans.retry"].exists, retry)
     }
 
     private func launch(capabilities: String, draft: String, repository: String = "empty") {

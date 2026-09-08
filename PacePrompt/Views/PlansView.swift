@@ -8,44 +8,17 @@ struct PlansView: View {
 
     var body: some View {
         Group {
-            switch viewModel.repositoryStatus.canonical {
+            switch viewModel.libraryPresentation.content {
             case .empty:
                 emptyView
-            case let .available(records):
-                availableView(records)
-            case .protectedDataUnavailable:
-                unavailableView(
-                    title: "Plans are locked",
-                    description: "Unlock this iPhone, then retry. PacePrompt will not treat protected data as an empty plan list."
-                )
-            case .readFailure:
-                unavailableView(
-                    title: "Plans could not be read",
-                    description: "The saved-plan file was preserved. Check storage access, then retry."
-                )
-            case .corruptData:
-                unavailableView(
-                    title: "Saved plans are corrupt",
-                    description: "PacePrompt preserved the stored bytes and disabled changes. Recovery is outside this slice."
-                )
-            case .partialWriteDetected:
-                unavailableView(
-                    title: "An incomplete write was detected",
-                    description: "PacePrompt preserved the stored files and disabled changes. Recovery is outside this slice."
-                )
-            case let .unsupportedStoreVersion(version):
-                unavailableView(
-                    title: "Saved-plan version is unsupported",
-                    description: "Store version \(version) needs a compatible PacePrompt version. No data was changed."
-                )
-            case let .unsupportedPlanVersion(_, version):
-                unavailableView(
-                    title: "A workout version is unsupported",
-                    description: "Workout schema version \(version) needs a compatible PacePrompt version. No data was changed."
-                )
+            case let .populated(rows):
+                populatedView(rows)
+            case let .blocked(status):
+                blockedView(status)
             }
         }
         .navigationTitle("Plans")
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -58,8 +31,10 @@ struct PlansView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 if let beginImport {
-                    Button("Import workout", action: beginImport)
-                        .disabled(!viewModel.canMutate)
+                    Button(action: beginImport) {
+                        Label("Import workout", systemImage: "square.and.arrow.down")
+                    }
+                        .disabled(!viewModel.libraryPresentation.canImport)
                         .accessibilityIdentifier("plans.import")
                 }
             }
@@ -108,102 +83,197 @@ struct PlansView: View {
             }
         } message: {
             if let record = viewModel.pendingDeletion {
-                Text("This permanently deletes \(record.plan.suggestedName) from this iPhone. This action cannot be undone.")
+                Text(PlansDeletionPresentation(record: record).message)
             }
         }
     }
 
     private var deletionConfirmationTitle: String {
         guard let record = viewModel.pendingDeletion else { return "Delete saved plan?" }
-        return "Delete \(record.plan.suggestedName)?"
+        return PlansDeletionPresentation(record: record).title
     }
 
     private var emptyView: some View {
-        VStack(spacing: 16) {
-            if viewModel.repositoryStatus.staging != .absent {
-                repositoryMutationWarning
-            }
-            ContentUnavailableView {
-                Label("No saved plans", systemImage: "list.bullet.rectangle")
-            } description: {
-                Text("Create a walking or running interval plan, review every target, then confirm it before saving.")
-            } actions: {
-                Button("Create plan") {
-                    viewModel.beginCreate()
+        ScrollView {
+            VStack(spacing: 20) {
+                if let warning = viewModel.libraryPresentation.stagingWarning {
+                    PlansStatusCard(status: warning)
+                        .accessibilityIdentifier("plans.staging-warning")
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.canMutate)
-                .accessibilityIdentifier("plans.create-empty")
+
+                ContentUnavailableView {
+                    Label("No plans yet", systemImage: "list.bullet.rectangle")
+                } description: {
+                    Text("Build an indoor walking or running interval plan, review every exact target, and confirm before anything is saved to this device.")
+                } actions: {
+                    VStack(spacing: 12) {
+                        Button("Create plan") {
+                            viewModel.beginCreate()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .disabled(!viewModel.libraryPresentation.canCreate)
+                        .accessibilityIdentifier("plans.create-empty")
+
+                        if let beginImport {
+                            Button(action: beginImport) {
+                                Label("Import workout", systemImage: "square.and.arrow.down")
+                            }
+                            .disabled(!viewModel.libraryPresentation.canImport)
+                            .accessibilityIdentifier("plans.import-empty")
+                        }
+                    }
+                }
             }
+            .padding()
+            .frame(maxWidth: .infinity)
         }
-        .padding()
     }
 
-    private func availableView(_ records: [SavedPlanRecord]) -> some View {
+    private func populatedView(_ rows: [PlansPlanRowPresentation]) -> some View {
         List {
-            if viewModel.repositoryStatus.staging != .absent {
-                Section { repositoryMutationWarning }
+            if let warning = viewModel.libraryPresentation.stagingWarning {
+                Section {
+                    PlansStatusCard(status: warning)
+                        .accessibilityIdentifier("plans.staging-warning")
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             }
             if let deletionError = viewModel.deletionError {
-                Section("Deletion failed") {
-                    ValidationIssueRow(message: deletionError)
+                Section {
+                    PlansStatusCard(
+                        status: .init(
+                            title: "Deletion failed",
+                            detail: deletionError,
+                            symbol: "exclamationmark.triangle.fill",
+                            tone: .failure,
+                            retryTitle: nil
+                        )
+                    )
                     Button("Dismiss") { viewModel.dismissDeletionError() }
                         .accessibilityIdentifier("plans.dismiss-deletion-error")
                 }
                 .accessibilityIdentifier("plans.deletion-error")
             }
             if let exportError = viewModel.exportError, !viewModel.isExportPresented {
-                Section("Export cleanup failed") {
-                    ValidationIssueRow(message: exportError)
+                Section {
+                    PlansStatusCard(
+                        status: .init(
+                            title: "Export failed",
+                            detail: exportError,
+                            symbol: "exclamationmark.triangle.fill",
+                            tone: .failure,
+                            retryTitle: nil
+                        )
+                    )
                     Button("Dismiss") { viewModel.dismissExportError() }
                         .accessibilityIdentifier("plans.dismiss-export-error")
                 }
                 .accessibilityIdentifier("plans.export-error")
             }
-            Section("Saved plans") {
-                ForEach(records, id: \.id) { record in
+            Section {
+                ForEach(rows) { row in
                     Button {
+                        guard let record = viewModel.records.first(where: { $0.id == row.id }) else { return }
                         viewModel.beginEdit(record)
                     } label: {
-                        SavedPlanRow(record: record)
+                        SavedPlanRow(row: row)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(row.name)
+                            .accessibilityValue(row.accessibilityValue)
+                            .accessibilityHint("Opens the plan editor")
                     }
                     .buttonStyle(.plain)
                     .disabled(!viewModel.canMutate)
-                    .accessibilityIdentifier("plans.record.\(record.id.uuidString)")
+                    .accessibilityIdentifier("plans.record.\(row.id.uuidString)")
+                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                    .listRowBackground(Color.clear)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
+                            guard let record = viewModel.records.first(where: { $0.id == row.id }) else { return }
                             viewModel.requestDeletion(of: record)
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
                         .disabled(!viewModel.canMutate)
-                        .accessibilityIdentifier("plans.delete.\(record.id.uuidString)")
+                        .accessibilityLabel("Delete \(row.name)")
+                        .accessibilityIdentifier("plans.delete.\(row.id.uuidString)")
                     }
                 }
+            } footer: {
+                Text("Swipe a plan to delete. Deletion asks for confirmation first.")
             }
         }
+        .listStyle(.plain)
+        .contentMargins(.horizontal, 16, for: .scrollContent)
     }
 
-    private var repositoryMutationWarning: some View {
-        Label(
-            viewModel.repositoryStatus.staging == .staleArtifactPresent
-                ? "A stale staging file was detected. Saved plans remain readable, but changes are disabled."
-                : "Staging-file status is unavailable. Changes are disabled.",
-            systemImage: "exclamationmark.triangle"
-        )
-        .foregroundStyle(.orange)
-        .accessibilityIdentifier("plans.staging-warning")
-    }
-
-    private func unavailableView(title: String, description: String) -> some View {
-        ContentUnavailableView {
-            Label(title, systemImage: "exclamationmark.triangle")
-        } description: {
-            Text(description)
-        } actions: {
-            Button("Retry") { viewModel.reload() }
-                .accessibilityIdentifier("plans.retry")
+    private func blockedView(_ status: PlansStatusPresentation) -> some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                if let warning = viewModel.libraryPresentation.stagingWarning {
+                    PlansStatusCard(status: warning)
+                        .accessibilityIdentifier("plans.staging-warning")
+                }
+                PlansStatusCard(status: status) {
+                    viewModel.reload()
+                }
+                .accessibilityIdentifier("plans.blocked")
+            }
+            .padding()
         }
+    }
+}
+
+private struct PlansStatusCard: View {
+    let status: PlansStatusPresentation
+    var retry: (() -> Void)? = nil
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 13) {
+            Image(systemName: status.symbol)
+                .foregroundStyle(tint)
+                .font(.body)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(status.title)
+                    .font(.headline)
+                    .foregroundStyle(status.tone == .failure ? tint : .primary)
+                Text(status.detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let retryTitle = status.retryTitle, let retry {
+                    Button(action: retry) {
+                        Label(retryTitle, systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .accessibilityIdentifier("plans.retry")
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(border, lineWidth: 1)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var tint: Color {
+        switch status.tone {
+        case .neutral: .secondary
+        case .warning: .orange
+        case .failure: .red
+        }
+    }
+
+    private var border: Color {
+        status.tone == .neutral ? Color.secondary.opacity(0.25) : tint.opacity(0.8)
     }
 }
 
@@ -348,24 +418,43 @@ private struct SavedPlanActivityView: UIViewControllerRepresentable {
 }
 
 private struct SavedPlanRow: View {
-    let record: SavedPlanRecord
+    let row: PlansPlanRowPresentation
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(record.plan.suggestedName)
-                .font(.headline)
-            Text("\(record.plan.activity.displayName) · \(record.plan.steps.count) steps · \(totalSeconds) seconds")
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(row.name)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 7) {
+                        Label(row.activity, systemImage: row.activitySymbol)
+                        Text("·")
+                        Text(row.stepCount)
+                        Text("·")
+                        Text(row.duration)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Label(row.activity, systemImage: row.activitySymbol)
+                        Text("\(row.stepCount) · \(row.duration)")
+                    }
+                }
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.forward")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
         }
         .contentShape(Rectangle())
-    }
-
-    private var totalSeconds: String {
-        let total = record.plan.steps.reduce(Decimal.zero) {
-            $0 + Decimal($1.duration.value)
-        }
-        return PlanValueFormatter.localizedText(total)
     }
 }
 

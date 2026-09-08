@@ -96,7 +96,10 @@ private final class PlansUITestRepository: SavedPlanRepositoryProtocol {
 
     init(scenario: String?) {
         self.scenario = scenario
-        records = ["edit-failure", "delete", "delete-failure", "export"].contains(scenario)
+        records = [
+            "populated", "edit-failure", "delete", "delete-failure", "export",
+            "stale-staging", "staging-unavailable",
+        ].contains(scenario)
             ? [Self.seedRecord()]
             : []
     }
@@ -105,12 +108,26 @@ private final class PlansUITestRepository: SavedPlanRepositoryProtocol {
         switch scenario {
         case "protected":
             .init(canonical: .protectedDataUnavailable, staging: .absent)
+        case "read-failure":
+            .init(canonical: .readFailure, staging: .absent)
         case "corrupt":
             .init(canonical: .corruptData, staging: .absent)
-        case "unsupported":
+        case "partial-write":
+            .init(canonical: .partialWriteDetected, staging: .absent)
+        case "unsupported-store":
             .init(canonical: .unsupportedStoreVersion(2), staging: .absent)
-        case "staging":
+        case "unsupported-plan":
+            .init(
+                canonical: .unsupportedPlanVersion(
+                    recordID: UUID(uuidString: "00000000-0000-0000-0000-000000000010")!,
+                    version: 2
+                ),
+                staging: .absent
+            )
+        case "stale-staging":
             .init(canonical: records.isEmpty ? .empty : .available(records: records), staging: .staleArtifactPresent)
+        case "staging-unavailable":
+            .init(canonical: records.isEmpty ? .empty : .available(records: records), staging: .presenceUnavailable)
         default:
             .init(canonical: records.isEmpty ? .empty : .available(records: records), staging: .absent)
         }
