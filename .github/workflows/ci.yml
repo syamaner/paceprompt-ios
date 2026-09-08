@@ -19,8 +19,43 @@ env:
   SIMULATOR_DESTINATION: platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5
 
 jobs:
+  quick:
+    name: Fast repository checks
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify local-validation entry point
+        run: bash -n scripts/validate_local.sh
+
+      - name: Verify production import resources
+        run: python3 -B scripts/verify_import_resources.py
+
+      - name: Verify deterministic workout-import corpus
+        run: |
+          python3 -B Evaluation/WorkoutImport/Scoring/scorer.py \
+            --root Evaluation/WorkoutImport verify-corpus
+          python3 -B -m unittest discover \
+            -s Evaluation/WorkoutImport/Tests -v
+          python3 -B -m unittest discover \
+            -s Evaluation/WorkoutImport/Summaries -p 'test_*.py' -v
+
+      - name: Test development-accounting helper
+        run: |
+          python3 -B -m unittest discover \
+            -s .agents/skills/codex-phase-accounting/tests -v
+
   validate:
-    name: Deterministic validation
+    # Temporary issue #69 policy: full hosted validation is manual while every
+    # candidate change must pass scripts/validate_local.sh before merge.
+    name: Deterministic full validation (manual)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     timeout-minutes: 45
 
@@ -123,6 +158,7 @@ jobs:
 
   codecov:
     name: Informational Codecov upload
+    if: github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: macos-26
     timeout-minutes: 10
