@@ -716,13 +716,15 @@ final class ImportSessionTransportTests: XCTestCase {
         LocalImportProtocol.reset(status: nil)
         let transport = SessionImportTransport(makeConfiguration: mockConfiguration, deadlineNanoseconds: 30_000_000)
         let done = expectation(description: "independent total deadline")
-        let request = try ImportResources().request(for: .init(text: "Synthetic timeout", capabilities: known()))
+        let requestIdentifier = UUID().uuidString
+        var request = try ImportResources().request(for: .init(text: "Synthetic timeout", capabilities: known()))
+        request.setValue(requestIdentifier, forHTTPHeaderField: LocalImportProtocol.requestIdentifierHeader)
         transport.send(request) { result in
             guard case .failure(.timeout) = result else { XCTFail("Expected timeout"); done.fulfill(); return }
             done.fulfill()
         }
         await fulfillment(of: [done], timeout: 3)
-        XCTAssertEqual(LocalImportProtocol.count, 1)
+        XCTAssertEqual(LocalImportProtocol.count(for: requestIdentifier), 1)
         transport.cancel()
     }
     func testResponseCannotWinAfterAbsoluteDeadlineEvenIfTimerCallbackIsLate() async throws {
@@ -785,15 +787,32 @@ final class ImportSessionTransportTests: XCTestCase {
 
 // Handles every URL in this session. No request can escape to a network provider.
 private final class LocalImportProtocol: URLProtocol, @unchecked Sendable {
+    static let requestIdentifierHeader = "X-PacePrompt-Test-Request-ID"
     private static let lock = NSLock()
     private static var status: Int?
     private static var requests = 0
+    private static var requestsByIdentifier: [String: Int] = [:]
     static var count: Int { lock.lock(); defer { lock.unlock() }; return requests }
-    static func reset(status: Int?) { lock.lock(); defer { lock.unlock() }; self.status = status; requests = 0 }
+    static func count(for identifier: String) -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return requestsByIdentifier[identifier, default: 0]
+    }
+    static func reset(status: Int?) {
+        lock.lock(); defer { lock.unlock() }
+        self.status = status
+        requests = 0
+        requestsByIdentifier = [:]
+    }
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
-        Self.lock.lock(); Self.requests += 1; let status = Self.status; Self.lock.unlock()
+        Self.lock.lock()
+        Self.requests += 1
+        if let identifier = request.value(forHTTPHeaderField: Self.requestIdentifierHeader) {
+            Self.requestsByIdentifier[identifier, default: 0] += 1
+        }
+        let status = Self.status
+        Self.lock.unlock()
         guard let status else { return }
         client?.urlProtocol(self, didReceive: response(status), cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data("synthetic-private-error".utf8))
