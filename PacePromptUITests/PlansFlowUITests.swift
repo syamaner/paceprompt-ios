@@ -1,6 +1,7 @@
 import XCTest
 
 final class PlansFlowUITests: XCTestCase {
+    private let settledUIStateTimeout: TimeInterval = 10
     private var app: XCUIApplication!
 
     override func tearDown() {
@@ -79,7 +80,10 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(findByScrolling(speed))
         XCTAssertEqual(speed.value as? String, "5.0 km/h")
         replaceText(in: speed, with: "5.5")
-        XCTAssertEqual(speed.value as? String, "5.5 km/h")
+        XCTAssertTrue(
+            waitForValue("5.5 km/h", in: speed),
+            "Speed field did not settle to the exact replacement value; observed \(String(describing: speed.value))"
+        )
 
         let inclination = app.textFields["plan.step.0.inclination"]
         XCTAssertEqual(inclination.value as? String, "0.0 %")
@@ -376,15 +380,33 @@ final class PlansFlowUITests: XCTestCase {
     private func reviewPlan(expectPreview: Bool = true) {
         tapWhenVisible(app.buttons["plan.review"])
         if expectPreview {
-            XCTAssertTrue(app.navigationBars["Review"].waitForExistence(timeout: 2))
+            XCTAssertTrue(
+                app.navigationBars["Review"].waitForExistence(timeout: settledUIStateTimeout),
+                "Review destination did not become observable after the enabled review action was tapped"
+            )
         }
     }
 
     private func tapWhenVisible(_ element: XCUIElement, attempts: Int = 8) {
-        for _ in 0..<attempts where !element.isHittable {
+        for _ in 0..<attempts {
+            if element.isHittable && element.isEnabled {
+                element.tap()
+                return
+            }
             app.swipeUp()
         }
-        XCTAssertTrue(element.waitForExistence(timeout: 2))
+
+        let ready = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND hittable == true AND enabled == true"),
+            object: element
+        )
+        let result = XCTWaiter.wait(for: [ready], timeout: settledUIStateTimeout)
+        XCTAssertEqual(
+            result,
+            .completed,
+            "Element never became present, hittable, and enabled before its bounded interaction deadline"
+        )
+        guard result == .completed else { return }
         element.tap()
     }
 
@@ -407,5 +429,13 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(selectAll.waitForExistence(timeout: 2))
         selectAll.tap()
         field.typeText(value)
+    }
+
+    private func waitForValue(_ expectedValue: String, in element: XCUIElement) -> Bool {
+        let settled = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", expectedValue),
+            object: element
+        )
+        return XCTWaiter.wait(for: [settled], timeout: settledUIStateTimeout) == .completed
     }
 }
