@@ -1,5 +1,7 @@
 # PacePrompt
 
+[![Codecov coverage](https://codecov.io/gh/syamaner/paceprompt-ios/graph/badge.svg?branch=main)](https://app.codecov.io/gh/syamaner/paceprompt-ios)
+
 PacePrompt is a local-first iPhone app for turning plain-English interval workouts into validated treadmill plans and, in later authorised slices, running them on a Reebok FR30z over Bluetooth FTMS.
 
 The core product rule is: AI may propose a plan; deterministic local code validates it and controls the treadmill.
@@ -117,6 +119,20 @@ xcodebuild -project PacePrompt.xcodeproj -scheme PacePromptEvaluation \
 ```
 
 Use another listed iPhone simulator if that model is not installed.
+
+## Continuous integration and coverage
+
+GitHub Actions runs the production unit and UI tests, a Release simulator build,
+static analysis, the deterministic corpus checks and the developer-only evaluation
+tests on the standard macOS 26 runner with Xcode 26.6. All Xcode builds are unsigned,
+and the evaluation gates use only checked-in synthetic fixtures; CI has no provider
+credential and makes no model-provider call.
+
+The coverage artifact is exported from the production `PacePrompt.app` binary only.
+Test targets, evaluation and design/documentation files, and DEBUG-only UI-test
+support are excluded. Codecov's project and patch reports are intentionally
+informational while the repository establishes a baseline; no coverage percentage
+is an acceptance threshold.
 
 ## User-run physical FR30z validation
 

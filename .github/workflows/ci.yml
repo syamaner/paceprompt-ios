@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+  SIMULATOR_DESTINATION: platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5
+
+jobs:
+  validate:
+    name: Deterministic validation
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify pinned Apple toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(xcodebuild -version | sed -n '1p')" = "Xcode 26.6"
+          test "$(xcodebuild -version | sed -n '2p')" = "Build version 17F113"
+          test "$(xcrun --sdk iphonesimulator --show-sdk-version)" = "26.5"
+          xcrun simctl list devices available | grep -F "iPhone 17 Pro ("
+
+      - name: Verify production import resources
+        run: python3 -B scripts/verify_import_resources.py
+
+      - name: Verify deterministic workout-import corpus
+        run: |
+          python3 -B Evaluation/WorkoutImport/Scoring/scorer.py \
+            --root Evaluation/WorkoutImport verify-corpus
+          python3 -B -m unittest discover \
+            -s Evaluation/WorkoutImport/Tests -v
+          python3 -B -m unittest discover \
+            -s Evaluation/WorkoutImport/Summaries -p 'test_*.py' -v
+
+      - name: Run complete production simulator suite with coverage
+        run: |
+          xcodebuild \
+            -project PacePrompt.xcodeproj \
+            -scheme PacePrompt \
+            -destination "$SIMULATOR_DESTINATION" \
+            -derivedDataPath "$RUNNER_TEMP/PacePromptDerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/PacePrompt.xcresult" \
+            -enableCodeCoverage YES \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+
+      - name: Export production-target coverage
+        run: |
+          scripts/export_xcode_coverage.sh \
+            "$RUNNER_TEMP/PacePromptDerivedData" \
+            "$RUNNER_TEMP/PacePrompt.lcov"
+
+      - name: Build production app for simulator in Release
+        run: |
+          xcodebuild \
+            -project PacePrompt.xcodeproj \
+            -scheme PacePrompt \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/PacePromptReleaseDerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Run static analysis
+        run: |
+          xcodebuild \
+            -project PacePrompt.xcodeproj \
+            -scheme PacePrompt \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/PacePromptAnalyzeDerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            analyze
+
+      - name: Run developer-only evaluation simulator tests
+        run: |
+          xcodebuild \
+            -project PacePrompt.xcodeproj \
+            -scheme PacePromptEvaluation \
+            -destination "$SIMULATOR_DESTINATION" \
+            -derivedDataPath "$RUNNER_TEMP/PacePromptEvaluationDerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/PacePromptEvaluation.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+
+      - name: Preserve production coverage for Codecov
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: paceprompt-production-coverage
+          path: ${{ runner.temp }}/PacePrompt.lcov
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Preserve failed Xcode result bundles
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: paceprompt-xcode-results-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/PacePrompt.xcresult
+            ${{ runner.temp }}/PacePromptEvaluation.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
+
+  codecov:
+    name: Informational Codecov upload
+    needs: validate
+    runs-on: macos-26
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download production coverage
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: paceprompt-production-coverage
+          path: coverage
+
+      - name: Upload informational production coverage
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          disable_search: true
+          disable_telem: true
+          fail_ci_if_error: false
+          files: coverage/PacePrompt.lcov
+          flags: production
+          name: paceprompt-production
+          plugins: noop
+          use_oidc: true
+          version: v11.3.1
