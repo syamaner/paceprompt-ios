@@ -60,6 +60,7 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/PacePromptDerivedData" \
             -resultBundlePath "$RUNNER_TEMP/PacePrompt.xcresult" \
             -enableCodeCoverage YES \
+            -parallel-testing-enabled NO \
             CODE_SIGNING_ALLOWED=NO \
             test
 
