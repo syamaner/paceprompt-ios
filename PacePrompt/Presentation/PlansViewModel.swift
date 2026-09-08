@@ -41,29 +41,18 @@ final class PlansViewModel: ObservableObject {
         return records
     }
 
+    var libraryPresentation: PlansLibraryPresentation {
+        PlansLibraryPresentation(status: repositoryStatus)
+    }
+
     var canMutate: Bool {
-        guard repositoryStatus.staging == .absent else { return false }
-        return switch repositoryStatus.canonical {
-        case .empty, .available:
-            true
-        case .protectedDataUnavailable,
-             .readFailure,
-             .corruptData,
-             .partialWriteDetected,
-             .unsupportedStoreVersion,
-             .unsupportedPlanVersion:
-            false
-        }
+        libraryPresentation.canCreate
     }
 
     var isEditorPresented: Bool { draft != nil }
 
     var canBeginExport: Bool {
-        guard repositoryStatus.staging == .absent,
-              case let .available(records) = repositoryStatus.canonical else {
-            return false
-        }
-        return !records.isEmpty
+        libraryPresentation.canExport
     }
 
     var canPreviewExport: Bool {

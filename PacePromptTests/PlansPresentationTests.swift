@@ -4,6 +4,151 @@ import XCTest
 
 @MainActor
 final class PlansPresentationTests: XCTestCase {
+    func testLibraryRowsContainOnlyCanonicalFactsWithExactDurationAndPluralisation() {
+        let pluralRecord = record(name: "Synthetic progression")
+        let plural = PlansPlanRowPresentation(record: pluralRecord)
+
+        XCTAssertEqual(plural.name, "Synthetic progression")
+        XCTAssertEqual(plural.activity, "Indoor running")
+        XCTAssertEqual(plural.stepCount, "3 steps")
+        XCTAssertEqual(plural.duration, "18:00")
+        XCTAssertEqual(plural.accessibilityValue, "Indoor running, 3 steps, 18:00")
+
+        let oneStepPlan = WorkoutPlan(
+            schemaVersion: WorkoutPlanSchema.currentVersion,
+            suggestedName: "Synthetic single step",
+            activity: .indoorWalking,
+            steps: [pluralRecord.plan.steps[0]]
+        )
+        let singularRecord = SavedPlanRecord(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000013")!,
+            createdAt: pluralRecord.createdAt,
+            modifiedAt: pluralRecord.modifiedAt,
+            plan: oneStepPlan
+        )
+        let singular = PlansPlanRowPresentation(record: singularRecord)
+
+        XCTAssertEqual(singular.activity, "Indoor walking")
+        XCTAssertEqual(singular.stepCount, "1 step")
+        XCTAssertEqual(singular.duration, "6:00")
+    }
+
+    func testEmptyStateIsDistinctFromEveryCanonicalBlockedState() {
+        let empty = PlansLibraryPresentation(
+            status: .init(canonical: .empty, staging: .absent)
+        )
+        XCTAssertEqual(empty.content, .empty)
+
+        let blockedStates: [SavedPlanCanonicalState] = [
+            .protectedDataUnavailable,
+            .readFailure,
+            .corruptData,
+            .partialWriteDetected,
+            .unsupportedStoreVersion(4),
+            .unsupportedPlanVersion(recordID: UUID(), version: 4),
+        ]
+        var titles: Set<String> = []
+        for state in blockedStates {
+            let presentation = PlansLibraryPresentation(
+                status: .init(canonical: state, staging: .absent)
+            )
+            guard case let .blocked(card) = presentation.content else {
+                return XCTFail("Blocked state was presented as \(presentation.content)")
+            }
+            titles.insert(card.title)
+            XCTAssertFalse(presentation.canCreate)
+            XCTAssertFalse(presentation.canImport)
+            XCTAssertFalse(presentation.canExport)
+            XCTAssertTrue(
+                card.detail.localizedCaseInsensitiveContains("preserv")
+                    || card.detail.contains("kept as-is")
+                    || card.detail.contains("untouched")
+            )
+        }
+        XCTAssertEqual(titles.count, blockedStates.count)
+    }
+
+    func testActionAvailabilityUsesCanonicalAndStagingCombinations() {
+        let saved = record(name: "Synthetic readable")
+        let empty = PlansLibraryPresentation(
+            status: .init(canonical: .empty, staging: .absent)
+        )
+        XCTAssertTrue(empty.canCreate)
+        XCTAssertTrue(empty.canImport)
+        XCTAssertFalse(empty.canExport)
+
+        let available = PlansLibraryPresentation(
+            status: .init(canonical: .available(records: [saved]), staging: .absent)
+        )
+        XCTAssertTrue(available.canCreate)
+        XCTAssertTrue(available.canImport)
+        XCTAssertTrue(available.canExport)
+
+        for staging in [SavedPlanStagingState.staleArtifactPresent, .presenceUnavailable] {
+            let warning = PlansLibraryPresentation(
+                status: .init(canonical: .available(records: [saved]), staging: staging)
+            )
+            XCTAssertFalse(warning.canCreate)
+            XCTAssertFalse(warning.canImport)
+            XCTAssertFalse(warning.canExport)
+            XCTAssertNotNil(warning.stagingWarning)
+            XCTAssertEqual(warning.content, .populated([PlansPlanRowPresentation(record: saved)]))
+        }
+    }
+
+    func testUnsupportedStoreAndPlanVersionsRemainSpecificAndOfferNoRetry() {
+        let store = PlansLibraryPresentation(
+            status: .init(canonical: .unsupportedStoreVersion(7), staging: .absent)
+        )
+        let plan = PlansLibraryPresentation(
+            status: .init(
+                canonical: .unsupportedPlanVersion(recordID: UUID(), version: 9),
+                staging: .absent
+            )
+        )
+
+        guard case let .blocked(storeCard) = store.content,
+              case let .blocked(planCard) = plan.content else {
+            return XCTFail("Unsupported versions must remain blocked")
+        }
+        XCTAssertTrue(storeCard.detail.contains("schema v7"))
+        XCTAssertTrue(planCard.detail.contains("schema v9"))
+        XCTAssertNil(storeCard.retryTitle)
+        XCTAssertNil(planCard.retryTitle)
+        XCTAssertNotEqual(storeCard.title, planCard.title)
+    }
+
+    func testRetryIsOfferedOnlyForProtectedDataAndReadFailure() {
+        let states: [(SavedPlanCanonicalState, String?)] = [
+            (.protectedDataUnavailable, "Try again"),
+            (.readFailure, "Retry read"),
+            (.corruptData, nil),
+            (.partialWriteDetected, nil),
+            (.unsupportedStoreVersion(2), nil),
+            (.unsupportedPlanVersion(recordID: UUID(), version: 2), nil),
+        ]
+
+        for (state, retryTitle) in states {
+            let presentation = PlansLibraryPresentation(
+                status: .init(canonical: state, staging: .absent)
+            )
+            guard case let .blocked(card) = presentation.content else {
+                return XCTFail("Expected a blocked presentation")
+            }
+            XCTAssertEqual(card.retryTitle, retryTitle)
+        }
+    }
+
+    func testDeletionConfirmationNamesPlanAndExactStepCount() {
+        let confirmation = PlansDeletionPresentation(record: record(name: "Synthetic intervals"))
+
+        XCTAssertEqual(confirmation.title, "Delete Synthetic intervals?")
+        XCTAssertEqual(
+            confirmation.message,
+            "This permanently removes the plan and its 3 steps from this iPhone. It cannot be undone."
+        )
+    }
+
     func testLocalisedManualEntryBuildsExplicitDomainUnitsAndExactPreviewTotals() throws {
         let draft = validDraft(decimalSeparator: ",")
 
@@ -286,6 +431,10 @@ final class PlansPresentationTests: XCTestCase {
         XCTAssertEqual(repository.deleteCallIDs, [original.id])
         XCTAssertEqual(repository.records, [original])
         XCTAssertEqual(model.records, [original])
+        XCTAssertEqual(
+            model.libraryPresentation.content,
+            .populated([PlansPlanRowPresentation(record: original)])
+        )
         XCTAssertTrue(model.deletionError?.contains("Deletion was not confirmed") == true)
         XCTAssertTrue(model.deletionError?.contains("atomic replacement") == true)
     }
