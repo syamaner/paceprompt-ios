@@ -4,6 +4,12 @@ import UIKit
 struct TreadmillSetupView: View {
     @ObservedObject var treadmill: TreadmillSetupViewModel
     @State private var copiedDiagnostics = false
+#if DEBUG
+    @State private var deckAndBeltConfirmed = false
+    @State private var consoleAndSafetyKeyConfirmed = false
+    @State private var noOtherControllerConfirmed = false
+    @State private var showingRequestControlConfirmation = false
+#endif
 
     var body: some View {
         List {
@@ -16,6 +22,9 @@ struct TreadmillSetupView: View {
 
             capabilitySection
             subscriptionSection
+#if DEBUG
+            requestControlDiagnosticSection
+#endif
             diagnosticSection
 
             if !treadmill.characteristics.isEmpty {
@@ -205,6 +214,65 @@ struct TreadmillSetupView: View {
         }
     }
 
+#if DEBUG
+    private var requestControlDiagnosticSection: some View {
+        Section {
+            LabeledContent("Diagnostic state", value: treadmill.requestControlReadiness.title)
+            if let detail = treadmill.requestControlReadiness.detail {
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Toggle("Deck clear and belt stationary", isOn: $deckAndBeltConfirmed)
+            Toggle("Console and safety key within reach", isOn: $consoleAndSafetyKeyConfirmed)
+            Toggle("No other app or person controlling", isOn: $noOtherControllerConfirmed)
+
+            Button(role: .destructive) {
+                showingRequestControlConfirmation = true
+            } label: {
+                Label("Send one Request Control · 00", systemImage: "lock.open.trianglebadge.exclamationmark")
+            }
+            .disabled(!requestControlSubmissionEnabled)
+            .confirmationDialog(
+                "Send exactly one Request Control write?",
+                isPresented: $showingRequestControlConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Send 00 once", role: .destructive) {
+                    treadmill.submitRequestControlDiagnosticOnce()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This consumes the installed diagnostic build's one-write allowance. It cannot retry, reconnect, or send any other Control Point opcode.")
+            }
+
+            if !treadmill.requestControlDiagnostics.isEmpty {
+                ForEach(treadmill.requestControlDiagnostics.reversed()) { record in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(record.event.reportLine)
+                            .font(.caption)
+                        Text(record.timestamp, format: .dateTime.hour().minute().second())
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } header: {
+            Text("Issue #51 · Debug-only Request Control proof")
+        } footer: {
+            Text("Only the exact single byte 00 is allow-listed. Any error or uncertainty ends the proof; use Disconnect and send no compensating command.")
+        }
+    }
+
+    private var requestControlSubmissionEnabled: Bool {
+        treadmill.requestControlReadiness.permitsRequest
+            && deckAndBeltConfirmed
+            && consoleAndSafetyKeyConfirmed
+            && noOtherControllerConfirmed
+    }
+#endif
+
     private var characteristicSection: some View {
         Section("Discovered characteristics") {
             ForEach(treadmill.characteristics) { characteristic in
@@ -220,9 +288,17 @@ struct TreadmillSetupView: View {
 
     private var safetySection: some View {
         Section {
+#if DEBUG
+            Label("Issue #51 one-write diagnostic", systemImage: "lock.shield")
+#else
             Label("Read-only capability check", systemImage: "lock.shield")
+#endif
         } footer: {
+#if DEBUG
+            Text("The Debug-only diagnostic can submit Request Control 00 once. It cannot send speed, inclination, Start, Stop/Pause, Reset, retry, reconnect or workout commands. The physical console and safety key remain authoritative.")
+#else
             Text("This app never writes to FTMS Control Point 0x2AD9. The physical console and safety key remain authoritative.")
+#endif
         }
     }
 

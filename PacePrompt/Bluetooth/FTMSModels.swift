@@ -443,6 +443,9 @@ enum FTMSClientEvent: Equatable {
     case subscription(uuid: String, state: FTMSSubscriptionState)
     case value(uuid: String, data: Data, source: FTMSValueSource)
     case valueError(uuid: String, source: FTMSValueSource, message: String)
+#if DEBUG
+    case requestControlDiagnostic(RequestControlDiagnosticEvent)
+#endif
 }
 
 extension Data {
