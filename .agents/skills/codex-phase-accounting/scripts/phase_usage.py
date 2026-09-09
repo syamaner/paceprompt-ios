@@ -451,13 +451,6 @@ def decreased_counter_fields(current: Counter, previous: Counter) -> tuple[str, 
     )
 
 
-def reset_edges(resets: Sequence[CounterReset]) -> str:
-    return ", ".join(
-        f"{reset.previous_token_count_event}->{reset.token_count_event}"
-        for reset in resets
-    )
-
-
 def snapshot_dict(session: Session, token_count_event: int | None = None) -> dict[str, Any]:
     ordinal = (
         len(session.token_events)
@@ -468,15 +461,6 @@ def snapshot_dict(session: Session, token_count_event: int | None = None) -> dic
         raise AccountingError(
             f"token-count event {ordinal} is outside the available range "
             f"1..{len(session.token_events)}"
-        )
-    resets_after_boundary = tuple(
-        reset for reset in session.counter_resets if reset.token_count_event > ordinal
-    )
-    if resets_after_boundary:
-        raise AccountingError(
-            f"selected baseline at token-count event {ordinal} precedes session "
-            f"counter reset(s) {reset_edges(resets_after_boundary)}; the intended "
-            "phase cannot be measured across a reset"
         )
     event = session.token_events[ordinal - 1]
     counters = event.total.as_dict()
@@ -543,14 +527,8 @@ def select_boundary(
 ) -> tuple[str, Counter, tuple[TokenEvent, ...], dict[str, Any]]:
     final_event = session.token_events[-1]
     if baseline is None:
-        if session.counter_resets:
-            raise AccountingError(
-                "whole-session accounting crosses session counter reset(s) "
-                f"{reset_edges(session.counter_resets)}; supply an exact baseline "
-                "captured at or after the last reset"
-            )
-        usage = final_event.total
         events = session.token_events
+        previous_event = None
         start = {
             "mode": "whole-session",
             "token_count_event": None,
@@ -577,21 +555,8 @@ def select_boundary(
                 "baseline does not match its selected session event: "
                 + ", ".join(details)
             )
-        resets_inside_boundary = tuple(
-            reset
-            for reset in session.counter_resets
-            if reset.token_count_event > baseline.token_count_event
-        )
-        if resets_inside_boundary:
-            raise AccountingError(
-                "measured boundary crosses session counter reset(s) "
-                f"{reset_edges(resets_inside_boundary)}; retain the intended "
-                "boundary and report it as unmeasured"
-            )
-        usage = subtract_counter(
-            final_event.total, baseline.counters, label="phase counters"
-        )
         events = session.token_events[baseline.token_count_event :]
+        previous_event = captured_event
         start = {
             "mode": "delta",
             "token_count_event": baseline.token_count_event,
@@ -600,16 +565,74 @@ def select_boundary(
         }
 
     request_events = tuple(event for event in events if event.request is not None)
-    summed_requests = sum_counters(
+    usage = sum_counters(
         [event.request for event in request_events if event.request is not None],
-        shape=usage,
+        shape=final_event.total,
     )
-    mismatched = counter_mismatch(summed_requests, usage)
-    if mismatched:
-        raise AccountingError(
-            "request-level counters do not reconcile to the measured boundary: "
-            + ", ".join(mismatched)
-        )
+    prior = previous_event
+    for event in events:
+        if prior is None:
+            if event.request is None:
+                raise AccountingError(
+                    "first token-count event has no measured request usage"
+                )
+            mismatched = counter_mismatch(event.total, event.request)
+            if mismatched:
+                raise AccountingError(
+                    "request-level counters do not reconcile: first token-count "
+                    "event does not establish an exact cumulative epoch anchor: "
+                    + ", ".join(mismatched)
+                )
+        else:
+            decreased = decreased_counter_fields(event.total, prior.total)
+            if decreased:
+                if event.request is None:
+                    raise AccountingError(
+                        f"counter reset {prior.ordinal}->{event.ordinal} has no "
+                        "measured request usage"
+                    )
+                mismatched = counter_mismatch(event.total, event.request)
+                if mismatched:
+                    raise AccountingError(
+                        f"counter reset {prior.ordinal}->{event.ordinal} does not "
+                        "establish an exact cumulative epoch anchor: "
+                        + ", ".join(mismatched)
+                    )
+            else:
+                delta = subtract_counter(
+                    event.total,
+                    prior.total,
+                    label=(
+                        "session counters between token_count events "
+                        f"{prior.ordinal} and {event.ordinal}"
+                    ),
+                )
+                if event.request is None:
+                    nonzero = [
+                        field
+                        for field, value in delta.as_dict().items()
+                        if field
+                        not in (
+                            "uncached_input_tokens",
+                            "standard_uncached_input_tokens",
+                        )
+                        and value not in (None, 0)
+                    ]
+                    if nonzero:
+                        raise AccountingError(
+                            f"token-count event {event.ordinal} changes cumulative "
+                            "usage without measured request counters: "
+                            + ", ".join(nonzero)
+                        )
+                else:
+                    mismatched = counter_mismatch(delta, event.request)
+                    if mismatched:
+                        raise AccountingError(
+                            "request-level counters at token-count event "
+                            f"{event.ordinal} do not reconcile to its cumulative "
+                            "epoch: " + ", ".join(mismatched)
+                        )
+        prior = event
     return start["mode"], usage, events, start
 
 
@@ -815,6 +838,12 @@ def build_report(
                 for reset in session.counter_resets
                 if baseline is not None
                 and reset.token_count_event <= baseline.token_count_event
+            ],
+            "counter_resets_inside_boundary": [
+                reset.as_dict()
+                for reset in session.counter_resets
+                if baseline is None
+                or reset.token_count_event > baseline.token_count_event
             ],
         },
         "selected_session": str(session.path),

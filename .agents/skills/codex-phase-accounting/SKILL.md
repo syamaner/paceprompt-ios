@@ -21,7 +21,7 @@ python3 .agents/skills/codex-phase-accounting/scripts/phase_usage.py snapshot \
 
 Keep the baseline outside Git. Do not substitute a file chosen only because it is the newest session. If the helper is itself being introduced, read [the bootstrap procedure](references/bootstrap.md) before editing.
 
-The helper records counter-reset edges. A reset entirely before the selected baseline does not invalidate a later phase: `snapshot` includes it as `historical_counter_resets`, and `report` verifies only the monotonic events after the exact baseline. Do not move a boundary forward merely to avoid a reset. If the intended phase crosses a reset, the helper rejects it and that phase remains unmeasured.
+The helper records counter-reset edges. A reset entirely before the selected baseline does not invalidate a later phase: `snapshot` includes it as `historical_counter_resets`. Do not move a boundary forward merely to avoid a reset. A reset inside the intended phase is measurable only when the reset event establishes a complete new cumulative epoch: its cumulative counters must exactly equal its complete request counters, and every request on both sides of the reset must reconcile within its own monotonic epoch. The report identifies each accepted in-boundary reset. Any missing or mismatched reset anchor remains an actionable error.
 
 ## Produce the phase report
 
@@ -41,7 +41,7 @@ python3 .agents/skills/codex-phase-accounting/scripts/phase_usage.py report \
 
 Omit `--baseline` only for a deliberately labelled whole-session measurement. The helper validates cumulative and request counters, preserves missing optional counters as `null`, checks that request totals reconcile to the phase delta, and reports every measured request input size. A request crosses the supplied threshold only when its input is greater than the threshold.
 
-Whole-session reporting rejects any counter reset because discontinuous cumulative totals cannot be aggregated exactly. Delta reporting allows resets at or before its captured baseline, reports them as historical evidence, and rejects any reset after the baseline as an in-phase discontinuity.
+Whole-session and delta reporting sum complete request counters after validating each monotonic cumulative epoch independently. A whole-session report additionally requires the first cumulative event to equal its request counters. Delta reporting binds to the exact captured baseline. Resets at or before a delta baseline are historical evidence; later resets are reported as in-boundary evidence and accepted only with an exact new-epoch anchor. This never permits subtraction across a discontinuity.
 
 Codex can emit an unchanged cumulative snapshot after context maintenance with all metered `last_token_usage` components explicitly zero and a standalone `total_tokens` context-size value. The helper validates and reports that record as a repeated cumulative snapshot, but does not count it as a request, usage or cost. It also reports and excludes an idempotently replayed token event only when the complete canonical `info` payload exactly matches the immediately preceding token event. That replay is not counted as a request, usage or cost. Any non-identical unchanged snapshot with a non-zero metered component remains an actionable error.
 
@@ -68,7 +68,7 @@ The result is an API-equivalent comparison estimate, not a ChatGPT subscription 
 
 - Preserve the existing columns, terminology, arithmetic and rounding in `DEVELOPMENT_NOTES.md`.
 - Record the stable PacePrompt change ID and exact phase scope.
-- State the start and final snapshots, request count, largest request, threshold crossings, included agents/channels and known exclusions.
+- State the start and final snapshots, request count, largest request, threshold crossings, historical and in-boundary reset evidence, included agents/channels and known exclusions.
 - Mark absent or incompatible data unmeasured. Do not aggregate a separate session or subagent unless its exact JSONL is supplied and the aggregation is explicitly labelled.
 - Treat the final numeric ledger insertion and any later commit or push as excluded unless a new measured boundary includes them.
 
@@ -79,6 +79,6 @@ python3 -B -m unittest discover \
   -s .agents/skills/codex-phase-accounting/tests -v
 ```
 
-Also run the repository's skill validator. Never repair the transcript, interpolate counters or estimate a missing value. A historical reset before an exact baseline is evidence, not malformed phase data; use the helper's verified delta. Stop and mark the phase unmeasured only when the intended boundary crosses a reset or another actionable validation error remains.
+Also run the repository's skill validator. Never repair the transcript, interpolate counters or estimate a missing value. A historical reset before an exact baseline is evidence, not malformed phase data. An in-boundary reset is also exact only when the helper verifies its complete new-epoch anchor and all request-to-cumulative reconciliation. Stop and mark the phase unmeasured when that proof or another required counter is absent, or another actionable validation error remains.
 
 The helper and its tests use only the Python standard library. Codex's bundled skill validator additionally imports PyYAML; install the pinned development-only dependency from `requirements-dev.txt` into an isolated environment, then invoke the bundled validator with that environment's Python. Do not add PyYAML as a helper runtime dependency.

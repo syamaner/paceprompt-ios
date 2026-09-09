@@ -192,6 +192,8 @@ User-run iPhone/FR30z validation on 2 September 2026 confirmed discovery, connec
 
 The user reported that, after a physical-console stop, no further packets arrived during the instructed 30-second observation. The treadmill did not send a terminal zero-speed `0x2ACD` packet, and no `0x2AD3` or `0x2ADA` notification was observed during the captured runs. This validates passive moving-belt `0x2ACD` telemetry, the one Training Status read and subscription enablement on the tested FR30z, but does not establish continuous stationary telemetry, Training Status notification delivery, Fitness Machine Status delivery, multi-notification behaviour or any Control Point behaviour. The last received value remains timestamped historical evidence, not proof of current treadmill state.
 
+One separately authorised Request Control attempt on 9 September 2026 submitted exactly `00` once and received exactly `80 00 01`, but CoreBluetooth delivered the indication callback before its successful ATT write callback. The reviewed transport failed closed on that ordering, the operator observed no movement, and an explicit disconnect ended the connection without retry. The [sanitised attempt record](docs/validation/fr30z-request-control-2026-09-09.md) therefore leaves Request Control unresolved; it is not evidence that control was granted. Target, Start, Stop/Pause, Reset, motion and workout behaviour remain entirely untested.
+
 ## Repository guidance
 
 Product and design sources stay under `design/`. Project-wide safety and slice rules are in `AGENTS.md`; repository-local skills are maintained under `.agents/skills`. Per-commit Codex token measurements and API-equivalent estimates are recorded in `DEVELOPMENT_NOTES.md`.

@@ -1,5 +1,8 @@
 import Combine
 import Foundation
+#if DEBUG
+import UIKit
+#endif
 
 @MainActor
 final class TreadmillSetupViewModel: ObservableObject {
@@ -13,6 +16,12 @@ final class TreadmillSetupViewModel: ObservableObject {
     @Published private(set) var subscriptions: [FTMSSubscription]
     @Published private(set) var diagnostics: [FTMSDiagnostic] = []
     @Published private(set) var lastError: String?
+#if DEBUG
+    @Published private(set) var requestControlReadiness: RequestControlDiagnosticReadiness = .awaitingConnection
+    @Published private(set) var requestControlDiagnostics: [RequestControlDiagnosticRecord] = []
+    private var requestControlPassiveDiagnostics: [FTMSDiagnostic] = []
+    private var requestControlPassiveSubscriptionOutcomes: [String: FTMSSubscriptionState] = [:]
+#endif
 
     private let client: any FTMSClientProtocol
     private let now: () -> Date
@@ -129,6 +138,19 @@ final class TreadmillSetupViewModel: ObservableObject {
     }
 
     var diagnosticReport: String {
+#if DEBUG
+        var lines = [
+            "PacePrompt issue #51 Request Control diagnostic",
+            "Equipment: Reebok FR30z (operator identified)",
+            "Treadmill dongle/firmware: unavailable from the current FTMS-only diagnostic",
+            "Central: \(UIDevice.current.model) · \(UIDevice.current.systemName) \(UIDevice.current.systemVersion) · built-in Bluetooth",
+            "Security/pairing: \(requestControlSecurityPairingSummary)",
+            "Connection: \(connectionState.title)",
+            "Bluetooth: \(availability.title)",
+            "",
+            "Discovered FTMS devices",
+        ]
+#else
         var lines = [
             "PacePrompt read-only FTMS diagnostics",
             "Connection: \(connectionState.title)",
@@ -136,6 +158,7 @@ final class TreadmillSetupViewModel: ObservableObject {
             "",
             "Discovered FTMS devices",
         ]
+#endif
 
         if devices.isEmpty {
             lines.append("Unavailable - no devices discovered")
@@ -164,28 +187,62 @@ final class TreadmillSetupViewModel: ObservableObject {
         lines.append("0x\(FTMSUUID.supportedInclinationRange): \(inclinationRange.rawHex) - \(inclinationRangeText)")
 
         lines.append(contentsOf: ["", "Passive subscriptions"])
-        for subscription in subscriptions {
+#if DEBUG
+        let reportedSubscriptions = FTMSUUID.passiveNotifications.sorted().map { uuid in
+            FTMSSubscription(
+                uuid: uuid,
+                state: requestControlPassiveSubscriptionOutcomes[uuid]
+                    ?? .inactive(reason: "No terminal subscription outcome recorded")
+            )
+        }
+#else
+        let reportedSubscriptions = subscriptions
+#endif
+        for subscription in reportedSubscriptions {
             let detail = subscription.state.detail.map { " - \($0)" } ?? ""
             lines.append("0x\(subscription.uuid) \(FTMSUUID.name(for: subscription.uuid)): \(subscription.state.title)\(detail)")
         }
 
-        lines.append(contentsOf: ["", "Packet log (\(diagnostics.count)/\(diagnosticLimit))"])
-        if diagnostics.isEmpty {
+#if DEBUG
+        let reportedDiagnostics = requestControlPassiveDiagnostics
+        lines.append(contentsOf: ["", "Complete issue #51 passive packet log (\(reportedDiagnostics.count))"])
+#else
+        let reportedDiagnostics = diagnostics
+        lines.append(contentsOf: ["", "Packet log (\(reportedDiagnostics.count)/\(diagnosticLimit))"])
+#endif
+        if reportedDiagnostics.isEmpty {
             lines.append("Unavailable - no packets received")
         } else {
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            for diagnostic in diagnostics {
+            for diagnostic in reportedDiagnostics {
                 lines.append("[\(formatter.string(from: diagnostic.timestamp))] 0x\(diagnostic.uuid) \(diagnostic.source.title) · \(diagnostic.kind.reportLabel)")
                 lines.append("Raw: \(diagnostic.rawHex)")
                 lines.append(contentsOf: diagnostic.decodedLines.map { "Decoded: \($0)" })
             }
         }
 
+#if DEBUG
+        lines.append(contentsOf: ["", "Issue #51 Control Point log"])
+        if requestControlDiagnostics.isEmpty {
+            lines.append("Unavailable - no Control Point diagnostic events recorded")
+        } else {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            for record in requestControlDiagnostics {
+                lines.append("[\(formatter.string(from: record.timestamp))] \(record.event.reportLine)")
+            }
+        }
+        lines.append(contentsOf: [
+            "",
+            "Debug-only issue #51 build. Its Control Point path hard-allows exactly one Request Control 00 write and no other command.",
+        ])
+#else
         lines.append(contentsOf: [
             "",
             "Read-only capture. No FTMS Control Point 0x2AD9 write was performed.",
         ])
+#endif
         return lines.joined(separator: "\n")
     }
 
@@ -208,6 +265,12 @@ final class TreadmillSetupViewModel: ObservableObject {
         client.disconnect()
     }
 
+#if DEBUG
+    func submitRequestControlDiagnosticOnce() {
+        client.submitRequestControlDiagnosticOnce()
+    }
+#endif
+
     func clearDiagnostics() {
         diagnostics.removeAll()
     }
@@ -223,6 +286,10 @@ final class TreadmillSetupViewModel: ObservableObject {
         inclinationRange = .unavailable
         characteristics = []
         diagnostics = []
+#if DEBUG
+        requestControlPassiveDiagnostics = []
+        requestControlPassiveSubscriptionOutcomes = [:]
+#endif
         subscriptions = Self.inactiveSubscriptions(reason: "Not connected")
         nextDiagnosticID = 0
     }
@@ -315,6 +382,12 @@ final class TreadmillSetupViewModel: ObservableObject {
             decodedLines: decodedLines,
             kind: kind
         )
+#if DEBUG
+        // The ordinary UI list stays bounded, but the short, explicitly
+        // supervised issue #51 session retains every passive packet for its
+        // terminal raw report.
+        requestControlPassiveDiagnostics.append(diagnostic)
+#endif
         diagnostics.append(diagnostic)
         if diagnostics.count > diagnosticLimit {
             diagnostics.removeFirst(diagnostics.count - diagnosticLimit)
@@ -324,6 +397,14 @@ final class TreadmillSetupViewModel: ObservableObject {
     private func updateSubscription(uuid: String, state: FTMSSubscriptionState) {
         guard let index = subscriptions.firstIndex(where: { $0.uuid == uuid }) else { return }
         subscriptions[index] = FTMSSubscription(uuid: uuid, state: state)
+#if DEBUG
+        switch state {
+        case .subscribed, .unsupported, .failed:
+            requestControlPassiveSubscriptionOutcomes[uuid] = state
+        case .inactive, .subscribing:
+            break
+        }
+#endif
     }
 
     private static func inactiveSubscriptions(reason: String) -> [FTMSSubscription] {
@@ -423,9 +504,57 @@ extension TreadmillSetupViewModel: FTMSClientDelegate {
             consume(uuid: uuid, data: data, source: source)
         case let .valueError(_, _, message):
             lastError = message
+#if DEBUG
+        case let .requestControlDiagnostic(event):
+            consumeRequestControlDiagnostic(event)
+#endif
         }
     }
 }
+
+#if DEBUG
+private extension TreadmillSetupViewModel {
+    var requestControlSecurityPairingSummary: String {
+        for record in requestControlDiagnostics.reversed() {
+            switch record.event {
+            case .indicationSubscriptionSucceeded:
+                return "CoreBluetooth enabled the security-restricted Control Point indication subscription without an OS-mediated security or pairing error; negotiated LE security details are not exposed"
+            case let .indicationSubscriptionFailed(message):
+                return "failed while enabling the Control Point indication subscription - \(message)"
+            default:
+                continue
+            }
+        }
+        return "not yet observed"
+    }
+
+    func consumeRequestControlDiagnostic(_ event: RequestControlDiagnosticEvent) {
+        if case let .readiness(readiness) = event {
+            requestControlReadiness = readiness
+        }
+        nextDiagnosticID += 1
+        let record = RequestControlDiagnosticRecord(
+            id: nextDiagnosticID,
+            timestamp: now(),
+            event: event
+        )
+        requestControlDiagnostics.append(record)
+        if requestControlDiagnostics.count > diagnosticLimit {
+            requestControlDiagnostics.removeFirst(requestControlDiagnostics.count - diagnosticLimit)
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        print("PACEPROMPT_ISSUE51 [\(formatter.string(from: record.timestamp))] \(event.reportLine)")
+
+        if case .disconnected = event {
+            print("PACEPROMPT_ISSUE51_REPORT_BEGIN")
+            print(diagnosticReport)
+            print("PACEPROMPT_ISSUE51_REPORT_END")
+        }
+    }
+}
+#endif
 
 private extension FTMSDiagnosticKind {
     var reportLabel: String {

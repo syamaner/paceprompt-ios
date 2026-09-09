@@ -269,54 +269,74 @@ class PhaseUsageTests(unittest.TestCase):
             snapshot["historical_counter_resets"],
         )
 
-    def test_snapshot_and_report_reject_reset_inside_boundary(self) -> None:
+    def test_snapshot_and_report_measure_exact_reset_inside_boundary(self) -> None:
         session = self.write_records(session_records_with_reset())
-        rejected_snapshot = self.run_tool(
+        baseline = self.directory / "baseline.json"
+        captured = self.run_tool(
             "snapshot",
             session,
             "--token-count-event",
             2,
             "--output",
-            self.directory / "rejected-baseline.json",
+            baseline,
         )
-        self.assertEqual(rejected_snapshot.returncode, 2)
-        self.assertIn(
-            "precedes session counter reset(s) 2->3", rejected_snapshot.stderr
-        )
-
-        baseline = self.directory / "manual-baseline.json"
-        baseline.write_text(
-            json.dumps(
-                {
-                    "schema_version": 1,
-                    "session_id": "synthetic-session",
-                    "token_count_event": 2,
-                    "timestamp": "2026-09-03T10:00:02Z",
-                    "counters": counter(
-                        30,
-                        9,
-                        3,
-                        cache_write_input_tokens=0,
-                        reasoning_output_tokens=1,
-                    ),
-                }
-            )
-        )
+        self.assertEqual(captured.returncode, 0, captured.stderr)
         arguments = self.report_arguments(session)
         arguments[2:2] = ["--baseline", baseline]
-        rejected_report = self.run_tool(*arguments)
-        self.assertEqual(rejected_report.returncode, 2)
-        self.assertIn(
-            "measured boundary crosses session counter reset(s) 2->3",
-            rejected_report.stderr,
+        completed = self.run_tool(*arguments)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["usage"]["input_tokens"], 18)
+        self.assertEqual(report["usage"]["cached_input_tokens"], 5)
+        self.assertEqual(report["usage"]["output_tokens"], 3)
+        self.assertEqual(report["usage"]["total_tokens"], 21)
+        self.assertEqual(report["requests"]["count"], 2)
+        self.assertEqual(
+            report["boundary"]["counter_resets_inside_boundary"],
+            [
+                {
+                    "decreased_counters": [
+                        "input_tokens",
+                        "cached_input_tokens",
+                        "output_tokens",
+                        "total_tokens",
+                        "reasoning_output_tokens",
+                    ],
+                    "previous_token_count_event": 2,
+                    "timestamp": "2026-09-03T10:00:03Z",
+                    "token_count_event": 3,
+                }
+            ],
         )
 
-    def test_whole_session_rejects_counter_reset(self) -> None:
+    def test_whole_session_measures_complete_exact_epochs_across_reset(self) -> None:
         session = self.write_records(session_records_with_reset())
         completed = self.run_tool(*self.report_arguments(session))
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["usage"]["input_tokens"], 48)
+        self.assertEqual(report["usage"]["cached_input_tokens"], 14)
+        self.assertEqual(report["usage"]["output_tokens"], 6)
+        self.assertEqual(report["usage"]["total_tokens"], 54)
+        self.assertEqual(report["requests"]["count"], 4)
+
+    def test_reset_inside_boundary_requires_exact_new_epoch_anchor(self) -> None:
+        records = session_records_with_reset()
+        reset_total = records[4]["payload"]["info"]["total_token_usage"]
+        reset_total["input_tokens"] += 1
+        reset_total["total_tokens"] += 1
+        session = self.write_records(records)
+        baseline = self.directory / "baseline.json"
+        captured = self.run_tool(
+            "snapshot", session, "--token-count-event", 2, "--output", baseline
+        )
+        self.assertEqual(captured.returncode, 0, captured.stderr)
+        arguments = self.report_arguments(session)
+        arguments[2:2] = ["--baseline", baseline]
+        completed = self.run_tool(*arguments)
         self.assertEqual(completed.returncode, 2)
         self.assertIn(
-            "whole-session accounting crosses session counter reset(s) 2->3",
+            "counter reset 2->3 does not establish an exact cumulative epoch anchor",
             completed.stderr,
         )
 
