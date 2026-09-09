@@ -43,6 +43,42 @@ final class FTMSControlPointCodecTests: XCTestCase {
         XCTAssertEqual(try encode(.setTargetInclination(percent: 15)), Data([0x03, 0x96, 0x00]))
     }
 
+    func testParserDecodedRangeValuesRoundTripDespiteBinaryFloatingPointTails() throws {
+        let speedRange = try FTMSParser.supportedSpeedRange(
+            Data([0x32, 0x00, 0xCF, 0x07, 0x01, 0x00])
+        )
+        let speedEligibility = FTMSControlPointEligibility(
+            features: supported.features,
+            speedRange: speedRange,
+            inclinationRange: supported.inclinationRange
+        )
+        XCTAssertEqual(speedRange.maximumKilometresPerHour, 19.990000000000002)
+        XCTAssertEqual(
+            try FTMSControlPointCodec.encode(
+                .setTargetSpeed(kilometresPerHour: speedRange.maximumKilometresPerHour),
+                eligibility: speedEligibility
+            ),
+            Data([0x02, 0xCF, 0x07])
+        )
+
+        let inclinationRange = try FTMSParser.supportedInclinationRange(
+            Data([0xD5, 0xFE, 0x7F, 0x00, 0x01, 0x00])
+        )
+        let inclinationEligibility = FTMSControlPointEligibility(
+            features: supported.features,
+            speedRange: supported.speedRange,
+            inclinationRange: inclinationRange
+        )
+        XCTAssertEqual(inclinationRange.minimumPercent, -29.900000000000002)
+        XCTAssertEqual(
+            try FTMSControlPointCodec.encode(
+                .setTargetInclination(percent: inclinationRange.minimumPercent),
+                eligibility: inclinationEligibility
+            ),
+            Data([0x03, 0xD5, 0xFE])
+        )
+    }
+
     func testRejectsTargetsWithoutAdvertisedSupportOrRangeEvidence() {
         let noFeatures = FTMSControlPointEligibility(
             features: FTMSFeatureFlags(machineFeatures: 0, targetSettingFeatures: 0),

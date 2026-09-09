@@ -238,29 +238,31 @@ enum FTMSControlPointCodec {
             }
             throw FTMSControlPointCodecError.nonFiniteValue
         }
-        guard var decimal = Decimal(string: String(value), locale: Locale(identifier: "en_US_POSIX")) else {
+        let scaled = value * Double(scale)
+        guard scaled.isFinite else {
             if let rangeField {
                 throw FTMSControlPointCodecError.invalidRange("\(rangeField) is not representable")
             }
             throw FTMSControlPointCodecError.valueOverflow
         }
-        decimal *= Decimal(scale)
-        var rounded = Decimal()
-        NSDecimalRound(&rounded, &decimal, 0, .plain)
-        guard decimal == rounded else {
+        let rounded = scaled.rounded()
+        // Parsed FTMS integers are exposed as scaled Doubles. Reversing that
+        // scale can land one ULP beside the original integer (for example,
+        // 1999 * 0.01 * 100). Accept only that representation noise; values
+        // genuinely between protocol units remain far outside this tolerance.
+        let representationTolerance = max(scaled.ulp, rounded.ulp) * 2
+        guard abs(scaled - rounded) <= representationTolerance else {
             if let rangeField {
                 throw FTMSControlPointCodecError.invalidRange("\(rangeField) is not aligned to \(resolution)")
             }
             throw FTMSControlPointCodecError.valueNotRepresentable(resolution: resolution)
         }
-        let lower = Decimal(rawMinimum)
-        let upper = Decimal(rawMaximum)
-        guard rounded >= lower, rounded <= upper else {
+        guard rounded >= Double(rawMinimum), rounded <= Double(rawMaximum) else {
             if let rangeField {
                 throw FTMSControlPointCodecError.invalidRange("\(rangeField) overflows the FTMS field")
             }
             throw FTMSControlPointCodecError.valueOverflow
         }
-        return NSDecimalNumber(decimal: rounded).int64Value
+        return Int64(rounded)
     }
 }
