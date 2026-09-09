@@ -75,6 +75,11 @@
 		B50000000000000000001001 /* PlansPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B50000000000000000002001 /* PlansPresentation.swift */; };
 		B60000000000000000001001 /* WorkoutExecutionReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60000000000000000002001 /* WorkoutExecutionReducer.swift */; };
 		B60000000000000000001002 /* WorkoutExecutionReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */; };
+		C70000000000000000001001 /* FTMSControlPointCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002001 /* FTMSControlPointCodec.swift */; };
+		C70000000000000000001002 /* FTMSControlPointTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002002 /* FTMSControlPointTransport.swift */; };
+		C70000000000000000001003 /* CoreBluetoothFTMSControlPointLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002003 /* CoreBluetoothFTMSControlPointLink.swift */; };
+		C70000000000000000001004 /* FTMSControlPointCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002004 /* FTMSControlPointCodecTests.swift */; };
+		C70000000000000000001005 /* FTMSControlPointTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002005 /* FTMSControlPointTransportTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -122,6 +127,11 @@
 		B50000000000000000002001 /* PlansPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansPresentation.swift; sourceTree = "<group>"; };
 		B60000000000000000002001 /* WorkoutExecutionReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionReducer.swift; sourceTree = "<group>"; };
 		B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionReducerTests.swift; sourceTree = "<group>"; };
+		C70000000000000000002001 /* FTMSControlPointCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointCodec.swift; sourceTree = "<group>"; };
+		C70000000000000000002002 /* FTMSControlPointTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointTransport.swift; sourceTree = "<group>"; };
+		C70000000000000000002003 /* CoreBluetoothFTMSControlPointLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreBluetoothFTMSControlPointLink.swift; sourceTree = "<group>"; };
+		C70000000000000000002004 /* FTMSControlPointCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointCodecTests.swift; sourceTree = "<group>"; };
+		C70000000000000000002005 /* FTMSControlPointTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointTransportTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000200F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000002011 /* FTMSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSParserTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002012 /* TreadmillPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreadmillPresentationTests.swift; sourceTree = "<group>"; };
@@ -256,6 +266,9 @@
 		AA0000000000000000005003 /* Bluetooth */ = {
 			isa = PBXGroup;
 			children = (
+				C70000000000000000002003 /* CoreBluetoothFTMSControlPointLink.swift */,
+				C70000000000000000002001 /* FTMSControlPointCodec.swift */,
+				C70000000000000000002002 /* FTMSControlPointTransport.swift */,
 				AA0000000000000000002008 /* FTMSUUID.swift */,
 				AA0000000000000000002009 /* FTMSModels.swift */,
 				AA000000000000000000200A /* FTMSParser.swift */,
@@ -321,6 +334,8 @@
 		AA0000000000000000005006 /* PacePromptTests */ = {
 			isa = PBXGroup;
 			children = (
+				C70000000000000000002004 /* FTMSControlPointCodecTests.swift */,
+				C70000000000000000002005 /* FTMSControlPointTransportTests.swift */,
 				B40000000000000000002003 /* HomePresentationTests.swift */,
 				AA0000000000000000002011 /* FTMSParserTests.swift */,
 				AA0000000000000000002012 /* TreadmillPresentationTests.swift */,
@@ -622,6 +637,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C70000000000000000001003 /* CoreBluetoothFTMSControlPointLink.swift in Sources */,
+				C70000000000000000001001 /* FTMSControlPointCodec.swift in Sources */,
+				C70000000000000000001002 /* FTMSControlPointTransport.swift in Sources */,
 				B40000000000000000001001 /* HomePresentation.swift in Sources */,
 				B40000000000000000001002 /* HomeUITestSupport.swift in Sources */,
 				B50000000000000000001001 /* PlansPresentation.swift in Sources */,
@@ -662,6 +680,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C70000000000000000001004 /* FTMSControlPointCodecTests.swift in Sources */,
+				C70000000000000000001005 /* FTMSControlPointTransportTests.swift in Sources */,
 				B40000000000000000001003 /* HomePresentationTests.swift in Sources */,
 				AD0000000000000000000008 /* WorkoutImportTests.swift */,
 				AA0000000000000000001011 /* FTMSParserTests.swift in Sources */,
