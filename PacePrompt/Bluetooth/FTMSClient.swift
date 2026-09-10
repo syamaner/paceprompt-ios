@@ -9,6 +9,9 @@ protocol FTMSClientDelegate: AnyObject {
 @MainActor
 protocol FTMSClientProtocol: AnyObject {
     var delegate: (any FTMSClientDelegate)? { get set }
+#if DEBUG
+    var requestControlDiagnosticJournalRecords: [RequestControlDiagnosticJournalEntry] { get }
+#endif
 
     func startScan()
     func stopScan()
@@ -18,6 +21,12 @@ protocol FTMSClientProtocol: AnyObject {
     func submitRequestControlDiagnosticOnce()
 #endif
 }
+
+#if DEBUG
+extension FTMSClientProtocol {
+    var requestControlDiagnosticJournalRecords: [RequestControlDiagnosticJournalEntry] { [] }
+}
+#endif
 
 @MainActor
 final class FTMSClient: NSObject, FTMSClientProtocol {
@@ -32,6 +41,8 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
     private var deferredNotificationCharacteristics: [String: CBCharacteristic] = [:]
 #if DEBUG
     private let requestControlWriteGate = RequestControlWriteGate()
+    private var requestControlJournal: RequestControlDiagnosticJournal?
+    private var requestControlJournalFailure: String?
     private var requestControlTransport: FTMSSingleProcedureTransport?
     private var requestControlLink: RequestControlOnlyLink?
     private var requestControlCoreLink: CoreBluetoothFTMSControlPointLink?
@@ -45,9 +56,24 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
 #endif
 
     override init() {
+#if DEBUG
+        do {
+            requestControlJournal = try RequestControlDiagnosticJournal(
+                store: RequestControlDiagnosticJournalFileStore()
+            )
+        } catch {
+            requestControlJournalFailure = error.localizedDescription
+        }
+#endif
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: .main)
     }
+
+#if DEBUG
+    var requestControlDiagnosticJournalRecords: [RequestControlDiagnosticJournalEntry] {
+        requestControlJournal?.records ?? []
+    }
+#endif
 
     func startScan() {
         guard centralManager.state == .poweredOn else {
@@ -581,10 +607,18 @@ private extension FTMSClient {
             )
             return
         }
+        guard let requestControlJournal else {
+            coreLink.invalidate()
+            setRequestControlReadiness(
+                .failed("Protected diagnostic evidence is unavailable. No write is permitted.")
+            )
+            return
+        }
 
         let restrictedLink = RequestControlOnlyLink(
             underlying: coreLink,
-            gate: requestControlWriteGate
+            gate: requestControlWriteGate,
+            journal: requestControlJournal
         )
         restrictedLink.requestSubmitted = { [weak self] data in
             self?.publishRequestControlDiagnostic(.requestSubmitted(data))
@@ -645,6 +679,12 @@ private extension FTMSClient {
     }
 
     func updateRequestControlReadiness() {
+        if let requestControlJournalFailure {
+            setRequestControlReadiness(
+                .failed("Protected diagnostic evidence is unavailable. \(requestControlJournalFailure)")
+            )
+            return
+        }
         if let requestControlPrerequisiteFailure {
             setRequestControlReadiness(.failed(requestControlPrerequisiteFailure))
             return
@@ -690,7 +730,55 @@ private extension FTMSClient {
     }
 
     func publishRequestControlDiagnostic(_ event: RequestControlDiagnosticEvent) {
+        if requestControlJournalFailure != nil {
+            if case .readiness = event {
+                delegate?.ftmsClient(self, didReceive: .requestControlDiagnostic(event))
+            } else if case .blocked = event {
+                delegate?.ftmsClient(self, didReceive: .requestControlDiagnostic(event))
+            } else {
+                delegate?.ftmsClient(
+                    self,
+                    didReceive: .requestControlDiagnostic(
+                        .blocked("Protected diagnostic evidence remains unavailable. Suppressed event: \(event.reportLine)")
+                    )
+                )
+            }
+            return
+        }
+
+        guard let requestControlJournal else {
+            failRequestControlJournal(
+                "The protected diagnostic journal was not initialised.",
+                whileRecording: event
+            )
+            return
+        }
+
+        do {
+            try requestControlJournal.record(event.journalKind, detail: event.reportLine)
+        } catch {
+            failRequestControlJournal(error.localizedDescription, whileRecording: event)
+            return
+        }
         delegate?.ftmsClient(self, didReceive: .requestControlDiagnostic(event))
+    }
+
+    func failRequestControlJournal(
+        _ detail: String,
+        whileRecording event: RequestControlDiagnosticEvent
+    ) {
+        let message = "Protected diagnostic evidence failed while recording \(event.journalKind.rawValue). No further write is authorised. \(detail)"
+        requestControlJournalFailure = message
+        if requestControlPrerequisiteFailure == nil {
+            requestControlPrerequisiteFailure = message
+        }
+        requestControlReadiness = .failed(message)
+        requestControlLink?.abort(reason: message)
+        delegate?.ftmsClient(self, didReceive: .requestControlDiagnostic(.blocked(message)))
+        delegate?.ftmsClient(
+            self,
+            didReceive: .requestControlDiagnostic(.readiness(.failed(message)))
+        )
     }
 
     func resolveRequestControlCapabilityRead(uuid: String, data: Data?, error: Error?) {

@@ -17,6 +17,7 @@ Status: aborted preparation under GitHub issue [#51](https://github.com/syamaner
 - The operator reported that the diagnostic reached **Ready for one request** after connecting to the identified FR30z.
 - Before the operator enabled the final confirmations or triggered the send action, the diagnostic process terminated unexpectedly with signal 9.
 - The retained raw console capture contains no issue #51 diagnostic records or Request Control submission line. Its sparsity cannot independently prove the final Bluetooth state or absence of traffic.
+- The available evidence cannot identify why the process received signal 9. It does not distinguish an OS termination, development-tool termination, operator action or another cause, so the cause remains explicitly unknown.
 - The operator explicitly confirmed that the app was disconnected, no Request Control was sent, and no treadmill movement occurred.
 - The abort ended the physical-session authority. The app was not relaunched and the FR30z was not reconnected. No compensating command was attempted.
 

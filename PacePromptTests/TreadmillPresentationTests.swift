@@ -325,6 +325,26 @@ final class TreadmillPresentationTests: XCTestCase {
         XCTAssertTrue(model.diagnosticReport.contains("without an OS-mediated security or pairing error"))
     }
 
+    func testIssue51ReportIncludesRecoveredProtectedJournalEvidence() {
+        let client = FakeFTMSClient()
+        client.requestControlDiagnosticJournalRecords = [
+            RequestControlDiagnosticJournalEntry(
+                sequence: 42,
+                timestamp: Date(timeIntervalSince1970: 1_700_000_000),
+                sessionID: UUID(uuidString: "00000000-0000-0000-0000-000000000051")!,
+                kind: .previousSessionRecovered,
+                detail: "Recovered through forwardingStarted; final Bluetooth state remains unknown."
+            ),
+        ]
+        let model = TreadmillSetupViewModel(client: client)
+
+        let report = model.diagnosticReport
+
+        XCTAssertTrue(report.contains("Protected durable issue #51 journal (1)"))
+        XCTAssertTrue(report.contains("sequence 42 · previousSessionRecovered"))
+        XCTAssertTrue(report.contains("final Bluetooth state remains unknown"))
+    }
+
     func testIssue51ReportRetainsEveryPassivePacketBeyondBoundedUIList() {
         let client = FakeFTMSClient()
         let model = TreadmillSetupViewModel(client: client, diagnosticLimit: 2)
@@ -369,6 +389,7 @@ private func decimal(_ value: String) -> Decimal {
 @MainActor
 private final class FakeFTMSClient: FTMSClientProtocol {
     weak var delegate: (any FTMSClientDelegate)?
+    var requestControlDiagnosticJournalRecords: [RequestControlDiagnosticJournalEntry] = []
     private(set) var startScanCount = 0
     private(set) var stopScanCount = 0
     private(set) var connectedIdentifiers: [UUID] = []
