@@ -272,6 +272,23 @@ final class RequestControlDiagnosticJournal: RequestControlDiagnosticJournaling 
         try appendBatch(startupRecords)
     }
 
+    /// Loads and validates retained evidence without appending a new process
+    /// session. Read-only diagnostic builds use this path so historical issue
+    /// #51 evidence cannot be aged out merely by launching the app.
+    static func readOnlyRecords(
+        store: any RequestControlDiagnosticJournalStore,
+        maximumRecordCount: Int = 200
+    ) throws -> [RequestControlDiagnosticJournalEntry] {
+        precondition(maximumRecordCount >= 2)
+        guard let data = try store.load() else { return [] }
+        let document = try JSONDecoder().decode(
+            RequestControlDiagnosticJournalDocument.self,
+            from: data
+        )
+        try validate(document, maximumRecordCount: maximumRecordCount)
+        return document.entries
+    }
+
     var records: [RequestControlDiagnosticJournalEntry] {
         document.entries
     }

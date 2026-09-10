@@ -56,6 +56,7 @@ struct FTMSTreadmillData: Equatable {
         var lines = [
             String(format: "Flags: 0x%04X", flags),
             "More data follows: \(moreDataFollows ? "Yes" : "No")",
+            "Included fields: \(includedFieldNames.isEmpty ? "None in this packet" : includedFieldNames.joined(separator: ", "))",
         ]
 
         if let instantaneousSpeedKilometresPerHour {
@@ -101,6 +102,29 @@ struct FTMSTreadmillData: Equatable {
         appendMeasurement(forceOnBeltNewtons, label: "Force on belt", suffix: " N", to: &lines)
         appendMeasurement(powerOutputWatts, label: "Power output", suffix: " W", to: &lines)
         return lines
+    }
+
+    var includedFieldNames: [String] {
+        var fields: [String] = []
+        if instantaneousSpeedKilometresPerHour != nil { fields.append("instantaneous speed") }
+        if averageSpeedKilometresPerHour != nil { fields.append("average speed") }
+        if totalDistanceMetres != nil { fields.append("total distance") }
+        if inclinationPercent != nil { fields.append("inclination") }
+        if rampAngleDegrees != nil { fields.append("ramp angle") }
+        if positiveElevationGainMetres != nil { fields.append("positive elevation gain") }
+        if negativeElevationGainMetres != nil { fields.append("negative elevation gain") }
+        if instantaneousPaceSecondsPer500Metres != nil { fields.append("instantaneous pace") }
+        if averagePaceSecondsPer500Metres != nil { fields.append("average pace") }
+        if totalEnergyKilocalories != nil { fields.append("total energy") }
+        if energyPerHourKilocalories != nil { fields.append("energy per hour") }
+        if energyPerMinuteKilocalories != nil { fields.append("energy per minute") }
+        if heartRateBeatsPerMinute != nil { fields.append("heart rate") }
+        if metabolicEquivalent != nil { fields.append("metabolic equivalent") }
+        if elapsedTimeSeconds != nil { fields.append("elapsed time") }
+        if remainingTimeSeconds != nil { fields.append("remaining time") }
+        if forceOnBeltNewtons != nil { fields.append("force on belt") }
+        if powerOutputWatts != nil { fields.append("power output") }
+        return fields
     }
 
     private func appendMeasurement(
@@ -428,11 +452,68 @@ enum FTMSValueSource: Equatable {
 struct FTMSDiagnostic: Identifiable, Equatable {
     let id: UInt64
     let timestamp: Date
+    let captureOffsetSeconds: TimeInterval
+    let intervalSincePreviousTreadmillNotificationSeconds: TimeInterval?
     let uuid: String
     let source: FTMSValueSource
     let rawHex: String
     let decodedLines: [String]
     let kind: FTMSDiagnosticKind
+}
+
+enum FTMSApplicationActivity: String, Equatable {
+    case unknown
+    case active
+    case inactive
+    case background
+
+    var title: String {
+        switch self {
+        case .unknown: "Unknown"
+        case .active: "Active (foreground)"
+        case .inactive: "Inactive"
+        case .background: "Background"
+        }
+    }
+}
+
+enum FTMSOperatorObservation: String, CaseIterable, Identifiable, Equatable {
+    case beltStationary
+    case consoleStart
+    case steadySpeed
+    case consoleSpeedChange
+    case consoleInclinationChange
+    case consoleStop
+    case beltFullyStationary
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .beltStationary: "Belt observed stationary"
+        case .consoleStart: "Start pressed on console"
+        case .steadySpeed: "Steady speed observed"
+        case .consoleSpeedChange: "Speed changed on console"
+        case .consoleInclinationChange: "Inclination changed on console"
+        case .consoleStop: "Stop pressed on console"
+        case .beltFullyStationary: "Belt observed fully stationary"
+        }
+    }
+}
+
+enum FTMSCaptureMarkerKind: Equatable {
+    case captureStarted
+    case applicationActivity(FTMSApplicationActivity)
+    case connection(state: String, detail: String?)
+    case valueError(uuid: String, source: FTMSValueSource, message: String)
+    case operatorObservation(FTMSOperatorObservation)
+}
+
+struct FTMSCaptureMarker: Identifiable, Equatable {
+    let id: UInt64
+    let timestamp: Date
+    let captureOffsetSeconds: TimeInterval
+    let kind: FTMSCaptureMarkerKind
 }
 
 enum FTMSClientEvent: Equatable {
@@ -443,9 +524,6 @@ enum FTMSClientEvent: Equatable {
     case subscription(uuid: String, state: FTMSSubscriptionState)
     case value(uuid: String, data: Data, source: FTMSValueSource)
     case valueError(uuid: String, source: FTMSValueSource, message: String)
-#if DEBUG
-    case requestControlDiagnostic(RequestControlDiagnosticEvent)
-#endif
 }
 
 extension Data {

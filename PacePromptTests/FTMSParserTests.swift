@@ -129,6 +129,16 @@ final class FTMSParserTests: XCTestCase {
         XCTAssertEqual(packet.remainingTimeSeconds, 120)
         XCTAssertEqual(packet.forceOnBeltNewtons, .value(-30))
         XCTAssertEqual(packet.powerOutputWatts, .value(250))
+        XCTAssertEqual(
+            packet.includedFieldNames,
+            [
+                "instantaneous speed", "average speed", "total distance", "inclination",
+                "ramp angle", "positive elevation gain", "negative elevation gain",
+                "instantaneous pace", "average pace", "total energy", "energy per hour",
+                "energy per minute", "heart rate", "metabolic equivalent", "elapsed time",
+                "remaining time", "force on belt", "power output",
+            ]
+        )
     }
 
     func testTreadmillDataPreservesMoreDataAndUnavailableValues() throws {
@@ -152,6 +162,11 @@ final class FTMSParserTests: XCTestCase {
         XCTAssertEqual(packet.powerOutputWatts, .unavailable)
         XCTAssertTrue(packet.decodedLines.contains("Instantaneous speed: Not included in this packet"))
         XCTAssertTrue(packet.decodedLines.contains("Inclination: Data unavailable"))
+        XCTAssertTrue(
+            packet.decodedLines.contains(
+                "Included fields: inclination, ramp angle, total energy, energy per hour, energy per minute, force on belt, power output"
+            )
+        )
     }
 
     func testTreadmillDataRejectsShortFlaggedFieldsReservedFlagsAndTrailingBytes() {

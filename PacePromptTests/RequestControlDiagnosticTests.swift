@@ -199,6 +199,24 @@ final class RequestControlDiagnosticTests: XCTestCase {
         XCTAssertTrue(recovered.records.last?.detail.contains("no retry or write authority") == true)
     }
 
+    func testReadOnlyJournalLoadValidatesWithoutAppendingOrSaving() throws {
+        let store = FakeRequestControlDiagnosticJournalStore()
+        let journal = try RequestControlDiagnosticJournal(
+            store: store,
+            now: { Date(timeIntervalSince1970: 1_000) },
+            sessionID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        )
+        try journal.record(.outcome, detail: "Historical accepted proof")
+        let savedData = store.data
+        let saveCount = store.saveCount
+
+        let records = try RequestControlDiagnosticJournal.readOnlyRecords(store: store)
+
+        XCTAssertEqual(records, journal.records)
+        XCTAssertEqual(store.data, savedData)
+        XCTAssertEqual(store.saveCount, saveCount)
+    }
+
     func testFileStoreAppliesCompleteProtectionAndBackupExclusion() throws {
         let fileSystem = FakeRequestControlDiagnosticJournalFileSystem()
         let store = try RequestControlDiagnosticJournalFileStore(fileSystem: fileSystem)
@@ -459,6 +477,7 @@ private final class FakeRequestControlDiagnosticJournalFileSystem: RequestContro
 private final class FakeRequestControlDiagnosticJournalStore: RequestControlDiagnosticJournalStore {
     var data: Data?
     var failSave = false
+    private(set) var saveCount = 0
 
     func load() throws -> Data? {
         data
@@ -468,6 +487,7 @@ private final class FakeRequestControlDiagnosticJournalStore: RequestControlDiag
         if failSave {
             throw SyntheticJournalError.saveFailed
         }
+        saveCount += 1
         self.data = data
     }
 }

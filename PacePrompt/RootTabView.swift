@@ -74,9 +74,13 @@ struct RootTabView: View {
         .onChange(of: capabilities) { _, value in importer.updateCapabilities(value) }
         .onChange(of: scenePhase) { _, phase in
             importer.setForeground(phase == .active)
+            treadmill.setApplicationActivity(captureActivity(for: phase))
             if phase != .active { credential.protectedDataLost() }
         }
-        .onAppear { importer.setProtectedDataAvailable(UIApplication.shared.isProtectedDataAvailable) }
+        .onAppear {
+            importer.setProtectedDataAvailable(UIApplication.shared.isProtectedDataAvailable)
+            treadmill.setApplicationActivity(captureActivity(for: scenePhase))
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataWillBecomeUnavailableNotification)) { _ in
             importer.setProtectedDataAvailable(false)
             credential.protectedDataLost()
@@ -88,5 +92,14 @@ struct RootTabView: View {
 
     private var capabilities: WorkoutPlanCapabilities {
         workoutCapabilitiesOverride ?? treadmill.workoutPlanCapabilities
+    }
+
+    private func captureActivity(for phase: ScenePhase) -> FTMSApplicationActivity {
+        switch phase {
+        case .active: .active
+        case .inactive: .inactive
+        case .background: .background
+        @unknown default: .unknown
+        }
     }
 }

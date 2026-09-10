@@ -24,9 +24,6 @@ private final class HomeUITestFTMSClient: FTMSClientProtocol {
     func stopScan() { send(.connection(.idle)) }
     func connect(to identifier: UUID) {}
     func disconnect() {}
-    func submitRequestControlDiagnosticOnce() {
-        send(.requestControlDiagnostic(.blocked("Synthetic UI-test client cannot write.")))
-    }
 
     func seed(scenario: String?) {
         switch scenario {
