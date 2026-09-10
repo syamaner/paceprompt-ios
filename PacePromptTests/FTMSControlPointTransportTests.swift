@@ -209,7 +209,7 @@ final class FTMSControlPointTransportTests: XCTestCase {
         }
     }
 
-    func testMalformedReservedMismatchedAndOutOfOrderIndicationsFailClosed() throws {
+    func testMalformedReservedAndMismatchedIndicationsFailClosed() throws {
         let cases: [(Data, String)] = [
             (Data([0x80, 0x00]), "exactly 3 bytes"),
             (Data([0x81, 0x00, 0x01]), "not 0x80"),
@@ -238,18 +238,185 @@ final class FTMSControlPointTransportTests: XCTestCase {
             )
         }
 
-        let early = try Harness()
-        _ = try early.transport.submit(.requestControl)
-        early.link.send(.indication(Data([0x80, 0x00, 0x01])))
-        XCTAssertInvalidated(early.transport.state, epoch: early.epoch)
-        guard case let .protocolAnomaly(reason, _) = early.transport.state.outcomes[0].result else {
-            return XCTFail("Expected out-of-order indication failure")
-        }
-        XCTAssertTrue(reason.contains("before ATT write acceptance"))
+    }
+
+    func testEarlyMatchingIndicationIsProvisionalUntilATTAcceptance() throws {
+        let harness = try Harness()
+        harness.clock.seconds = 10
+        let id = try harness.transport.submit(.requestControl)
+        harness.clock.seconds = 11
+        let bytes = Data([0x80, 0x00, 0x01])
+        harness.link.send(.indication(bytes))
+
+        XCTAssertEqual(harness.transport.state.permission, .requesting(id))
+        XCTAssertTrue(harness.transport.state.inFlight?.hasProvisionalResponse == true)
+        XCTAssertEqual(harness.transport.state.inFlight?.id, id)
+        XCTAssertEqual(harness.transport.state.inFlight?.provisionalResponse?.rawBytes, bytes)
+        XCTAssertNil(harness.transport.state.inFlight?.response)
         XCTAssertEqual(
-            early.transport.state.outcomes[0].evidence.responseReceivedAt,
-            MonotonicInstant(seconds: 0)
+            harness.transport.state.inFlight?.responseReceivedAt,
+            MonotonicInstant(seconds: 11)
         )
+        XCTAssertTrue(harness.scheduler.tokens.isEmpty)
+        XCTAssertTrue(harness.transport.state.outcomes.isEmpty)
+
+        harness.clock.seconds = 12
+        harness.link.send(.writeAccepted)
+
+        XCTAssertNil(harness.transport.state.inFlight)
+        XCTAssertEqual(
+            harness.transport.state.permission,
+            .held(harness.epoch, acknowledgedAt: MonotonicInstant(seconds: 12))
+        )
+        XCTAssertTrue(harness.scheduler.tokens.isEmpty)
+        guard case let .acknowledged(response) = harness.transport.state.outcomes[0].result else {
+            return XCTFail("Expected acknowledgement only after ATT acceptance")
+        }
+        XCTAssertEqual(response.rawBytes, bytes)
+        XCTAssertEqual(harness.transport.state.outcomes[0].evidence.id, id)
+        XCTAssertNil(harness.transport.state.outcomes[0].evidence.provisionalResponse)
+        XCTAssertEqual(harness.transport.state.outcomes[0].evidence.response?.rawBytes, bytes)
+        XCTAssertEqual(
+            harness.transport.state.outcomes[0].evidence.attOutcome,
+            .accepted(
+                at: MonotonicInstant(seconds: 12),
+                indicationDeadline: MonotonicInstant(seconds: 42)
+            )
+        )
+        XCTAssertEqual(
+            harness.transport.state.outcomes[0].evidence.responseReceivedAt,
+            MonotonicInstant(seconds: 11)
+        )
+        XCTAssertEqual(
+            harness.transport.state.outcomes[0].completedAt,
+            MonotonicInstant(seconds: 12)
+        )
+        XCTAssertEqual(harness.link.writes, [Data([0x00])])
+    }
+
+    func testEarlyMatchingIndicationCannotOverrideATTRejectionOrUnknownDelivery() throws {
+        let rejected = try Harness()
+        _ = try rejected.transport.submit(.requestControl)
+        let bytes = Data([0x80, 0x00, 0x01])
+        rejected.link.send(.indication(bytes))
+        rejected.clock.seconds = 1
+        rejected.link.send(.writeATTRejected(code: 0x03, message: "Write not permitted"))
+
+        XCTAssertEqual(rejected.transport.state.permission, .notHeld)
+        XCTAssertNil(rejected.transport.state.inFlight)
+        XCTAssertEqual(rejected.link.writes, [Data([0x00])])
+        guard case .attRejected(code: 0x03, message: "Write not permitted") =
+            rejected.transport.state.outcomes[0].result else {
+            return XCTFail("Expected ATT rejection to remain authoritative")
+        }
+        XCTAssertEqual(
+            rejected.transport.state.outcomes[0].evidence.provisionalResponse?.rawBytes,
+            bytes
+        )
+        XCTAssertNil(rejected.transport.state.outcomes[0].evidence.response)
+
+        let unknown = try Harness()
+        _ = try unknown.transport.submit(.requestControl)
+        unknown.link.send(.indication(bytes))
+        unknown.clock.seconds = 1
+        unknown.link.send(.writeDeliveryUnknown("Bluetooth reset"))
+
+        XCTAssertInvalidated(unknown.transport.state, epoch: unknown.epoch)
+        XCTAssertEqual(unknown.transport.state.permission, .notHeld)
+        XCTAssertEqual(unknown.link.writes, [Data([0x00])])
+        guard case .deliveryUnknown("Bluetooth reset") = unknown.transport.state.outcomes[0].result else {
+            return XCTFail("Expected unknown delivery to fail closed")
+        }
+        XCTAssertEqual(unknown.transport.state.outcomes[0].evidence.provisionalResponse?.rawBytes, bytes)
+        XCTAssertNil(unknown.transport.state.outcomes[0].evidence.response)
+    }
+
+    func testEarlyResponseDisconnectRemainsDeliveryUnknown() throws {
+        let harness = try Harness()
+        _ = try harness.transport.submit(.requestControl)
+        let bytes = Data([0x80, 0x00, 0x01])
+        harness.link.send(.indication(bytes))
+        harness.clock.seconds = 1
+        harness.link.send(.disconnected("Link lost"))
+
+        XCTAssertEqual(harness.transport.state.link, .disconnected)
+        XCTAssertEqual(harness.transport.state.permission, .notHeld)
+        XCTAssertEqual(harness.link.writes, [Data([0x00])])
+        guard case .deliveryUnknownDisconnect("Link lost") = harness.transport.state.outcomes[0].result else {
+            return XCTFail("Expected disconnect before ATT acceptance to preserve uncertainty")
+        }
+        XCTAssertEqual(harness.transport.state.outcomes[0].evidence.provisionalResponse?.rawBytes, bytes)
+        XCTAssertNil(harness.transport.state.outcomes[0].evidence.response)
+    }
+
+    func testMalformedMismatchedDuplicateAndInvalidTimeEarlyResponsesFailClosed() throws {
+        for bytes in [
+            Data([0x80, 0x00]),
+            Data([0x80, 0x02, 0x01]),
+        ] {
+            let harness = try Harness()
+            _ = try harness.transport.submit(.requestControl)
+            harness.link.send(.indication(bytes))
+            XCTAssertInvalidated(harness.transport.state, epoch: harness.epoch)
+            XCTAssertEqual(harness.link.writes, [Data([0x00])])
+            guard case .protocolAnomaly = harness.transport.state.outcomes[0].result else {
+                return XCTFail("Expected malformed or mismatched early response to fail closed")
+            }
+        }
+
+        let duplicate = try Harness()
+        _ = try duplicate.transport.submit(.requestControl)
+        let bytes = Data([0x80, 0x00, 0x01])
+        duplicate.link.send(.indication(bytes))
+        duplicate.clock.seconds = 1
+        duplicate.link.send(.indication(bytes))
+        XCTAssertInvalidated(duplicate.transport.state, epoch: duplicate.epoch)
+        guard case let .protocolAnomaly(reason, raw) = duplicate.transport.state.outcomes[0].result else {
+            return XCTFail("Expected duplicate early response to fail closed")
+        }
+        XCTAssertTrue(reason.contains("Duplicate"))
+        XCTAssertEqual(raw, bytes)
+
+        let invalidTime = try Harness()
+        invalidTime.clock.seconds = 1
+        _ = try invalidTime.transport.submit(.requestControl)
+        invalidTime.clock.seconds = .nan
+        invalidTime.link.send(.indication(bytes))
+        XCTAssertInvalidated(invalidTime.transport.state, epoch: invalidTime.epoch)
+        XCTAssertEqual(invalidTime.transport.state.permission, .notHeld)
+        XCTAssertEqual(invalidTime.link.writes, [Data([0x00])])
+        XCTAssertTrue(invalidTime.transport.state.outcomes.isEmpty)
+    }
+
+    func testProvisionalResponseCannotCrossConnectionEpochOrProcedureIdentity() throws {
+        let clock = FakeMonotonicClock()
+        let scheduler = FakeDeadlineScheduler()
+        let transport = FTMSSingleProcedureTransport(clock: { clock.instant }, scheduler: scheduler)
+        let first = FakeControlPointLink()
+        let firstEpoch = ConnectionEpoch(rawValue: 7)
+        try transport.establishLink(epoch: firstEpoch, eligibility: Harness.eligibility, link: first)
+        try transport.enableIndications()
+        first.send(.indicationsEnabled)
+        let firstID = try transport.submit(.requestControl)
+        first.send(.indication(Data([0x80, 0x00, 0x01])))
+        XCTAssertEqual(transport.state.inFlight?.id, firstID)
+        first.send(.disconnected("First link ended"))
+
+        let second = FakeControlPointLink()
+        let secondEpoch = ConnectionEpoch(rawValue: 8)
+        try transport.establishLink(epoch: secondEpoch, eligibility: Harness.eligibility, link: second)
+        try transport.enableIndications()
+        second.send(.indicationsEnabled)
+        let secondID = try transport.submit(.requestControl)
+        XCTAssertNotEqual(firstID, secondID)
+
+        first.send(.writeAccepted)
+        XCTAssertEqual(transport.state.inFlight?.id, secondID)
+        XCTAssertNil(transport.state.inFlight?.provisionalResponse)
+        XCTAssertNil(transport.state.inFlight?.response)
+        XCTAssertEqual(transport.state.permission, .requesting(secondID))
+        XCTAssertEqual(transport.state.anomalies.last, .staleLinkEvent(firstEpoch))
+        XCTAssertEqual(second.writes, [Data([0x00])])
     }
 
     func testDuplicateAndLateIndicationsInvalidateWithoutChangingPriorSuccess() throws {

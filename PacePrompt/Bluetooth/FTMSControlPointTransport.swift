@@ -100,8 +100,13 @@ struct FTMSControlPointProcedureEvidence: Equatable {
     let exactRequestBytes: Data
     let submittedAt: MonotonicInstant
     var attOutcome: FTMSControlPointATTOutcome?
+    var provisionalResponse: FTMSControlPointResponse? = nil
     var response: FTMSControlPointResponse?
     var responseReceivedAt: MonotonicInstant?
+
+    var hasProvisionalResponse: Bool {
+        provisionalResponse != nil && response == nil && attOutcome == nil
+    }
 }
 
 enum FTMSControlPointProcedureResult: Equatable {
@@ -382,6 +387,14 @@ final class FTMSSingleProcedureTransport: FitnessMachineControlTransport {
         guard let now = validTimestampOrInvalidate(epoch: epoch) else { return }
         let deadline = now.advanced(by: Self.indicationDeadline)
         procedure.attOutcome = .accepted(at: now, indicationDeadline: deadline)
+
+        if let response = procedure.provisionalResponse {
+            procedure.provisionalResponse = nil
+            procedure.response = response
+            completeResponse(procedure, response: response, epoch: epoch, at: now)
+            return
+        }
+
         state.inFlight = procedure
         cancelDeadline()
         deadlineCancellation = scheduler.schedule(after: Self.indicationDeadline) { [weak self] in
@@ -424,26 +437,29 @@ final class FTMSSingleProcedureTransport: FitnessMachineControlTransport {
             failUnexpected("Duplicate or late Control Point indication", epoch: epoch)
             return
         }
-        guard case let .accepted(_, deadline)? = procedure.attOutcome else {
+        guard procedure.provisionalResponse == nil, procedure.response == nil else {
             completeProtocolAnomaly(
                 procedure,
                 epoch: epoch,
-                reason: "Control Point indication arrived before ATT write acceptance",
+                reason: "Duplicate Control Point indication arrived for the in-flight procedure",
                 rawBytes: data
             )
             return
         }
         guard let now = validTimestampOrInvalidate(epoch: epoch) else { return }
         procedure.responseReceivedAt = now
-        guard now < deadline else {
-            completeProtocolAnomaly(
-                procedure,
-                epoch: epoch,
-                reason: "Control Point indication arrived at or after the 30-second deadline",
-                rawBytes: data,
-                at: now
-            )
-            return
+
+        if case let .accepted(_, deadline)? = procedure.attOutcome {
+            guard now < deadline else {
+                completeProtocolAnomaly(
+                    procedure,
+                    epoch: epoch,
+                    reason: "Control Point indication arrived at or after the 30-second deadline",
+                    rawBytes: data,
+                    at: now
+                )
+                return
+            }
         }
 
         let response: FTMSControlPointResponse
@@ -474,8 +490,25 @@ final class FTMSSingleProcedureTransport: FitnessMachineControlTransport {
             return
         }
 
-        procedure.response = response
         procedure.responseReceivedAt = now
+
+        guard case .accepted? = procedure.attOutcome else {
+            procedure.provisionalResponse = response
+            state.inFlight = procedure
+            publishState()
+            return
+        }
+
+        procedure.response = response
+        completeResponse(procedure, response: response, epoch: epoch, at: now)
+    }
+
+    private func completeResponse(
+        _ procedure: FTMSControlPointProcedureEvidence,
+        response: FTMSControlPointResponse,
+        epoch: ConnectionEpoch,
+        at now: MonotonicInstant
+    ) {
         cancelDeadline()
         if response.result == .success {
             complete(procedure, result: .acknowledged(response), at: now)
