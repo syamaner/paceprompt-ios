@@ -77,7 +77,6 @@
 		B60000000000000000001002 /* WorkoutExecutionReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */; };
 		C70000000000000000001001 /* FTMSControlPointCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002001 /* FTMSControlPointCodec.swift */; };
 		C70000000000000000001002 /* FTMSControlPointTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002002 /* FTMSControlPointTransport.swift */; };
-		C70000000000000000001003 /* CoreBluetoothFTMSControlPointLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002003 /* CoreBluetoothFTMSControlPointLink.swift */; };
 		C70000000000000000001004 /* FTMSControlPointCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002004 /* FTMSControlPointCodecTests.swift */; };
 		C70000000000000000001005 /* FTMSControlPointTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002005 /* FTMSControlPointTransportTests.swift */; };
 		D10000000000000000001001 /* RequestControlDiagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000002001 /* RequestControlDiagnostic.swift */; };
@@ -131,7 +130,6 @@
 		B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionReducerTests.swift; sourceTree = "<group>"; };
 		C70000000000000000002001 /* FTMSControlPointCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointCodec.swift; sourceTree = "<group>"; };
 		C70000000000000000002002 /* FTMSControlPointTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointTransport.swift; sourceTree = "<group>"; };
-		C70000000000000000002003 /* CoreBluetoothFTMSControlPointLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreBluetoothFTMSControlPointLink.swift; sourceTree = "<group>"; };
 		C70000000000000000002004 /* FTMSControlPointCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointCodecTests.swift; sourceTree = "<group>"; };
 		C70000000000000000002005 /* FTMSControlPointTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointTransportTests.swift; sourceTree = "<group>"; };
 		D10000000000000000002001 /* RequestControlDiagnostic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestControlDiagnostic.swift; sourceTree = "<group>"; };
@@ -271,7 +269,6 @@
 			isa = PBXGroup;
 			children = (
 				D10000000000000000002001 /* RequestControlDiagnostic.swift */,
-				C70000000000000000002003 /* CoreBluetoothFTMSControlPointLink.swift */,
 				C70000000000000000002001 /* FTMSControlPointCodec.swift */,
 				C70000000000000000002002 /* FTMSControlPointTransport.swift */,
 				AA0000000000000000002008 /* FTMSUUID.swift */,
@@ -644,7 +641,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D10000000000000000001001 /* RequestControlDiagnostic.swift in Sources */,
-				C70000000000000000001003 /* CoreBluetoothFTMSControlPointLink.swift in Sources */,
 				C70000000000000000001001 /* FTMSControlPointCodec.swift in Sources */,
 				C70000000000000000001002 /* FTMSControlPointTransport.swift in Sources */,
 				B40000000000000000001001 /* HomePresentation.swift in Sources */,

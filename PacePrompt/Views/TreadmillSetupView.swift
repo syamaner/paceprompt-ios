@@ -4,12 +4,7 @@ import UIKit
 struct TreadmillSetupView: View {
     @ObservedObject var treadmill: TreadmillSetupViewModel
     @State private var copiedDiagnostics = false
-#if DEBUG
-    @State private var deckAndBeltConfirmed = false
-    @State private var consoleAndSafetyKeyConfirmed = false
-    @State private var noOtherControllerConfirmed = false
-    @State private var showingRequestControlConfirmation = false
-#endif
+    @State private var copiedFreshnessCapture = false
 
     var body: some View {
         List {
@@ -22,9 +17,7 @@ struct TreadmillSetupView: View {
 
             capabilitySection
             subscriptionSection
-#if DEBUG
-            requestControlDiagnosticSection
-#endif
+            freshnessCaptureSection
             diagnosticSection
 
             if !treadmill.characteristics.isEmpty {
@@ -202,7 +195,7 @@ struct TreadmillSetupView: View {
             }
 
             if !treadmill.diagnostics.isEmpty {
-                Button("Clear packet log", role: .destructive) {
+                Button("Clear in-memory capture", role: .destructive) {
                     treadmill.clearDiagnostics()
                     copiedDiagnostics = false
                 }
@@ -214,64 +207,53 @@ struct TreadmillSetupView: View {
         }
     }
 
-#if DEBUG
-    private var requestControlDiagnosticSection: some View {
+    private var freshnessCaptureSection: some View {
         Section {
-            LabeledContent("Diagnostic state", value: treadmill.requestControlReadiness.title)
-            if let detail = treadmill.requestControlReadiness.detail {
-                Text(detail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            LabeledContent("Application state", value: treadmill.applicationActivity.title)
+            LabeledContent(
+                "Complete packet capture",
+                value: "\(treadmill.capturedDiagnosticCount)/\(treadmill.captureDiagnosticCapacity)"
+            )
+            if treadmill.droppedCaptureDiagnostics > 0 {
+                Label(
+                    "\(treadmill.droppedCaptureDiagnostics) packets dropped; this capture is not complete",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .font(.footnote)
+                .foregroundStyle(.red)
             }
 
-            Toggle("Deck clear and belt stationary", isOn: $deckAndBeltConfirmed)
-            Toggle("Console and safety key within reach", isOn: $consoleAndSafetyKeyConfirmed)
-            Toggle("No other app or person controlling", isOn: $noOtherControllerConfirmed)
-
-            Button(role: .destructive) {
-                showingRequestControlConfirmation = true
-            } label: {
-                Label("Send one Request Control · 00", systemImage: "lock.open.trianglebadge.exclamationmark")
-            }
-            .disabled(!requestControlSubmissionEnabled)
-            .confirmationDialog(
-                "Send exactly one Request Control write?",
-                isPresented: $showingRequestControlConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Send 00 once", role: .destructive) {
-                    treadmill.submitRequestControlDiagnosticOnce()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This consumes the installed diagnostic build's one-write allowance. It cannot retry, reconnect, or send any other Control Point opcode.")
-            }
-
-            if !treadmill.requestControlDiagnostics.isEmpty {
-                ForEach(treadmill.requestControlDiagnostics.reversed()) { record in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(record.event.reportLine)
-                            .font(.caption)
-                        Text(record.timestamp, format: .dateTime.hour().minute().second())
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
+            Menu {
+                ForEach(FTMSOperatorObservation.allCases) { observation in
+                    Button(observation.title) {
+                        treadmill.recordOperatorObservation(observation)
+                        copiedFreshnessCapture = false
                     }
                 }
+            } label: {
+                Label("Record operator observation", systemImage: "person.crop.circle.badge.checkmark")
+            }
+            .disabled(!treadmill.canRecordOperatorObservation)
+
+            ShareLink(item: treadmill.treadmillDataFreshnessReport) {
+                Label("Share issue #52 capture", systemImage: "square.and.arrow.up")
+            }
+
+            Button {
+                UIPasteboard.general.string = treadmill.treadmillDataFreshnessReport
+                copiedFreshnessCapture = true
+            } label: {
+                Label(
+                    copiedFreshnessCapture ? "Issue #52 capture copied" : "Copy issue #52 capture",
+                    systemImage: "doc.on.doc"
+                )
             }
         } header: {
-            Text("Issue #51 · Debug-only Request Control proof")
+            Text("Issue #52 · Read-only timing capture")
         } footer: {
-            Text("Only the exact single byte 00 is allow-listed. Any error or uncertainty ends the proof; use Disconnect and send no compensating command.")
+            Text("Markers record only when you press them; they do not verify treadmill state. Packet intervals use a monotonic clock. No freshness window or target deadline is applied, and no build configuration contains a Control Point write path.")
         }
     }
-
-    private var requestControlSubmissionEnabled: Bool {
-        treadmill.requestControlReadiness.permitsRequest
-            && deckAndBeltConfirmed
-            && consoleAndSafetyKeyConfirmed
-            && noOtherControllerConfirmed
-    }
-#endif
 
     private var characteristicSection: some View {
         Section("Discovered characteristics") {
@@ -288,17 +270,9 @@ struct TreadmillSetupView: View {
 
     private var safetySection: some View {
         Section {
-#if DEBUG
-            Label("Issue #51 one-write diagnostic", systemImage: "lock.shield")
-#else
             Label("Read-only capability check", systemImage: "lock.shield")
-#endif
         } footer: {
-#if DEBUG
-            Text("The Debug-only diagnostic can submit Request Control 00 once. It cannot send speed, inclination, Start, Stop/Pause, Reset, retry, reconnect or workout commands. The physical console and safety key remain authoritative.")
-#else
-            Text("This app never writes to FTMS Control Point 0x2AD9. The physical console and safety key remain authoritative.")
-#endif
+            Text("No build configuration can write to FTMS Control Point 0x2AD9. The physical console and safety key remain authoritative.")
         }
     }
 
@@ -331,6 +305,9 @@ private struct DiagnosticPacketCard: View {
             Text(diagnostic.source.title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            Text(packetTiming)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
             ForEach(Array(diagnostic.decodedLines.enumerated()), id: \.offset) { _, line in
                 Text(line)
                     .font(.subheadline)
@@ -351,6 +328,14 @@ private struct DiagnosticPacketCard: View {
         case .unknown: "Unknown protocol value"
         case .malformed: "Malformed packet"
         }
+    }
+
+    private var packetTiming: String {
+        var text = String(format: "+%.3f s from capture start", diagnostic.captureOffsetSeconds)
+        if let interval = diagnostic.intervalSincePreviousTreadmillNotificationSeconds {
+            text += String(format: " · %.3f s since prior 0x2ACD notification", interval)
+        }
+        return text
     }
 
     private var diagnosticSymbol: String {

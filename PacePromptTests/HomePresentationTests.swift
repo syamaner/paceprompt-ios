@@ -186,5 +186,4 @@ private final class HomePresentationFakeClient: FTMSClientProtocol {
     func stopScan() {}
     func connect(to identifier: UUID) { connectCount += 1 }
     func disconnect() {}
-    func submitRequestControlDiagnosticOnce() {}
 }

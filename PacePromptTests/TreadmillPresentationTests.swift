@@ -256,7 +256,11 @@ final class TreadmillPresentationTests: XCTestCase {
         XCTAssertTrue(report.contains("Unavailable - no packets received"))
         XCTAssertTrue(report.contains("Synthetic treadmill - \(identifier.uuidString) - RSSI -54 dBm"))
         XCTAssertTrue(report.contains("0x2ACD Treadmill Data: Inactive - No terminal subscription outcome recorded"))
-        XCTAssertTrue(report.contains("hard-allows exactly one Request Control 00 write"))
+        XCTAssertTrue(
+            report.contains(
+                "No FTMS Control Point 0x2AD9 write path is compiled in any build configuration"
+            )
+        )
     }
 
     func testValueUpdateErrorDoesNotRewriteSubscriptionOutcome() {
@@ -270,6 +274,86 @@ final class TreadmillPresentationTests: XCTestCase {
         XCTAssertEqual(model.lastError, "Synthetic packet error")
     }
 
+    func testIssue52CaptureUsesMonotonicTreadmillNotificationIntervalsAndReportsSilence() {
+        let client = FakeFTMSClient()
+        let clock = MonotonicClockStub([100, 100.25, 100.75, 102])
+        let model = TreadmillSetupViewModel(
+            client: client,
+            now: { Date(timeIntervalSince1970: 1_788_379_200) },
+            monotonicNow: { clock.next() }
+        )
+
+        client.send(.value(uuid: FTMSUUID.treadmillData, data: Data([0x00, 0x00, 0x20, 0x03]), source: .notification))
+        client.send(.value(uuid: FTMSUUID.treadmillData, data: Data([0x00, 0x00, 0x21, 0x03]), source: .notification))
+
+        XCTAssertEqual(model.diagnostics.map(\.captureOffsetSeconds), [0.25, 0.75])
+        XCTAssertNil(model.diagnostics[0].intervalSincePreviousTreadmillNotificationSeconds)
+        XCTAssertEqual(model.diagnostics[1].intervalSincePreviousTreadmillNotificationSeconds, 0.5)
+
+        let report = model.treadmillDataFreshnessReport
+        XCTAssertTrue(report.contains("[+0.750 s; interval 0.500 s from prior 0x2ACD notification]"))
+        XCTAssertTrue(report.contains("Measured silence since last 0x2ACD notification at report generation: 1.250 s; this is not machine-state evidence"))
+        XCTAssertTrue(report.contains("no freshness window or target-observation deadline has been adopted"))
+    }
+
+    func testIssue52CaptureKeepsLifecycleHumanAndValueErrorEvidenceDistinct() {
+        let client = FakeFTMSClient()
+        let clock = MonotonicClockStub([10, 11, 12, 13, 14, 15])
+        let model = TreadmillSetupViewModel(
+            client: client,
+            now: { Date(timeIntervalSince1970: 1_788_379_200) },
+            monotonicNow: { clock.next() }
+        )
+
+        model.recordOperatorObservation(.beltStationary)
+        model.setApplicationActivity(.active)
+        client.send(.connection(.connected(name: "Synthetic treadmill")))
+        model.recordOperatorObservation(.beltStationary)
+        client.send(.valueError(uuid: FTMSUUID.treadmillData, source: .notification, message: "Synthetic packet error"))
+
+        let report = model.treadmillDataFreshnessReport
+        XCTAssertEqual(report.components(separatedBy: "Operator recorded: Belt observed stationary").count - 1, 1)
+        XCTAssertTrue(report.contains("Application state: Active (foreground)"))
+        XCTAssertTrue(report.contains("Connection state: Connected"))
+        XCTAssertTrue(report.contains("0x2ACD Notification error: Synthetic packet error"))
+        XCTAssertTrue(report.contains("Operator markers record only the operator's button press"))
+    }
+
+    func testIssue52CompleteCaptureIsSeparateFromBoundedUIAndFailsVisibleOnOverflow() {
+        let client = FakeFTMSClient()
+        var monotonic = 0.0
+        let model = TreadmillSetupViewModel(
+            client: client,
+            monotonicNow: {
+                defer { monotonic += 1 }
+                return monotonic
+            },
+            diagnosticLimit: 1,
+            captureDiagnosticLimit: 3
+        )
+
+        for status in UInt8(0)...3 {
+            client.send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0x00, status]), source: .notification))
+        }
+
+        XCTAssertEqual(model.diagnostics.count, 1)
+        XCTAssertEqual(model.capturedDiagnosticCount, 3)
+        XCTAssertEqual(model.droppedCaptureDiagnostics, 1)
+        XCTAssertTrue(model.treadmillDataFreshnessReport.contains("INCOMPLETE CAPTURE"))
+    }
+
+    func testIssue52ReportRetainsTerminalSubscriptionOutcomesAfterDisconnect() {
+        let client = FakeFTMSClient()
+        let model = TreadmillSetupViewModel(client: client)
+        client.send(.subscription(uuid: FTMSUUID.treadmillData, state: .subscribed))
+        client.send(.subscription(uuid: FTMSUUID.treadmillData, state: .inactive(reason: "Disconnected")))
+
+        let report = model.treadmillDataFreshnessReport
+        XCTAssertTrue(report.contains("0x2ACD Treadmill Data: Subscribed"))
+        XCTAssertTrue(report.contains("no FTMS Control Point write path is compiled in any configuration"))
+        XCTAssertTrue(report.contains("No FTMS Control Point 0x2AD9 write path is available in any build configuration"))
+    }
+
     func testClearDiagnosticsDoesNotChangeSubscriptionEvidence() {
         let client = FakeFTMSClient()
         let model = TreadmillSetupViewModel(client: client)
@@ -279,6 +363,8 @@ final class TreadmillPresentationTests: XCTestCase {
         model.clearDiagnostics()
 
         XCTAssertTrue(model.diagnostics.isEmpty)
+        XCTAssertEqual(model.capturedDiagnosticCount, 0)
+        XCTAssertTrue(model.treadmillDataFreshnessReport.contains("Unavailable - no packets received"))
         XCTAssertEqual(model.subscription(for: FTMSUUID.treadmillData), .subscribed)
     }
 
@@ -296,33 +382,6 @@ final class TreadmillPresentationTests: XCTestCase {
 
         XCTAssertTrue(model.diagnosticReport.contains("0x2AD3 Initial read · Decoded"))
         XCTAssertTrue(model.diagnosticReport.contains("0x2AD3 Notification · Decoded"))
-    }
-
-    func testIssue51DiagnosticForwardsExplicitActionAndRecordsExactEvidenceLayers() {
-        let client = FakeFTMSClient()
-        let model = TreadmillSetupViewModel(
-            client: client,
-            now: { Date(timeIntervalSince1970: 1_700_000_000) }
-        )
-
-        model.submitRequestControlDiagnosticOnce()
-        XCTAssertEqual(client.requestControlSubmitCount, 1)
-
-        client.send(.requestControlDiagnostic(.indicationSubscriptionSucceeded))
-        client.send(.requestControlDiagnostic(.readiness(.ready)))
-        client.send(.requestControlDiagnostic(.requestSubmitted(Data([0x00]))))
-        client.send(.requestControlDiagnostic(.attAccepted))
-        client.send(.requestControlDiagnostic(.indication(Data([0x80, 0x00, 0x01]))))
-        client.send(.requestControlDiagnostic(.disconnectRequested))
-        client.send(.requestControlDiagnostic(.disconnected(nil)))
-
-        XCTAssertEqual(model.requestControlReadiness, .ready)
-        XCTAssertTrue(model.diagnosticReport.contains("exact bytes: 00"))
-        XCTAssertTrue(model.diagnosticReport.contains("ATT write callback: accepted"))
-        XCTAssertTrue(model.diagnosticReport.contains("raw bytes: 80 00 01"))
-        XCTAssertTrue(model.diagnosticReport.contains("Explicit disconnect requested"))
-        XCTAssertTrue(model.diagnosticReport.contains("CoreBluetooth disconnected"))
-        XCTAssertTrue(model.diagnosticReport.contains("without an OS-mediated security or pairing error"))
     }
 
     func testIssue51ReportIncludesRecoveredProtectedJournalEvidence() {
@@ -345,7 +404,7 @@ final class TreadmillPresentationTests: XCTestCase {
         XCTAssertTrue(report.contains("final Bluetooth state remains unknown"))
     }
 
-    func testIssue51ReportRetainsEveryPassivePacketBeyondBoundedUIList() {
+    func testDiagnosticReportRetainsEveryPassivePacketBeyondBoundedUIList() {
         let client = FakeFTMSClient()
         let model = TreadmillSetupViewModel(client: client, diagnosticLimit: 2)
 
@@ -360,8 +419,9 @@ final class TreadmillPresentationTests: XCTestCase {
         }
 
         XCTAssertEqual(model.diagnostics.count, 2)
-        XCTAssertTrue(model.diagnosticReport.contains("Complete issue #51 passive packet log (3)"))
+        XCTAssertTrue(model.diagnosticReport.contains("Packet log (3/10000; dropped 0)"))
         XCTAssertEqual(model.diagnosticReport.components(separatedBy: "0x2AD3 Notification").count - 1, 3)
+        XCTAssertTrue(model.diagnosticReport.contains("No FTMS Control Point 0x2AD9 write path is compiled in any build configuration"))
     }
 
     func testIssue51ReportPreservesTerminalSubscriptionOutcomesAfterDisconnect() {
@@ -386,6 +446,19 @@ private func decimal(_ value: String) -> Decimal {
     Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))!
 }
 
+private final class MonotonicClockStub {
+    private var values: [TimeInterval]
+
+    init(_ values: [TimeInterval]) {
+        self.values = values
+    }
+
+    func next() -> TimeInterval {
+        precondition(!values.isEmpty)
+        return values.removeFirst()
+    }
+}
+
 @MainActor
 private final class FakeFTMSClient: FTMSClientProtocol {
     weak var delegate: (any FTMSClientDelegate)?
@@ -394,7 +467,6 @@ private final class FakeFTMSClient: FTMSClientProtocol {
     private(set) var stopScanCount = 0
     private(set) var connectedIdentifiers: [UUID] = []
     private(set) var disconnectCount = 0
-    private(set) var requestControlSubmitCount = 0
 
     func startScan() {
         startScanCount += 1
@@ -410,10 +482,6 @@ private final class FakeFTMSClient: FTMSClientProtocol {
 
     func disconnect() {
         disconnectCount += 1
-    }
-
-    func submitRequestControlDiagnosticOnce() {
-        requestControlSubmitCount += 1
     }
 
     func send(_ event: FTMSClientEvent) {
