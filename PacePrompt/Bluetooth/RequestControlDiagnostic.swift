@@ -1,6 +1,375 @@
 #if DEBUG
 import Foundation
 
+enum RequestControlDiagnosticJournalKind: String, Codable, Equatable {
+    case sessionStarted
+    case previousSessionRecovered
+    case controlPointDiscovered
+    case indicationSubscriptionSucceeded
+    case indicationSubscriptionFailed
+    case readiness
+    case requestPathEntered
+    case gateConsumed
+    case forwardingStarted
+    case requestSubmitted
+    case procedureSubmitted
+    case attAccepted
+    case attRejected
+    case writeDeliveryUnknown
+    case indicationReceived
+    case indicationFailed
+    case outcome
+    case disconnectRequested
+    case disconnected
+    case blocked
+}
+
+struct RequestControlDiagnosticJournalEntry: Codable, Identifiable, Equatable {
+    var id: UInt64 { sequence }
+
+    let sequence: UInt64
+    let timestamp: Date
+    let sessionID: UUID
+    let kind: RequestControlDiagnosticJournalKind
+    let detail: String
+}
+
+struct RequestControlDiagnosticJournalDocument: Codable, Equatable {
+    static let currentSchemaVersion = 1
+
+    let schemaVersion: Int
+    let nextSequence: UInt64
+    let entries: [RequestControlDiagnosticJournalEntry]
+}
+
+enum RequestControlDiagnosticJournalError: Error, Equatable, LocalizedError {
+    case unsupportedSchema(Int)
+    case invalidSequence
+    case sequenceExhausted
+    case protectionUnavailable(String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .unsupportedSchema(version):
+            "The Request Control diagnostic journal uses unsupported schema version \(version)."
+        case .invalidSequence:
+            "The Request Control diagnostic journal has missing, duplicate, reordered, or rolled-back sequence evidence."
+        case .sequenceExhausted:
+            "The Request Control diagnostic journal sequence is exhausted."
+        case let .protectionUnavailable(detail):
+            "The Request Control diagnostic journal could not establish protected local storage: \(detail)"
+        }
+    }
+}
+
+protocol RequestControlDiagnosticJournalStore {
+    func load() throws -> Data?
+    func saveAtomicallyProtected(_ data: Data) throws
+}
+
+protocol RequestControlDiagnosticJournalFileSystem {
+    func applicationSupportDirectory() throws -> URL
+    func fileExists(at url: URL) throws -> Bool
+    func createProtectedDirectory(at url: URL) throws
+    func readData(at url: URL) throws -> Data
+    func writeAtomicallyProtectedData(_ data: Data, to url: URL) throws
+    func applyCompleteFileProtection(to url: URL) throws
+    func hasCompleteFileProtection(at url: URL) throws -> Bool
+    func excludeFromBackup(_ url: URL) throws
+    func isExcludedFromBackup(_ url: URL) throws -> Bool
+}
+
+struct FoundationRequestControlDiagnosticJournalFileSystem: RequestControlDiagnosticJournalFileSystem {
+    private let fileManager: FileManager
+
+    init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+    }
+
+    func applicationSupportDirectory() throws -> URL {
+        try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+    }
+
+    func fileExists(at url: URL) throws -> Bool {
+        do {
+            _ = try fileManager.attributesOfItem(atPath: url.path)
+            return true
+        } catch {
+            let cocoaError = error as NSError
+            guard cocoaError.domain == NSCocoaErrorDomain,
+                  cocoaError.code == CocoaError.fileNoSuchFile.rawValue
+                    || cocoaError.code == CocoaError.fileReadNoSuchFile.rawValue else {
+                throw error
+            }
+            return false
+        }
+    }
+
+    func createProtectedDirectory(at url: URL) throws {
+        try fileManager.createDirectory(
+            at: url,
+            withIntermediateDirectories: true,
+            attributes: [.protectionKey: FileProtectionType.complete]
+        )
+    }
+
+    func readData(at url: URL) throws -> Data {
+        try Data(contentsOf: url)
+    }
+
+    func writeAtomicallyProtectedData(_ data: Data, to url: URL) throws {
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
+    }
+
+    func applyCompleteFileProtection(to url: URL) throws {
+        try fileManager.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: url.path
+        )
+    }
+
+    func hasCompleteFileProtection(at url: URL) throws -> Bool {
+        let attributes = try fileManager.attributesOfItem(atPath: url.path)
+        return (attributes[.protectionKey] as? FileProtectionType) == .complete
+    }
+
+    func excludeFromBackup(_ url: URL) throws {
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        var mutableURL = url
+        try mutableURL.setResourceValues(values)
+    }
+
+    func isExcludedFromBackup(_ url: URL) throws -> Bool {
+        try url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true
+    }
+}
+
+final class RequestControlDiagnosticJournalFileStore: RequestControlDiagnosticJournalStore {
+    private static let directoryName = "PacePromptIssue51Diagnostic"
+    private static let fileName = "request-control-journal-v1.json"
+
+    private let fileSystem: any RequestControlDiagnosticJournalFileSystem
+    private let directoryURL: URL
+    private let fileURL: URL
+
+    convenience init(
+        fileSystem: any RequestControlDiagnosticJournalFileSystem = FoundationRequestControlDiagnosticJournalFileSystem()
+    ) throws {
+        let applicationSupport = try fileSystem.applicationSupportDirectory()
+        try self.init(
+            directoryURL: applicationSupport.appendingPathComponent(Self.directoryName, isDirectory: true),
+            fileSystem: fileSystem
+        )
+    }
+
+    init(
+        directoryURL: URL,
+        fileSystem: any RequestControlDiagnosticJournalFileSystem
+    ) throws {
+        self.fileSystem = fileSystem
+        self.directoryURL = directoryURL
+        fileURL = directoryURL.appendingPathComponent(Self.fileName, isDirectory: false)
+        try prepareProtectedDirectory()
+    }
+
+    func load() throws -> Data? {
+        guard try fileSystem.fileExists(at: fileURL) else { return nil }
+        try verifyProtectionAndBackupExclusion(for: fileURL)
+        return try fileSystem.readData(at: fileURL)
+    }
+
+    func saveAtomicallyProtected(_ data: Data) throws {
+        try fileSystem.writeAtomicallyProtectedData(data, to: fileURL)
+        try fileSystem.applyCompleteFileProtection(to: fileURL)
+        try fileSystem.excludeFromBackup(fileURL)
+        try verifyProtectionAndBackupExclusion(for: fileURL)
+    }
+
+    private func prepareProtectedDirectory() throws {
+        try fileSystem.createProtectedDirectory(at: directoryURL)
+        try fileSystem.applyCompleteFileProtection(to: directoryURL)
+        try fileSystem.excludeFromBackup(directoryURL)
+        try verifyProtectionAndBackupExclusion(for: directoryURL)
+    }
+
+    private func verifyProtectionAndBackupExclusion(for url: URL) throws {
+        guard try fileSystem.hasCompleteFileProtection(at: url) else {
+            throw RequestControlDiagnosticJournalError.protectionUnavailable(
+                "complete file protection was not verified"
+            )
+        }
+        guard try fileSystem.isExcludedFromBackup(url) else {
+            throw RequestControlDiagnosticJournalError.protectionUnavailable(
+                "backup exclusion was not verified"
+            )
+        }
+    }
+}
+
+@MainActor
+protocol RequestControlDiagnosticJournaling: AnyObject {
+    var records: [RequestControlDiagnosticJournalEntry] { get }
+
+    func record(
+        _ kind: RequestControlDiagnosticJournalKind,
+        detail: String
+    ) throws
+}
+
+@MainActor
+final class RequestControlDiagnosticJournal: RequestControlDiagnosticJournaling {
+    private let store: any RequestControlDiagnosticJournalStore
+    private let maximumRecordCount: Int
+    private let now: () -> Date
+    private let sessionID: UUID
+    private var document: RequestControlDiagnosticJournalDocument
+
+    init(
+        store: any RequestControlDiagnosticJournalStore,
+        maximumRecordCount: Int = 200,
+        now: @escaping () -> Date = { Date() },
+        sessionID: UUID = UUID()
+    ) throws {
+        precondition(maximumRecordCount >= 2)
+        self.store = store
+        self.maximumRecordCount = maximumRecordCount
+        self.now = now
+        self.sessionID = sessionID
+
+        if let data = try store.load() {
+            let decoded = try JSONDecoder().decode(RequestControlDiagnosticJournalDocument.self, from: data)
+            try Self.validate(decoded, maximumRecordCount: maximumRecordCount)
+            document = decoded
+        } else {
+            document = RequestControlDiagnosticJournalDocument(
+                schemaVersion: RequestControlDiagnosticJournalDocument.currentSchemaVersion,
+                nextSequence: 1,
+                entries: []
+            )
+        }
+
+        let previousLast = document.entries.last
+        var startupRecords: [(RequestControlDiagnosticJournalKind, String)] = [
+            (
+                .sessionStarted,
+                "DEBUG diagnostic process session started. This is not Bluetooth activity or write authority."
+            ),
+        ]
+        if let previousLast {
+            startupRecords.append(
+                (
+                    .previousSessionRecovered,
+                    Self.recoveryDetail(previousLast: previousLast)
+                )
+            )
+        }
+        try appendBatch(startupRecords)
+    }
+
+    var records: [RequestControlDiagnosticJournalEntry] {
+        document.entries
+    }
+
+    func record(
+        _ kind: RequestControlDiagnosticJournalKind,
+        detail: String
+    ) throws {
+        try appendBatch([(kind, detail)])
+    }
+
+    private func appendBatch(
+        _ values: [(RequestControlDiagnosticJournalKind, String)]
+    ) throws {
+        var candidate = document
+        var entries = candidate.entries
+        var nextSequence = candidate.nextSequence
+
+        for (kind, detail) in values {
+            guard nextSequence < UInt64.max else {
+                throw RequestControlDiagnosticJournalError.sequenceExhausted
+            }
+            entries.append(
+                RequestControlDiagnosticJournalEntry(
+                    sequence: nextSequence,
+                    timestamp: now(),
+                    sessionID: sessionID,
+                    kind: kind,
+                    detail: detail
+                )
+            )
+            nextSequence += 1
+        }
+
+        if entries.count > maximumRecordCount {
+            entries.removeFirst(entries.count - maximumRecordCount)
+        }
+
+        candidate = RequestControlDiagnosticJournalDocument(
+            schemaVersion: RequestControlDiagnosticJournalDocument.currentSchemaVersion,
+            nextSequence: nextSequence,
+            entries: entries
+        )
+        try Self.validate(candidate, maximumRecordCount: maximumRecordCount)
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(candidate)
+        try store.saveAtomicallyProtected(data)
+        document = candidate
+    }
+
+    private static func validate(
+        _ document: RequestControlDiagnosticJournalDocument,
+        maximumRecordCount: Int
+    ) throws {
+        guard document.schemaVersion == RequestControlDiagnosticJournalDocument.currentSchemaVersion else {
+            throw RequestControlDiagnosticJournalError.unsupportedSchema(document.schemaVersion)
+        }
+        guard document.nextSequence > 0,
+              document.entries.count <= maximumRecordCount else {
+            throw RequestControlDiagnosticJournalError.invalidSequence
+        }
+
+        var previousSequence: UInt64?
+        for entry in document.entries {
+            guard entry.sequence > 0 else {
+                throw RequestControlDiagnosticJournalError.invalidSequence
+            }
+            if let previousSequence {
+                guard previousSequence < UInt64.max,
+                      entry.sequence == previousSequence + 1 else {
+                    throw RequestControlDiagnosticJournalError.invalidSequence
+                }
+            }
+            previousSequence = entry.sequence
+        }
+
+        if let last = document.entries.last {
+            guard last.sequence < UInt64.max,
+                  document.nextSequence == last.sequence + 1 else {
+                throw RequestControlDiagnosticJournalError.invalidSequence
+            }
+        } else if document.nextSequence != 1 {
+            throw RequestControlDiagnosticJournalError.invalidSequence
+        }
+    }
+
+    private static func recoveryDetail(
+        previousLast: RequestControlDiagnosticJournalEntry
+    ) -> String {
+        let closure = previousLast.kind == .disconnected
+            ? "an explicit disconnect was recorded"
+            : "no explicit disconnect was recorded; the process-exit cause and final Bluetooth state remain unknown"
+        return "Recovered durable evidence through sequence \(previousLast.sequence); \(closure). Recovery grants no retry or write authority."
+    }
+}
+
 enum RequestControlDiagnosticReadiness: Equatable {
     case awaitingConnection
     case preparing(String)
@@ -124,13 +493,16 @@ final class RequestControlOnlyLink: FTMSControlPointLink {
 
     private let underlying: any FTMSControlPointLink
     private let gate: RequestControlWriteGate
+    private let journal: any RequestControlDiagnosticJournaling
 
     init(
         underlying: any FTMSControlPointLink,
-        gate: RequestControlWriteGate
+        gate: RequestControlWriteGate,
+        journal: any RequestControlDiagnosticJournaling
     ) {
         self.underlying = underlying
         self.gate = gate
+        self.journal = journal
     }
 
     func enableIndications() {
@@ -138,6 +510,16 @@ final class RequestControlOnlyLink: FTMSControlPointLink {
     }
 
     func writeWithResponse(_ data: Data) {
+        do {
+            try journal.record(
+                .requestPathEntered,
+                detail: "The explicit Request Control path was entered with bytes \(data.ftmsHex). No CoreBluetooth write has occurred."
+            )
+        } catch {
+            blockBeforeWrite(stage: "recording the explicit trigger boundary", error: error)
+            return
+        }
+
         do {
             try gate.consume(data)
         } catch {
@@ -148,8 +530,22 @@ final class RequestControlOnlyLink: FTMSControlPointLink {
             return
         }
 
-        requestSubmitted?(data)
+        do {
+            try journal.record(
+                .gateConsumed,
+                detail: "The persistent one-shot gate was consumed for exact bytes \(data.ftmsHex). No CoreBluetooth write has occurred."
+            )
+            try journal.record(
+                .forwardingStarted,
+                detail: "The next operation invokes CoreBluetooth Write With Response for exact bytes \(data.ftmsHex); delivery is unknown until later evidence."
+            )
+        } catch {
+            blockBeforeWrite(stage: "sealing the consumed gate and forwarding boundary", error: error)
+            return
+        }
+
         underlying.writeWithResponse(data)
+        requestSubmitted?(data)
     }
 
     func invalidate() {
@@ -160,9 +556,36 @@ final class RequestControlOnlyLink: FTMSControlPointLink {
         underlying.invalidate()
         eventHandler?(.indicationFailed(reason))
     }
+
+    private func blockBeforeWrite(stage: String, error: Error) {
+        let message = "Protected diagnostic journal failed while \(stage). No CoreBluetooth write occurred and no retry is authorised. \(error.localizedDescription)"
+        requestBlocked?(message)
+        underlying.invalidate()
+        eventHandler?(.writeDeliveryUnknown(message))
+    }
 }
 
 extension RequestControlDiagnosticEvent {
+    var journalKind: RequestControlDiagnosticJournalKind {
+        switch self {
+        case .controlPointDiscovered: .controlPointDiscovered
+        case .indicationSubscriptionSucceeded: .indicationSubscriptionSucceeded
+        case .indicationSubscriptionFailed: .indicationSubscriptionFailed
+        case .readiness: .readiness
+        case .requestSubmitted: .requestSubmitted
+        case .procedureSubmitted: .procedureSubmitted
+        case .attAccepted: .attAccepted
+        case .attRejected: .attRejected
+        case .writeDeliveryUnknown: .writeDeliveryUnknown
+        case .indication: .indicationReceived
+        case .indicationFailed: .indicationFailed
+        case .outcome: .outcome
+        case .disconnectRequested: .disconnectRequested
+        case .disconnected: .disconnected
+        case .blocked: .blocked
+        }
+    }
+
     var reportLine: String {
         switch self {
         case let .controlPointDiscovered(write, indicate):

@@ -223,6 +223,20 @@ final class TreadmillSetupViewModel: ObservableObject {
         }
 
 #if DEBUG
+        let durableRecords = client.requestControlDiagnosticJournalRecords
+        lines.append(contentsOf: ["", "Protected durable issue #51 journal (\(durableRecords.count))"])
+        if durableRecords.isEmpty {
+            lines.append("Unavailable - protected journal could not be loaded")
+        } else {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            for record in durableRecords {
+                lines.append(
+                    "[\(formatter.string(from: record.timestamp))] sequence \(record.sequence) · \(record.kind.rawValue) · \(record.detail)"
+                )
+            }
+        }
+
         lines.append(contentsOf: ["", "Issue #51 Control Point log"])
         if requestControlDiagnostics.isEmpty {
             lines.append("Unavailable - no Control Point diagnostic events recorded")
