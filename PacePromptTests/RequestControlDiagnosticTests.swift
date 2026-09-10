@@ -4,6 +4,13 @@ import XCTest
 
 @MainActor
 final class RequestControlDiagnosticTests: XCTestCase {
+    func testDefaultGateUsesFreshThirdPersistentAttemptKey() {
+        XCTAssertEqual(
+            RequestControlWriteGate.defaultAttemptKey,
+            "PacePrompt.issue51.requestControlAttemptConsumed.v3"
+        )
+    }
+
     func testGateConsumesOnlyExactRequestControlAndPersistsAcrossInstances() throws {
         let fixture = makeDefaults()
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suite) }

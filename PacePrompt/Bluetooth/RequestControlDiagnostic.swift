@@ -445,7 +445,7 @@ enum RequestControlWriteGateError: Error, Equatable, LocalizedError {
 
 final class RequestControlWriteGate {
     static let exactRequest = Data([0x00])
-    static let defaultAttemptKey = "PacePrompt.issue51.requestControlAttemptConsumed.v1"
+    static let defaultAttemptKey = "PacePrompt.issue51.requestControlAttemptConsumed.v3"
 
     private let defaults: UserDefaults
     private let attemptKey: String
