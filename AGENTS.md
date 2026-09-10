@@ -32,7 +32,10 @@ These instructions apply to the entire repository.
 - Keep CoreBluetooth operations, pure binary parsing, observable presentation state and SwiftUI views separate.
 - Views must not parse bytes or issue CoreBluetooth operations directly.
 - Test parsers with synthetic little-endian fixtures, including short, malformed, unsupported and unavailable values.
-- Validate in stages: focused tests, complete simulator tests, simulator build, then static analysis when reliable.
+- Validate in this order: focused checks while iterating; complete-diff review and safety inspection; then one complete `scripts/validate_local.sh` run on the final executable, test, build and validation-script content when required by the issue or its risk.
+- A passing complete gate remains valid across commit, push and merge, and after changes limited to `DEVELOPMENT_NOTES.md`, issue/PR/tracker text or non-executable documentation, provided all executable, test and build inputs remain byte-identical. Run the relevant documentation checks and `git diff --check` for those later changes.
+- Any later change to app code, tests, Xcode project/build settings, dependencies, validation scripts, executable resources or safety logic invalidates the gate and requires affected focused checks followed by one replacement complete gate.
+- Do not duplicate a complete local suite in hosted CI unless the issue acceptance criteria explicitly require both; retain the fast hosted repository checks.
 - Before handoff, run `git diff --check`, inspect the full diff and report repository status.
 - Label unperformed, simulator-only and physical-device validation precisely. Do not infer FR30z capabilities before reading them from the real treadmill.
 
