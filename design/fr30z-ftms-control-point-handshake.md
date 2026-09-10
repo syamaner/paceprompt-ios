@@ -1,6 +1,6 @@
 # Safe FR30z FTMS Control Point handshake
 
-Status: documentation-only protocol specification for GitHub issue [#2](https://github.com/syamaner/paceprompt-ios/issues/2). It does not authorise an implementation, a write to Fitness Machine Control Point `0x2AD9`, physical treadmill operation, or workout execution.
+Status: protocol specification established by GitHub issue [#2](https://github.com/syamaner/paceprompt-ios/issues/2) and narrowed for callback-order handling by issue [#72](https://github.com/syamaner/paceprompt-ios/issues/72). It does not authorise a write to Fitness Machine Control Point `0x2AD9`, physical treadmill operation, or workout execution.
 
 ## Scope and safety boundary
 
@@ -17,12 +17,14 @@ The physical console and safety key remain authoritative at all times. An app co
 
 ## Protocol authority
 
-This specification was checked on 3 September 2026 against these current, adopted Bluetooth SIG primary sources:
+This specification was checked on 3 September 2026 and rechecked for issue #72 on 10 September 2026 against these current, adopted Bluetooth SIG primary sources:
 
 - [Fitness Machine Service 1.0.1](https://www.bluetooth.com/specifications/specs/fitness-machine-service-1-0-1/), revision date 1 October 2024: Sections 1.7, 4.1, 4.4, 4.11-4.12 and 4.16-4.18, especially Tables 4.14, 4.15, 4.23, 4.24, 4.25 and 4.26;
 - [Fitness Machine Profile 1.0.1](https://www.bluetooth.com/specifications/specs/fitness-machine-profile-1-0-1/), especially Sections 4.4.14, 4.7 and 6.1 for configuring Control Point indications, the 30-second procedure timeout, error handling and Control Point security;
 - the Bluetooth SIG [Fitness Machine Service test suite, publication 6](https://files.bluetooth.com/wp-content/uploads/dlm_uploads/2024/10/FTMS.TS_.p6.pdf) and [Fitness Machine Profile test suite, publication 7](https://files.bluetooth.com/wp-content/uploads/dlm_uploads/2024/10/FTMP.TS_.p7.pdf), used to cross-check request/response bytes and Collector failure behaviour;
 - Bluetooth SIG [Assigned Numbers](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/index-en.html) for service and characteristic UUIDs.
+
+Issue #72 also rechecked Apple's current CoreBluetooth documentation for [`writeValue(_:for:type:)`](https://developer.apple.com/documentation/corebluetooth/cbperipheral/writevalue%28_%3Afor%3Atype%3A%29), [`peripheral(_:didWriteValueFor:error:)`](https://developer.apple.com/documentation/corebluetooth/cbperipheraldelegate/1518823-peripheral), [`setNotifyValue(_:for:)`](https://developer.apple.com/documentation/corebluetooth/cbperipheral/setnotifyvalue%28_%3Afor%3A%29) and [`peripheral(_:didUpdateValueFor:error:)`](https://developer.apple.com/documentation/corebluetooth/cbperipheraldelegate/peripheral%28_%3Adidupdatevaluefor%3Aerror%3A%29-1xyna). Apple documents the write result and subscribed value-update callbacks independently and does not specify a relative ordering between them. A peripheral chooses when to send subscribed updates. The client therefore cannot treat callback arrival order alone as protocol evidence ordering.
 
 The product concept in [`treadmill-controller-product-spec.html`](treadmill-controller-product-spec.html) and [`TreadmillDesign.pdf`](TreadmillDesign.pdf) is eventual-product context only. Its controls and workout screens are not protocol authority or implementation permission.
 
@@ -82,8 +84,8 @@ An indication whose response opcode is not `0x80`, whose request opcode does not
 1. Discover `0x2AD9` with both Write and Indicate properties. Property presence is only a prerequisite.
 2. Configure the `0x2AD9` Client Characteristic Configuration descriptor for indications and wait for CoreBluetooth to report that the subscription is active. A notification subscription is not equivalent. No Control Point write is allowed before this succeeds.
 3. Permit exactly one Control Point procedure in flight. Correlate its locally generated procedure identifier, connection/bearer identifier, request opcode, exact request bytes and monotonic timestamps for write submission, ATT write result and indication receipt.
-4. Use a GATT Write request with response. An explicit ATT Error response means the FTMS procedure did not start or queue. A local CoreBluetooth or transport error without a confirmed ATT Error response leaves delivery unknown and must fail closed. A successful ATT Write response starts the procedure but is not FTMS success.
-5. After a successful ATT Write response, start the Profile-mandated 30-second ATT transaction timer. End the procedure only on the one matching, well-formed `0x80` indication. If none arrives within 30 seconds, or if the link is lost while the procedure is in progress, the procedure has timed out and failed. Do not substitute a shorter product timeout or extend this normative deadline.
+4. Use a GATT Write request with response. An explicit ATT Error response means the FTMS procedure did not start or queue. A local CoreBluetooth or transport error without a confirmed ATT Error response leaves delivery unknown and must fail closed. A successful ATT Write response starts the procedure but is not FTMS success. If one matching, well-formed response indication reaches the app after submission but before the ATT callback, retain it only as provisional response evidence for that same connection epoch and procedure identifier. It grants no success or control permission by itself.
+5. After a successful ATT Write response, anchor the Profile-mandated 30-second ATT transaction deadline to that acceptance. If a provisional matching response already exists for the same in-flight procedure, the ATT acceptance supplies the missing evidence and the procedure may complete without waiting again. Otherwise, end the procedure only when the one matching, well-formed `0x80` indication arrives before the deadline. If none arrives within 30 seconds, or if the link is lost while the procedure is in progress, the procedure has timed out and failed. Do not substitute a shorter product timeout or extend this normative deadline.
 6. After a Control Point procedure timeout, treat the procedure and machine state as unknown. Start no new Fitness Machine Control Point procedure until a new link is established. An explicit user action may disconnect; any later connection is a fresh session and must repeat discovery, reads and subscriptions. Never reconnect or retry automatically.
 7. A disconnect at any stage ends control permission and invalidates every pending or remembered command outcome. Requested targets become historical intent only. On a later user-initiated connection, read and observe the machine afresh before considering any new request.
 
@@ -100,6 +102,9 @@ This is a documentation model, not executable workout logic. Every transition is
 | Disconnected | User connects; required characteristics, features and ranges are read and passive subscriptions are resolved | Passive ready | Capability evidence only |
 | Passive ready | `0x2AD9` indication subscription succeeds | Ready to request control | Ready for a separately authorised single write |
 | Ready to request control | User explicitly initiates the authorised `00` Write request | Write pending | Request submitted |
+| Write pending | Exactly `80 00 01` arrives on the same connection before the ATT callback | Write pending with provisional response | Response bytes and receipt time only; no ATT acceptance, protocol success or control permission claim |
+| Write pending with provisional response | ATT Write response succeeds for the same in-flight procedure | Control granted | Both ATT acceptance and the correlated protocol response are now established; no motion or target claim |
+| Write pending with provisional response | ATT rejection, delivery uncertainty, disconnect, duplicate or any contradictory evidence | Failed/unknown | No control permission or success claim; no automatic retry or follow-on write |
 | Write pending | ATT Write response succeeds | Awaiting indication | Procedure started |
 | Awaiting indication | Exactly `80 00 01` arrives on the same connection | Control granted | Protocol permission held on this connection; no motion or target claim |
 | Control granted | User explicitly initiates one separately authorised, prevalidated target write | Target write pending | Target request submitted |
