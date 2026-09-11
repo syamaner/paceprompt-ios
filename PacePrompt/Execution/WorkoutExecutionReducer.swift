@@ -1,1526 +1,1773 @@
 import Foundation
 
 struct MonotonicInstant: Equatable, Comparable {
-    let seconds: TimeInterval
+  let seconds: TimeInterval
 
-    static func < (lhs: Self, rhs: Self) -> Bool {
-        lhs.seconds < rhs.seconds
-    }
+  static func < (lhs: Self, rhs: Self) -> Bool { lhs.seconds < rhs.seconds }
 
-    func advanced(by interval: TimeInterval) -> Self {
-        .init(seconds: seconds + interval)
-    }
+  func advanced(by interval: TimeInterval) -> Self {
+    .init(seconds: seconds + interval)
+  }
 }
 
 struct ConnectionEpoch: Equatable, Hashable {
-    let rawValue: UInt64
+  let rawValue: UInt64
 }
 
 struct ProcedureID: Equatable, Hashable {
-    let epoch: ConnectionEpoch
-    let sequence: UInt64
+  let epoch: ConnectionEpoch
+  let sequence: UInt64
+}
+
+enum FR30zProfileEvidence: Equatable {
+  case unavailable
+  case mismatch
+  case matched
 }
 
 struct FR30zCapabilitySnapshot: Equatable {
-    let identity: String
-    let equipmentIdentity: String
-    let planCapabilities: WorkoutPlanCapabilities
-    let controlPointSupportsWrite: Bool
-    let controlPointSupportsIndicate: Bool
-    let controlPointIndicationsEnabled: Bool
-    let passiveSubscriptionOutcomesResolved: Bool
+  let peripheralIdentity: String
+  let equipmentIdentity: String
+  let fitnessMachineServicePresent: Bool
+  let requiredCharacteristicPropertiesMatch: Bool
+  let fitnessMachineFeatureEvidence: FR30zProfileEvidence
+  let supportedSpeedRangeEvidence: FR30zProfileEvidence
+  let supportedInclinationRangeEvidence: FR30zProfileEvidence
+  let treadmillDataNotificationsEnabled: Bool
+  let controlPointIndicationsEnabled: Bool
+  let optionalSubscriptionOutcomesResolved: Bool
+  let planCapabilities: WorkoutPlanCapabilities
 }
 
 struct WorkoutSessionCeilings: Equatable {
-    let maximumSpeed: WorkoutSpeed
-    let maximumInclination: WorkoutInclination
-    let maximumStepSpeedChange: WorkoutSpeed
+  let maximumSpeed: WorkoutSpeed
+  let maximumInclination: WorkoutInclination
+  let maximumStepSpeedChange: WorkoutSpeed
 }
 
-enum FR30zTargetOrder: Equatable {
-    case speedThenInclination
-    case inclinationThenSpeed
-}
-
+/// The immutable issue #57 product policy. It deliberately has no Start, Stop,
+/// Pause, retry, reconnect, or control-reacquisition option.
 struct FR30zExecutionProfile: Equatable {
-    let identity: String
-    let equipmentIdentity: String
-    let targetOrder: FR30zTargetOrder
-    let requiresStartForFirstStep: Bool
-    let permitsStop: Bool
-    let telemetryFreshnessInterval: TimeInterval
-    let targetObservationInterval: TimeInterval
-    let procedureResponseInterval: TimeInterval
-    let requestControlEvidenceAccepted: Bool
-    let speedTargetEvidenceAccepted: Bool
-    let inclinationTargetEvidenceAccepted: Bool
-    let startEvidenceAccepted: Bool
-    let stopEvidenceAccepted: Bool
+  static let identity = "fr30z-physical-console-v1"
+  static let telemetryFreshnessInterval: TimeInterval = 2
+  static let telemetryCheckingInterval: TimeInterval = 10
+  static let targetObservationInterval: TimeInterval = 30
+  static let procedureResponseInterval: TimeInterval = 30
 
-    var isComplete: Bool {
-        !identity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !equipmentIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && telemetryFreshnessInterval.isFinite
-            && telemetryFreshnessInterval > 0
-            && targetObservationInterval.isFinite
-            && targetObservationInterval > 0
-            && procedureResponseInterval == 30
-            && requestControlEvidenceAccepted
-            && speedTargetEvidenceAccepted
-            && inclinationTargetEvidenceAccepted
-            && (!requiresStartForFirstStep || startEvidenceAccepted)
-            && (!permitsStop || stopEvidenceAccepted)
-    }
+  let peripheralIdentity: String
+  let equipmentIdentity: String
+
+  var isComplete: Bool {
+    !peripheralIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && !equipmentIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
+  func matches(_ capability: FR30zCapabilitySnapshot) -> Bool {
+    isComplete
+      && capability.peripheralIdentity == peripheralIdentity
+      && capability.equipmentIdentity == equipmentIdentity
+      && capability.fitnessMachineServicePresent
+      && capability.requiredCharacteristicPropertiesMatch
+      && capability.fitnessMachineFeatureEvidence == .matched
+      && capability.supportedSpeedRangeEvidence == .matched
+      && capability.supportedInclinationRangeEvidence == .matched
+      && capability.treadmillDataNotificationsEnabled
+      && capability.controlPointIndicationsEnabled
+      && capability.optionalSubscriptionOutcomesResolved
+      && capability.planCapabilities == Self.acceptedPlanCapabilities
+  }
+
+  private static var acceptedPlanCapabilities: WorkoutPlanCapabilities {
+    .init(
+      speed: .supported(
+        .init(
+          minimum: .init(value: Decimal(5) / 10, unit: .kilometresPerHour),
+          maximum: .init(value: 20, unit: .kilometresPerHour),
+          increment: .init(value: Decimal(1) / 10, unit: .kilometresPerHour)
+        )
+      ),
+      inclination: .supported(
+        .init(
+          minimum: .init(value: 0, unit: .percent),
+          maximum: .init(value: 15, unit: .percent),
+          increment: .init(value: 1, unit: .percent)
+        )
+      )
+    )
+  }
 }
 
 struct WorkoutOperatorReadiness: Equatable {
-    let deckClear: Bool
-    let consoleImmediatelyReachable: Bool
-    let safetyKeyImmediatelyReachable: Bool
-    let physicallyStationary: Bool
+  let deckClear: Bool
+  let consoleImmediatelyReachable: Bool
+  let safetyKeyImmediatelyReachable: Bool
+  let physicallyStationary: Bool
 
-    var isConfirmed: Bool {
-        deckClear && consoleImmediatelyReachable && safetyKeyImmediatelyReachable && physicallyStationary
-    }
+  var isConfirmed: Bool {
+    deckClear && consoleImmediatelyReachable && safetyKeyImmediatelyReachable
+      && physicallyStationary
+  }
+}
+
+struct WorkoutTarget: Equatable {
+  let speed: WorkoutSpeed
+  let inclination: WorkoutInclination
 }
 
 enum WorkoutControlPointIntent: Equatable {
-    case requestControl
-    case setTargetSpeed(WorkoutSpeed)
-    case setTargetInclination(WorkoutInclination)
-    case start
-    case stop
-
-    var mayMakeMotionPossible: Bool {
-        switch self {
-        case .setTargetSpeed, .setTargetInclination, .start:
-            true
-        case .requestControl, .stop:
-            false
-        }
-    }
+  case requestControl
+  case setTargetSpeed(WorkoutSpeed)
+  case setTargetInclination(WorkoutInclination)
 }
 
 struct WorkoutProcedureRecord: Equatable {
-    let id: ProcedureID
-    let intent: WorkoutControlPointIntent
-    let stepIndex: Int?
-    let createdAt: MonotonicInstant
-    var submittedAt: MonotonicInstant?
-    var attAcceptedAt: MonotonicInstant?
+  let id: ProcedureID
+  let intent: WorkoutControlPointIntent
+  let stepIndex: Int?
+  let createdAt: MonotonicInstant
+  var submittedAt: MonotonicInstant?
+  var attAcceptedAt: MonotonicInstant?
+  var ftmsAcknowledgedAt: MonotonicInstant?
 }
 
 enum WorkoutProcedureFailure: Equatable {
-    case submissionRejected(String)
-    case attRejected(String)
-    case protocolRejected(String)
-    case protocolUnsupported
-    case protocolMalformed
-    case protocolUnknown
-    case correlationFailure(expected: ProcedureID, received: ProcedureID)
-    case duplicateOrLate(ProcedureID)
-    case responseTimeout
+  case submissionRejected(String)
+  case attRejected(String)
+  case protocolRejected(String)
+  case protocolUnsupported
+  case protocolMalformed
+  case protocolUnknown
+  case correlationFailure(expected: ProcedureID, received: ProcedureID)
+  case duplicateOrLate(ProcedureID)
+  case responseTimeout
 }
 
 enum WorkoutProcedureState: Equatable {
-    case idle
-    case intentCreated(WorkoutProcedureRecord)
-    case submitted(WorkoutProcedureRecord)
-    case attAccepted(record: WorkoutProcedureRecord, deadline: MonotonicInstant)
-    case acknowledged(record: WorkoutProcedureRecord, at: MonotonicInstant)
-    case failed(record: WorkoutProcedureRecord, failure: WorkoutProcedureFailure)
-    case timedOutUnknown(record: WorkoutProcedureRecord)
+  case idle
+  case intentCreated(WorkoutProcedureRecord)
+  case submitted(WorkoutProcedureRecord)
+  case attAccepted(record: WorkoutProcedureRecord, deadline: MonotonicInstant)
+  case failed(record: WorkoutProcedureRecord, failure: WorkoutProcedureFailure)
+  case timedOutUnknown(record: WorkoutProcedureRecord)
 
-    var activeRecord: WorkoutProcedureRecord? {
-        switch self {
-        case .idle:
-            nil
-        case let .intentCreated(record), let .submitted(record), let .attAccepted(record, _),
-             let .acknowledged(record, _), let .failed(record, _), let .timedOutUnknown(record):
-            record
-        }
+  var activeRecord: WorkoutProcedureRecord? {
+    switch self {
+    case .idle:
+      nil
+    case .intentCreated(let record), .submitted(let record), .attAccepted(let record, _),
+      .failed(let record, _), .timedOutUnknown(let record):
+      record
     }
+  }
 
-    var unresolvedRecord: WorkoutProcedureRecord? {
-        switch self {
-        case let .intentCreated(record), let .submitted(record), let .attAccepted(record, _):
-            record
-        case .idle, .acknowledged, .failed, .timedOutUnknown:
-            nil
-        }
+  var unresolvedRecord: WorkoutProcedureRecord? {
+    switch self {
+    case .intentCreated(let record), .submitted(let record), .attAccepted(let record, _):
+      record
+    case .idle, .failed, .timedOutUnknown:
+      nil
     }
+  }
 }
 
 enum WorkoutProcedureOutcome: Equatable {
-    case acknowledged(WorkoutProcedureRecord, at: MonotonicInstant)
-    case failed(WorkoutProcedureRecord, WorkoutProcedureFailure)
-    case timedOutUnknown(WorkoutProcedureRecord)
+  case acknowledged(
+    record: WorkoutProcedureRecord,
+    attAcceptedAt: MonotonicInstant,
+    ftmsAcknowledgedAt: MonotonicInstant
+  )
+  case failed(WorkoutProcedureRecord, WorkoutProcedureFailure)
+  case timedOutUnknown(WorkoutProcedureRecord)
 }
 
 enum WorkoutControlPermission: Equatable {
-    case notHeld
-    case requesting(ProcedureID)
-    case held(epoch: ConnectionEpoch, acknowledgedAt: MonotonicInstant)
-    case invalidated(String)
+  case notHeld
+  case requesting(ProcedureID)
+  case held(epoch: ConnectionEpoch, acknowledgedAt: MonotonicInstant)
+  case invalidated(String)
 }
 
 enum WorkoutConnectionState: Equatable {
-    case disconnected
-    case connecting(ConnectionEpoch)
-    case ready(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
-    case lost(previousEpoch: ConnectionEpoch, reason: String)
-    case invalidated(previousEpoch: ConnectionEpoch, reason: String)
+  case disconnected
+  case connecting(ConnectionEpoch)
+  case ready(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
+  case lost(previousEpoch: ConnectionEpoch, reason: String)
+  case invalidated(previousEpoch: ConnectionEpoch, reason: String)
 
-    var epoch: ConnectionEpoch? {
-        switch self {
-        case .disconnected:
-            nil
-        case let .connecting(epoch), let .ready(epoch, _), let .lost(epoch, _),
-             let .invalidated(epoch, _):
-            epoch
-        }
+  var epoch: ConnectionEpoch? {
+    switch self {
+    case .disconnected:
+      nil
+    case .connecting(let epoch), .ready(let epoch, _), .lost(let epoch, _),
+      .invalidated(let epoch, _):
+      epoch
     }
+  }
 
-    var readyCapability: FR30zCapabilitySnapshot? {
-        guard case let .ready(_, capability) = self else { return nil }
-        return capability
-    }
+  var readyCapability: FR30zCapabilitySnapshot? {
+    guard case .ready(_, let capability) = self else { return nil }
+    return capability
+  }
 }
 
 struct WorkoutTelemetrySample: Equatable {
-    let speed: WorkoutSpeed?
-    let inclination: WorkoutInclination?
-    let totalDistanceMetres: Decimal?
-    let receivedAt: MonotonicInstant
+  let speed: WorkoutSpeed
+  let inclination: WorkoutInclination
+  let totalDistanceMetres: Decimal?
+  let receivedAt: MonotonicInstant
 }
 
 enum WorkoutTelemetryInput: Equatable {
-    case sample(speed: WorkoutSpeed?, inclination: WorkoutInclination?, totalDistanceMetres: Decimal?)
-    case unavailable(String)
-    case malformed(String)
+  case sample(speed: WorkoutSpeed?, inclination: WorkoutInclination?, totalDistanceMetres: Decimal?)
+  case unavailable(String)
+  case malformed(String)
 }
 
 enum WorkoutTelemetryState: Equatable {
-    case unavailable(String)
-    case fresh(WorkoutTelemetrySample)
-    case stale(WorkoutTelemetrySample)
-    case malformed(String)
-    case contradictory(String)
+  case unavailable(String)
+  case fresh(WorkoutTelemetrySample)
+  case stale(WorkoutTelemetrySample)
+  case malformed(String)
+  case contradictory(String)
+}
+
+struct WorkoutHumanStationaryEvidence: Equatable {
+  let confirmedAt: MonotonicInstant
+  let note: String
+}
+
+struct WorkoutHumanMotionEvidence: Equatable {
+  let observedAt: MonotonicInstant
+  let note: String
+}
+
+enum WorkoutStationaryEvidence: Equatable {
+  case telemetry(WorkoutTelemetrySample)
+  case human(WorkoutHumanStationaryEvidence)
 }
 
 enum WorkoutObservedMachineState: Equatable {
-    case unknown
-    case reported(WorkoutTelemetrySample)
-    case stepTargetReported(stepIndex: Int, sample: WorkoutTelemetrySample)
-    case humanConfirmedStopped(WorkoutHumanStopEvidence)
-}
-
-struct WorkoutHumanStopEvidence: Equatable {
-    let confirmedAt: MonotonicInstant
-    let note: String
+  case unknown
+  case reportedStationary(WorkoutTelemetrySample)
+  case reportedMoving(WorkoutTelemetrySample)
+  case targetReported(stepIndex: Int, sample: WorkoutTelemetrySample)
+  case humanConfirmedStationary(WorkoutHumanStationaryEvidence)
+  case humanObservedMoving(WorkoutHumanMotionEvidence)
 }
 
 struct ArmedWorkout: Equatable {
-    let plan: WorkoutPlanValidator.ValidatedPlan
-    let capability: FR30zCapabilitySnapshot
-    let ceilings: WorkoutSessionCeilings
-    let profile: FR30zExecutionProfile
+  let plan: WorkoutPlanValidator.ValidatedPlan
+  let capability: FR30zCapabilitySnapshot
+  let ceilings: WorkoutSessionCeilings
+  let profile: FR30zExecutionProfile
 }
 
-struct WorkoutStepApplication: Equatable {
-    let stepIndex: Int
-    var remainingIntents: [WorkoutControlPointIntent]
-    var speedAcknowledgedAt: MonotonicInstant?
-    var inclinationAcknowledgedAt: MonotonicInstant?
-    var startAcknowledgedAt: MonotonicInstant?
-    var observationDeadline: MonotonicInstant?
+struct WorkoutCurrentSegment: Equatable {
+  let stepIndex: Int
+  var accumulatedActiveSeconds: TimeInterval
+  var activeStartedAt: MonotonicInstant?
+  var speedOverride: WorkoutSpeed?
+  var inclinationOverride: WorkoutInclination?
 }
 
-struct WorkoutRunningStep: Equatable {
-    let stepIndex: Int
-    let accumulatedActiveSeconds: TimeInterval
-    let segmentStartedAt: MonotonicInstant
+enum WorkoutTargetSequencePurpose: Equatable {
+  case initial
+  case plannedTransition
+  case manualAdjustment
+  case returnToPlan
+  case resumeRestoration
 }
 
-enum WorkoutStopReason: Equatable {
-    case userRequested
-    case completedPlan
-    case cancelled
+struct WorkoutTargetSequence: Equatable {
+  let purpose: WorkoutTargetSequencePurpose
+  let stepIndex: Int
+  let startedAt: MonotonicInstant
+  var forceSpeed: Bool
+  var forceInclination: Bool
+  var acknowledgedSpeed: WorkoutSpeed?
+  var acknowledgedInclination: WorkoutInclination?
+  var finalAcknowledgementAt: MonotonicInstant?
+  var observationDeadline: MonotonicInstant?
 }
 
-struct WorkoutStopRequest: Equatable {
-    let reason: WorkoutStopReason
-    let requestedAt: MonotonicInstant
-    let resumablePhase: WorkoutExecutionPhase
-    let frozenRunningStep: WorkoutRunningStep?
+enum WorkoutCheckingOrigin: Equatable {
+  case waitingForPhysicalStart
+  case applyingTargets(WorkoutTargetSequencePurpose)
+  case runningSegment
+  case paused(WorkoutStationaryEvidence)
+  case restoringTargets
+  case awaitingPhysicalStopForCompletion
 }
 
-enum WorkoutStopCommandOutcome: Equatable {
-    case notSent
-    case intentCreated(ProcedureID)
-    case submitted(ProcedureID)
-    case attAccepted(ProcedureID)
-    case protocolAcknowledged(ProcedureID)
-    case failed(ProcedureID, WorkoutProcedureFailure)
-    case timedOutUnknown(ProcedureID)
+struct WorkoutCheckingState: Equatable {
+  let origin: WorkoutCheckingOrigin
+  let freshnessBoundary: MonotonicInstant
+  let interruptionDeadline: MonotonicInstant
 }
 
-struct WorkoutAwaitingHumanStop: Equatable {
-    let reason: WorkoutStopReason
-    var commandOutcome: WorkoutStopCommandOutcome
-    let requestedAt: MonotonicInstant
+enum WorkoutCompletionReason: Equatable {
+  case completedPlan
+  case endedFromPause
+}
+
+struct WorkoutCompletionContext: Equatable {
+  let reason: WorkoutCompletionReason
+  let stepIndex: Int
+  let totalActiveSeconds: TimeInterval
+  let stationaryEvidence: WorkoutStationaryEvidence
+
+  func replacingStationaryEvidence(
+    with evidence: WorkoutStationaryEvidence
+  ) -> WorkoutCompletionContext {
+    .init(
+      reason: reason,
+      stepIndex: stepIndex,
+      totalActiveSeconds: totalActiveSeconds,
+      stationaryEvidence: evidence
+    )
+  }
+}
+
+enum WorkoutInterruption: Equatable {
+  case telemetryUnavailable(String)
+  case telemetryStreamTimedOut
+  case stationaryEvidenceExpired
+  case connectionLost(String)
+  case foregroundLost(String)
+  case controlPermissionLost(String)
+  case profileChanged
+  case resumeGuardsFailed
 }
 
 enum WorkoutExecutionFailure: Equatable {
-    case procedure(WorkoutProcedureFailure)
-    case telemetry(String)
-    case observationTimeout
-    case connectionLost(String)
-    case foregroundLost(String)
-    case capabilityChanged
-    case controlPermissionLost(String)
+  case procedure(WorkoutProcedureFailure)
+  case malformedTelemetry(String)
+  case incompleteTelemetry
+  case contradictoryEvidence(String)
+  case targetObservationTimeout
+  case localFinalization(String)
 }
 
-enum WorkoutEndOutcome: Equatable {
-    case cancelledBeforeActuation
-    case failedBeforeActuation(WorkoutExecutionFailure)
-    case stopped(reason: WorkoutStopReason, command: WorkoutStopCommandOutcome, evidence: WorkoutHumanStopEvidence)
-    case failedAfterPossibleMotion(WorkoutExecutionFailure, evidence: WorkoutHumanStopEvidence)
+enum WorkoutTerminalReason: Equatable {
+  case interrupted(WorkoutInterruption)
+  case failed(WorkoutExecutionFailure)
 }
 
-indirect enum WorkoutExecutionPhase: Equatable {
-    case idle
-    case armed
-    case acquiringControl
-    case readyToBegin
-    case applyingStep(WorkoutStepApplication)
-    case runningStep(WorkoutRunningStep)
-    case stopConfirmationRequested(WorkoutStopRequest)
-    case awaitingHumanStop(WorkoutAwaitingHumanStop)
-    case failedAwaitingHumanStop(WorkoutExecutionFailure)
-    case ended(WorkoutEndOutcome)
+enum WorkoutExecutionPhase: Equatable {
+  case idle
+  case preflight
+  case acquiringControl
+  case waitingForPhysicalStart
+  case applyingTargets(WorkoutTargetSequencePurpose)
+  case runningSegment
+  case checkingTreadmill(WorkoutCheckingState)
+  case paused(WorkoutStationaryEvidence)
+  case restoringTargets
+  case awaitingPhysicalStopForCompletion
+  case readyToEnd(WorkoutCompletionContext)
+  case ending(WorkoutCompletionContext)
+  case finished(WorkoutCompletionContext)
+  case interrupted(WorkoutInterruption)
+  case failed(WorkoutExecutionFailure)
 }
 
 struct WorkoutExecutionState: Equatable {
-    var connection: WorkoutConnectionState = .disconnected
-    var controlPermission: WorkoutControlPermission = .notHeld
-    var procedure: WorkoutProcedureState = .idle
-    var telemetry: WorkoutTelemetryState = .unavailable("No current telemetry")
-    var observedMachine: WorkoutObservedMachineState = .unknown
-    var execution: WorkoutExecutionPhase = .idle
-    var motionPossible = false
-    var isForegroundActive = true
-    var armedWorkout: ArmedWorkout?
-    var procedureHistory: [WorkoutProcedureOutcome] = []
-    var nextProcedureSequence: UInt64 = 1
-    var completedActiveSeconds: TimeInterval = 0
-    var frozenActiveSeconds: TimeInterval?
-    var presentationStepIndex: Int?
-    var lastEventTime = MonotonicInstant(seconds: 0)
+  var connection: WorkoutConnectionState = .disconnected
+  var controlPermission: WorkoutControlPermission = .notHeld
+  var procedure: WorkoutProcedureState = .idle
+  var procedureHistory: [WorkoutProcedureOutcome] = []
+  var telemetry: WorkoutTelemetryState = .unavailable("No current telemetry")
+  var observedMachine: WorkoutObservedMachineState = .unknown
+  var execution: WorkoutExecutionPhase = .idle
+  var armedWorkout: ArmedWorkout?
+  var currentSegment: WorkoutCurrentSegment?
+  var targetSequence: WorkoutTargetSequence?
+  var lastConfirmedTarget: WorkoutTarget?
+  var completedActiveSeconds: TimeInterval = 0
+  var motionPossible = false
+  var isForegroundActive = true
+  var nextProcedureSequence: UInt64 = 1
+  var lastEventTime = MonotonicInstant(seconds: 0)
 }
 
 enum WorkoutExecutionEvent: Equatable {
-    case userStartsConnection(ConnectionEpoch)
-    case connectionBecomesReady(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
-    case arm(plan: WorkoutPlanValidator.ValidatedPlan, ceilings: WorkoutSessionCeilings, profile: FR30zExecutionProfile)
-    case userRequestsControl(epoch: ConnectionEpoch, readiness: WorkoutOperatorReadiness)
-    case userBegins(epoch: ConnectionEpoch, readiness: WorkoutOperatorReadiness)
-    case intentSubmitted(epoch: ConnectionEpoch, procedureID: ProcedureID)
-    case intentSubmissionRejected(epoch: ConnectionEpoch, procedureID: ProcedureID, reason: String)
-    case attAccepted(epoch: ConnectionEpoch, procedureID: ProcedureID)
-    case attRejected(epoch: ConnectionEpoch, procedureID: ProcedureID, reason: String)
-    case protocolAcknowledged(epoch: ConnectionEpoch, procedureID: ProcedureID)
-    case protocolRejected(epoch: ConnectionEpoch, procedureID: ProcedureID, reason: String)
-    case protocolUnsupported(epoch: ConnectionEpoch, procedureID: ProcedureID)
-    case protocolMalformed(epoch: ConnectionEpoch, procedureID: ProcedureID)
-    case protocolUnknown(epoch: ConnectionEpoch, procedureID: ProcedureID)
-    case telemetry(epoch: ConnectionEpoch, WorkoutTelemetryInput)
-    case tick(epoch: ConnectionEpoch)
-    case userRequestsStop(epoch: ConnectionEpoch, reason: WorkoutStopReason)
-    case userCancelsStop(epoch: ConnectionEpoch)
-    case userConfirmsStop(epoch: ConnectionEpoch)
-    case humanConfirmsStopped(epoch: ConnectionEpoch, note: String)
-    case humanObservesMotion(epoch: ConnectionEpoch)
-    case connectionLost(epoch: ConnectionEpoch, reason: String)
-    case capabilityChanged(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
-    case controlPermissionLost(epoch: ConnectionEpoch, reason: String)
-    case appBecameInactive(epoch: ConnectionEpoch, reason: String)
+  case userStartsConnection(ConnectionEpoch)
+  case connectionBecomesReady(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
+  case arm(
+    plan: WorkoutPlanValidator.ValidatedPlan, ceilings: WorkoutSessionCeilings,
+    profile: FR30zExecutionProfile)
+  case beginWorkout(epoch: ConnectionEpoch, readiness: WorkoutOperatorReadiness)
+  case intentSubmitted(epoch: ConnectionEpoch, procedureID: ProcedureID)
+  case intentSubmissionRejected(epoch: ConnectionEpoch, procedureID: ProcedureID, reason: String)
+  case attAccepted(epoch: ConnectionEpoch, procedureID: ProcedureID)
+  case attRejected(epoch: ConnectionEpoch, procedureID: ProcedureID, reason: String)
+  case protocolAcknowledged(epoch: ConnectionEpoch, procedureID: ProcedureID)
+  case protocolRejected(epoch: ConnectionEpoch, procedureID: ProcedureID, reason: String)
+  case protocolUnsupported(epoch: ConnectionEpoch, procedureID: ProcedureID)
+  case protocolMalformed(epoch: ConnectionEpoch, procedureID: ProcedureID)
+  case protocolUnknown(epoch: ConnectionEpoch, procedureID: ProcedureID)
+  case telemetry(epoch: ConnectionEpoch, WorkoutTelemetryInput)
+  case tick(epoch: ConnectionEpoch)
+  case setSpeedOverride(epoch: ConnectionEpoch, WorkoutSpeed)
+  case setInclinationOverride(epoch: ConnectionEpoch, WorkoutInclination)
+  case returnToPlan(epoch: ConnectionEpoch)
+  case humanConfirmsStationary(epoch: ConnectionEpoch, note: String)
+  case humanObservesMotion(epoch: ConnectionEpoch, note: String)
+  case userEndsWorkout(epoch: ConnectionEpoch)
+  case localEndingSucceeded(epoch: ConnectionEpoch)
+  case localEndingFailed(epoch: ConnectionEpoch, reason: String)
+  case connectionLost(epoch: ConnectionEpoch, reason: String)
+  case capabilityChanged(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
+  case controlPermissionLost(epoch: ConnectionEpoch, reason: String)
+  case appBecameInactive(epoch: ConnectionEpoch, reason: String)
 }
 
 enum WorkoutExecutionEffect: Equatable {
-    case submit(WorkoutProcedureRecord)
-    case directUserToConsoleAndSafetyKey
+  case submit(WorkoutProcedureRecord)
+  case finalizeLocally(WorkoutCompletionContext)
+  case directUserToConsoleAndSafetyKey
 }
 
-enum WorkoutGuardRejection: Equatable, Hashable, CaseIterable {
-    case nonMonotonicTime
-    case wrongState
-    case wrongEpoch
-    case staleEpoch
-    case connectionNotReady
-    case incompleteCapabilityEvidence
-    case invalidPlanOrCeilings
-    case incompleteOrMismatchedProfile
-    case operatorReadinessMissing
-    case controlNotHeld
-    case procedureBusy
-    case telemetryNotFresh
-    case treadmillNotReportedStationary
-    case appNotForeground
-    case duplicateOrLateProcedure
-    case stopAlreadyRequested
+enum WorkoutGuardRejection: Equatable {
+  case nonMonotonicTime
+  case wrongState
+  case wrongEpoch
+  case staleEpoch
+  case connectionNotReady
+  case incompleteCapabilityEvidence
+  case invalidPlanOrCeilings
+  case incompleteOrMismatchedProfile
+  case operatorReadinessMissing
+  case controlNotHeld
+  case procedureBusy
+  case invalidAdjustment
+  case noCurrentSegment
+  case endNotAvailable
+  case duplicateOrLateProcedure
 }
 
 enum WorkoutReductionDisposition: Equatable {
-    case accepted
-    case rejected(WorkoutGuardRejection)
-    case ignored(WorkoutGuardRejection)
-    case failedClosed(WorkoutExecutionFailure)
+  case accepted
+  case rejected(WorkoutGuardRejection)
+  case ignored(WorkoutGuardRejection)
+  case failedClosed(WorkoutTerminalReason)
 }
 
 struct WorkoutExecutionTransition: Equatable {
-    let state: WorkoutExecutionState
-    let effects: [WorkoutExecutionEffect]
-    let disposition: WorkoutReductionDisposition
+  let state: WorkoutExecutionState
+  let effects: [WorkoutExecutionEffect]
+  let disposition: WorkoutReductionDisposition
 }
 
 struct WorkoutExecutionReducer {
-    let clock: () -> MonotonicInstant
-
-    func reduce(_ original: WorkoutExecutionState, _ event: WorkoutExecutionEvent) -> WorkoutExecutionTransition {
-        let now = clock()
-        guard now.seconds.isFinite, now >= original.lastEventTime else {
-            return .init(state: original, effects: [], disposition: .rejected(.nonMonotonicTime))
-        }
-
-        var state = original
-        guard epochDisposition(for: event, state: state) == nil else {
-            return .init(state: original, effects: [], disposition: epochDisposition(for: event, state: state)!)
-        }
-        if isTerminal(state.execution) {
-            switch event {
-            case .userStartsConnection, .connectionLost, .capabilityChanged:
-                break
-            default:
-                let reason: WorkoutGuardRejection = isProcedureLifecycleEvent(event) ? .duplicateOrLateProcedure : .wrongState
-                return .init(state: original, effects: [], disposition: .ignored(reason))
-            }
-        }
-        state.lastEventTime = now
-
-        var effects: [WorkoutExecutionEffect] = []
-        var disposition: WorkoutReductionDisposition = .accepted
-
-        if let responseID = protocolResponseProcedureID(event),
-           case let .attAccepted(record, deadline) = state.procedure,
-           now >= deadline {
-            if responseID != record.id {
-                return failCorrelation(state, received: responseID, now: now)
-            }
-            disposition = timeOutProcedure(record, state: &state, effects: &effects)
-            return .init(state: state, effects: effects, disposition: disposition)
-        }
-
-        switch event {
-        case let .userStartsConnection(epoch):
-            guard canStartConnection(state) else { return rejected(original, .wrongState) }
-            if let previousEpoch = state.connection.epoch, epoch.rawValue <= previousEpoch.rawValue {
-                return rejected(original, .wrongEpoch)
-            }
-            state.connection = .connecting(epoch)
-            state.controlPermission = .notHeld
-            state.procedure = .idle
-            state.telemetry = .unavailable("Awaiting current-epoch telemetry")
-            state.observedMachine = .unknown
-            state.isForegroundActive = true
-            state.execution = .idle
-            state.motionPossible = false
-            state.armedWorkout = nil
-            state.procedureHistory = []
-            state.nextProcedureSequence = 1
-            state.completedActiveSeconds = 0
-            state.frozenActiveSeconds = nil
-            state.presentationStepIndex = nil
-
-        case let .connectionBecomesReady(epoch, capability):
-            guard case .connecting(epoch) = state.connection else { return rejected(original, .wrongState) }
-            guard capabilityIsComplete(capability) else { return rejected(original, .incompleteCapabilityEvidence) }
-            state.connection = .ready(epoch: epoch, capability: capability)
-
-        case let .arm(plan, ceilings, profile):
-            guard case let .ready(_, capability) = state.connection, case .idle = state.execution else {
-                return rejected(original, .connectionNotReady)
-            }
-            guard planAndCeilingsAreValid(plan, capability: capability, ceilings: ceilings) else {
-                return rejected(original, .invalidPlanOrCeilings)
-            }
-            guard profile.isComplete, profile.equipmentIdentity == capability.equipmentIdentity else {
-                return rejected(original, .incompleteOrMismatchedProfile)
-            }
-            state.armedWorkout = .init(plan: plan, capability: capability, ceilings: ceilings, profile: profile)
-            state.telemetry = .unavailable("Awaiting telemetry matched to frozen execution bounds")
-            state.observedMachine = .unknown
-            state.execution = .armed
-
-        case let .userRequestsControl(_, readiness):
-            guard case .armed = state.execution,
-                  case let .ready(epoch, capability) = state.connection,
-                  state.isForegroundActive,
-                  case .notHeld = state.controlPermission,
-                  case .idle = state.procedure,
-                  let armed = state.armedWorkout,
-                  armed.capability == capability,
-                  armed.profile.isComplete,
-                  readiness.isConfirmed
-            else {
-                return rejected(original, requestControlRejection(state, readiness: readiness))
-            }
-            let record = makeProcedure(.requestControl, epoch: epoch, stepIndex: nil, now: now, state: &state)
-            state.procedure = .intentCreated(record)
-            state.controlPermission = .requesting(record.id)
-            state.execution = .acquiringControl
-            effects.append(.submit(record))
-
-        case let .userBegins(_, readiness):
-            guard case .readyToBegin = state.execution,
-                  case let .ready(epoch, capability) = state.connection,
-                  case .held(epoch, _) = state.controlPermission,
-                  case .idle = state.procedure,
-                  state.isForegroundActive,
-                  readiness.isConfirmed,
-                  let armed = state.armedWorkout,
-                  armed.capability == capability,
-                  telemetryIsFreshAndStationary(state.telemetry, now: now, profile: armed.profile)
-            else {
-                return rejected(original, beginRejection(state, readiness: readiness, now: now))
-            }
-            var application = newApplication(stepIndex: 0, armed: armed)
-            guard let intent = application.remainingIntents.first else { return rejected(original, .incompleteOrMismatchedProfile) }
-            application.remainingIntents.removeFirst()
-            let record = makeProcedure(intent, epoch: epoch, stepIndex: 0, now: now, state: &state)
-            state.procedure = .intentCreated(record)
-            state.execution = .applyingStep(application)
-            state.motionPossible = true
-            state.presentationStepIndex = 0
-            effects.append(.submit(record))
-
-        case let .intentSubmitted(_, procedureID):
-            guard case var .intentCreated(record) = state.procedure else {
-                return lateOrWrongProcedure(original, procedureID: procedureID, now: now)
-            }
-            guard record.id == procedureID else {
-                return failCorrelation(state, received: procedureID, now: now)
-            }
-            record.submittedAt = now
-            state.procedure = .submitted(record)
-            if record.intent == .stop { updateStopOutcome(&state, .submitted(record.id)) }
-
-        case let .attAccepted(_, procedureID):
-            guard case var .submitted(record) = state.procedure else {
-                return lateOrWrongProcedure(original, procedureID: procedureID, now: now)
-            }
-            guard record.id == procedureID else { return failCorrelation(state, received: procedureID, now: now) }
-            record.attAcceptedAt = now
-            let deadline = now.advanced(by: state.armedWorkout?.profile.procedureResponseInterval ?? 30)
-            state.procedure = .attAccepted(record: record, deadline: deadline)
-            if record.intent == .stop { updateStopOutcome(&state, .attAccepted(record.id)) }
-
-        case let .protocolAcknowledged(_, procedureID):
-            guard case let .attAccepted(record, _) = state.procedure else {
-                return lateOrWrongProcedure(original, procedureID: procedureID, now: now)
-            }
-            guard record.id == procedureID else { return failCorrelation(state, received: procedureID, now: now) }
-            disposition = consumeAcknowledgement(record, at: now, state: &state, effects: &effects)
-
-        case let .intentSubmissionRejected(_, procedureID, reason):
-            disposition = failProcedure(procedureID, failure: .submissionRejected(reason), now: now, state: &state, effects: &effects)
-
-        case let .attRejected(_, procedureID, reason):
-            disposition = failProcedure(procedureID, failure: .attRejected(reason), now: now, state: &state, effects: &effects)
-
-        case let .protocolRejected(_, procedureID, reason):
-            disposition = failProcedure(procedureID, failure: .protocolRejected(reason), now: now, state: &state, effects: &effects)
-
-        case let .protocolUnsupported(_, procedureID):
-            disposition = failProcedure(procedureID, failure: .protocolUnsupported, now: now, state: &state, effects: &effects)
-
-        case let .protocolMalformed(_, procedureID):
-            disposition = failProcedure(procedureID, failure: .protocolMalformed, now: now, state: &state, effects: &effects)
-
-        case let .protocolUnknown(_, procedureID):
-            disposition = failProcedure(procedureID, failure: .protocolUnknown, now: now, state: &state, effects: &effects)
-
-        case let .telemetry(_, input):
-            disposition = consumeTelemetry(input, now: now, state: &state, effects: &effects)
-
-        case .tick:
-            disposition = consumeTick(now: now, state: &state, effects: &effects)
-
-        case let .userRequestsStop(_, reason):
-            guard !isTerminal(state.execution) else { return rejected(original, .wrongState) }
-            switch state.execution {
-            case .stopConfirmationRequested, .awaitingHumanStop, .failedAwaitingHumanStop:
-                return rejected(original, .stopAlreadyRequested)
-            default:
-                break
-            }
-            let frozen = frozenRunningStep(from: state.execution, now: now)
-            state.frozenActiveSeconds = state.completedActiveSeconds + (frozen?.accumulatedActiveSeconds ?? 0)
-            state.execution = .stopConfirmationRequested(
-                .init(reason: reason, requestedAt: now, resumablePhase: state.execution, frozenRunningStep: frozen)
-            )
-
-        case .userCancelsStop:
-            guard case let .stopConfirmationRequested(request) = state.execution else { return rejected(original, .wrongState) }
-            state.execution = restoredPhase(from: request, now: now)
-            state.frozenActiveSeconds = nil
-
-        case .userConfirmsStop:
-            guard case let .stopConfirmationRequested(request) = state.execution else { return rejected(original, .wrongState) }
-            guard state.motionPossible else {
-                state.execution = .ended(.cancelledBeforeActuation)
-                state.controlPermission = .invalidated("Execution ended before actuation")
-                break
-            }
-            var waiting = WorkoutAwaitingHumanStop(reason: request.reason, commandOutcome: .notSent, requestedAt: request.requestedAt)
-            if case let .ready(epoch, _) = state.connection,
-               case .held(epoch, _) = state.controlPermission,
-               case .idle = state.procedure,
-               let profile = state.armedWorkout?.profile,
-               profile.permitsStop,
-               profile.stopEvidenceAccepted {
-                let record = makeProcedure(.stop, epoch: epoch, stepIndex: nil, now: now, state: &state)
-                state.procedure = .intentCreated(record)
-                waiting.commandOutcome = .intentCreated(record.id)
-                effects.append(.submit(record))
-            } else {
-                effects.append(.directUserToConsoleAndSafetyKey)
-            }
-            state.execution = .awaitingHumanStop(waiting)
-
-        case let .humanConfirmsStopped(_, note):
-            let evidence = WorkoutHumanStopEvidence(confirmedAt: now, note: note)
-            let outcome: WorkoutEndOutcome
-            switch state.execution {
-            case let .awaitingHumanStop(waiting):
-                outcome = .stopped(reason: waiting.reason, command: waiting.commandOutcome, evidence: evidence)
-            case let .failedAwaitingHumanStop(failure):
-                outcome = .failedAfterPossibleMotion(failure, evidence: evidence)
-            default:
-                return rejected(original, .wrongState)
-            }
-            state.motionPossible = false
-            state.observedMachine = .humanConfirmedStopped(evidence)
-            state.execution = .ended(outcome)
-            state.controlPermission = .invalidated("Human stop confirmation ended execution")
-
-        case .humanObservesMotion:
-            state.motionPossible = true
-            switch state.execution {
-            case .applyingStep, .runningStep, .stopConfirmationRequested, .awaitingHumanStop, .failedAwaitingHumanStop:
-                break
-            default:
-                disposition = failExecution(.telemetry("Unexpected human observation of motion"), state: &state, effects: &effects)
-            }
-
-        case let .connectionLost(_, reason):
-            let epoch = state.connection.epoch!
-            let terminal = isTerminal(state.execution)
-            state.connection = .lost(previousEpoch: epoch, reason: reason)
-            if terminal {
-                state.controlPermission = .invalidated("Connection lost after execution ended")
-                state.telemetry = .unavailable("Connection lost")
-                break
-            }
-            if let record = state.procedure.unresolvedRecord {
-                state.procedure = .timedOutUnknown(record: record)
-                state.procedureHistory.append(.timedOutUnknown(record))
-                if record.intent == .stop { updateStopOutcome(&state, .timedOutUnknown(record.id)) }
-            }
-            state.controlPermission = .invalidated("Connection lost")
-            state.telemetry = .unavailable("Connection lost")
-            state.observedMachine = .unknown
-            if case .awaitingHumanStop = state.execution {
-                effects.append(.directUserToConsoleAndSafetyKey)
-                disposition = .failedClosed(.connectionLost(reason))
-            } else {
-                disposition = failExecution(.connectionLost(reason), state: &state, effects: &effects)
-            }
-
-        case let .capabilityChanged(_, capability):
-            guard capability != state.connection.readyCapability else { break }
-            let epoch = state.connection.epoch!
-            state.connection = .invalidated(previousEpoch: epoch, reason: "Capability evidence changed")
-            state.controlPermission = .invalidated("Capability evidence changed")
-            if isTerminal(state.execution) { break }
-            state.observedMachine = .unknown
-            disposition = failExecutionPreservingStopOutcome(.capabilityChanged, state: &state, effects: &effects)
-
-        case let .controlPermissionLost(_, reason):
-            state.controlPermission = .invalidated(reason)
-            disposition = failExecutionPreservingStopOutcome(.controlPermissionLost(reason), state: &state, effects: &effects)
-
-        case let .appBecameInactive(_, reason):
-            state.isForegroundActive = false
-            state.controlPermission = .invalidated("App is not foreground-active")
-            state.observedMachine = .unknown
-            if let record = state.procedure.unresolvedRecord {
-                state.procedure = .timedOutUnknown(record: record)
-                state.procedureHistory.append(.timedOutUnknown(record))
-                if record.intent == .stop { updateStopOutcome(&state, .timedOutUnknown(record.id)) }
-            }
-            if case .awaitingHumanStop = state.execution {
-                effects.append(.directUserToConsoleAndSafetyKey)
-                disposition = .failedClosed(.foregroundLost(reason))
-            } else {
-                disposition = failExecution(.foregroundLost(reason), state: &state, effects: &effects)
-            }
-        }
-
-        return .init(state: state, effects: effects, disposition: disposition)
+  func reduce(
+    _ original: WorkoutExecutionState,
+    _ event: WorkoutExecutionEvent,
+    at now: MonotonicInstant
+  ) -> WorkoutExecutionTransition {
+    guard now.seconds.isFinite, now >= original.lastEventTime else {
+      return rejected(original, .nonMonotonicTime)
     }
-}
-
-private extension WorkoutExecutionReducer {
-    func rejected(_ state: WorkoutExecutionState, _ reason: WorkoutGuardRejection) -> WorkoutExecutionTransition {
-        .init(state: state, effects: [], disposition: .rejected(reason))
+    if isTerminal(original.execution), !isNewAttempt(event) {
+      let reason: WorkoutGuardRejection =
+        isProcedureLifecycleEvent(event) ? .duplicateOrLateProcedure : .wrongState
+      return .init(state: original, effects: [], disposition: .ignored(reason))
+    }
+    if let epochDisposition = epochDisposition(for: event, state: original) {
+      return .init(state: original, effects: [], disposition: epochDisposition)
     }
 
-    func eventEpoch(_ event: WorkoutExecutionEvent) -> ConnectionEpoch? {
-        switch event {
-        case .userStartsConnection, .arm:
-            nil
-        case let .connectionBecomesReady(epoch, _), let .userRequestsControl(epoch, _),
-             let .userBegins(epoch, _), let .intentSubmitted(epoch, _),
-             let .intentSubmissionRejected(epoch, _, _), let .attAccepted(epoch, _),
-             let .attRejected(epoch, _, _), let .protocolAcknowledged(epoch, _),
-             let .protocolRejected(epoch, _, _), let .protocolUnsupported(epoch, _),
-             let .protocolMalformed(epoch, _), let .protocolUnknown(epoch, _),
-             let .telemetry(epoch, _), let .tick(epoch),
-             let .userRequestsStop(epoch, _), let .userCancelsStop(epoch),
-             let .userConfirmsStop(epoch), let .humanConfirmsStopped(epoch, _),
-             let .humanObservesMotion(epoch), let .connectionLost(epoch, _),
-             let .capabilityChanged(epoch, _), let .controlPermissionLost(epoch, _),
-             let .appBecameInactive(epoch, _):
-            epoch
-        }
+    var state = original
+    state.lastEventTime = now
+    var effects: [WorkoutExecutionEffect] = []
+    var disposition: WorkoutReductionDisposition = .accepted
+
+    if let responseID = protocolResponseProcedureID(event),
+      case .attAccepted(let record, let deadline) = state.procedure,
+      now >= deadline
+    {
+      if responseID != record.id { return failCorrelation(state, received: responseID, at: now) }
+      disposition = timeOutProcedure(record, state: &state, effects: &effects)
+      return .init(state: state, effects: effects, disposition: disposition)
     }
 
-    func epochDisposition(for event: WorkoutExecutionEvent, state: WorkoutExecutionState) -> WorkoutReductionDisposition? {
-        guard let supplied = eventEpoch(event) else { return nil }
-        guard let current = state.connection.epoch else { return .rejected(.wrongEpoch) }
-        if supplied.rawValue < current.rawValue { return .ignored(.staleEpoch) }
-        if supplied != current { return .rejected(.wrongEpoch) }
-        return nil
-    }
+    switch event {
+    case .userStartsConnection(let epoch):
+      guard canStartNewAttempt(state) else { return rejected(original, .wrongState) }
+      if let previous = state.connection.epoch, epoch.rawValue <= previous.rawValue {
+        return rejected(original, .wrongEpoch)
+      }
+      state = WorkoutExecutionState(
+        connection: .connecting(epoch),
+        telemetry: .unavailable("Awaiting current-epoch telemetry"),
+        lastEventTime: now
+      )
 
-    func canStartConnection(_ state: WorkoutExecutionState) -> Bool {
-        switch (state.connection, state.execution) {
-        case (.disconnected, .idle), (.lost, .idle), (.lost, .ended),
-             (.invalidated, .idle), (.invalidated, .ended):
-            true
-        default:
-            false
-        }
-    }
+    case .connectionBecomesReady(let epoch, let capability):
+      guard case .connecting(epoch) = state.connection else {
+        return rejected(original, .wrongState)
+      }
+      guard capabilityIsComplete(capability) else {
+        return rejected(original, .incompleteCapabilityEvidence)
+      }
+      state.connection = .ready(epoch: epoch, capability: capability)
 
-    func protocolResponseProcedureID(_ event: WorkoutExecutionEvent) -> ProcedureID? {
-        switch event {
-        case let .protocolAcknowledged(_, id), let .protocolRejected(_, id, _),
-             let .protocolUnsupported(_, id), let .protocolMalformed(_, id),
-             let .protocolUnknown(_, id):
-            id
-        default:
-            nil
-        }
-    }
+    case .arm(let plan, let ceilings, let profile):
+      guard case .ready(_, let capability) = state.connection,
+        case .idle = state.execution,
+        state.isForegroundActive
+      else { return rejected(original, .connectionNotReady) }
+      guard profile.matches(capability) else {
+        return rejected(original, .incompleteOrMismatchedProfile)
+      }
+      guard planAndCeilingsAreValid(plan, capability: capability, ceilings: ceilings) else {
+        return rejected(original, .invalidPlanOrCeilings)
+      }
+      state.armedWorkout = .init(
+        plan: plan, capability: capability, ceilings: ceilings, profile: profile)
+      state.telemetry = .unavailable("Awaiting current attempt telemetry")
+      state.observedMachine = .unknown
+      state.execution = .preflight
 
-    func isProcedureLifecycleEvent(_ event: WorkoutExecutionEvent) -> Bool {
-        switch event {
-        case .intentSubmitted, .intentSubmissionRejected, .attAccepted, .attRejected,
-             .protocolAcknowledged, .protocolRejected, .protocolUnsupported,
-             .protocolMalformed, .protocolUnknown:
-            true
-        default:
-            false
-        }
-    }
+    case .beginWorkout(_, let readiness):
+      guard case .preflight = state.execution,
+        case .ready(let epoch, let capability) = state.connection,
+        case .notHeld = state.controlPermission,
+        case .idle = state.procedure,
+        state.isForegroundActive,
+        readiness.isConfirmed,
+        let armed = state.armedWorkout,
+        armed.capability == capability,
+        armed.profile.matches(capability)
+      else { return rejected(original, beginRejection(state, readiness: readiness)) }
+      let record = makeProcedure(
+        .requestControl, epoch: epoch, stepIndex: nil, at: now, state: &state)
+      state.procedure = .intentCreated(record)
+      state.controlPermission = .requesting(record.id)
+      state.execution = .acquiringControl
+      effects.append(.submit(record))
 
-    func capabilityIsComplete(_ capability: FR30zCapabilitySnapshot) -> Bool {
-        !capability.identity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !capability.equipmentIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && capability.controlPointSupportsWrite
-            && capability.controlPointSupportsIndicate
-            && capability.controlPointIndicationsEnabled
-            && capability.passiveSubscriptionOutcomesResolved
-    }
+    case .intentSubmitted(_, let procedureID):
+      guard case .intentCreated(var record) = state.procedure else {
+        return lateOrWrongProcedure(original, procedureID: procedureID, at: now)
+      }
+      guard record.id == procedureID else {
+        return failCorrelation(state, received: procedureID, at: now)
+      }
+      record.submittedAt = now
+      state.procedure = .submitted(record)
 
-    func planAndCeilingsAreValid(
-        _ validated: WorkoutPlanValidator.ValidatedPlan,
-        capability: FR30zCapabilitySnapshot,
-        ceilings: WorkoutSessionCeilings
-    ) -> Bool {
-        guard case let .success(revalidated) = WorkoutPlanValidator.validate(validated.plan, against: capability.planCapabilities),
-              revalidated == validated,
-              case let .supported(speedRange) = capability.planCapabilities.speed,
-              case let .supported(inclinationRange) = capability.planCapabilities.inclination,
-              ceilings.maximumSpeed.value.isFinite,
-              ceilings.maximumInclination.value.isFinite,
-              ceilings.maximumStepSpeedChange.value.isFinite,
-              ceilings.maximumSpeed.value >= speedRange.minimum.value,
-              ceilings.maximumSpeed.value <= speedRange.maximum.value,
-              ceilings.maximumInclination.value >= inclinationRange.minimum.value,
-              ceilings.maximumInclination.value <= inclinationRange.maximum.value,
-              ceilings.maximumStepSpeedChange.value > 0,
-              ceilings.maximumStepSpeedChange.value <= speedRange.maximum.value - speedRange.minimum.value
-        else { return false }
+    case .intentSubmissionRejected(_, let procedureID, let reason):
+      disposition = failProcedure(
+        procedureID, failure: .submissionRejected(reason), state: &state, effects: &effects)
 
-        for (index, step) in validated.plan.steps.enumerated() {
-            if step.targetSpeed.value > ceilings.maximumSpeed.value
-                || step.targetInclination.value > ceilings.maximumInclination.value {
-                return false
-            }
-            if index > 0 {
-                let prior = validated.plan.steps[index - 1].targetSpeed.value
-                if absDecimal(step.targetSpeed.value - prior) > ceilings.maximumStepSpeedChange.value {
-                    return false
-                }
-            }
-        }
-        return true
-    }
-
-    func requestControlRejection(_ state: WorkoutExecutionState, readiness: WorkoutOperatorReadiness) -> WorkoutGuardRejection {
-        guard state.isForegroundActive else { return .appNotForeground }
-        guard readiness.isConfirmed else { return .operatorReadinessMissing }
-        guard case .idle = state.procedure else { return .procedureBusy }
-        guard case .ready = state.connection else { return .connectionNotReady }
-        return .wrongState
-    }
-
-    func beginRejection(
-        _ state: WorkoutExecutionState,
-        readiness: WorkoutOperatorReadiness,
-        now: MonotonicInstant
-    ) -> WorkoutGuardRejection {
-        guard state.isForegroundActive else { return .appNotForeground }
-        guard readiness.isConfirmed else { return .operatorReadinessMissing }
-        guard case .idle = state.procedure else { return .procedureBusy }
-        guard case .held = state.controlPermission else { return .controlNotHeld }
-        guard case .fresh(let sample) = state.telemetry else { return .telemetryNotFresh }
-        guard let speed = sample.speed, sample.inclination != nil else { return .telemetryNotFresh }
-        guard let profile = state.armedWorkout?.profile,
-              now.seconds - sample.receivedAt.seconds <= profile.telemetryFreshnessInterval
-        else { return .telemetryNotFresh }
-        guard speed.value == 0 else { return .treadmillNotReportedStationary }
-        return .wrongState
-    }
-
-    func telemetryIsFreshAndStationary(
-        _ telemetry: WorkoutTelemetryState,
-        now: MonotonicInstant,
-        profile: FR30zExecutionProfile
-    ) -> Bool {
-        guard case let .fresh(sample) = telemetry,
-              let speed = sample.speed,
-              sample.inclination != nil
-        else { return false }
-        return speed.value == 0 && now.seconds - sample.receivedAt.seconds <= profile.telemetryFreshnessInterval
-    }
-
-    func telemetryIsFreshAndComplete(
-        _ telemetry: WorkoutTelemetryState,
-        now: MonotonicInstant,
-        profile: FR30zExecutionProfile
-    ) -> Bool {
-        guard case let .fresh(sample) = telemetry,
-              sample.speed != nil,
-              sample.inclination != nil
-        else { return false }
-        return now.seconds - sample.receivedAt.seconds <= profile.telemetryFreshnessInterval
-    }
-
-    func makeProcedure(
-        _ intent: WorkoutControlPointIntent,
-        epoch: ConnectionEpoch,
-        stepIndex: Int?,
-        now: MonotonicInstant,
-        state: inout WorkoutExecutionState
-    ) -> WorkoutProcedureRecord {
-        let id = ProcedureID(epoch: epoch, sequence: state.nextProcedureSequence)
-        state.nextProcedureSequence += 1
-        return .init(id: id, intent: intent, stepIndex: stepIndex, createdAt: now)
-    }
-
-    func newApplication(stepIndex: Int, armed: ArmedWorkout) -> WorkoutStepApplication {
-        let step = armed.plan.plan.steps[stepIndex]
-        var intents: [WorkoutControlPointIntent]
-        switch armed.profile.targetOrder {
-        case .speedThenInclination:
-            intents = [.setTargetSpeed(step.targetSpeed), .setTargetInclination(step.targetInclination)]
-        case .inclinationThenSpeed:
-            intents = [.setTargetInclination(step.targetInclination), .setTargetSpeed(step.targetSpeed)]
-        }
-        if stepIndex == 0, armed.profile.requiresStartForFirstStep { intents.append(.start) }
-        return .init(
-            stepIndex: stepIndex,
-            remainingIntents: intents,
-            speedAcknowledgedAt: nil,
-            inclinationAcknowledgedAt: nil,
-            startAcknowledgedAt: nil,
-            observationDeadline: nil
+    case .attAccepted(_, let procedureID):
+      guard case .submitted(var record) = state.procedure else {
+        return lateOrWrongProcedure(original, procedureID: procedureID, at: now)
+      }
+      guard record.id == procedureID else {
+        return failCorrelation(state, received: procedureID, at: now)
+      }
+      record.attAcceptedAt = now
+      if let acknowledgedAt = record.ftmsAcknowledgedAt {
+        disposition = completeAcknowledgedProcedure(
+          record,
+          attAcceptedAt: now,
+          ftmsAcknowledgedAt: acknowledgedAt,
+          state: &state,
+          effects: &effects
         )
-    }
+      } else {
+        state.procedure = .attAccepted(
+          record: record,
+          deadline: now.advanced(by: FR30zExecutionProfile.procedureResponseInterval)
+        )
+      }
 
-    func consumeAcknowledgement(
-        _ record: WorkoutProcedureRecord,
-        at now: MonotonicInstant,
-        state: inout WorkoutExecutionState,
-        effects: inout [WorkoutExecutionEffect]
-    ) -> WorkoutReductionDisposition {
-        switch record.intent {
-        case .requestControl:
-            guard case .acquiringControl = state.execution else {
-                return recordLateAcknowledgement(record, at: now, state: &state, effects: &effects)
-            }
-            state.procedureHistory.append(.acknowledged(record, at: now))
-            state.procedure = .idle
-            state.controlPermission = .held(epoch: record.id.epoch, acknowledgedAt: now)
-            state.execution = .readyToBegin
-        case .setTargetSpeed, .setTargetInclination, .start:
-            guard case var .applyingStep(application) = state.execution,
-                  let armed = state.armedWorkout,
-                  case let .ready(epoch, _) = state.connection
-            else {
-                return recordLateAcknowledgement(record, at: now, state: &state, effects: &effects)
-            }
-            state.procedureHistory.append(.acknowledged(record, at: now))
-            switch record.intent {
-            case .setTargetSpeed: application.speedAcknowledgedAt = now
-            case .setTargetInclination: application.inclinationAcknowledgedAt = now
-            case .start: application.startAcknowledgedAt = now
-            default: break
-            }
-            if let next = application.remainingIntents.first {
-                guard telemetryIsFreshAndComplete(state.telemetry, now: now, profile: armed.profile) else {
-                    if case let .fresh(sample) = state.telemetry {
-                        state.telemetry = .stale(sample)
-                    }
-                    state.observedMachine = .unknown
-                    return failExecution(.telemetry("Telemetry is not fresh during command progression"), state: &state, effects: &effects)
-                }
-                application.remainingIntents.removeFirst()
-                let nextRecord = makeProcedure(next, epoch: epoch, stepIndex: application.stepIndex, now: now, state: &state)
-                state.procedure = .intentCreated(nextRecord)
-                state.execution = .applyingStep(application)
-                state.motionPossible = state.motionPossible || next.mayMakeMotionPossible
-                effects.append(.submit(nextRecord))
-            } else {
-                application.observationDeadline = now.advanced(by: armed.profile.targetObservationInterval)
-                state.procedure = .idle
-                state.execution = .applyingStep(application)
-            }
-        case .stop:
-            guard case .awaitingHumanStop = state.execution else {
-                return recordLateAcknowledgement(record, at: now, state: &state, effects: &effects)
-            }
-            state.procedureHistory.append(.acknowledged(record, at: now))
-            state.procedure = .acknowledged(record: record, at: now)
-            updateStopOutcome(&state, .protocolAcknowledged(record.id))
-        }
-        return .accepted
-    }
+    case .attRejected(_, let procedureID, let reason):
+      disposition = failProcedure(
+        procedureID, failure: .attRejected(reason), state: &state, effects: &effects)
 
-    func recordLateAcknowledgement(
-        _ record: WorkoutProcedureRecord,
-        at now: MonotonicInstant,
-        state: inout WorkoutExecutionState,
-        effects: inout [WorkoutExecutionEffect]
-    ) -> WorkoutReductionDisposition {
-        let failure = WorkoutProcedureFailure.duplicateOrLate(record.id)
-        state.procedureHistory.append(.acknowledged(record, at: now))
-        state.procedure = .acknowledged(record: record, at: now)
-        state.controlPermission = .invalidated("Late procedure acknowledgement")
-        return failExecutionPreservingStopOutcome(.procedure(failure), state: &state, effects: &effects)
-    }
-
-    func lateOrWrongProcedure(
-        _ state: WorkoutExecutionState,
-        procedureID: ProcedureID,
-        now: MonotonicInstant
-    ) -> WorkoutExecutionTransition {
-        guard let active = state.procedure.activeRecord else {
-            var failedState = state
-            var effects: [WorkoutExecutionEffect] = []
-            let failure = WorkoutProcedureFailure.duplicateOrLate(procedureID)
-            failedState.controlPermission = .invalidated("Duplicate or late procedure evidence")
-            let disposition = failExecution(.procedure(failure), state: &failedState, effects: &effects)
-            failedState.lastEventTime = now
-            return .init(state: failedState, effects: effects, disposition: disposition)
-        }
-        if active.id != procedureID { return failCorrelation(state, received: procedureID, now: now) }
-        var failedState = state
-        var effects: [WorkoutExecutionEffect] = []
-        let failure = WorkoutProcedureFailure.duplicateOrLate(procedureID)
-        _ = failProcedure(procedureID, failure: failure, now: now, state: &failedState, effects: &effects)
-        failedState.lastEventTime = now
-        return .init(state: failedState, effects: effects, disposition: .failedClosed(.procedure(failure)))
-    }
-
-    func failCorrelation(
-        _ original: WorkoutExecutionState,
-        received: ProcedureID,
-        now: MonotonicInstant
-    ) -> WorkoutExecutionTransition {
-        var state = original
-        var effects: [WorkoutExecutionEffect] = []
-        let expected = state.procedure.activeRecord!.id
-        let failure = WorkoutProcedureFailure.correlationFailure(expected: expected, received: received)
-        _ = failProcedure(expected, failure: failure, now: now, state: &state, effects: &effects)
-        state.lastEventTime = now
-        return .init(state: state, effects: effects, disposition: .failedClosed(.procedure(failure)))
-    }
-
-    func failProcedure(
-        _ procedureID: ProcedureID,
-        failure: WorkoutProcedureFailure,
-        now: MonotonicInstant,
-        state: inout WorkoutExecutionState,
-        effects: inout [WorkoutExecutionEffect]
-    ) -> WorkoutReductionDisposition {
-        guard let record = state.procedure.activeRecord else { return .ignored(.duplicateOrLateProcedure) }
+    case .protocolAcknowledged(_, let procedureID):
+      switch state.procedure {
+      case .submitted(var record):
         guard record.id == procedureID else {
-            let mismatch = WorkoutProcedureFailure.correlationFailure(expected: record.id, received: procedureID)
-            state.procedure = .failed(record: record, failure: mismatch)
-            state.procedureHistory.append(.failed(record, mismatch))
-            state.controlPermission = .invalidated("Procedure correlation failed")
-            return failExecution(.procedure(mismatch), state: &state, effects: &effects)
+          return failCorrelation(state, received: procedureID, at: now)
         }
-        state.procedure = .failed(record: record, failure: failure)
-        state.procedureHistory.append(.failed(record, failure))
-        state.controlPermission = .invalidated("Procedure failed")
-        if record.intent == .stop {
-            updateStopOutcome(&state, .failed(record.id, failure))
-            effects.append(.directUserToConsoleAndSafetyKey)
-            return .failedClosed(.procedure(failure))
+        guard record.ftmsAcknowledgedAt == nil else {
+          return lateOrWrongProcedure(original, procedureID: procedureID, at: now)
         }
-        return failExecutionPreservingStopOutcome(.procedure(failure), state: &state, effects: &effects)
+        record.ftmsAcknowledgedAt = now
+        state.procedure = .submitted(record)
+      case .attAccepted(var record, _):
+        guard record.id == procedureID else {
+          return failCorrelation(state, received: procedureID, at: now)
+        }
+        record.ftmsAcknowledgedAt = now
+        disposition = completeAcknowledgedProcedure(
+          record,
+          attAcceptedAt: record.attAcceptedAt!,
+          ftmsAcknowledgedAt: now,
+          state: &state,
+          effects: &effects
+        )
+      default:
+        return lateOrWrongProcedure(original, procedureID: procedureID, at: now)
+      }
+
+    case .protocolRejected(_, let procedureID, let reason):
+      disposition = failProcedure(
+        procedureID, failure: .protocolRejected(reason), state: &state, effects: &effects)
+    case .protocolUnsupported(_, let procedureID):
+      disposition = failProcedure(
+        procedureID, failure: .protocolUnsupported, state: &state, effects: &effects)
+    case .protocolMalformed(_, let procedureID):
+      disposition = failProcedure(
+        procedureID, failure: .protocolMalformed, state: &state, effects: &effects)
+    case .protocolUnknown(_, let procedureID):
+      disposition = failProcedure(
+        procedureID, failure: .protocolUnknown, state: &state, effects: &effects)
+
+    case .telemetry(_, let input):
+      disposition = consumeTelemetry(input, at: now, state: &state, effects: &effects)
+    case .tick:
+      disposition = consumeTick(at: now, state: &state, effects: &effects)
+    case .setSpeedOverride(_, let target):
+      disposition = setOverride(
+        speed: target, inclination: nil, at: now, state: &state, effects: &effects)
+    case .setInclinationOverride(_, let target):
+      disposition = setOverride(
+        speed: nil, inclination: target, at: now, state: &state, effects: &effects)
+    case .returnToPlan:
+      disposition = returnToPlan(at: now, state: &state, effects: &effects)
+    case .humanConfirmsStationary(_, let note):
+      disposition = consumeHumanStationary(note: note, at: now, state: &state, effects: &effects)
+    case .humanObservesMotion(_, let note):
+      disposition = consumeHumanMotion(note: note, at: now, state: &state, effects: &effects)
+
+    case .userEndsWorkout:
+      guard case .idle = state.procedure else { return rejected(original, .procedureBusy) }
+      guard let context = endContext(state, at: now) else {
+        return rejected(original, .endNotAvailable)
+      }
+      state.execution = .ending(context)
+      state.targetSequence = nil
+      effects.append(.finalizeLocally(context))
+    case .localEndingSucceeded:
+      guard case .ending(let context) = state.execution, case .idle = state.procedure else {
+        return rejected(original, .wrongState)
+      }
+      guard stationaryEvidenceIsAccepted(context.stationaryEvidence, state: state, at: now) else {
+        if case .telemetry(let sample) = context.stationaryEvidence {
+          state.telemetry = .stale(sample)
+          state.observedMachine = .unknown
+        }
+        disposition = interrupt(.stationaryEvidenceExpired, state: &state, effects: &effects)
+        break
+      }
+      state.execution = .finished(context)
+      state.controlPermission = .invalidated("Workout ended locally")
+      state.procedure = .idle
+      state.motionPossible = false
+    case .localEndingFailed(_, let reason):
+      guard case .ending = state.execution else { return rejected(original, .wrongState) }
+      disposition = fail(.localFinalization(reason), state: &state, effects: &effects)
+
+    case .connectionLost(_, let reason):
+      let epoch = state.connection.epoch!
+      state.connection = .lost(previousEpoch: epoch, reason: reason)
+      state.telemetry = .unavailable("Connection lost")
+      state.observedMachine = .unknown
+      disposition = interrupt(.connectionLost(reason), state: &state, effects: &effects)
+    case .capabilityChanged(_, let capability):
+      guard capability != state.connection.readyCapability else { break }
+      let epoch = state.connection.epoch!
+      state.connection = .invalidated(
+        previousEpoch: epoch, reason: "Capability/profile evidence changed")
+      disposition = interrupt(.profileChanged, state: &state, effects: &effects)
+    case .controlPermissionLost(_, let reason):
+      disposition = interrupt(.controlPermissionLost(reason), state: &state, effects: &effects)
+    case .appBecameInactive(_, let reason):
+      state.isForegroundActive = false
+      disposition = interrupt(.foregroundLost(reason), state: &state, effects: &effects)
     }
 
-    func consumeTelemetry(
-        _ input: WorkoutTelemetryInput,
-        now: MonotonicInstant,
-        state: inout WorkoutExecutionState,
-        effects: inout [WorkoutExecutionEffect]
-    ) -> WorkoutReductionDisposition {
-        if case let .applyingStep(application) = state.execution,
-           let deadline = application.observationDeadline,
-           now >= deadline {
-            return failExecution(.observationTimeout, state: &state, effects: &effects)
+    if case .rejected(let reason) = disposition {
+      return rejected(original, reason)
+    }
+    return .init(state: state, effects: effects, disposition: disposition)
+  }
+}
+
+extension WorkoutExecutionReducer {
+  fileprivate func rejected(_ state: WorkoutExecutionState, _ reason: WorkoutGuardRejection)
+    -> WorkoutExecutionTransition
+  {
+    .init(state: state, effects: [], disposition: .rejected(reason))
+  }
+
+  fileprivate func isNewAttempt(_ event: WorkoutExecutionEvent) -> Bool {
+    if case .userStartsConnection = event { return true }
+    return false
+  }
+
+  fileprivate func isTerminal(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .finished, .interrupted, .failed: true
+    default: false
+    }
+  }
+
+  fileprivate func canStartNewAttempt(_ state: WorkoutExecutionState) -> Bool {
+    switch state.execution {
+    case .idle, .finished, .interrupted, .failed: true
+    default: false
+    }
+  }
+
+  fileprivate func eventEpoch(_ event: WorkoutExecutionEvent) -> ConnectionEpoch? {
+    switch event {
+    case .userStartsConnection, .arm:
+      nil
+    case .connectionBecomesReady(let epoch, _), .beginWorkout(let epoch, _),
+      .intentSubmitted(let epoch, _), .intentSubmissionRejected(let epoch, _, _),
+      .attAccepted(let epoch, _), .attRejected(let epoch, _, _),
+      .protocolAcknowledged(let epoch, _), .protocolRejected(let epoch, _, _),
+      .protocolUnsupported(let epoch, _), .protocolMalformed(let epoch, _),
+      .protocolUnknown(let epoch, _), .telemetry(let epoch, _), .tick(let epoch),
+      .setSpeedOverride(let epoch, _), .setInclinationOverride(let epoch, _),
+      .returnToPlan(let epoch), .humanConfirmsStationary(let epoch, _),
+      .humanObservesMotion(let epoch, _), .userEndsWorkout(let epoch),
+      .localEndingSucceeded(let epoch), .localEndingFailed(let epoch, _),
+      .connectionLost(let epoch, _), .capabilityChanged(let epoch, _),
+      .controlPermissionLost(let epoch, _), .appBecameInactive(let epoch, _):
+      epoch
+    }
+  }
+
+  fileprivate func epochDisposition(for event: WorkoutExecutionEvent, state: WorkoutExecutionState)
+    -> WorkoutReductionDisposition?
+  {
+    guard let supplied = eventEpoch(event) else { return nil }
+    guard let current = state.connection.epoch else { return .rejected(.wrongEpoch) }
+    if supplied.rawValue < current.rawValue { return .ignored(.staleEpoch) }
+    if supplied != current { return .rejected(.wrongEpoch) }
+    return nil
+  }
+
+  fileprivate func isProcedureLifecycleEvent(_ event: WorkoutExecutionEvent) -> Bool {
+    switch event {
+    case .intentSubmitted, .intentSubmissionRejected, .attAccepted, .attRejected,
+      .protocolAcknowledged, .protocolRejected, .protocolUnsupported,
+      .protocolMalformed, .protocolUnknown:
+      true
+    default:
+      false
+    }
+  }
+
+  fileprivate func protocolResponseProcedureID(_ event: WorkoutExecutionEvent) -> ProcedureID? {
+    switch event {
+    case .protocolAcknowledged(_, let id), .protocolRejected(_, let id, _),
+      .protocolUnsupported(_, let id), .protocolMalformed(_, let id), .protocolUnknown(_, let id):
+      id
+    default:
+      nil
+    }
+  }
+
+  fileprivate func capabilityIsComplete(_ capability: FR30zCapabilitySnapshot) -> Bool {
+    !capability.peripheralIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && !capability.equipmentIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && capability.fitnessMachineServicePresent
+      && capability.requiredCharacteristicPropertiesMatch
+      && capability.fitnessMachineFeatureEvidence != .unavailable
+      && capability.supportedSpeedRangeEvidence != .unavailable
+      && capability.supportedInclinationRangeEvidence != .unavailable
+  }
+
+  fileprivate func planAndCeilingsAreValid(
+    _ validated: WorkoutPlanValidator.ValidatedPlan,
+    capability: FR30zCapabilitySnapshot,
+    ceilings: WorkoutSessionCeilings
+  ) -> Bool {
+    guard
+      case .success(let revalidated) = WorkoutPlanValidator.validate(
+        validated.plan, against: capability.planCapabilities),
+      revalidated == validated,
+      case .supported(let speedRange) = capability.planCapabilities.speed,
+      case .supported(let inclinationRange) = capability.planCapabilities.inclination,
+      value(ceilings.maximumSpeed, isWithin: speedRange, ceiling: speedRange.maximum),
+      value(
+        ceilings.maximumInclination, isWithin: inclinationRange, ceiling: inclinationRange.maximum),
+      ceilings.maximumStepSpeedChange.value > 0,
+      ceilings.maximumStepSpeedChange.value <= speedRange.maximum.value - speedRange.minimum.value,
+      isAligned(
+        ceilings.maximumStepSpeedChange.value, minimum: 0, increment: speedRange.increment.value)
+    else { return false }
+
+    for (index, step) in validated.plan.steps.enumerated() {
+      guard step.targetSpeed.value <= ceilings.maximumSpeed.value,
+        step.targetInclination.value <= ceilings.maximumInclination.value
+      else { return false }
+      if index > 0 {
+        let previous = validated.plan.steps[index - 1].targetSpeed.value
+        guard absolute(step.targetSpeed.value - previous) <= ceilings.maximumStepSpeedChange.value
+        else {
+          return false
         }
-        switch input {
-        case let .unavailable(reason):
-            state.telemetry = .unavailable(reason)
-            state.observedMachine = .unknown
-            if isApplyingOrRunning(state.execution) {
-                return failExecution(.telemetry(reason), state: &state, effects: &effects)
-            }
-        case let .malformed(reason):
-            state.telemetry = .malformed(reason)
-            state.observedMachine = .unknown
-            if isApplyingOrRunning(state.execution) {
-                return failExecution(.telemetry(reason), state: &state, effects: &effects)
-            }
-        case let .sample(speed, inclination, distance):
-            let sample = WorkoutTelemetrySample(
-                speed: speed,
-                inclination: inclination,
-                totalDistanceMetres: distance,
-                receivedAt: now
-            )
-            guard speed != nil, inclination != nil else {
-                state.telemetry = .unavailable("Required speed or inclination field missing")
-                state.observedMachine = .unknown
-                if isApplyingOrRunning(state.execution) {
-                    return failExecution(.telemetry("Required field missing"), state: &state, effects: &effects)
-                }
-                return .accepted
-            }
-            if speed!.value > 0 { state.motionPossible = true }
-            guard sampleIsInsideFrozenBounds(sample, state: state) else {
-                state.telemetry = .contradictory("Telemetry lies outside frozen capabilities or session ceilings")
-                state.observedMachine = .unknown
-                return failExecutionPreservingStopOutcome(
-                    .telemetry("Contradictory telemetry"),
-                    state: &state,
-                    effects: &effects
-                )
-            }
-            state.telemetry = .fresh(sample)
-            state.observedMachine = .reported(sample)
-            switch state.execution {
-            case let .applyingStep(application):
-                if sampleConfirms(application: application, sample: sample, state: state) {
-                    state.observedMachine = .stepTargetReported(stepIndex: application.stepIndex, sample: sample)
-                    state.execution = .runningStep(
-                        .init(stepIndex: application.stepIndex, accumulatedActiveSeconds: 0, segmentStartedAt: now)
-                    )
-                }
-            case let .runningStep(running):
-                if !sampleMatchesStep(sample, stepIndex: running.stepIndex, state: state) {
-                    state.telemetry = .contradictory("A confirmed step target changed")
-                    state.observedMachine = .unknown
-                    return failExecution(.telemetry("Contradictory confirmed target"), state: &state, effects: &effects)
-                }
-                state.observedMachine = .stepTargetReported(stepIndex: running.stepIndex, sample: sample)
-            default:
-                break
-            }
+      }
+    }
+    return true
+  }
+
+  fileprivate func value(
+    _ value: WorkoutSpeed, isWithin range: WorkoutSpeedRange, ceiling: WorkoutSpeed
+  ) -> Bool {
+    value.value.isFinite
+      && value.unit == range.minimum.unit
+      && value.value >= range.minimum.value
+      && value.value <= ceiling.value
+      && isAligned(value.value, minimum: range.minimum.value, increment: range.increment.value)
+  }
+
+  fileprivate func value(
+    _ value: WorkoutInclination, isWithin range: WorkoutInclinationRange,
+    ceiling: WorkoutInclination
+  ) -> Bool {
+    value.value.isFinite
+      && value.unit == range.minimum.unit
+      && value.value >= range.minimum.value
+      && value.value <= ceiling.value
+      && isAligned(value.value, minimum: range.minimum.value, increment: range.increment.value)
+  }
+
+  fileprivate func beginRejection(
+    _ state: WorkoutExecutionState, readiness: WorkoutOperatorReadiness
+  ) -> WorkoutGuardRejection {
+    guard state.isForegroundActive else { return .wrongState }
+    guard readiness.isConfirmed else { return .operatorReadinessMissing }
+    guard case .idle = state.procedure else { return .procedureBusy }
+    guard case .ready = state.connection else { return .connectionNotReady }
+    return .wrongState
+  }
+
+  fileprivate func makeProcedure(
+    _ intent: WorkoutControlPointIntent,
+    epoch: ConnectionEpoch,
+    stepIndex: Int?,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState
+  ) -> WorkoutProcedureRecord {
+    let id = ProcedureID(epoch: epoch, sequence: state.nextProcedureSequence)
+    state.nextProcedureSequence += 1
+    return .init(id: id, intent: intent, stepIndex: stepIndex, createdAt: now)
+  }
+
+  fileprivate func completeAcknowledgedProcedure(
+    _ record: WorkoutProcedureRecord,
+    attAcceptedAt: MonotonicInstant,
+    ftmsAcknowledgedAt: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    state.procedureHistory.append(
+      .acknowledged(
+        record: record, attAcceptedAt: attAcceptedAt, ftmsAcknowledgedAt: ftmsAcknowledgedAt)
+    )
+    state.procedure = .idle
+
+    switch record.intent {
+    case .requestControl:
+      guard case .acquiringControl = state.execution else {
+        return fail(.procedure(.duplicateOrLate(record.id)), state: &state, effects: &effects)
+      }
+      state.currentSegment = .init(
+        stepIndex: 0,
+        accumulatedActiveSeconds: 0,
+        activeStartedAt: nil,
+        speedOverride: nil,
+        inclinationOverride: nil
+      )
+      state.controlPermission = .held(
+        epoch: record.id.epoch, acknowledgedAt: max(attAcceptedAt, ftmsAcknowledgedAt))
+      state.execution = .waitingForPhysicalStart
+    case .setTargetSpeed(let target):
+      guard var sequence = state.targetSequence, sequence.stepIndex == record.stepIndex else {
+        return fail(.procedure(.duplicateOrLate(record.id)), state: &state, effects: &effects)
+      }
+      sequence.acknowledgedSpeed = target
+      sequence.forceSpeed = false
+      sequence.finalAcknowledgementAt = max(attAcceptedAt, ftmsAcknowledgedAt)
+      sequence.observationDeadline = nil
+      state.targetSequence = sequence
+      if isActivelyApplyingTargets(state.execution) {
+        return advanceTargetSequence(at: state.lastEventTime, state: &state, effects: &effects)
+      }
+    case .setTargetInclination(let target):
+      guard var sequence = state.targetSequence, sequence.stepIndex == record.stepIndex else {
+        return fail(.procedure(.duplicateOrLate(record.id)), state: &state, effects: &effects)
+      }
+      sequence.acknowledgedInclination = target
+      sequence.forceInclination = false
+      sequence.finalAcknowledgementAt = max(attAcceptedAt, ftmsAcknowledgedAt)
+      sequence.observationDeadline = nil
+      state.targetSequence = sequence
+      if isActivelyApplyingTargets(state.execution) {
+        return advanceTargetSequence(at: state.lastEventTime, state: &state, effects: &effects)
+      }
+    }
+    return .accepted
+  }
+
+  fileprivate func advanceTargetSequence(
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    guard var sequence = state.targetSequence,
+      let target = effectiveTarget(state),
+      case .idle = state.procedure,
+      case .ready(let epoch, let capability) = state.connection,
+      case .held(epoch, _) = state.controlPermission,
+      state.isForegroundActive,
+      let armed = state.armedWorkout,
+      armed.capability == capability,
+      armed.profile.matches(capability)
+    else { return interrupt(.resumeGuardsFailed, state: &state, effects: &effects) }
+
+    let intent: WorkoutControlPointIntent?
+    if sequence.forceSpeed || sequence.acknowledgedSpeed != target.speed {
+      intent = .setTargetSpeed(target.speed)
+    } else if sequence.forceInclination || sequence.acknowledgedInclination != target.inclination {
+      intent = .setTargetInclination(target.inclination)
+    } else {
+      intent = nil
+    }
+
+    if let intent {
+      sequence.observationDeadline = nil
+      state.targetSequence = sequence
+      let record = makeProcedure(
+        intent, epoch: epoch, stepIndex: sequence.stepIndex, at: now, state: &state)
+      state.procedure = .intentCreated(record)
+      state.motionPossible = true
+      effects.append(.submit(record))
+      return .accepted
+    }
+
+    if let acknowledgedAt = sequence.finalAcknowledgementAt {
+      sequence.observationDeadline = acknowledgedAt.advanced(
+        by: FR30zExecutionProfile.targetObservationInterval)
+      state.targetSequence = sequence
+      if let sample = freshSample(state, at: now),
+        sample.receivedAt > acknowledgedAt,
+        sampleMatches(sample, target: target)
+      {
+        completeTargetObservation(sample, at: now, state: &state)
+      }
+      return .accepted
+    }
+
+    guard let sample = freshSample(state, at: now), sampleMatches(sample, target: target) else {
+      return fail(
+        .contradictoryEvidence("Current exact telemetry is required when no target changes"),
+        state: &state,
+        effects: &effects
+      )
+    }
+    completeTargetObservation(sample, at: now, state: &state)
+    return .accepted
+  }
+
+  fileprivate func startTargetSequence(
+    purpose: WorkoutTargetSequencePurpose,
+    forceBothAxes: Bool,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    guard let segment = state.currentSegment else { return .rejected(.noCurrentSegment) }
+    state.targetSequence = .init(
+      purpose: purpose,
+      stepIndex: segment.stepIndex,
+      startedAt: now,
+      forceSpeed: forceBothAxes,
+      forceInclination: forceBothAxes,
+      acknowledgedSpeed: forceBothAxes ? nil : state.lastConfirmedTarget?.speed,
+      acknowledgedInclination: forceBothAxes ? nil : state.lastConfirmedTarget?.inclination,
+      finalAcknowledgementAt: nil,
+      observationDeadline: nil
+    )
+    state.execution = purpose == .resumeRestoration ? .restoringTargets : .applyingTargets(purpose)
+    return advanceTargetSequence(at: now, state: &state, effects: &effects)
+  }
+
+  fileprivate func completeTargetObservation(
+    _ sample: WorkoutTelemetrySample, at now: MonotonicInstant, state: inout WorkoutExecutionState
+  ) {
+    guard var segment = state.currentSegment else { return }
+    state.lastConfirmedTarget = .init(speed: sample.speed, inclination: sample.inclination)
+    state.targetSequence = nil
+    segment.activeStartedAt = now
+    state.currentSegment = segment
+    state.execution = .runningSegment
+    state.observedMachine = .targetReported(stepIndex: segment.stepIndex, sample: sample)
+  }
+
+  fileprivate func consumeTelemetry(
+    _ input: WorkoutTelemetryInput,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    if case .checkingTreadmill(let checking) = state.execution, now >= checking.interruptionDeadline
+    {
+      return interrupt(.telemetryStreamTimedOut, state: &state, effects: &effects)
+    }
+    if let deadline = state.targetSequence?.observationDeadline,
+      now >= deadline,
+      isTargetObservationRelevant(state.execution)
+    {
+      return fail(.targetObservationTimeout, state: &state, effects: &effects)
+    }
+
+    switch input {
+    case .unavailable(let reason):
+      state.telemetry = .unavailable(reason)
+      state.observedMachine = .unknown
+      if attemptNeedsTelemetry(state.execution) {
+        return interrupt(.telemetryUnavailable(reason), state: &state, effects: &effects)
+      }
+      return .accepted
+    case .malformed(let reason):
+      state.telemetry = .malformed(reason)
+      state.observedMachine = .unknown
+      if attemptNeedsTelemetry(state.execution) {
+        return fail(.malformedTelemetry(reason), state: &state, effects: &effects)
+      }
+      return .accepted
+    case .sample(let speed, let inclination, let distance):
+      guard let speed, let inclination else {
+        state.telemetry = .unavailable("Required speed or inclination field missing")
+        state.observedMachine = .unknown
+        if attemptNeedsTelemetry(state.execution) {
+          return fail(.incompleteTelemetry, state: &state, effects: &effects)
         }
         return .accepted
+      }
+      let sample = WorkoutTelemetrySample(
+        speed: speed,
+        inclination: inclination,
+        totalDistanceMetres: distance,
+        receivedAt: now
+      )
+      guard sampleIsInsideCapability(sample, state: state) else {
+        state.telemetry = .contradictory("Telemetry lies outside the accepted capability range")
+        state.observedMachine = .unknown
+        return fail(
+          .contradictoryEvidence("Telemetry lies outside the accepted capability range"),
+          state: &state,
+          effects: &effects
+        )
+      }
+      state.telemetry = .fresh(sample)
+      if speed.value == 0 {
+        state.observedMachine = .reportedStationary(sample)
+        return consumeReportedStationary(sample, at: now, state: &state)
+      }
+      state.motionPossible = true
+      state.observedMachine = .reportedMoving(sample)
+      return consumeReportedMoving(sample, at: now, state: &state, effects: &effects)
     }
+  }
 
-    func consumeTick(
-        now: MonotonicInstant,
-        state: inout WorkoutExecutionState,
-        effects: inout [WorkoutExecutionEffect]
-    ) -> WorkoutReductionDisposition {
-        if case let .attAccepted(record, deadline) = state.procedure, now >= deadline {
-            return timeOutProcedure(record, state: &state, effects: &effects)
-        }
-        if case let .fresh(sample) = state.telemetry,
-           let profile = state.armedWorkout?.profile,
-           now.seconds - sample.receivedAt.seconds > profile.telemetryFreshnessInterval {
-            state.telemetry = .stale(sample)
-            state.observedMachine = .unknown
-            if isApplyingOrRunning(state.execution) {
-                return failExecution(.telemetry("Telemetry became stale"), state: &state, effects: &effects)
-            }
-        }
-        if case let .applyingStep(application) = state.execution,
-           let deadline = application.observationDeadline,
-           now >= deadline {
-            return failExecution(.observationTimeout, state: &state, effects: &effects)
-        }
-        if case let .runningStep(running) = state.execution,
-           let armed = state.armedWorkout {
-            let active = running.accumulatedActiveSeconds + now.seconds - running.segmentStartedAt.seconds
-            let required = TimeInterval(armed.plan.plan.steps[running.stepIndex].duration.value)
-            if active >= required {
-                if running.stepIndex + 1 < armed.plan.plan.steps.count {
-                    state.completedActiveSeconds += required
-                    var next = newApplication(stepIndex: running.stepIndex + 1, armed: armed)
-                    let intent = next.remainingIntents.removeFirst()
-                    guard case let .ready(epoch, _) = state.connection,
-                          case .held(epoch, _) = state.controlPermission,
-                          case .idle = state.procedure,
-                          state.isForegroundActive
-                    else {
-                        return failExecution(.controlPermissionLost("Step transition guards failed"), state: &state, effects: &effects)
-                    }
-                    let record = makeProcedure(intent, epoch: epoch, stepIndex: next.stepIndex, now: now, state: &state)
-                    state.procedure = .intentCreated(record)
-                    state.execution = .applyingStep(next)
-                    state.presentationStepIndex = next.stepIndex
-                    if case let .fresh(sample) = state.telemetry {
-                        state.observedMachine = .reported(sample)
-                    } else {
-                        state.observedMachine = .unknown
-                    }
-                    effects.append(.submit(record))
-                } else {
-                    let frozen = WorkoutRunningStep(
-                        stepIndex: running.stepIndex,
-                        accumulatedActiveSeconds: required,
-                        segmentStartedAt: now
-                    )
-                    state.frozenActiveSeconds = state.completedActiveSeconds + required
-                    state.execution = .stopConfirmationRequested(
-                        .init(reason: .completedPlan, requestedAt: now, resumablePhase: .runningStep(frozen), frozenRunningStep: frozen)
-                    )
-                }
-            }
-        }
+  fileprivate func consumeReportedStationary(
+    _ sample: WorkoutTelemetrySample,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState
+  ) -> WorkoutReductionDisposition {
+    let evidence = WorkoutStationaryEvidence.telemetry(sample)
+    switch state.execution {
+    case .applyingTargets, .runningSegment, .restoringTargets:
+      guard state.motionPossible else { return .accepted }
+      enterPaused(evidence, at: now, state: &state)
+    case .checkingTreadmill(let checking):
+      if checking.origin == .awaitingPhysicalStopForCompletion {
+        state.execution = .readyToEnd(
+          completionContext(.completedPlan, evidence: evidence, state: state))
+      } else if state.motionPossible {
+        enterPaused(evidence, at: now, state: &state)
+      }
+    case .awaitingPhysicalStopForCompletion:
+      state.execution = .readyToEnd(
+        completionContext(.completedPlan, evidence: evidence, state: state))
+    case .paused:
+      state.execution = .paused(evidence)
+    case .readyToEnd(let context):
+      state.execution = .readyToEnd(context.replacingStationaryEvidence(with: evidence))
+    case .ending(let context):
+      state.execution = .ending(context.replacingStationaryEvidence(with: evidence))
+    default:
+      break
+    }
+    return .accepted
+  }
+
+  fileprivate func consumeReportedMoving(
+    _ sample: WorkoutTelemetrySample,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    switch state.execution {
+    case .waitingForPhysicalStart:
+      guard state.currentSegment != nil else { return .rejected(.noCurrentSegment) }
+      return startTargetSequence(
+        purpose: .initial, forceBothAxes: true, at: now, state: &state, effects: &effects)
+    case .paused:
+      guard case .idle = state.procedure else {
+        return interrupt(.resumeGuardsFailed, state: &state, effects: &effects)
+      }
+      state.targetSequence = nil
+      return startTargetSequence(
+        purpose: .resumeRestoration,
+        forceBothAxes: true,
+        at: now,
+        state: &state,
+        effects: &effects
+      )
+    case .checkingTreadmill(let checking):
+      return resolveCheckingWithMoving(
+        checking, sample: sample, at: now, state: &state, effects: &effects)
+    case .applyingTargets, .restoringTargets:
+      if targetObservationIsSatisfied(sample, state: state) {
+        completeTargetObservation(sample, at: now, state: &state)
+      }
+    case .runningSegment:
+      if let target = effectiveTarget(state), sampleMatches(sample, target: target),
+        let segment = state.currentSegment
+      {
+        state.observedMachine = .targetReported(stepIndex: segment.stepIndex, sample: sample)
+      }
+    case .readyToEnd:
+      state.execution = .awaitingPhysicalStopForCompletion
+    case .ending:
+      return fail(
+        .contradictoryEvidence("Treadmill reported movement while ending"),
+        state: &state,
+        effects: &effects
+      )
+    default:
+      break
+    }
+    return .accepted
+  }
+
+  fileprivate func resolveCheckingWithMoving(
+    _ checking: WorkoutCheckingState,
+    sample: WorkoutTelemetrySample,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    switch checking.origin {
+    case .waitingForPhysicalStart:
+      state.execution = .waitingForPhysicalStart
+      return consumeReportedMoving(sample, at: now, state: &state, effects: &effects)
+    case .applyingTargets(let purpose):
+      state.execution = .applyingTargets(purpose)
+      if targetObservationIsSatisfied(sample, state: state) {
+        completeTargetObservation(sample, at: now, state: &state)
         return .accepted
+      }
+      if case .idle = state.procedure {
+        return advanceTargetSequence(at: now, state: &state, effects: &effects)
+      }
+    case .restoringTargets:
+      state.execution = .restoringTargets
+      if targetObservationIsSatisfied(sample, state: state) {
+        completeTargetObservation(sample, at: now, state: &state)
+        return .accepted
+      }
+      if case .idle = state.procedure {
+        return advanceTargetSequence(at: now, state: &state, effects: &effects)
+      }
+    case .runningSegment:
+      state.execution = .runningSegment
+      if var segment = state.currentSegment {
+        segment.activeStartedAt = now
+        state.currentSegment = segment
+      }
+    case .paused(let evidence):
+      state.execution = .paused(evidence)
+      return consumeReportedMoving(sample, at: now, state: &state, effects: &effects)
+    case .awaitingPhysicalStopForCompletion:
+      state.execution = .awaitingPhysicalStopForCompletion
     }
+    return .accepted
+  }
 
-    func timeOutProcedure(
-        _ record: WorkoutProcedureRecord,
-        state: inout WorkoutExecutionState,
-        effects: inout [WorkoutExecutionEffect]
-    ) -> WorkoutReductionDisposition {
-        state.procedure = .timedOutUnknown(record: record)
-        state.procedureHistory.append(.timedOutUnknown(record))
-        state.controlPermission = .invalidated("Procedure response timed out")
-        updateStopOutcome(&state, .timedOutUnknown(record.id))
-        if record.intent == .stop {
-            effects.append(.directUserToConsoleAndSafetyKey)
-            return .failedClosed(.procedure(.responseTimeout))
-        }
-        return failExecutionPreservingStopOutcome(.procedure(.responseTimeout), state: &state, effects: &effects)
+  fileprivate func consumeTick(
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    if case .attAccepted(let record, let deadline) = state.procedure, now >= deadline {
+      return timeOutProcedure(record, state: &state, effects: &effects)
     }
+    if let deadline = state.targetSequence?.observationDeadline,
+      now >= deadline,
+      isTargetObservationRelevant(state.execution)
+    {
+      return fail(.targetObservationTimeout, state: &state, effects: &effects)
+    }
+    if case .checkingTreadmill(let checking) = state.execution {
+      if now >= checking.interruptionDeadline {
+        return interrupt(.telemetryStreamTimedOut, state: &state, effects: &effects)
+      }
+      return .accepted
+    }
+    if let sample = currentTelemetrySample(state.telemetry),
+      phaseRequiresFreshTelemetry(state.execution),
+      now.seconds - sample.receivedAt.seconds > FR30zExecutionProfile.telemetryFreshnessInterval
+    {
+      let freshnessBoundary = sample.receivedAt.advanced(
+        by: FR30zExecutionProfile.telemetryFreshnessInterval)
+      freezeSegment(at: freshnessBoundary, state: &state)
+      state.telemetry = .stale(sample)
+      state.observedMachine = .unknown
+      let checking = WorkoutCheckingState(
+        origin: checkingOrigin(state.execution),
+        freshnessBoundary: freshnessBoundary,
+        interruptionDeadline: sample.receivedAt.advanced(
+          by: FR30zExecutionProfile.telemetryCheckingInterval)
+      )
+      state.execution = .checkingTreadmill(checking)
+      if now >= checking.interruptionDeadline {
+        return interrupt(.telemetryStreamTimedOut, state: &state, effects: &effects)
+      }
+      return .accepted
+    }
+    if case .runningSegment = state.execution {
+      return progressRunningSegment(at: now, state: &state, effects: &effects)
+    }
+    return .accepted
+  }
 
-    func sampleIsInsideFrozenBounds(_ sample: WorkoutTelemetrySample, state: WorkoutExecutionState) -> Bool {
-        guard let armed = state.armedWorkout,
-              let speed = sample.speed,
-              let inclination = sample.inclination,
-              case let .supported(speedRange) = armed.capability.planCapabilities.speed,
-              case let .supported(inclinationRange) = armed.capability.planCapabilities.inclination
-        else { return state.armedWorkout == nil }
-        return speed.value >= speedRange.minimum.value
-            && speed.value <= speedRange.maximum.value
-            && inclination.value >= inclinationRange.minimum.value
-            && inclination.value <= inclinationRange.maximum.value
-            && speed.value <= armed.ceilings.maximumSpeed.value
-            && inclination.value <= armed.ceilings.maximumInclination.value
-    }
+  fileprivate func progressRunningSegment(
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    guard var segment = state.currentSegment,
+      let startedAt = segment.activeStartedAt,
+      let armed = state.armedWorkout
+    else { return .rejected(.noCurrentSegment) }
+    let duration = TimeInterval(armed.plan.plan.steps[segment.stepIndex].duration.value)
+    let active = segment.accumulatedActiveSeconds + now.seconds - startedAt.seconds
+    guard active + 0.000_000_001 >= duration else { return .accepted }
 
-    func sampleConfirms(
-        application: WorkoutStepApplication,
-        sample: WorkoutTelemetrySample,
-        state: WorkoutExecutionState
-    ) -> Bool {
-        guard application.remainingIntents.isEmpty,
-              let speedAt = application.speedAcknowledgedAt,
-              let inclineAt = application.inclinationAcknowledgedAt,
-              sample.receivedAt > speedAt,
-              sample.receivedAt > inclineAt,
-              application.observationDeadline != nil
-        else { return false }
-        return sampleMatchesStep(sample, stepIndex: application.stepIndex, state: state)
+    segment.accumulatedActiveSeconds = duration
+    segment.activeStartedAt = nil
+    state.currentSegment = segment
+    state.completedActiveSeconds += duration
+    if segment.stepIndex + 1 >= armed.plan.plan.steps.count {
+      state.targetSequence = nil
+      state.execution = .awaitingPhysicalStopForCompletion
+      return .accepted
     }
+    state.currentSegment = .init(
+      stepIndex: segment.stepIndex + 1,
+      accumulatedActiveSeconds: 0,
+      activeStartedAt: nil,
+      speedOverride: nil,
+      inclinationOverride: nil
+    )
+    return startTargetSequence(
+      purpose: .plannedTransition,
+      forceBothAxes: false,
+      at: now,
+      state: &state,
+      effects: &effects
+    )
+  }
 
-    func sampleMatchesStep(_ sample: WorkoutTelemetrySample, stepIndex: Int, state: WorkoutExecutionState) -> Bool {
-        guard let step = state.armedWorkout?.plan.plan.steps[stepIndex] else { return false }
-        return sample.speed == step.targetSpeed && sample.inclination == step.targetInclination
+  fileprivate func setOverride(
+    speed: WorkoutSpeed?,
+    inclination: WorkoutInclination?,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    guard var segment = state.currentSegment else { return .rejected(.noCurrentSegment) }
+    guard adjustmentStateAllowsChange(state.execution) else { return .rejected(.wrongState) }
+    if let speed, !validSpeedAdjustment(speed, state: state) {
+      return .rejected(.invalidAdjustment)
     }
+    if let inclination, !validInclinationAdjustment(inclination, state: state) {
+      return .rejected(.invalidAdjustment)
+    }
+    if let speed { segment.speedOverride = speed }
+    if let inclination { segment.inclinationOverride = inclination }
+    state.currentSegment = segment
+    switch state.execution {
+    case .runningSegment:
+      freezeSegment(at: now, state: &state)
+      return startTargetSequence(
+        purpose: .manualAdjustment,
+        forceBothAxes: false,
+        at: now,
+        state: &state,
+        effects: &effects
+      )
+    case .applyingTargets, .restoringTargets:
+      if case .idle = state.procedure {
+        return advanceTargetSequence(at: now, state: &state, effects: &effects)
+      }
+    case .waitingForPhysicalStart, .checkingTreadmill, .paused:
+      break
+    default:
+      return .rejected(.wrongState)
+    }
+    return .accepted
+  }
 
-    func failExecution(
-        _ failure: WorkoutExecutionFailure,
-        state: inout WorkoutExecutionState,
-        effects: inout [WorkoutExecutionEffect]
-    ) -> WorkoutReductionDisposition {
-        guard !isTerminal(state.execution) else { return .failedClosed(failure) }
-        state.observedMachine = .unknown
-        if state.motionPossible {
-            state.frozenActiveSeconds = state.completedActiveSeconds + activeSeconds(in: state.execution, at: state.lastEventTime)
-            state.execution = .failedAwaitingHumanStop(failure)
-            effects.append(.directUserToConsoleAndSafetyKey)
-        } else {
-            state.execution = .ended(.failedBeforeActuation(failure))
-        }
-        return .failedClosed(failure)
+  fileprivate func returnToPlan(
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    guard var segment = state.currentSegment else { return .rejected(.noCurrentSegment) }
+    guard adjustmentStateAllowsChange(state.execution) else { return .rejected(.wrongState) }
+    segment.speedOverride = nil
+    segment.inclinationOverride = nil
+    state.currentSegment = segment
+    switch state.execution {
+    case .runningSegment:
+      freezeSegment(at: now, state: &state)
+      return startTargetSequence(
+        purpose: .returnToPlan,
+        forceBothAxes: false,
+        at: now,
+        state: &state,
+        effects: &effects
+      )
+    case .applyingTargets, .restoringTargets:
+      if case .idle = state.procedure {
+        return advanceTargetSequence(at: now, state: &state, effects: &effects)
+      }
+    case .waitingForPhysicalStart, .checkingTreadmill, .paused:
+      break
+    default:
+      return .rejected(.wrongState)
     }
+    return .accepted
+  }
 
-    func failExecutionPreservingStopOutcome(
-        _ failure: WorkoutExecutionFailure,
-        state: inout WorkoutExecutionState,
-        effects: inout [WorkoutExecutionEffect]
-    ) -> WorkoutReductionDisposition {
-        guard case .awaitingHumanStop = state.execution else {
-            return failExecution(failure, state: &state, effects: &effects)
-        }
-        state.observedMachine = .unknown
-        if !effects.contains(.directUserToConsoleAndSafetyKey) {
-            effects.append(.directUserToConsoleAndSafetyKey)
-        }
-        return .failedClosed(failure)
+  fileprivate func consumeHumanStationary(
+    note: String,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    if let sample = freshSample(state, at: now), sample.speed.value > 0 {
+      state.telemetry = .contradictory(
+        "Human stationary observation conflicts with fresh moving telemetry")
+      return fail(
+        .contradictoryEvidence(
+          "Human stationary observation conflicts with fresh moving telemetry"),
+        state: &state,
+        effects: &effects
+      )
     }
+    let human = WorkoutHumanStationaryEvidence(confirmedAt: now, note: note)
+    let evidence = WorkoutStationaryEvidence.human(human)
+    state.observedMachine = .humanConfirmedStationary(human)
+    switch state.execution {
+    case .awaitingPhysicalStopForCompletion:
+      state.execution = .readyToEnd(
+        completionContext(.completedPlan, evidence: evidence, state: state))
+    case .checkingTreadmill(let checking)
+    where checking.origin == .awaitingPhysicalStopForCompletion:
+      state.execution = .readyToEnd(
+        completionContext(.completedPlan, evidence: evidence, state: state))
+    case .applyingTargets, .runningSegment, .checkingTreadmill, .restoringTargets:
+      guard state.motionPossible else { return .rejected(.wrongState) }
+      enterPaused(evidence, at: now, state: &state)
+    case .paused:
+      state.execution = .paused(evidence)
+    default:
+      return .rejected(.wrongState)
+    }
+    return .accepted
+  }
 
-    func updateStopOutcome(_ state: inout WorkoutExecutionState, _ outcome: WorkoutStopCommandOutcome) {
-        guard case var .awaitingHumanStop(waiting) = state.execution else { return }
-        waiting.commandOutcome = outcome
-        state.execution = .awaitingHumanStop(waiting)
+  fileprivate func consumeHumanMotion(
+    note: String,
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    if let sample = freshSample(state, at: now), sample.speed.value == 0 {
+      state.telemetry = .contradictory(
+        "Human motion observation conflicts with fresh zero telemetry")
+      return fail(
+        .contradictoryEvidence("Human motion observation conflicts with fresh zero telemetry"),
+        state: &state,
+        effects: &effects
+      )
     }
+    state.motionPossible = true
+    state.observedMachine = .humanObservedMoving(.init(observedAt: now, note: note))
+    return .accepted
+  }
 
-    func frozenRunningStep(from phase: WorkoutExecutionPhase, now: MonotonicInstant) -> WorkoutRunningStep? {
-        guard case let .runningStep(running) = phase else { return nil }
-        return .init(
-            stepIndex: running.stepIndex,
-            accumulatedActiveSeconds: running.accumulatedActiveSeconds + now.seconds - running.segmentStartedAt.seconds,
-            segmentStartedAt: now
-        )
+  fileprivate func enterPaused(
+    _ evidence: WorkoutStationaryEvidence, at now: MonotonicInstant,
+    state: inout WorkoutExecutionState
+  ) {
+    freezeSegment(at: now, state: &state)
+    if var sequence = state.targetSequence {
+      sequence.observationDeadline = nil
+      state.targetSequence = state.procedure.unresolvedRecord == nil ? nil : sequence
     }
+    state.execution = .paused(evidence)
+  }
 
-    func activeSeconds(in phase: WorkoutExecutionPhase, at now: MonotonicInstant) -> TimeInterval {
-        switch phase {
-        case let .runningStep(running):
-            running.accumulatedActiveSeconds + now.seconds - running.segmentStartedAt.seconds
-        case let .stopConfirmationRequested(request):
-            request.frozenRunningStep?.accumulatedActiveSeconds ?? 0
-        default:
-            0
-        }
+  fileprivate func freezeSegment(at boundary: MonotonicInstant, state: inout WorkoutExecutionState)
+  {
+    guard var segment = state.currentSegment, let startedAt = segment.activeStartedAt else {
+      return
     }
+    segment.accumulatedActiveSeconds += max(0, boundary.seconds - startedAt.seconds)
+    segment.activeStartedAt = nil
+    state.currentSegment = segment
+  }
 
-    func restoredPhase(from request: WorkoutStopRequest, now: MonotonicInstant) -> WorkoutExecutionPhase {
-        guard let frozen = request.frozenRunningStep else { return request.resumablePhase }
-        return .runningStep(
-            .init(stepIndex: frozen.stepIndex, accumulatedActiveSeconds: frozen.accumulatedActiveSeconds, segmentStartedAt: now)
-        )
-    }
+  fileprivate func timeOutProcedure(
+    _ record: WorkoutProcedureRecord,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    state.procedure = .timedOutUnknown(record: record)
+    state.procedureHistory.append(.timedOutUnknown(record))
+    return fail(.procedure(.responseTimeout), state: &state, effects: &effects)
+  }
 
-    func isApplyingOrRunning(_ phase: WorkoutExecutionPhase) -> Bool {
-        switch phase {
-        case .applyingStep, .runningStep: true
-        default: false
-        }
+  fileprivate func failProcedure(
+    _ procedureID: ProcedureID,
+    failure: WorkoutProcedureFailure,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    guard let record = state.procedure.unresolvedRecord else {
+      return .ignored(.duplicateOrLateProcedure)
     }
+    guard record.id == procedureID else {
+      let mismatch = WorkoutProcedureFailure.correlationFailure(
+        expected: record.id, received: procedureID)
+      state.procedure = .failed(record: record, failure: mismatch)
+      state.procedureHistory.append(.failed(record, mismatch))
+      return fail(.procedure(mismatch), state: &state, effects: &effects)
+    }
+    state.procedure = .failed(record: record, failure: failure)
+    state.procedureHistory.append(.failed(record, failure))
+    return fail(.procedure(failure), state: &state, effects: &effects)
+  }
 
-    func isTerminal(_ phase: WorkoutExecutionPhase) -> Bool {
-        if case .ended = phase { return true }
-        return false
+  fileprivate func failCorrelation(
+    _ original: WorkoutExecutionState,
+    received: ProcedureID,
+    at now: MonotonicInstant
+  ) -> WorkoutExecutionTransition {
+    var state = original
+    state.lastEventTime = now
+    var effects: [WorkoutExecutionEffect] = []
+    guard let expected = state.procedure.unresolvedRecord?.id else {
+      let failure = WorkoutProcedureFailure.duplicateOrLate(received)
+      let disposition = fail(.procedure(failure), state: &state, effects: &effects)
+      return .init(state: state, effects: effects, disposition: disposition)
     }
+    let failure = WorkoutProcedureFailure.correlationFailure(expected: expected, received: received)
+    _ = failProcedure(expected, failure: failure, state: &state, effects: &effects)
+    return .init(
+      state: state, effects: effects, disposition: .failedClosed(.failed(.procedure(failure))))
+  }
 
-    func absDecimal(_ value: Decimal) -> Decimal {
-        value < 0 ? -value : value
+  fileprivate func lateOrWrongProcedure(
+    _ original: WorkoutExecutionState,
+    procedureID: ProcedureID,
+    at now: MonotonicInstant
+  ) -> WorkoutExecutionTransition {
+    var state = original
+    state.lastEventTime = now
+    var effects: [WorkoutExecutionEffect] = []
+    if let active = state.procedure.unresolvedRecord, active.id != procedureID {
+      return failCorrelation(original, received: procedureID, at: now)
     }
+    let failure = WorkoutProcedureFailure.duplicateOrLate(procedureID)
+    if let record = state.procedure.unresolvedRecord {
+      state.procedure = .failed(record: record, failure: failure)
+      state.procedureHistory.append(.failed(record, failure))
+    }
+    let disposition = fail(.procedure(failure), state: &state, effects: &effects)
+    return .init(state: state, effects: effects, disposition: disposition)
+  }
+
+  fileprivate func fail(
+    _ failure: WorkoutExecutionFailure,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    freezeSegment(at: state.lastEventTime, state: &state)
+    invalidateOutstandingProcedure(state: &state)
+    state.controlPermission = .invalidated("Execution failed")
+    state.targetSequence = nil
+    state.execution = .failed(failure)
+    if state.motionPossible, !effects.contains(.directUserToConsoleAndSafetyKey) {
+      effects.append(.directUserToConsoleAndSafetyKey)
+    }
+    return .failedClosed(.failed(failure))
+  }
+
+  fileprivate func interrupt(
+    _ interruption: WorkoutInterruption,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    freezeSegment(at: state.lastEventTime, state: &state)
+    invalidateOutstandingProcedure(state: &state)
+    state.controlPermission = .invalidated("Execution interrupted")
+    state.targetSequence = nil
+    state.execution = .interrupted(interruption)
+    if state.motionPossible, !effects.contains(.directUserToConsoleAndSafetyKey) {
+      effects.append(.directUserToConsoleAndSafetyKey)
+    }
+    return .failedClosed(.interrupted(interruption))
+  }
+
+  fileprivate func invalidateOutstandingProcedure(state: inout WorkoutExecutionState) {
+    guard let record = state.procedure.unresolvedRecord else { return }
+    state.procedure = .timedOutUnknown(record: record)
+    if !state.procedureHistory.contains(.timedOutUnknown(record)) {
+      state.procedureHistory.append(.timedOutUnknown(record))
+    }
+  }
+
+  fileprivate func effectiveTarget(_ state: WorkoutExecutionState) -> WorkoutTarget? {
+    guard let segment = state.currentSegment,
+      let plan = state.armedWorkout?.plan.plan,
+      plan.steps.indices.contains(segment.stepIndex)
+    else { return nil }
+    let step = plan.steps[segment.stepIndex]
+    return .init(
+      speed: segment.speedOverride ?? step.targetSpeed,
+      inclination: segment.inclinationOverride ?? step.targetInclination
+    )
+  }
+
+  fileprivate func targetObservationIsSatisfied(
+    _ sample: WorkoutTelemetrySample, state: WorkoutExecutionState
+  ) -> Bool {
+    guard let sequence = state.targetSequence,
+      let target = effectiveTarget(state),
+      let acknowledgedAt = sequence.finalAcknowledgementAt,
+      sequence.observationDeadline != nil,
+      sample.receivedAt > acknowledgedAt
+    else { return false }
+    return sampleMatches(sample, target: target)
+  }
+
+  fileprivate func sampleMatches(_ sample: WorkoutTelemetrySample, target: WorkoutTarget) -> Bool {
+    sample.speed == target.speed && sample.inclination == target.inclination
+  }
+
+  fileprivate func sampleIsInsideCapability(
+    _ sample: WorkoutTelemetrySample, state: WorkoutExecutionState
+  ) -> Bool {
+    guard let armed = state.armedWorkout,
+      case .supported(let speedRange) = armed.capability.planCapabilities.speed,
+      case .supported(let inclinationRange) = armed.capability.planCapabilities.inclination
+    else { return true }
+    let speedIsValid =
+      sample.speed.value == 0
+      || (sample.speed.value >= speedRange.minimum.value
+        && sample.speed.value <= speedRange.maximum.value)
+    return speedIsValid
+      && sample.inclination.value >= inclinationRange.minimum.value
+      && sample.inclination.value <= inclinationRange.maximum.value
+  }
+
+  fileprivate func freshSample(_ state: WorkoutExecutionState, at now: MonotonicInstant)
+    -> WorkoutTelemetrySample?
+  {
+    guard case .fresh(let sample) = state.telemetry,
+      now.seconds - sample.receivedAt.seconds <= FR30zExecutionProfile.telemetryFreshnessInterval
+    else { return nil }
+    return sample
+  }
+
+  fileprivate func currentTelemetrySample(_ telemetry: WorkoutTelemetryState)
+    -> WorkoutTelemetrySample?
+  {
+    switch telemetry {
+    case .fresh(let sample), .stale(let sample): sample
+    default: nil
+    }
+  }
+
+  fileprivate func phaseRequiresFreshTelemetry(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .waitingForPhysicalStart, .applyingTargets, .runningSegment,
+      .restoringTargets, .awaitingPhysicalStopForCompletion:
+      true
+    case .paused(let evidence):
+      if case .telemetry = evidence { true } else { false }
+    case .readyToEnd(let context):
+      if case .telemetry = context.stationaryEvidence { true } else { false }
+    default:
+      false
+    }
+  }
+
+  fileprivate func attemptNeedsTelemetry(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .waitingForPhysicalStart, .applyingTargets, .runningSegment,
+      .checkingTreadmill, .paused, .restoringTargets,
+      .awaitingPhysicalStopForCompletion, .readyToEnd, .ending:
+      true
+    default:
+      false
+    }
+  }
+
+  fileprivate func checkingOrigin(_ phase: WorkoutExecutionPhase) -> WorkoutCheckingOrigin {
+    switch phase {
+    case .waitingForPhysicalStart: .waitingForPhysicalStart
+    case .applyingTargets(let purpose): .applyingTargets(purpose)
+    case .runningSegment: .runningSegment
+    case .paused(let evidence): .paused(evidence)
+    case .restoringTargets: .restoringTargets
+    case .awaitingPhysicalStopForCompletion, .readyToEnd: .awaitingPhysicalStopForCompletion
+    default: preconditionFailure("Only telemetry-dependent phases enter checking")
+    }
+  }
+
+  fileprivate func isActivelyApplyingTargets(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .applyingTargets, .restoringTargets: true
+    default: false
+    }
+  }
+
+  fileprivate func isTargetObservationRelevant(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .applyingTargets, .restoringTargets, .checkingTreadmill: true
+    default: false
+    }
+  }
+
+  fileprivate func adjustmentStateAllowsChange(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .waitingForPhysicalStart, .applyingTargets, .runningSegment,
+      .checkingTreadmill, .paused, .restoringTargets:
+      true
+    default:
+      false
+    }
+  }
+
+  fileprivate func validSpeedAdjustment(_ speed: WorkoutSpeed, state: WorkoutExecutionState) -> Bool
+  {
+    guard let armed = state.armedWorkout,
+      case .supported(let range) = armed.capability.planCapabilities.speed
+    else { return false }
+    return value(speed, isWithin: range, ceiling: armed.ceilings.maximumSpeed)
+  }
+
+  fileprivate func validInclinationAdjustment(
+    _ inclination: WorkoutInclination, state: WorkoutExecutionState
+  ) -> Bool {
+    guard let armed = state.armedWorkout,
+      case .supported(let range) = armed.capability.planCapabilities.inclination
+    else { return false }
+    return value(inclination, isWithin: range, ceiling: armed.ceilings.maximumInclination)
+  }
+
+  fileprivate func completionContext(
+    _ reason: WorkoutCompletionReason,
+    evidence: WorkoutStationaryEvidence,
+    state: WorkoutExecutionState
+  ) -> WorkoutCompletionContext {
+    .init(
+      reason: reason,
+      stepIndex: state.currentSegment?.stepIndex ?? 0,
+      totalActiveSeconds: totalActiveSeconds(state),
+      stationaryEvidence: evidence
+    )
+  }
+
+  fileprivate func endContext(
+    _ state: WorkoutExecutionState, at now: MonotonicInstant
+  ) -> WorkoutCompletionContext? {
+    switch state.execution {
+    case .readyToEnd(let context):
+      stationaryEvidenceIsAccepted(context.stationaryEvidence, state: state, at: now)
+        ? context : nil
+    case .paused(let evidence):
+      stationaryEvidenceIsAccepted(evidence, state: state, at: now)
+        ? completionContext(.endedFromPause, evidence: evidence, state: state) : nil
+    default: nil
+    }
+  }
+
+  fileprivate func stationaryEvidenceIsAccepted(
+    _ evidence: WorkoutStationaryEvidence,
+    state: WorkoutExecutionState,
+    at now: MonotonicInstant
+  ) -> Bool {
+    switch evidence {
+    case .telemetry(let evidenceSample):
+      guard case .fresh(let latestSample) = state.telemetry else { return false }
+      return latestSample == evidenceSample
+        && latestSample.speed.value == 0
+        && now.seconds - latestSample.receivedAt.seconds
+          <= FR30zExecutionProfile.telemetryFreshnessInterval
+    case .human:
+      guard let sample = freshSample(state, at: now) else { return true }
+      return sample.speed.value == 0
+    }
+  }
+
+  fileprivate func totalActiveSeconds(_ state: WorkoutExecutionState) -> TimeInterval {
+    guard let segment = state.currentSegment else { return state.completedActiveSeconds }
+    var current = segment.accumulatedActiveSeconds
+    if let started = segment.activeStartedAt {
+      current += max(0, state.lastEventTime.seconds - started.seconds)
+    }
+    let duration = state.armedWorkout.map {
+      TimeInterval($0.plan.plan.steps[segment.stepIndex].duration.value)
+    }
+    if duration == segment.accumulatedActiveSeconds,
+      state.completedActiveSeconds >= segment.accumulatedActiveSeconds
+    {
+      return state.completedActiveSeconds
+    }
+    return state.completedActiveSeconds + current
+  }
+
+  fileprivate func isAligned(_ value: Decimal, minimum: Decimal, increment: Decimal) -> Bool {
+    guard value.isFinite, minimum.isFinite, increment.isFinite, increment > 0 else { return false }
+    var quotient = (value - minimum) / increment
+    var rounded = Decimal()
+    NSDecimalRound(&rounded, &quotient, 0, .plain)
+    return quotient == rounded
+  }
+
+  fileprivate func absolute(_ value: Decimal) -> Decimal { value < 0 ? -value : value }
 }
 
-enum WorkoutPreflightBlocker: Equatable {
-    case connectionNotReady
-    case planNotArmed
-    case controlNotHeld
-    case telemetryNotFresh
-    case treadmillNotReportedStationary
-    case appNotForeground
-}
-
-enum WorkoutCommandPresentationState: Equatable {
-    case notRequested
-    case intentCreated
-    case submitted
-    case attAccepted
-    case protocolAcknowledged
-    case targetObserved
-    case failed
-}
-
-enum WorkoutStopPresentationState: Equatable {
-    case available
-    case confirmationRequired
-    case notSentUsePhysicalControls
-    case intentCreated
-    case submitted
-    case attAccepted
-    case sentUnconfirmed
-    case failedUsePhysicalControls
-    case humanConfirmed
-    case endedWithoutPhysicalStopClaim
-}
-
-enum WorkoutDistancePresentation: Equatable {
-    case trustworthy(metres: Decimal, sampledAt: MonotonicInstant)
-    case unavailable
-}
-
-struct WorkoutStepPresentation: Equatable {
-    let index: Int
-    let label: String
-    let requestedSpeed: WorkoutSpeed
-    let requestedInclination: WorkoutInclination
-    let remainingSeconds: Int
-}
-
-struct WorkoutExecutionPresentation: Equatable {
-    let preflightBlockers: [WorkoutPreflightBlocker]
-    let activity: WorkoutActivity?
-    let currentStep: WorkoutStepPresentation?
-    let nextStep: WorkoutStepPresentation?
-    let requestedSpeed: WorkoutSpeed?
-    let actualSpeed: WorkoutSpeed?
-    let speedCommandState: WorkoutCommandPresentationState
-    let requestedInclination: WorkoutInclination?
-    let actualInclination: WorkoutInclination?
-    let inclinationCommandState: WorkoutCommandPresentationState
-    let elapsedActiveSeconds: Int
-    let distance: WorkoutDistancePresentation
-    let stopState: WorkoutStopPresentationState
-    let frozenCeilings: WorkoutSessionCeilings?
-    let executionProfileIdentity: String?
-
-    init(state: WorkoutExecutionState) {
-        var blockers: [WorkoutPreflightBlocker] = []
-        if state.connection.readyCapability == nil { blockers.append(.connectionNotReady) }
-        if state.armedWorkout == nil { blockers.append(.planNotArmed) }
-        if case .held = state.controlPermission {} else { blockers.append(.controlNotHeld) }
-        if case let .fresh(sample) = state.telemetry,
-           let profile = state.armedWorkout?.profile,
-           state.lastEventTime.seconds - sample.receivedAt.seconds <= profile.telemetryFreshnessInterval {
-            if let speed = sample.speed, sample.inclination != nil {
-                if speed.value != 0, Self.isAwaitingBegin(state.execution) {
-                    blockers.append(.treadmillNotReportedStationary)
-                }
-            } else {
-                blockers.append(.telemetryNotFresh)
-            }
-        } else {
-            blockers.append(.telemetryNotFresh)
-        }
-        if !state.isForegroundActive { blockers.append(.appNotForeground) }
-        preflightBlockers = blockers
-        activity = state.armedWorkout?.plan.plan.activity
-
-        let stepIndex: Int?
-        let remaining: Int
-        switch state.execution {
-        case let .applyingStep(application):
-            stepIndex = application.stepIndex
-            remaining = state.armedWorkout?.plan.plan.steps[application.stepIndex].duration.value ?? 0
-        case let .runningStep(running):
-            stepIndex = running.stepIndex
-            let duration = state.armedWorkout?.plan.plan.steps[running.stepIndex].duration.value ?? 0
-            let elapsed = running.accumulatedActiveSeconds + state.lastEventTime.seconds - running.segmentStartedAt.seconds
-            remaining = max(0, duration - Int(elapsed.rounded(.down)))
-        case let .stopConfirmationRequested(request):
-            if let frozen = request.frozenRunningStep {
-                stepIndex = frozen.stepIndex
-                let duration = state.armedWorkout?.plan.plan.steps[frozen.stepIndex].duration.value ?? 0
-                remaining = max(0, duration - Int(frozen.accumulatedActiveSeconds.rounded(.down)))
-            } else {
-                stepIndex = nil
-                remaining = 0
-            }
-        default:
-            stepIndex = state.presentationStepIndex
-            if let stepIndex,
-               let frozenTotal = state.frozenActiveSeconds {
-                let currentActive = max(0, frozenTotal - state.completedActiveSeconds)
-                let duration = state.armedWorkout?.plan.plan.steps[stepIndex].duration.value ?? 0
-                remaining = max(0, duration - Int(currentActive.rounded(.down)))
-            } else {
-                remaining = 0
-            }
-        }
-
-        if let stepIndex, let plan = state.armedWorkout?.plan.plan {
-            let step = plan.steps[stepIndex]
-            currentStep = .init(index: stepIndex, label: step.label, requestedSpeed: step.targetSpeed, requestedInclination: step.targetInclination, remainingSeconds: remaining)
-            if stepIndex + 1 < plan.steps.count {
-                let next = plan.steps[stepIndex + 1]
-                nextStep = .init(index: stepIndex + 1, label: next.label, requestedSpeed: next.targetSpeed, requestedInclination: next.targetInclination, remainingSeconds: next.duration.value)
-            } else {
-                nextStep = nil
-            }
-            requestedSpeed = step.targetSpeed
-            requestedInclination = step.targetInclination
-        } else {
-            currentStep = nil
-            nextStep = nil
-            requestedSpeed = nil
-            requestedInclination = nil
-        }
-
-        if case let .fresh(sample) = state.telemetry,
-           let profile = state.armedWorkout?.profile,
-           state.lastEventTime.seconds - sample.receivedAt.seconds <= profile.telemetryFreshnessInterval {
-            actualSpeed = sample.speed
-            actualInclination = sample.inclination
-            if let metres = sample.totalDistanceMetres {
-                distance = .trustworthy(metres: metres, sampledAt: sample.receivedAt)
-            } else {
-                distance = .unavailable
-            }
-        } else {
-            actualSpeed = nil
-            actualInclination = nil
-            distance = .unavailable
-        }
-
-        speedCommandState = Self.commandState(for: .speed, state: state)
-        inclinationCommandState = Self.commandState(for: .inclination, state: state)
-        elapsedActiveSeconds = Int((state.frozenActiveSeconds ?? (state.completedActiveSeconds + Self.currentActiveSeconds(state))).rounded(.down))
-        stopState = Self.stopState(state)
-        frozenCeilings = state.armedWorkout?.ceilings
-        executionProfileIdentity = state.armedWorkout?.profile.identity
-    }
-
-    private enum Axis { case speed, inclination }
-
-    private static func isAwaitingBegin(_ phase: WorkoutExecutionPhase) -> Bool {
-        switch phase {
-        case .armed, .acquiringControl, .readyToBegin:
-            true
-        default:
-            false
-        }
-    }
-
-    private static func commandState(for axis: Axis, state: WorkoutExecutionState) -> WorkoutCommandPresentationState {
-        if case .stepTargetReported = state.observedMachine { return .targetObserved }
-        let currentStepIndex = state.presentationStepIndex
-        let matches: (WorkoutControlPointIntent) -> Bool = { intent in
-            switch (axis, intent) {
-            case (.speed, .setTargetSpeed), (.inclination, .setTargetInclination): true
-            default: false
-            }
-        }
-        if let record = state.procedure.activeRecord,
-           record.stepIndex == currentStepIndex,
-           matches(record.intent) {
-            switch state.procedure {
-            case .intentCreated: return .intentCreated
-            case .submitted: return .submitted
-            case .attAccepted: return .attAccepted
-            case .acknowledged: return .protocolAcknowledged
-            case .failed, .timedOutUnknown: return .failed
-            case .idle: break
-            }
-        }
-        for outcome in state.procedureHistory.reversed() {
-            switch outcome {
-            case let .acknowledged(record, _) where record.stepIndex == currentStepIndex && matches(record.intent):
-                return .protocolAcknowledged
-            case let .failed(record, _) where record.stepIndex == currentStepIndex && matches(record.intent):
-                return .failed
-            case let .timedOutUnknown(record) where record.stepIndex == currentStepIndex && matches(record.intent):
-                return .failed
-            default: continue
-            }
-        }
-        return .notRequested
-    }
-
-    private static func currentActiveSeconds(_ state: WorkoutExecutionState) -> TimeInterval {
-        switch state.execution {
-        case let .runningStep(running):
-            running.accumulatedActiveSeconds + state.lastEventTime.seconds - running.segmentStartedAt.seconds
-        case let .stopConfirmationRequested(request):
-            request.frozenRunningStep?.accumulatedActiveSeconds ?? 0
-        default:
-            0
-        }
-    }
-
-    private static func stopState(_ state: WorkoutExecutionState) -> WorkoutStopPresentationState {
-        if case .humanConfirmedStopped = state.observedMachine { return .humanConfirmed }
-        switch state.execution {
-        case .stopConfirmationRequested:
-            return .confirmationRequired
-        case let .awaitingHumanStop(waiting):
-            switch waiting.commandOutcome {
-            case .notSent: return .notSentUsePhysicalControls
-            case .intentCreated: return .intentCreated
-            case .submitted: return .submitted
-            case .attAccepted: return .attAccepted
-            case .protocolAcknowledged, .timedOutUnknown: return .sentUnconfirmed
-            case .failed: return .failedUsePhysicalControls
-            }
-        case .failedAwaitingHumanStop:
-            return .failedUsePhysicalControls
-        case let .ended(outcome):
-            switch outcome {
-            case .stopped, .failedAfterPossibleMotion:
-                return .humanConfirmed
-            case .cancelledBeforeActuation, .failedBeforeActuation:
-                return .endedWithoutPhysicalStopClaim
-            }
-        default:
-            return .available
-        }
-    }
-}
-
-private extension Decimal {
-    var isFinite: Bool { !isNaN }
+extension Decimal {
+  fileprivate var isFinite: Bool { !isNaN }
 }
