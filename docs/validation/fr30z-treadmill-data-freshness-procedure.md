@@ -1,6 +1,6 @@
 # FR30z Treadmill Data freshness characterisation procedure
 
-Status: software preparation only. No physical issue #52 session has been authorised or performed.
+Status: historical issue #52 measurement procedure. Later sanitised physical evidence and the adopted policy are recorded in the [11 September characterisation](fr30z-console-target-characterisation-2026-09-11.md) and [FR30z physical-console execution profile](../../design/fr30z-physical-console-execution-profile.md). This document grants no physical-session authority.
 
 This procedure supports [issue #52](https://github.com/syamaner/paceprompt-ios/issues/52). It measures passive `0x2ACD` delivery so a later review can propose a conservative telemetry-freshness window, stream-interruption rule, and target-observation deadline. It does not adopt any of those values.
 

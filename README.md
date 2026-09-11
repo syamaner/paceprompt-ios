@@ -160,43 +160,25 @@ support are excluded. Codecov's project and patch reports are intentionally
 informational while the repository establishes a baseline; no coverage percentage
 is an acceptance threshold.
 
-## User-run physical FR30z validation
+## Physical FR30z evidence
 
-1. Copy `Config/Signing.local.xcconfig.example` to `Config/Signing.local.xcconfig`, replace the placeholder with your Apple development-team identifier, and keep that ignored file local.
-2. Open `PacePrompt.xcodeproj`, select your connected iPhone, build and run PacePrompt. Confirm the app offers no speed, incline, start, stop, pause or Control Point action.
-3. Insert the FR30z fitness Bluetooth dongle, insert the safety key and turn on the treadmill. Keep the physical console and safety key authoritative throughout.
-4. In PacePrompt, open **Settings → Treadmill**, press **Scan for FTMS treadmills**, select the FR30z and connect. Do not use another app to control the treadmill during this check.
-5. Record the subscription state shown for `0x2ACD`, `0x2AD3` and `0x2ADA`. A subscribed state with no packet is distinct from an unsupported or failed subscription.
-6. With the belt stationary, wait at least 30 seconds. Capture the raw and decoded values for `0x2ACC`, `0x2AD4` and `0x2AD5`; confirm whether an **Initial read** entry appears for `0x2AD3`; then use **Copy diagnostics** or **Share diagnostics** to capture the stationary packet log. Do not put the resulting device diagnostics in Git.
-7. If and only if you choose to validate moving-belt telemetry, stand clear first, retain access to the safety key, and start and adjust the belt exclusively from the physical FR30z console. The app must remain untouched and read-only. Observe at least one console-initiated start, one speed change, one inclination change if safe, and one console-initiated stop.
-8. After the belt is fully stationary, copy or share the final diagnostic report, press **Disconnect**, and turn off the treadmill.
+Physical characterisation is complete for the first product profile. Raw reports remain local because they contain a CoreBluetooth peripheral identifier. The checked-in sanitised records preserve capability, Request Control, target, telemetry and human-observation evidence without granting another physical session.
 
-Return:
+The candidate [physical-console execution profile](design/fr30z-physical-console-execution-profile.md) becomes the authority for subsequent product slices when issue #57 is accepted. It deliberately removes FTMS Start, Stop and Pause from the production surface: the operator starts/stops the belt physically while PacePrompt applies plan/manual speed and inclination targets, detects an accepted pause from fresh zero-speed telemetry or separate human confirmation, and restores the current effective targets after physical resume.
 
-- the discovered device name and identifier;
-- the full discovered-characteristic list and properties;
-- raw values for `0x2ACC`, `0x2AD4` and `0x2AD5`;
-- the result of the initial `0x2AD3` read, including its raw value or read error;
-- the subscription state for `0x2ACD`, `0x2AD3` and `0x2ADA`;
-- the stationary 30-second packet log, including an explicit report when no packet arrived;
-- if the optional console-only moving check was performed, packets surrounding the physical start, speed change, inclination change and stop;
-- any unknown opcode/status, unavailable value, malformed packet, permission error, subscription failure, connection error or disconnect message.
-
-These captures are inputs to a separately authorised control slice. They are not permission to send a command.
+See the [11 September characterisation](docs/validation/fr30z-console-target-characterisation-2026-09-11.md), the accepted [Request Control proof](docs/validation/fr30z-request-control-success-2026-09-10.md), and the historical [freshness procedure](docs/validation/fr30z-treadmill-data-freshness-procedure.md). These records are evidence, not permission to connect or operate the treadmill.
 
 ## Simulator limitation
 
 Simulator tests verify parsing, presentation and that the app builds. They cannot establish physical Bluetooth behaviour.
 
-User-run iPhone/FR30z validation on 2 September 2026 confirmed discovery, connection, the expected characteristic list, the three capability reads and successful CoreBluetooth notification subscriptions to `0x2ACD`, `0x2AD3` and `0x2ADA`. An initial read of `0x2AD3` returned `00 00`, which decodes as flags `0x00` and Training Status `0x00` (`Other`) with no status string. During motion initiated from the physical console, `0x2ACD` emitted well-formed `0x058C` packets at roughly two per second; decoded speed, inclination and elapsed-time values tracked the observed console changes.
-
-The user reported that, after a physical-console stop, no further packets arrived during the instructed 30-second observation. The treadmill did not send a terminal zero-speed `0x2ACD` packet, and no `0x2AD3` or `0x2ADA` notification was observed during the captured runs. This validates passive moving-belt `0x2ACD` telemetry, the one Training Status read and subscription enablement on the tested FR30z, but does not establish continuous stationary telemetry, Training Status notification delivery, Fitness Machine Status delivery, multi-notification behaviour or any Control Point behaviour. The last received value remains timestamped historical evidence, not proof of current treadmill state.
-
-Issue #52 preparation adds only read-only measurement support and a [reviewed physical-session procedure](docs/validation/fr30z-treadmill-data-freshness-procedure.md). No issue #52 physical session has been authorised or performed, and no freshness window, stream-interruption rule, or target-observation deadline has been adopted. The completed issue #51 Control Point trigger, CoreBluetooth writer and callback wiring have been removed from every build configuration. The #76 protected journal implementation and checked-in sanitised issue #51 records remain as historical evidence.
+The first passive captures on 2 September 2026 established roughly two `0x2ACD` packets per second during console-controlled movement but did not capture a terminal zero. A later 11 September observation retained repeated stationary zero reports and an 8.010-second gap between the last pre-stop 0.50 km/h report and the first zero report. Silence remains unknown; the profile uses separate fresh, checking, paused and interrupted states.
 
 The first separately authorised Request Control attempt on 9 September 2026 submitted exactly `00` once and received exactly `80 00 01`, but the then-reviewed transport failed closed because CoreBluetooth delivered the indication callback before its successful ATT write callback. The [sanitised first-attempt record](docs/validation/fr30z-request-control-2026-09-09.md) therefore remains failed/unknown evidence.
 
-After issue #72 established callback-order-safe correlation and issue #76 added a protected diagnostic journal, a separately authorised proof on 10 September 2026 submitted exact `00` once. One well-formed `80 00 01` indication arrived for the same connection and procedure approximately 2.1 milliseconds before the successful ATT callback; the indication remained provisional until ATT acceptance, after which the procedure was acknowledged. The operator explicitly disconnected and separately reported no belt movement. The [sanitised accepted proof](docs/validation/fr30z-request-control-success-2026-09-10.md) establishes only that control was granted for that completed connection. Target, Start, Stop/Pause, Reset, motion, safety-stop and workout behaviour remain entirely untested.
+After issue #72 established callback-order-safe correlation and issue #76 added a protected diagnostic journal, a separately authorised proof on 10 September 2026 submitted exact `00` once. One well-formed `80 00 01` indication arrived for the same connection and procedure approximately 2.1 milliseconds before the successful ATT callback; the indication remained provisional until ATT acceptance, after which the procedure was acknowledged. The operator explicitly disconnected and separately reported no belt movement. The [sanitised accepted proof](docs/validation/fr30z-request-control-success-2026-09-10.md) establishes Request Control for that completed connection only.
+
+On 11 September, low-value speed and inclination targets were separately submitted, acknowledged, later reported exactly by `0x2ACD`, and confirmed by the operator across physical-console Stop/Start cycles. FTMS Start and Stop acknowledgements did not provide reliable physical control, so they are excluded from production. The resulting policy is specific to the characterised equipment/profile and still requires a separately authorised end-to-end product proof in issue #62.
 
 ## Repository guidance
 

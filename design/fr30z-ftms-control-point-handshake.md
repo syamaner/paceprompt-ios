@@ -2,6 +2,8 @@
 
 Status: protocol specification established by GitHub issue [#2](https://github.com/syamaner/paceprompt-ios/issues/2) and narrowed for callback-order handling by issue [#72](https://github.com/syamaner/paceprompt-ios/issues/72). It does not authorise a write to Fitness Machine Control Point `0x2AD9`, physical treadmill operation, or workout execution.
 
+Historical scope note: this remains the transport/evidence authority for Request Control and target procedures. The later [physical-console execution profile](fr30z-physical-console-execution-profile.md) supersedes its unresolved product assumptions: production uses no FTMS Start, Stop or Pause action.
+
 ## Scope and safety boundary
 
 This document specifies the smallest evidence model needed before a later, separately authorised FR30z control proof. It covers only:
