@@ -1,1264 +1,1004 @@
-import Foundation
 import XCTest
+
 @testable import PacePrompt
 
 final class WorkoutExecutionReducerTests: XCTestCase {
-    func testConnectionPreparationArmingAndFrozenInputsAreExplicitAndEffectFree() throws {
-        let h = Harness()
-        var state = WorkoutExecutionState()
+  func testExactProfileAndCeilingsGatePreflight() throws {
+    let h = Harness()
+    var state = h.connectingState()
+    let mismatch = h.capabilityReplacingFeatureEvidence(.mismatch)
+    state =
+      h.accept(h.send(state, .connectionBecomesReady(epoch: h.epoch, capability: mismatch))).state
+    let rejected = h.send(state, .arm(plan: h.plan, ceilings: h.ceilings, profile: h.profile))
+    XCTAssertEqual(rejected.disposition, .rejected(.incompleteOrMismatchedProfile))
+    XCTAssertEqual(rejected.state, state)
 
-        state = accepted(h.reduce(state, .userStartsConnection(h.epoch))).state
-        XCTAssertEqual(state.connection, .connecting(h.epoch))
-        state = accepted(h.reduce(state, .connectionBecomesReady(epoch: h.epoch, capability: h.capability))).state
-        let transition = accepted(h.reduce(state, .arm(plan: h.plan, ceilings: h.ceilings, profile: h.profile)))
+    XCTAssertEqual(try Harness().preflightState().execution, .preflight)
+    XCTAssertEqual(FR30zExecutionProfile.telemetryFreshnessInterval, 2)
+    XCTAssertEqual(FR30zExecutionProfile.telemetryCheckingInterval, 10)
+    XCTAssertEqual(FR30zExecutionProfile.targetObservationInterval, 30)
+  }
 
-        XCTAssertTrue(transition.effects.isEmpty)
-        XCTAssertEqual(transition.state.execution, .armed)
-        XCTAssertEqual(transition.state.armedWorkout?.plan, h.plan)
-        XCTAssertEqual(transition.state.armedWorkout?.capability, h.capability)
-        XCTAssertEqual(transition.state.armedWorkout?.ceilings, h.ceilings)
-        XCTAssertEqual(transition.state.armedWorkout?.profile, h.profile)
+  func testBeginCreatesOnlyRequestControlIntentAndRequiresReadiness() throws {
+    let h = Harness()
+    let state = try h.preflightState()
+    let missing = WorkoutOperatorReadiness(
+      deckClear: true,
+      consoleImmediatelyReachable: false,
+      safetyKeyImmediatelyReachable: true,
+      physicallyStationary: true
+    )
+    let rejected = h.send(state, .beginWorkout(epoch: h.epoch, readiness: missing))
+    XCTAssertEqual(rejected.disposition, .rejected(.operatorReadinessMissing))
+    XCTAssertEqual(rejected.state, state)
+
+    let accepted = h.accept(h.send(state, .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
+    XCTAssertEqual(accepted.state.execution, .acquiringControl)
+    XCTAssertEqual(accepted.record?.intent, .requestControl)
+    XCTAssertFalse(accepted.state.motionPossible)
+    XCTAssertFalse(accepted.effects.containsTargetSubmission)
+  }
+
+  func testIntentSubmissionATTAndFTMSAcknowledgementRemainDistinct() throws {
+    let h = Harness()
+    var t = h.accept(
+      h.send(try h.preflightState(), .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
+    let record = try XCTUnwrap(t.record)
+    t = h.accept(h.send(t.state, .intentSubmitted(epoch: h.epoch, procedureID: record.id)))
+    guard case .submitted = t.state.procedure else { return XCTFail("Expected submitted") }
+    XCTAssertEqual(t.state.execution, .acquiringControl)
+    t = h.accept(h.send(t.state, .attAccepted(epoch: h.epoch, procedureID: record.id)))
+    guard case .attAccepted = t.state.procedure else { return XCTFail("Expected ATT accepted") }
+    XCTAssertEqual(t.state.execution, .acquiringControl)
+    t = h.accept(h.send(t.state, .protocolAcknowledged(epoch: h.epoch, procedureID: record.id)))
+    XCTAssertEqual(t.state.execution, .waitingForPhysicalStart)
+    guard case .held(h.epoch, _) = t.state.controlPermission else {
+      return XCTFail("Expected control")
+    }
+  }
+
+  func testEarlyFTMSAcknowledgementRemainsProvisionalUntilATT() throws {
+    let h = Harness()
+    var t = h.accept(
+      h.send(try h.preflightState(), .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
+    let record = try XCTUnwrap(t.record)
+    t = h.accept(h.send(t.state, .intentSubmitted(epoch: h.epoch, procedureID: record.id)))
+    t = h.accept(h.send(t.state, .protocolAcknowledged(epoch: h.epoch, procedureID: record.id)))
+    guard case .submitted(let provisional) = t.state.procedure else {
+      return XCTFail("Expected provisional")
+    }
+    XCTAssertNotNil(provisional.ftmsAcknowledgedAt)
+    XCTAssertEqual(t.state.execution, .acquiringControl)
+    t = h.accept(h.send(t.state, .attAccepted(epoch: h.epoch, procedureID: record.id)))
+    XCTAssertEqual(t.state.execution, .waitingForPhysicalStart)
+  }
+
+  func testPhysicalStartNeedsFreshNonzeroTelemetryAndAppliesSpeedThenInclination() throws {
+    let h = Harness()
+    var state = try h.waitingState()
+    var t = h.accept(h.send(state, .telemetry(epoch: h.epoch, h.sample("0", "0"))))
+    state = t.state
+    XCTAssertEqual(state.execution, .waitingForPhysicalStart)
+    XCTAssertTrue(t.effects.isEmpty)
+
+    t = h.accept(h.send(state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
+    XCTAssertEqual(t.state.execution, .applyingTargets(.initial))
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5")))
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertEqual(t.record?.intent, .setTargetInclination(Harness.inclination("0")))
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertEqual(t.state.execution, .applyingTargets(.initial))
+    XCTAssertNil(t.state.currentSegment?.activeStartedAt)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("4.9", "0"))))
+    XCTAssertEqual(t.state.execution, .applyingTargets(.initial))
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("5", "0"))))
+    XCTAssertEqual(t.state.execution, .runningSegment)
+  }
+
+  func testWaitingForPhysicalStartAdjustmentsStayPendingAndBecomeInitialTargets() throws {
+    let h = Harness()
+    var t = h.accept(
+      h.send(try h.waitingState(), .setSpeedOverride(epoch: h.epoch, Harness.speed("5.5"))))
+    XCTAssertTrue(t.effects.isEmpty)
+    XCTAssertEqual(t.state.currentSegment?.speedOverride, Harness.speed("5.5"))
+    t = h.accept(
+      h.send(t.state, .setInclinationOverride(epoch: h.epoch, Harness.inclination("1"))))
+    XCTAssertTrue(t.effects.isEmpty)
+    XCTAssertEqual(t.state.currentSegment?.inclinationOverride, Harness.inclination("1"))
+
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5.5")))
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertEqual(t.record?.intent, .setTargetInclination(Harness.inclination("1")))
+  }
+
+  func testStaleTelemetryChecksAtTwoSecondsAndExcludesUncertainGap() throws {
+    let h = Harness(stepDuration: 20)
+    var state = try h.runningState()
+    let sampleAt = state.lastEventTime.seconds
+    var t = h.accept(h.send(at: sampleAt + 2, state, .tick(epoch: h.epoch)))
+    XCTAssertEqual(t.state.execution, .runningSegment)
+    t = h.accept(h.send(at: sampleAt + 2.1, t.state, .tick(epoch: h.epoch)))
+    guard case .checkingTreadmill(let checking) = t.state.execution else {
+      return XCTFail("Expected checking")
+    }
+    XCTAssertEqual(checking.freshnessBoundary.seconds, sampleAt + 2, accuracy: 0.0001)
+    XCTAssertEqual(t.state.currentSegment?.accumulatedActiveSeconds ?? -1, 2, accuracy: 0.0001)
+    t = h.accept(
+      h.send(at: sampleAt + 8, t.state, .telemetry(epoch: h.epoch, h.sample("4.8", "0"))))
+    state = t.state
+    XCTAssertEqual(state.execution, .runningSegment)
+    XCTAssertEqual(state.currentSegment?.accumulatedActiveSeconds ?? -1, 2, accuracy: 0.0001)
+    XCTAssertEqual(
+      state.currentSegment?.activeStartedAt?.seconds ?? -1, sampleAt + 8, accuracy: 0.0001)
+    XCTAssertTrue(t.effects.isEmpty)
+  }
+
+  func testDelayedZeroPausesButSilenceOrDeadlineTelemetryInterrupts() throws {
+    let h = Harness(stepDuration: 20)
+    var state = try h.runningState()
+    let sampleAt = state.lastEventTime.seconds
+    state = h.accept(h.send(at: sampleAt + 3, state, .tick(epoch: h.epoch))).state
+    let paused = h.accept(
+      h.send(at: sampleAt + 8.01, state, .telemetry(epoch: h.epoch, h.sample("0", "0")))
+    )
+    guard case .paused(.telemetry) = paused.state.execution else {
+      return XCTFail("Expected pause")
+    }
+    XCTAssertEqual(paused.state.currentSegment?.accumulatedActiveSeconds ?? -1, 2, accuracy: 0.0001)
+
+    let silence = Harness(stepDuration: 20)
+    var other = try silence.runningState()
+    let otherSampleAt = other.lastEventTime.seconds
+    other =
+      silence.accept(silence.send(at: otherSampleAt + 3, other, .tick(epoch: silence.epoch))).state
+    let interrupted = silence.send(at: otherSampleAt + 10, other, .tick(epoch: silence.epoch))
+    XCTAssertEqual(interrupted.state.execution, .interrupted(.telemetryStreamTimedOut))
+    XCTAssertEqual(interrupted.effects, [.directUserToConsoleAndSafetyKey])
+    XCTAssertFalse(interrupted.effects.containsTargetSubmission)
+
+    let boundary = Harness(stepDuration: 20)
+    var boundaryState = try boundary.runningState()
+    let boundaryAt = boundaryState.lastEventTime.seconds
+    boundaryState =
+      boundary.accept(
+        boundary.send(at: boundaryAt + 3, boundaryState, .tick(epoch: boundary.epoch))
+      ).state
+    let late = boundary.send(
+      at: boundaryAt + 10,
+      boundaryState,
+      .telemetry(epoch: boundary.epoch, boundary.sample("5", "0"))
+    )
+    XCTAssertEqual(late.state.execution, .interrupted(.telemetryStreamTimedOut))
+  }
+
+  func testDirectPausePreservesSegmentAndPhysicalResumeRestoresBothTargets() throws {
+    let h = Harness(stepDuration: 20)
+    var state = try h.pausedState(activeSeconds: 3)
+    guard case .paused(.telemetry) = state.execution else { return XCTFail("Expected pause") }
+    XCTAssertEqual(state.currentSegment?.accumulatedActiveSeconds ?? -1, 3, accuracy: 0.0001)
+    XCTAssertTrue(state.motionPossible)
+
+    var t = h.accept(h.send(state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
+    XCTAssertEqual(t.state.execution, .restoringTargets)
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5")))
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertEqual(t.record?.intent, .setTargetInclination(Harness.inclination("0")))
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertNil(t.state.currentSegment?.activeStartedAt)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("5", "0"))))
+    state = t.state
+    XCTAssertEqual(state.execution, .runningSegment)
+    XCTAssertEqual(state.currentSegment?.accumulatedActiveSeconds ?? -1, 3, accuracy: 0.0001)
+  }
+
+  func testPausedAdjustmentsArePendingAndRestoreLatestEffectiveTargets() throws {
+    let h = Harness(stepDuration: 20)
+    var state = try h.pausedState(activeSeconds: 3)
+    var t = h.accept(h.send(state, .setSpeedOverride(epoch: h.epoch, Harness.speed("5.5"))))
+    XCTAssertTrue(t.effects.isEmpty)
+    t = h.accept(h.send(t.state, .setInclinationOverride(epoch: h.epoch, Harness.inclination("1"))))
+    XCTAssertTrue(t.effects.isEmpty)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5.5")))
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertEqual(t.record?.intent, .setTargetInclination(Harness.inclination("1")))
+    state = t.state
+    XCTAssertEqual(state.currentSegment?.speedOverride, Harness.speed("5.5"))
+    XCTAssertEqual(state.currentSegment?.inclinationOverride, Harness.inclination("1"))
+  }
+
+  func testCurrentSegmentOverridesAreIndependentAndInflightChangesDoNotCompete() throws {
+    let h = Harness(stepDuration: 20)
+    var t = h.accept(
+      h.send(try h.runningState(), .setSpeedOverride(epoch: h.epoch, Harness.speed("5.5"))))
+    let speedRecord = try XCTUnwrap(t.record)
+    let frozen = t.state.currentSegment!.accumulatedActiveSeconds
+    t = h.accept(h.send(t.state, .setInclinationOverride(epoch: h.epoch, Harness.inclination("1"))))
+    XCTAssertTrue(t.effects.isEmpty)
+    XCTAssertEqual(t.state.procedure.activeRecord?.id, speedRecord.id)
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertEqual(t.record?.intent, .setTargetInclination(Harness.inclination("1")))
+    t = try h.acknowledgeCurrent(t)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("5.5", "1"))))
+    XCTAssertEqual(t.state.execution, .runningSegment)
+    XCTAssertEqual(t.state.currentSegment?.accumulatedActiveSeconds ?? -1, frozen, accuracy: 0.0001)
+  }
+
+  func testReturnToPlanReappliesChangedAxis() throws {
+    let h = Harness(stepDuration: 20)
+    var t = h.accept(
+      h.send(try h.runningState(), .setSpeedOverride(epoch: h.epoch, Harness.speed("5.5"))))
+    t = try h.acknowledgeCurrent(t)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("5.5", "0"))))
+    t = h.accept(h.send(t.state, .returnToPlan(epoch: h.epoch)))
+    XCTAssertNil(t.state.currentSegment?.speedOverride)
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5")))
+  }
+
+  func testSegmentBoundaryClearsOverridesAndNoChangeBoundaryEmitsNothing() throws {
+    let h = Harness(stepDuration: 5)
+    var t = h.accept(
+      h.send(try h.runningState(), .setSpeedOverride(epoch: h.epoch, Harness.speed("5.5"))))
+    t = try h.acknowledgeCurrent(t)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("5.5", "0"))))
+    let started = t.state.currentSegment!.activeStartedAt!.seconds
+    var state = h.accept(
+      h.send(at: started + 4.5, t.state, .telemetry(epoch: h.epoch, h.sample("5.5", "0")))
+    ).state
+    t = h.accept(h.send(at: started + 5, state, .tick(epoch: h.epoch)))
+    state = t.state
+    XCTAssertEqual(state.currentSegment?.stepIndex, 1)
+    XCTAssertNil(state.currentSegment?.speedOverride)
+    XCTAssertNil(state.currentSegment?.inclinationOverride)
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("7")))
+
+    let same = Harness(stepDuration: 5, repeatedTargets: true)
+    var sameState = try same.runningState()
+    let sameStarted = sameState.currentSegment!.activeStartedAt!.seconds
+    sameState =
+      same.accept(
+        same.send(
+          at: sameStarted + 4.5, sameState, .telemetry(epoch: same.epoch, same.sample("5", "0")))
+      ).state
+    let noChange = same.accept(same.send(at: sameStarted + 5, sameState, .tick(epoch: same.epoch)))
+    XCTAssertEqual(noChange.state.execution, .runningSegment)
+    XCTAssertEqual(noChange.state.currentSegment?.stepIndex, 1)
+    XCTAssertTrue(noChange.effects.isEmpty)
+  }
+
+  func testAdjustmentsWhileCheckingStayPendingAndInvalidValuesAreRejected() throws {
+    let h = Harness(stepDuration: 20)
+    var state = try h.runningState()
+    let sampleAt = state.lastEventTime.seconds
+    state = h.accept(h.send(at: sampleAt + 3, state, .tick(epoch: h.epoch))).state
+    let pending = h.accept(h.send(state, .setSpeedOverride(epoch: h.epoch, Harness.speed("5.5"))))
+    XCTAssertTrue(pending.effects.isEmpty)
+    guard case .checkingTreadmill = pending.state.execution else {
+      return XCTFail("Expected checking")
     }
 
-    func testArmingInvalidatesPreArmTelemetryBeforeAnyActuationIntent() throws {
-        let h = Harness()
-        var state = WorkoutExecutionState()
-        state = accepted(h.reduce(state, .userStartsConnection(h.epoch))).state
-        state = accepted(h.reduce(state, .connectionBecomesReady(epoch: h.epoch, capability: h.capability))).state
-        state = accepted(
-            h.reduce(state, .telemetry(epoch: h.epoch, h.telemetry(speed: "0", inclination: "99")))
-        ).state
-        state = accepted(h.reduce(state, .arm(plan: h.plan, ceilings: h.ceilings, profile: h.profile))).state
-        var control = accepted(h.reduce(state, .userRequestsControl(epoch: h.epoch, readiness: h.readiness)))
-        control = try h.acknowledgeCurrent(control)
-        state = control.state
+    let invalidHarness = Harness(stepDuration: 20)
+    let invalidState = try invalidHarness.runningState()
+    for event in [
+      WorkoutExecutionEvent.setSpeedOverride(epoch: invalidHarness.epoch, Harness.speed("5.55")),
+      .setSpeedOverride(epoch: invalidHarness.epoch, Harness.speed("10.1")),
+      .setInclinationOverride(epoch: invalidHarness.epoch, Harness.inclination("1.5")),
+      .setInclinationOverride(epoch: invalidHarness.epoch, Harness.inclination("7")),
+    ] {
+      let rejected = invalidHarness.send(invalidState, event)
+      XCTAssertEqual(rejected.disposition, .rejected(.invalidAdjustment))
+      XCTAssertEqual(rejected.state, invalidState)
+    }
+  }
 
-        XCTAssertRejected(
-            h.reduce(state, .userBegins(epoch: h.epoch, readiness: h.readiness)),
-            .telemetryNotFresh
+  func testTargetFailuresAndDeadlinesInvalidateWithoutRetry() throws {
+    let rejectedHarness = Harness()
+    let initial = try rejectedHarness.initialSpeedTransition()
+    let record = try XCTUnwrap(initial.record)
+    let rejected = rejectedHarness.send(
+      initial.state,
+      .intentSubmissionRejected(
+        epoch: rejectedHarness.epoch, procedureID: record.id, reason: "not delivered")
+    )
+    XCTAssertEqual(
+      rejected.state.execution, .failed(.procedure(.submissionRejected("not delivered"))))
+    XCTAssertEqual(rejected.effects, [.directUserToConsoleAndSafetyKey])
+    XCTAssertFalse(rejected.effects.containsTargetSubmission)
+
+    let negativeAcknowledgementHarness = Harness()
+    var negativeAcknowledgement = try negativeAcknowledgementHarness.initialSpeedTransition()
+    let negativeAcknowledgementRecord = try XCTUnwrap(negativeAcknowledgement.record)
+    negativeAcknowledgement = negativeAcknowledgementHarness.accept(
+      negativeAcknowledgementHarness.send(
+        negativeAcknowledgement.state,
+        .intentSubmitted(
+          epoch: negativeAcknowledgementHarness.epoch,
+          procedureID: negativeAcknowledgementRecord.id)
+      )
+    )
+    negativeAcknowledgement = negativeAcknowledgementHarness.accept(
+      negativeAcknowledgementHarness.send(
+        negativeAcknowledgement.state,
+        .attAccepted(
+          epoch: negativeAcknowledgementHarness.epoch,
+          procedureID: negativeAcknowledgementRecord.id)
+      )
+    )
+    let negativelyAcknowledged = negativeAcknowledgementHarness.send(
+      negativeAcknowledgement.state,
+      .protocolRejected(
+        epoch: negativeAcknowledgementHarness.epoch,
+        procedureID: negativeAcknowledgementRecord.id,
+        reason: "not permitted")
+    )
+    XCTAssertEqual(
+      negativelyAcknowledged.state.execution,
+      .failed(.procedure(.protocolRejected("not permitted")))
+    )
+    XCTAssertEqual(negativelyAcknowledged.effects, [.directUserToConsoleAndSafetyKey])
+    XCTAssertFalse(negativelyAcknowledged.effects.containsTargetSubmission)
+
+    let responseHarness = Harness()
+    var response = try responseHarness.initialSpeedTransition()
+    let responseRecord = try XCTUnwrap(response.record)
+    response = responseHarness.accept(
+      responseHarness.send(
+        response.state,
+        .intentSubmitted(epoch: responseHarness.epoch, procedureID: responseRecord.id))
+    )
+    response = responseHarness.accept(
+      responseHarness.send(
+        response.state, .attAccepted(epoch: responseHarness.epoch, procedureID: responseRecord.id))
+    )
+    guard case .attAccepted(_, let deadline) = response.state.procedure else {
+      return XCTFail("Expected deadline")
+    }
+    let timedOut = responseHarness.send(
+      at: deadline.seconds,
+      response.state,
+      .protocolAcknowledged(epoch: responseHarness.epoch, procedureID: responseRecord.id)
+    )
+    XCTAssertEqual(timedOut.state.execution, .failed(.procedure(.responseTimeout)))
+
+    let observationHarness = Harness()
+    var observation = try observationHarness.initialSpeedTransition()
+    observation = try observationHarness.acknowledgeCurrent(observation)
+    observation = try observationHarness.acknowledgeCurrent(observation)
+    let observationDeadline = try XCTUnwrap(observation.state.targetSequence?.observationDeadline)
+    let targetTimedOut = observationHarness.send(
+      at: observationDeadline.seconds,
+      observation.state,
+      .telemetry(epoch: observationHarness.epoch, observationHarness.sample("5", "0"))
+    )
+    XCTAssertEqual(targetTimedOut.state.execution, .failed(.targetObservationTimeout))
+  }
+
+  func testMalformedIncompleteAndUnavailableTelemetryFailClosed() throws {
+    let malformedHarness = Harness(stepDuration: 20)
+    let malformed = malformedHarness.send(
+      try malformedHarness.runningState(),
+      .telemetry(epoch: malformedHarness.epoch, .malformed("short"))
+    )
+    XCTAssertEqual(malformed.state.execution, .failed(.malformedTelemetry("short")))
+
+    let incompleteHarness = Harness(stepDuration: 20)
+    let incomplete = incompleteHarness.send(
+      try incompleteHarness.runningState(),
+      .telemetry(
+        epoch: incompleteHarness.epoch,
+        .sample(speed: Harness.speed("5"), inclination: nil, totalDistanceMetres: nil)
+      )
+    )
+    XCTAssertEqual(incomplete.state.execution, .failed(.incompleteTelemetry))
+
+    let unavailableHarness = Harness(stepDuration: 20)
+    let unavailable = unavailableHarness.send(
+      try unavailableHarness.runningState(),
+      .telemetry(epoch: unavailableHarness.epoch, .unavailable("subscription ended"))
+    )
+    XCTAssertEqual(
+      unavailable.state.execution, .interrupted(.telemetryUnavailable("subscription ended")))
+  }
+
+  func testConnectionControlForegroundAndCapabilityChangesInterruptWithoutContinuation() throws {
+    let makers: [(Harness) throws -> WorkoutExecutionTransition] = [
+      { h in h.send(try h.runningState(), .connectionLost(epoch: h.epoch, reason: "link")) },
+      { h in h.send(try h.runningState(), .controlPermissionLost(epoch: h.epoch, reason: "control"))
+      },
+      { h in h.send(try h.runningState(), .appBecameInactive(epoch: h.epoch, reason: "background"))
+      },
+      { h in
+        h.send(
+          try h.runningState(),
+          .capabilityChanged(
+            epoch: h.epoch,
+            capability: h.capabilityReplacingFeatureEvidence(.mismatch)
+          )
         )
-        XCTAssertEqual(state.telemetry, .unavailable("Awaiting telemetry matched to frozen execution bounds"))
+      },
+    ]
+    for make in makers {
+      let transition = try make(Harness(stepDuration: 20))
+      guard case .interrupted = transition.state.execution else {
+        return XCTFail("Expected interruption")
+      }
+      XCTAssertEqual(transition.effects, [.directUserToConsoleAndSafetyKey])
+      XCTAssertFalse(transition.effects.containsTargetSubmission)
+    }
+  }
+
+  func testHumanStationaryEvidencePausesAfterMissingZeroAndContradictionFails() throws {
+    let h = Harness(stepDuration: 20)
+    var state = try h.runningState()
+    let sampleAt = state.lastEventTime.seconds
+    state = h.accept(h.send(at: sampleAt + 3, state, .tick(epoch: h.epoch))).state
+    let paused = h.accept(
+      h.send(
+        at: sampleAt + 4, state, .humanConfirmsStationary(epoch: h.epoch, note: "Console stopped"))
+    )
+    guard case .paused(.human) = paused.state.execution else {
+      return XCTFail("Expected human pause")
     }
 
-    func testConnectionAndArmingRejectEveryIncompleteGuardWithoutMutation() throws {
-        let h = Harness()
-        let initial = WorkoutExecutionState()
-        XCTAssertRejected(h.reduce(initial, .connectionBecomesReady(epoch: h.epoch, capability: h.capability)), .wrongEpoch)
+    let contradictionHarness = Harness(stepDuration: 20)
+    let contradiction = contradictionHarness.send(
+      try contradictionHarness.runningState(),
+      .humanConfirmsStationary(epoch: contradictionHarness.epoch, note: "Stopped")
+    )
+    guard case .failed(.contradictoryEvidence) = contradiction.state.execution else {
+      return XCTFail("Expected contradiction")
+    }
+  }
 
-        var connecting = accepted(h.reduce(initial, .userStartsConnection(h.epoch))).state
-        var incomplete = h.capability
-        incomplete = .init(
-            identity: incomplete.identity,
-            equipmentIdentity: incomplete.equipmentIdentity,
-            planCapabilities: incomplete.planCapabilities,
-            controlPointSupportsWrite: true,
-            controlPointSupportsIndicate: true,
-            controlPointIndicationsEnabled: false,
-            passiveSubscriptionOutcomesResolved: true
+  func testEndFromPauseUsesOnlyLocalEndingEffect() throws {
+    let h = Harness(stepDuration: 20)
+    var t = h.accept(h.send(try h.pausedState(activeSeconds: 3), .userEndsWorkout(epoch: h.epoch)))
+    guard case .ending = t.state.execution else { return XCTFail("Expected ending") }
+    XCTAssertNotNil(t.finalization)
+    XCTAssertFalse(t.effects.containsTargetSubmission)
+    t = h.accept(h.send(t.state, .localEndingSucceeded(epoch: h.epoch)))
+    guard case .finished(let context) = t.state.execution else {
+      return XCTFail("Expected finished")
+    }
+    XCTAssertEqual(context.reason, .endedFromPause)
+    XCTAssertFalse(t.state.motionPossible)
+  }
+
+  func testEndRequiresCurrentStationaryEvidenceAndMovementRevokesEligibility() throws {
+    let pausedHarness = Harness(stepDuration: 20)
+    var paused = try pausedHarness.pausedState(activeSeconds: 3)
+    guard case .paused(.telemetry(let pausedSample)) = paused.execution else {
+      return XCTFail("Expected telemetry pause")
+    }
+    paused =
+      pausedHarness.accept(
+        pausedHarness.send(
+          at: pausedSample.receivedAt.seconds + 2.1,
+          paused,
+          .tick(epoch: pausedHarness.epoch)
         )
-        XCTAssertRejected(h.reduce(connecting, .connectionBecomesReady(epoch: h.epoch, capability: incomplete)), .incompleteCapabilityEvidence)
+      ).state
+    guard case .checkingTreadmill(let checking) = paused.execution,
+      case .paused = checking.origin
+    else { return XCTFail("Expected stale pause to enter checking") }
+    XCTAssertEqual(
+      pausedHarness.send(paused, .userEndsWorkout(epoch: pausedHarness.epoch)).disposition,
+      .rejected(.endNotAvailable)
+    )
+    let resumed = pausedHarness.accept(
+      pausedHarness.send(
+        paused, .telemetry(epoch: pausedHarness.epoch, pausedHarness.sample("0.5", "0"))))
+    XCTAssertEqual(resumed.state.execution, .restoringTargets)
 
-        connecting = accepted(h.reduce(connecting, .connectionBecomesReady(epoch: h.epoch, capability: h.capability))).state
-        let tooLow = WorkoutSessionCeilings(
-            maximumSpeed: speed("4"),
-            maximumInclination: h.ceilings.maximumInclination,
-            maximumStepSpeedChange: h.ceilings.maximumStepSpeedChange
+    let completedHarness = Harness(stepDuration: 3)
+    let ready = try completedHarness.readyToEndState()
+    let moving = completedHarness.accept(
+      completedHarness.send(
+        ready, .telemetry(epoch: completedHarness.epoch, completedHarness.sample("0.5", "0"))))
+    XCTAssertEqual(moving.state.execution, .awaitingPhysicalStopForCompletion)
+    XCTAssertEqual(
+      completedHarness.send(moving.state, .userEndsWorkout(epoch: completedHarness.epoch))
+        .disposition,
+      .rejected(.endNotAvailable)
+    )
+
+    let staleCompletedHarness = Harness(stepDuration: 3)
+    var staleReady = try staleCompletedHarness.readyToEndState()
+    guard case .readyToEnd(let staleContext) = staleReady.execution,
+      case .telemetry(let staleSample) = staleContext.stationaryEvidence
+    else { return XCTFail("Expected telemetry-backed End eligibility") }
+    staleReady =
+      staleCompletedHarness.accept(
+        staleCompletedHarness.send(
+          at: staleSample.receivedAt.seconds + 2.1,
+          staleReady,
+          .tick(epoch: staleCompletedHarness.epoch)
         )
-        XCTAssertRejected(h.reduce(connecting, .arm(plan: h.plan, ceilings: tooLow, profile: h.profile)), .invalidPlanOrCeilings)
+      ).state
+    guard case .checkingTreadmill(let staleChecking) = staleReady.execution else {
+      return XCTFail("Expected stale End eligibility to enter checking")
+    }
+    XCTAssertEqual(staleChecking.origin, .awaitingPhysicalStopForCompletion)
+    XCTAssertEqual(
+      staleCompletedHarness.send(
+        staleReady, .userEndsWorkout(epoch: staleCompletedHarness.epoch)
+      ).disposition,
+      .rejected(.endNotAvailable)
+    )
+  }
 
-        let beyondCapability = WorkoutSessionCeilings(
-            maximumSpeed: speed("100"),
-            maximumInclination: inclination("100"),
-            maximumStepSpeedChange: speed("100")
-        )
-        XCTAssertRejected(
-            h.reduce(connecting, .arm(plan: h.plan, ceilings: beyondCapability, profile: h.profile)),
-            .invalidPlanOrCeilings
-        )
+  func testNewerFreshStationaryTelemetryRefreshesReadyToEndAndEndingEvidence() throws {
+    let readyHarness = Harness(stepDuration: 3)
+    let ready = try readyHarness.readyToEndState()
+    guard case .readyToEnd(let initialReadyContext) = ready.execution,
+      case .telemetry(let initialReadySample) = initialReadyContext.stationaryEvidence
+    else { return XCTFail("Expected telemetry-backed End eligibility") }
+    let refreshedReady = readyHarness.accept(
+      readyHarness.send(
+        at: initialReadySample.receivedAt.seconds + 1,
+        ready,
+        .telemetry(epoch: readyHarness.epoch, readyHarness.sample("0", "0"))
+      )
+    )
+    guard case .readyToEnd(let refreshedReadyContext) = refreshedReady.state.execution,
+      case .telemetry(let refreshedReadySample) = refreshedReadyContext.stationaryEvidence
+    else { return XCTFail("Expected refreshed End eligibility") }
+    XCTAssertNotEqual(refreshedReadySample, initialReadySample)
+    XCTAssertEqual(
+      readyHarness.send(
+        refreshedReady.state, .userEndsWorkout(epoch: readyHarness.epoch)
+      ).disposition,
+      .accepted
+    )
 
-        let wrongProfile = FR30zExecutionProfile(
-            identity: h.profile.identity,
-            equipmentIdentity: "different treadmill",
-            targetOrder: h.profile.targetOrder,
-            requiresStartForFirstStep: h.profile.requiresStartForFirstStep,
-            permitsStop: h.profile.permitsStop,
-            telemetryFreshnessInterval: h.profile.telemetryFreshnessInterval,
-            targetObservationInterval: h.profile.targetObservationInterval,
-            procedureResponseInterval: h.profile.procedureResponseInterval,
-            requestControlEvidenceAccepted: true,
-            speedTargetEvidenceAccepted: true,
-            inclinationTargetEvidenceAccepted: true,
-            startEvidenceAccepted: true,
-            stopEvidenceAccepted: true
-        )
-        XCTAssertRejected(h.reduce(connecting, .arm(plan: h.plan, ceilings: h.ceilings, profile: wrongProfile)), .incompleteOrMismatchedProfile)
+    let endingHarness = Harness(stepDuration: 20)
+    var ending = endingHarness.accept(
+      endingHarness.send(
+        try endingHarness.pausedState(activeSeconds: 3),
+        .userEndsWorkout(epoch: endingHarness.epoch)
+      )
+    )
+    guard case .ending(let initialEndingContext) = ending.state.execution,
+      case .telemetry(let initialEndingSample) = initialEndingContext.stationaryEvidence
+    else { return XCTFail("Expected telemetry-backed ending") }
+    ending = endingHarness.accept(
+      endingHarness.send(
+        at: initialEndingSample.receivedAt.seconds + 1,
+        ending.state,
+        .telemetry(epoch: endingHarness.epoch, endingHarness.sample("0", "0"))
+      )
+    )
+    guard case .ending(let refreshedEndingContext) = ending.state.execution,
+      case .telemetry(let refreshedEndingSample) = refreshedEndingContext.stationaryEvidence
+    else { return XCTFail("Expected refreshed ending evidence") }
+    XCTAssertNotEqual(refreshedEndingSample, initialEndingSample)
+    ending = endingHarness.accept(
+      endingHarness.send(ending.state, .localEndingSucceeded(epoch: endingHarness.epoch))
+    )
+    guard case .finished = ending.state.execution else { return XCTFail("Expected finished") }
+  }
+
+  func testEndRejectsUnresolvedTargetProcedureAndEndingFailsClosedOnUncertainty() throws {
+    for stage in 0...2 {
+      let h = Harness()
+      var t = try h.initialSpeedTransition()
+      let record = try XCTUnwrap(t.record)
+      if stage >= 1 {
+        t = h.accept(h.send(t.state, .intentSubmitted(epoch: h.epoch, procedureID: record.id)))
+      }
+      if stage == 2 {
+        t = h.accept(h.send(t.state, .attAccepted(epoch: h.epoch, procedureID: record.id)))
+      }
+      let paused = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0", "0"))))
+      let rejected = h.send(paused.state, .userEndsWorkout(epoch: h.epoch))
+      XCTAssertEqual(rejected.disposition, .rejected(.procedureBusy))
+      XCTAssertEqual(rejected.state, paused.state)
     }
 
-    func testProfileRejectsNonFiniteEvidenceIntervals() throws {
-        for h in [Harness(freshness: .infinity), Harness(observation: .infinity)] {
-            var state = WorkoutExecutionState()
-            state = accepted(h.reduce(state, .userStartsConnection(h.epoch))).state
-            h.advance()
-            state = accepted(h.reduce(state, .connectionBecomesReady(epoch: h.epoch, capability: h.capability))).state
-            h.advance()
-
-            XCTAssertRejected(
-                h.reduce(state, .arm(plan: h.plan, ceilings: h.ceilings, profile: h.profile)),
-                .incompleteOrMismatchedProfile
-            )
-        }
-    }
-
-    func testRequestControlRequiresFreshExplicitHumanReadinessAndDoesNotSetMotionLatch() throws {
-        let h = Harness()
-        var state = try h.armedState()
-        let missing = WorkoutOperatorReadiness(
-            deckClear: true,
-            consoleImmediatelyReachable: true,
-            safetyKeyImmediatelyReachable: true,
-            physicallyStationary: false
-        )
-
-        XCTAssertRejected(h.reduce(state, .userRequestsControl(epoch: h.epoch, readiness: missing)), .operatorReadinessMissing)
-        let transition = accepted(h.reduce(state, .userRequestsControl(epoch: h.epoch, readiness: h.readiness)))
-        state = transition.state
-
-        XCTAssertEqual(transition.effects.count, 1)
-        XCTAssertEqual(transition.effects.first?.intent, .requestControl)
-        XCTAssertFalse(state.motionPossible)
-        XCTAssertEqual(state.controlPermission, .requesting(try XCTUnwrap(transition.effects.first?.record).id))
-        XCTAssertEqual(state.execution, .acquiringControl)
-    }
-
-    func testIntentSubmissionATTAndProtocolAcknowledgementRemainDistinct() throws {
-        let h = Harness()
-        var transition = accepted(h.reduce(try h.armedState(), .userRequestsControl(epoch: h.epoch, readiness: h.readiness)))
-        let record = try XCTUnwrap(transition.effects.first?.record)
-
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .intentSubmitted(epoch: h.epoch, procedureID: record.id)))
-        guard case let .submitted(submitted) = transition.state.procedure else { return XCTFail("Expected submitted") }
-        XCTAssertEqual(submitted.submittedAt, h.now)
-
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .attAccepted(epoch: h.epoch, procedureID: record.id)))
-        guard case let .attAccepted(attRecord, deadline) = transition.state.procedure else { return XCTFail("Expected ATT accepted") }
-        XCTAssertEqual(attRecord.attAcceptedAt, h.now)
-        XCTAssertEqual(deadline, h.now.advanced(by: 30))
-        XCTAssertEqual(transition.state.execution, .acquiringControl)
-
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .protocolAcknowledged(epoch: h.epoch, procedureID: record.id)))
-        XCTAssertEqual(transition.state.execution, .readyToBegin)
-        XCTAssertEqual(transition.state.controlPermission, .held(epoch: h.epoch, acknowledgedAt: h.now))
-        XCTAssertEqual(transition.state.procedureHistory.last, .acknowledged(attRecord, at: h.now))
-    }
-
-    func testBeginRequiresCurrentTelemetryControlForegroundAndRepeatedReadiness() throws {
-        let h = Harness()
-        var state = try h.readyToBeginState()
-        let noTelemetry = h.reduce(state, .userBegins(epoch: h.epoch, readiness: h.readiness))
-        XCTAssertRejected(noTelemetry, .telemetryNotFresh)
-
-        state = accepted(h.reduce(state, .telemetry(epoch: h.epoch, h.telemetry(speed: "0", inclination: "0")))).state
-        let missing = WorkoutOperatorReadiness(deckClear: false, consoleImmediatelyReachable: true, safetyKeyImmediatelyReachable: true, physicallyStationary: true)
-        XCTAssertRejected(h.reduce(state, .userBegins(epoch: h.epoch, readiness: missing)), .operatorReadinessMissing)
-
-        h.advance()
-        state = accepted(h.reduce(state, .telemetry(epoch: h.epoch, h.telemetry(speed: "0.1", inclination: "0")))).state
-        XCTAssertRejected(h.reduce(state, .userBegins(epoch: h.epoch, readiness: h.readiness)), .treadmillNotReportedStationary)
-        XCTAssertTrue(
-            WorkoutExecutionPresentation(state: state).preflightBlockers.contains(.treadmillNotReportedStationary)
-        )
-        h.advance()
-        state = accepted(h.reduce(state, .telemetry(epoch: h.epoch, h.telemetry(speed: "0", inclination: "0")))).state
-
-        let transition = accepted(h.reduce(state, .userBegins(epoch: h.epoch, readiness: h.readiness)))
-        XCTAssertEqual(transition.effects.first?.intent, .setTargetSpeed(speed("5")))
-        XCTAssertTrue(transition.state.motionPossible)
-        guard case let .applyingStep(application) = transition.state.execution else { return XCTFail("Expected applying") }
-        XCTAssertEqual(application.stepIndex, 0)
-        XCTAssertEqual(application.remainingIntents, [.setTargetInclination(inclination("0")), .start])
-    }
-
-    func testProfileOrderingIsDeterministic() throws {
-        let h = Harness(targetOrder: .inclinationThenSpeed, requiresStart: false)
-        var state = try h.readyToBeginState()
-        state = accepted(h.reduce(state, .telemetry(epoch: h.epoch, h.telemetry(speed: "0", inclination: "0")))).state
-
-        let begin = accepted(h.reduce(state, .userBegins(epoch: h.epoch, readiness: h.readiness)))
-
-        XCTAssertEqual(begin.effects.first?.intent, .setTargetInclination(inclination("0")))
-        guard case let .applyingStep(application) = begin.state.execution else { return XCTFail("Expected applying") }
-        XCTAssertEqual(application.remainingIntents, [.setTargetSpeed(speed("5"))])
-    }
-
-    func testStepTimerStartsOnlyAfterAllAcknowledgementsAndOneLaterJointExactObservation() throws {
-        let h = Harness()
-        var transition = try h.beginTransition()
-
-        transition = try h.acknowledgeCurrent(transition)
-        XCTAssertEqual(transition.effects.first?.intent, .setTargetInclination(inclination("0")))
-        transition = try h.acknowledgeCurrent(transition)
-        XCTAssertEqual(transition.effects.first?.intent, .start)
-        transition = try h.acknowledgeCurrent(transition)
-        XCTAssertTrue(transition.effects.isEmpty)
-        guard case let .applyingStep(application) = transition.state.execution else { return XCTFail("Expected observation pending") }
-        XCTAssertNotNil(application.speedAcknowledgedAt)
-        XCTAssertNotNil(application.inclinationAcknowledgedAt)
-        XCTAssertNotNil(application.startAcknowledgedAt)
-
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .telemetry(epoch: h.epoch, h.telemetry(speed: "4.9", inclination: "0"))))
-        guard case .applyingStep = transition.state.execution else { return XCTFail("Ramp sample must remain pending") }
-
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .telemetry(epoch: h.epoch, h.telemetry(speed: "5", inclination: "0", distance: "12.5"))))
-        guard case let .runningStep(running) = transition.state.execution else { return XCTFail("Expected running") }
-        XCTAssertEqual(running.segmentStartedAt, h.now)
-        XCTAssertEqual(running.accumulatedActiveSeconds, 0)
-        XCTAssertEqual(transition.state.observedMachine, .stepTargetReported(stepIndex: 0, sample: try XCTUnwrap(transition.state.telemetry.sample)))
-    }
-
-    func testCommandProgressionStopsIfTelemetryExpiresBeforeAcknowledgement() throws {
-        let h = Harness(freshness: 2)
-        let begin = try h.beginTransition()
-        let transition = try h.acknowledgeCurrentAllowingFailure(begin)
-
-        XCTAssertFailedClosed(transition, .telemetry("Telemetry is not fresh during command progression"))
-        XCTAssertTrue(transition.effects.filter { $0.record != nil }.isEmpty)
-        guard case .stale = transition.state.telemetry else { return XCTFail("Expected stale evidence") }
-    }
-
-    func testUnavailableMalformedStaleAndObservationTimeoutTelemetryFailClosed() throws {
-        let unavailableHarness = Harness()
-        var pending = try unavailableHarness.observationPendingTransition().state
-        unavailableHarness.advance()
-        var result = unavailableHarness.reduce(pending, .telemetry(epoch: unavailableHarness.epoch, .unavailable("field absent")))
-        XCTAssertFailedClosed(result, .telemetry("field absent"))
-        XCTAssertTrue(result.effects.contains(.directUserToConsoleAndSafetyKey))
-
-        let malformedHarness = Harness()
-        pending = try malformedHarness.observationPendingTransition().state
-        malformedHarness.advance()
-        result = malformedHarness.reduce(pending, .telemetry(epoch: malformedHarness.epoch, .malformed("short packet")))
-        XCTAssertFailedClosed(result, .telemetry("short packet"))
-
-        let staleHarness = Harness(freshness: 50)
-        let running = try staleHarness.runningTransition().state
-        staleHarness.advance(by: 51)
-        result = staleHarness.reduce(running, .tick(epoch: staleHarness.epoch))
-        XCTAssertFailedClosed(result, .telemetry("Telemetry became stale"))
-        guard case .stale = result.state.telemetry else { return XCTFail("Expected stale telemetry") }
-
-        let timeoutHarness = Harness(freshness: 50, observation: 4)
-        pending = try timeoutHarness.observationPendingTransition().state
-        timeoutHarness.advance(by: 4)
-        result = timeoutHarness.reduce(pending, .tick(epoch: timeoutHarness.epoch))
-        XCTAssertFailedClosed(result, .observationTimeout)
-
-        let missingHarness = Harness()
-        pending = try missingHarness.observationPendingTransition().state
-        missingHarness.advance()
-        result = missingHarness.reduce(
-            pending,
-            .telemetry(epoch: missingHarness.epoch, .sample(speed: speed("5"), inclination: nil, totalDistanceMetres: nil))
-        )
-        XCTAssertFailedClosed(result, .telemetry("Required field missing"))
-    }
-
-    func testContradictoryObservationAfterConfirmationFailsButRampBeforeConfirmationDoesNot() throws {
-        let h = Harness()
-        var transition = try h.runningTransition()
-        h.advance()
-        transition = h.reduce(transition.state, .telemetry(epoch: h.epoch, h.telemetry(speed: "5.1", inclination: "0")))
-
-        XCTAssertFailedClosed(transition, .telemetry("Contradictory confirmed target"))
-        guard case .contradictory = transition.state.telemetry else { return XCTFail("Expected contradiction") }
-        XCTAssertTrue(transition.state.motionPossible)
-    }
-
-    func testWrongEpochIsIgnoredAndFutureEpochRejected() throws {
-        let h = Harness(epochValue: 7)
-        let state = try h.armedState()
-        let old = ConnectionEpoch(rawValue: 6)
-        let future = ConnectionEpoch(rawValue: 8)
-
-        let ignored = h.reduce(state, .telemetry(epoch: old, h.telemetry(speed: "0", inclination: "0")))
-        XCTAssertEqual(ignored.state, state)
-        XCTAssertEqual(ignored.disposition, .ignored(.staleEpoch))
-        XCTAssertRejected(h.reduce(state, .tick(epoch: future)), .wrongEpoch)
-    }
-
-    func testWrongProcedureFailsClosedAndDuplicateOrLateEvidenceCannotProgress() throws {
-        let h = Harness()
-        var transition = accepted(h.reduce(try h.armedState(), .userRequestsControl(epoch: h.epoch, readiness: h.readiness)))
-        let current = try XCTUnwrap(transition.effects.first?.record).id
-        let wrong = ProcedureID(epoch: h.epoch, sequence: current.sequence + 99)
-        h.advance()
-        transition = h.reduce(transition.state, .intentSubmitted(epoch: h.epoch, procedureID: wrong))
-        XCTAssertFailedClosed(transition, .procedure(.correlationFailure(expected: current, received: wrong)))
-        XCTAssertTrue(transition.effects.isEmpty)
-
-        let lateHarness = Harness()
-        let ready = try lateHarness.readyToBeginState()
-        let prior = try XCTUnwrap(ready.procedureHistory.last?.record).id
-        lateHarness.advance()
-        let late = lateHarness.reduce(ready, .protocolAcknowledged(epoch: lateHarness.epoch, procedureID: prior))
-        XCTAssertFailedClosed(late, .procedure(.duplicateOrLate(prior)))
-        XCTAssertEqual(late.state.execution, .ended(.failedBeforeActuation(.procedure(.duplicateOrLate(prior)))))
-    }
-
-    func testEveryExposedGuardHasAStateEventRejectionPath() throws {
-        var seen: Set<WorkoutGuardRejection> = []
-        func capture(_ transition: WorkoutExecutionTransition) {
-            switch transition.disposition {
-            case let .rejected(reason), let .ignored(reason): seen.insert(reason)
-            case .accepted, .failedClosed: break
-            }
-        }
-
-        let h = Harness(epochValue: 7)
-        var connecting = accepted(h.reduce(WorkoutExecutionState(), .userStartsConnection(h.epoch))).state
-        capture(h.reduce(connecting, .userStartsConnection(h.epoch)))
-        capture(h.reduce(connecting, .connectionBecomesReady(epoch: .init(rawValue: 8), capability: h.capability)))
-        capture(h.reduce(connecting, .connectionBecomesReady(epoch: .init(rawValue: 6), capability: h.capability)))
-        capture(h.reduce(WorkoutExecutionState(), .arm(plan: h.plan, ceilings: h.ceilings, profile: h.profile)))
-
-        let incompleteCapability = FR30zCapabilitySnapshot(
-            identity: h.capability.identity,
-            equipmentIdentity: h.capability.equipmentIdentity,
-            planCapabilities: h.capability.planCapabilities,
-            controlPointSupportsWrite: true,
-            controlPointSupportsIndicate: true,
-            controlPointIndicationsEnabled: false,
-            passiveSubscriptionOutcomesResolved: true
-        )
-        capture(h.reduce(connecting, .connectionBecomesReady(epoch: h.epoch, capability: incompleteCapability)))
-        connecting = accepted(h.reduce(connecting, .connectionBecomesReady(epoch: h.epoch, capability: h.capability))).state
-        let restrictive = WorkoutSessionCeilings(
-            maximumSpeed: speed("4"),
-            maximumInclination: h.ceilings.maximumInclination,
-            maximumStepSpeedChange: h.ceilings.maximumStepSpeedChange
-        )
-        capture(h.reduce(connecting, .arm(plan: h.plan, ceilings: restrictive, profile: h.profile)))
-
-        let invalidProfileHarness = Harness(freshness: .infinity)
-        var invalidProfileConnection = accepted(
-            invalidProfileHarness.reduce(WorkoutExecutionState(), .userStartsConnection(invalidProfileHarness.epoch))
-        ).state
-        invalidProfileConnection = accepted(
-            invalidProfileHarness.reduce(
-                invalidProfileConnection,
-                .connectionBecomesReady(epoch: invalidProfileHarness.epoch, capability: invalidProfileHarness.capability)
-            )
-        ).state
-        capture(
-            invalidProfileHarness.reduce(
-                invalidProfileConnection,
-                .arm(
-                    plan: invalidProfileHarness.plan,
-                    ceilings: invalidProfileHarness.ceilings,
-                    profile: invalidProfileHarness.profile
-                )
-            )
-        )
-
-        let readinessHarness = Harness()
-        let armed = try readinessHarness.armedState()
-        let missingReadiness = WorkoutOperatorReadiness(
-            deckClear: false,
-            consoleImmediatelyReachable: true,
-            safetyKeyImmediatelyReachable: true,
-            physicallyStationary: true
-        )
-        capture(
-            readinessHarness.reduce(
-                armed,
-                .userRequestsControl(epoch: readinessHarness.epoch, readiness: missingReadiness)
-            )
-        )
-        let busy = accepted(
-            readinessHarness.reduce(
-                armed,
-                .userRequestsControl(epoch: readinessHarness.epoch, readiness: readinessHarness.readiness)
-            )
-        ).state
-        capture(
-            readinessHarness.reduce(
-                busy,
-                .userRequestsControl(epoch: readinessHarness.epoch, readiness: readinessHarness.readiness)
-            )
-        )
-
-        let beginHarness = Harness()
-        var ready = try beginHarness.readyToBeginState()
-        capture(beginHarness.reduce(ready, .userBegins(epoch: beginHarness.epoch, readiness: beginHarness.readiness)))
-        ready.controlPermission = .notHeld
-        capture(beginHarness.reduce(ready, .userBegins(epoch: beginHarness.epoch, readiness: beginHarness.readiness)))
-        ready = try beginHarness.readyToBeginState()
-        ready.isForegroundActive = false
-        capture(beginHarness.reduce(ready, .userBegins(epoch: beginHarness.epoch, readiness: beginHarness.readiness)))
-        ready = try beginHarness.readyToBeginState()
-        ready.procedure = busy.procedure
-        capture(beginHarness.reduce(ready, .userBegins(epoch: beginHarness.epoch, readiness: beginHarness.readiness)))
-        ready = try beginHarness.readyToBeginState()
-        beginHarness.advance()
-        ready = accepted(
-            beginHarness.reduce(
-                ready,
-                .telemetry(epoch: beginHarness.epoch, beginHarness.telemetry(speed: "0.1", inclination: "0"))
-            )
-        ).state
-        capture(beginHarness.reduce(ready, .userBegins(epoch: beginHarness.epoch, readiness: beginHarness.readiness)))
-
-        let lateHarness = Harness()
-        let lateReady = try lateHarness.readyToBeginState()
-        let prior = try XCTUnwrap(lateReady.procedureHistory.last?.record).id
-        capture(
-            lateHarness.reduce(
-                lateReady,
-                .intentSubmissionRejected(epoch: lateHarness.epoch, procedureID: prior, reason: "late")
-            )
-        )
-
-        let stopHarness = Harness(freshness: 50)
-        var stopping = try stopHarness.runningTransition().state
-        stopHarness.advance()
-        stopping = accepted(
-            stopHarness.reduce(stopping, .userRequestsStop(epoch: stopHarness.epoch, reason: .userRequested))
-        ).state
-        capture(stopHarness.reduce(stopping, .userRequestsStop(epoch: stopHarness.epoch, reason: .userRequested)))
-
-        let clockHarness = Harness()
-        let clockState = try clockHarness.armedState()
-        clockHarness.setTime(clockState.lastEventTime.seconds - 1)
-        capture(clockHarness.reduce(clockState, .tick(epoch: clockHarness.epoch)))
-
-        XCTAssertEqual(seen, Set(WorkoutGuardRejection.allCases))
-    }
-
-    func testBenignNonRunningEvidenceUpdatesRemainEffectFree() throws {
-        let h = Harness()
-        var state = try h.armedState()
-        h.advance()
-        var transition = accepted(
-            h.reduce(state, .telemetry(epoch: h.epoch, .sample(speed: nil, inclination: nil, totalDistanceMetres: nil)))
-        )
-        XCTAssertTrue(transition.effects.isEmpty)
-        guard case .unavailable = transition.state.telemetry else { return XCTFail("Expected unavailable telemetry") }
-
-        state = transition.state
-        h.advance()
-        transition = accepted(h.reduce(state, .capabilityChanged(epoch: h.epoch, capability: h.capability)))
-        XCTAssertTrue(transition.effects.isEmpty)
-        XCTAssertEqual(transition.state.connection.readyCapability, h.capability)
-    }
-
-    func testDuplicateAcknowledgementDuringNextProcedureFailsClosed() throws {
-        let h = Harness()
-        var transition = try h.beginTransition()
-        let speedProcedure = try XCTUnwrap(transition.effects.first?.record).id
-        transition = try h.acknowledgeCurrent(transition)
-        h.advance()
-
-        transition = h.reduce(transition.state, .protocolAcknowledged(epoch: h.epoch, procedureID: speedProcedure))
-
-        guard case let .failedAwaitingHumanStop(.procedure(.correlationFailure(expected, received))) = transition.state.execution else {
-            return XCTFail("Expected duplicate correlation failure")
-        }
-        XCTAssertNotEqual(expected, received)
-        XCTAssertEqual(received, speedProcedure)
-        XCTAssertTrue(transition.effects.contains(.directUserToConsoleAndSafetyKey))
-    }
-
-    func testDuplicateSubmissionForCurrentProcedureFailsClosed() throws {
-        let h = Harness()
-        var transition = try h.beginTransition()
-        let id = try XCTUnwrap(transition.effects.first?.record).id
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .intentSubmitted(epoch: h.epoch, procedureID: id)))
-        h.advance()
-
-        transition = h.reduce(transition.state, .intentSubmitted(epoch: h.epoch, procedureID: id))
-
-        XCTAssertFailedClosed(transition, .procedure(.duplicateOrLate(id)))
-        XCTAssertTrue(transition.effects.filter { $0.record != nil }.isEmpty)
-    }
-
-    func testRejectedAndUnsupportedCommandsEmitNoRetryOrCompensatingEffect() throws {
-        for failure in FailureEvent.allCases {
-            let h = Harness()
-            let begin = try h.beginTransition()
-            let id = try XCTUnwrap(begin.effects.first?.record).id
-            h.advance()
-            let submitted = accepted(h.reduce(begin.state, .intentSubmitted(epoch: h.epoch, procedureID: id)))
-            let transition: WorkoutExecutionTransition
-            switch failure {
-            case .submission:
-                transition = h.reduce(begin.state, .intentSubmissionRejected(epoch: h.epoch, procedureID: id, reason: "transport"))
-            case .att:
-                transition = h.reduce(submitted.state, .attRejected(epoch: h.epoch, procedureID: id, reason: "ATT error"))
-            case .protocol:
-                h.advance()
-                let acceptedATT = accepted(h.reduce(submitted.state, .attAccepted(epoch: h.epoch, procedureID: id)))
-                transition = h.reduce(acceptedATT.state, .protocolRejected(epoch: h.epoch, procedureID: id, reason: "operation failed"))
-            case .unsupported:
-                h.advance()
-                let acceptedATT = accepted(h.reduce(submitted.state, .attAccepted(epoch: h.epoch, procedureID: id)))
-                transition = h.reduce(acceptedATT.state, .protocolUnsupported(epoch: h.epoch, procedureID: id))
-            case .malformed:
-                h.advance()
-                let acceptedATT = accepted(h.reduce(submitted.state, .attAccepted(epoch: h.epoch, procedureID: id)))
-                transition = h.reduce(acceptedATT.state, .protocolMalformed(epoch: h.epoch, procedureID: id))
-            case .unknown:
-                h.advance()
-                let acceptedATT = accepted(h.reduce(submitted.state, .attAccepted(epoch: h.epoch, procedureID: id)))
-                transition = h.reduce(acceptedATT.state, .protocolUnknown(epoch: h.epoch, procedureID: id))
-            }
-            XCTAssertFalse(transition.effects.contains(where: { $0.record != nil }), "No command effect for \(failure)")
-            XCTAssertTrue(transition.state.motionPossible)
-            guard case .failedAwaitingHumanStop = transition.state.execution else { return XCTFail("Expected fail closed") }
-        }
-    }
-
-    func testProcedureTimeoutIsUnknownAndNeverRetries() throws {
-        let h = Harness()
-        var transition = try h.beginTransition()
-        let id = try XCTUnwrap(transition.effects.first?.record).id
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .intentSubmitted(epoch: h.epoch, procedureID: id)))
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .attAccepted(epoch: h.epoch, procedureID: id)))
-        h.advance(by: 30)
-
-        transition = h.reduce(transition.state, .tick(epoch: h.epoch))
-
-        XCTAssertFailedClosed(transition, .procedure(.responseTimeout))
-        XCTAssertTrue(transition.effects.filter { $0.record != nil }.isEmpty)
-        guard case .timedOutUnknown = transition.state.procedure else { return XCTFail("Expected unknown timeout") }
-    }
-
-    func testProtocolEvidenceAtResponseDeadlineTimesOutWithoutDependingOnTickOrder() throws {
-        let h = Harness()
-        var transition = try h.beginTransition()
-        let id = try XCTUnwrap(transition.effects.first?.record).id
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .intentSubmitted(epoch: h.epoch, procedureID: id)))
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .attAccepted(epoch: h.epoch, procedureID: id)))
-        h.advance(by: 30)
-
-        transition = h.reduce(transition.state, .protocolAcknowledged(epoch: h.epoch, procedureID: id))
-
-        XCTAssertFailedClosed(transition, .procedure(.responseTimeout))
-        guard case .timedOutUnknown = transition.state.procedure else { return XCTFail("Expected unknown timeout") }
-        XCTAssertTrue(transition.effects.filter { $0.record != nil }.isEmpty)
-    }
-
-    func testTargetObservationAtDeadlineFailsWithoutDependingOnTickOrder() throws {
-        let h = Harness(freshness: 50, observation: 4)
-        var transition = try h.observationPendingTransition()
-        h.advance(by: 4)
-
-        transition = h.reduce(
-            transition.state,
-            .telemetry(epoch: h.epoch, h.telemetry(speed: "5", inclination: "0"))
-        )
-
-        XCTAssertFailedClosed(transition, .observationTimeout)
-        guard case .failedAwaitingHumanStop = transition.state.execution else { return XCTFail("Expected fail closed") }
-    }
-
-    func testEveryStepReissuesBothTargetsAndProgressesOnlyOnExplicitTick() throws {
-        let h = Harness(requiresStart: false, freshness: 50, repeatedTargets: true)
-        var transition = try h.runningTransition()
-        h.advance(by: 9)
-        transition = accepted(h.reduce(transition.state, .tick(epoch: h.epoch)))
-        guard case .runningStep = transition.state.execution else { return XCTFail("Should still run") }
-        XCTAssertTrue(transition.effects.isEmpty)
-
-        h.advance(by: 1)
-        transition = accepted(h.reduce(transition.state, .tick(epoch: h.epoch)))
-        XCTAssertEqual(transition.effects.first?.intent, .setTargetSpeed(speed("5")))
-        guard case let .applyingStep(application) = transition.state.execution else { return XCTFail("Expected next step") }
-        XCTAssertEqual(application.stepIndex, 1)
-        XCTAssertEqual(application.remainingIntents, [.setTargetInclination(inclination("0"))])
-        let presentation = WorkoutExecutionPresentation(state: transition.state)
-        XCTAssertEqual(presentation.requestedSpeed, speed("5"))
-        XCTAssertEqual(presentation.speedCommandState, .intentCreated)
-        XCTAssertEqual(presentation.inclinationCommandState, .notRequested)
-    }
-
-    func testStopRequestImmediatelyFreezesCountdownAndCancellationEmitsNothing() throws {
-        let h = Harness(freshness: 50)
-        var transition = try h.runningTransition()
-        h.advance(by: 3)
-        transition = accepted(h.reduce(transition.state, .userRequestsStop(epoch: h.epoch, reason: .userRequested)))
-        let frozen = WorkoutExecutionPresentation(state: transition.state)
-        XCTAssertEqual(frozen.elapsedActiveSeconds, 3)
-        XCTAssertEqual(frozen.currentStep?.remainingSeconds, 7)
-        XCTAssertEqual(frozen.stopState, .confirmationRequired)
-        XCTAssertTrue(transition.effects.isEmpty)
-
-        h.advance(by: 20)
-        transition = accepted(h.reduce(transition.state, .tick(epoch: h.epoch)))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).elapsedActiveSeconds, 3)
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .userCancelsStop(epoch: h.epoch)))
-        XCTAssertTrue(transition.effects.isEmpty)
-        h.advance(by: 2)
-        transition = accepted(h.reduce(transition.state, .tick(epoch: h.epoch)))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).elapsedActiveSeconds, 5)
-    }
-
-    func testStopConfirmationEmitsAtMostOneIntentAndCancellationNeverEmitsOne() throws {
-        let h = Harness(freshness: 50)
-        var transition = try h.runningTransition()
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .userRequestsStop(epoch: h.epoch, reason: .userRequested)))
-        h.advance()
-        let confirmed = accepted(h.reduce(transition.state, .userConfirmsStop(epoch: h.epoch)))
-        XCTAssertEqual(confirmed.effects.filter { $0.intent == .stop }.count, 1)
-        XCTAssertEqual(WorkoutExecutionPresentation(state: confirmed.state).stopState, .intentCreated)
-
-        h.advance()
-        XCTAssertRejected(h.reduce(confirmed.state, .userConfirmsStop(epoch: h.epoch)), .wrongState)
-        XCTAssertRejected(h.reduce(confirmed.state, .userRequestsStop(epoch: h.epoch, reason: .userRequested)), .stopAlreadyRequested)
-    }
-
-    func testStopSubmissionATTAndProtocolSuccessRemainSentUnconfirmed() throws {
-        let h = Harness(freshness: 50)
-        var transition = try h.stopIntentTransition()
-        let id = try XCTUnwrap(transition.effects.first?.record).id
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .intentSubmitted(epoch: h.epoch, procedureID: id)))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .submitted)
-        XCTAssertFalse(transition.state.isEnded)
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .attAccepted(epoch: h.epoch, procedureID: id)))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .attAccepted)
-        XCTAssertFalse(transition.state.isEnded)
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .protocolAcknowledged(epoch: h.epoch, procedureID: id)))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .sentUnconfirmed)
-        XCTAssertFalse(transition.state.isEnded)
-
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .telemetry(epoch: h.epoch, h.telemetry(speed: "0", inclination: "0"))))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .sentUnconfirmed)
-        XCTAssertFalse(transition.state.isEnded)
-    }
-
-    func testStopWithoutPermissionOrProfileAuthorityProducesNoStopIntent() throws {
-        let h = Harness(permitsStop: false, freshness: 50)
-        var transition = try h.runningTransition()
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .userRequestsStop(epoch: h.epoch, reason: .userRequested)))
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .userConfirmsStop(epoch: h.epoch)))
-
-        XCTAssertTrue(transition.effects.filter { $0.record != nil }.isEmpty)
-        XCTAssertTrue(transition.effects.contains(.directUserToConsoleAndSafetyKey))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .notSentUsePhysicalControls)
-    }
-
-    func testStopFailureKeepsSeparateCommandOutcomeAndStillNeedsHumanEvidence() throws {
-        let h = Harness(freshness: 50)
-        var transition = try h.stopIntentTransition()
-        let id = try XCTUnwrap(transition.effects.first?.record).id
-        h.advance()
-        transition = h.reduce(transition.state, .intentSubmissionRejected(epoch: h.epoch, procedureID: id, reason: "not sent"))
-
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .failedUsePhysicalControls)
-        XCTAssertFalse(transition.state.isEnded)
-        XCTAssertTrue(transition.effects.contains(.directUserToConsoleAndSafetyKey))
-    }
-
-    func testStopTimeoutAndDisconnectPreserveSentUnconfirmedState() throws {
-        let timeoutHarness = Harness(freshness: 100)
-        var transition = try timeoutHarness.stopIntentTransition()
-        var id = try XCTUnwrap(transition.effects.first?.record).id
-        timeoutHarness.advance()
-        transition = accepted(timeoutHarness.reduce(transition.state, .intentSubmitted(epoch: timeoutHarness.epoch, procedureID: id)))
-        timeoutHarness.advance()
-        transition = accepted(timeoutHarness.reduce(transition.state, .attAccepted(epoch: timeoutHarness.epoch, procedureID: id)))
-        timeoutHarness.advance(by: 30)
-        transition = timeoutHarness.reduce(transition.state, .tick(epoch: timeoutHarness.epoch))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .sentUnconfirmed)
-        XCTAssertFalse(transition.state.isEnded)
-
-        let disconnectHarness = Harness(freshness: 100)
-        transition = try disconnectHarness.stopIntentTransition()
-        id = try XCTUnwrap(transition.effects.first?.record).id
-        disconnectHarness.advance()
-        transition = accepted(disconnectHarness.reduce(transition.state, .intentSubmitted(epoch: disconnectHarness.epoch, procedureID: id)))
-        disconnectHarness.advance()
-        transition = disconnectHarness.reduce(transition.state, .connectionLost(epoch: disconnectHarness.epoch, reason: "lost after send"))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .sentUnconfirmed)
-        XCTAssertFalse(transition.state.isEnded)
-    }
-
-    func testStopCommandOutcomeSurvivesLaterCapabilityAndTelemetryFailures() throws {
-        let capabilityHarness = Harness(freshness: 100)
-        var transition = try capabilityHarness.stopIntentTransition()
-        transition = try capabilityHarness.acknowledgeCurrent(transition)
-        let changed = FR30zCapabilitySnapshot(
-            identity: "changed",
-            equipmentIdentity: capabilityHarness.capability.equipmentIdentity,
-            planCapabilities: capabilityHarness.capability.planCapabilities,
-            controlPointSupportsWrite: true,
-            controlPointSupportsIndicate: true,
-            controlPointIndicationsEnabled: true,
-            passiveSubscriptionOutcomesResolved: true
-        )
-        capabilityHarness.advance()
-        transition = capabilityHarness.reduce(
-            transition.state,
-            .capabilityChanged(epoch: capabilityHarness.epoch, capability: changed)
-        )
-        XCTAssertFailedClosed(transition, .capabilityChanged)
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .sentUnconfirmed)
-        guard case .awaitingHumanStop = transition.state.execution else { return XCTFail("Expected preserved stop gate") }
-
-        let telemetryHarness = Harness(freshness: 100)
-        transition = try telemetryHarness.stopIntentTransition()
-        transition = try telemetryHarness.acknowledgeCurrent(transition)
-        telemetryHarness.advance()
-        transition = telemetryHarness.reduce(
-            transition.state,
-            .telemetry(epoch: telemetryHarness.epoch, telemetryHarness.telemetry(speed: "99", inclination: "0"))
-        )
-        XCTAssertFailedClosed(transition, .telemetry("Contradictory telemetry"))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .sentUnconfirmed)
-        guard case .awaitingHumanStop = transition.state.execution else { return XCTFail("Expected preserved stop gate") }
-    }
-
-    func testResolvedStopOutcomeIsNotDowngradedByDisconnectOrInterruption() throws {
-        let acknowledgedHarness = Harness(freshness: 100)
-        var transition = try acknowledgedHarness.stopIntentTransition()
-        transition = try acknowledgedHarness.acknowledgeCurrent(transition)
-        let acknowledgedProcedure = transition.state.procedure
-        acknowledgedHarness.advance()
-        transition = acknowledgedHarness.reduce(
-            transition.state,
-            .connectionLost(epoch: acknowledgedHarness.epoch, reason: "after acknowledgement")
-        )
-        XCTAssertEqual(transition.state.procedure, acknowledgedProcedure)
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .sentUnconfirmed)
-
-        let failedHarness = Harness(freshness: 100)
-        transition = try failedHarness.stopIntentTransition()
-        let id = try XCTUnwrap(transition.effects.first?.record).id
-        failedHarness.advance()
-        transition = failedHarness.reduce(
-            transition.state,
-            .intentSubmissionRejected(epoch: failedHarness.epoch, procedureID: id, reason: "definite rejection")
-        )
-        let failedProcedure = transition.state.procedure
-        failedHarness.advance()
-        transition = failedHarness.reduce(
-            transition.state,
-            .appBecameInactive(epoch: failedHarness.epoch, reason: "after rejection")
-        )
-        XCTAssertEqual(transition.state.procedure, failedProcedure)
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .failedUsePhysicalControls)
-    }
-
-    func testLateTargetEvidenceCannotDiscardConfirmedStopGate() throws {
-        let h = Harness(freshness: 100)
-        var transition = try h.beginTransition()
-        let targetID = try XCTUnwrap(transition.effects.first?.record).id
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .userRequestsStop(epoch: h.epoch, reason: .userRequested)))
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .userConfirmsStop(epoch: h.epoch)))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .notSentUsePhysicalControls)
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .intentSubmitted(epoch: h.epoch, procedureID: targetID)))
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .attAccepted(epoch: h.epoch, procedureID: targetID)))
-        h.advance()
-
-        transition = h.reduce(transition.state, .protocolAcknowledged(epoch: h.epoch, procedureID: targetID))
-
-        XCTAssertFailedClosed(transition, .procedure(.duplicateOrLate(targetID)))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .notSentUsePhysicalControls)
-        guard case .awaitingHumanStop = transition.state.execution else { return XCTFail("Expected preserved stop gate") }
-        guard case let .acknowledged(record, _) = transition.state.procedure else { return XCTFail("Expected recorded late acknowledgement") }
-        XCTAssertEqual(record.id, targetID)
-        XCTAssertEqual(transition.state.procedureHistory.last, .acknowledged(record, at: h.now))
-        guard case .invalidated = transition.state.controlPermission else { return XCTFail("Expected invalidated control") }
-    }
-
-    func testOnlyHumanStopEvidenceEndsPossibleMotionAndClearsLatch() throws {
-        let h = Harness(freshness: 50)
-        var transition = try h.stopIntentTransition()
-        XCTAssertTrue(transition.state.motionPossible)
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .humanConfirmsStopped(epoch: h.epoch, note: "Operator observed belt stopped")))
-
-        XCTAssertTrue(transition.state.isEnded)
-        XCTAssertFalse(transition.state.motionPossible)
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .humanConfirmed)
-        guard case .humanConfirmedStopped = transition.state.observedMachine else { return XCTFail("Expected human evidence") }
-        guard case let .ended(.stopped(_, _, evidence)) = transition.state.execution else { return XCTFail("Expected retained evidence") }
-        XCTAssertEqual(evidence.note, "Operator observed belt stopped")
-    }
-
-    func testTerminalEventsCannotOverwriteHumanStopEvidenceOrReopenMotionLatch() throws {
-        let h = Harness(freshness: 100)
-        var transition = try h.stopIntentTransition()
-        h.advance()
-        transition = accepted(
-            h.reduce(transition.state, .humanConfirmsStopped(epoch: h.epoch, note: "Belt visibly stopped"))
-        )
-        let ended = transition.state
-        h.advance()
-        let lateTelemetry = h.reduce(
-            ended,
-            .telemetry(epoch: h.epoch, h.telemetry(speed: "5", inclination: "0"))
-        )
-        XCTAssertEqual(lateTelemetry.disposition, .ignored(.wrongState))
-        XCTAssertEqual(lateTelemetry.state, ended)
-
-        h.advance()
-        let disconnected = accepted(
-            h.reduce(ended, .connectionLost(epoch: h.epoch, reason: "link closed after workout"))
-        )
-        XCTAssertFalse(disconnected.state.motionPossible)
-        XCTAssertEqual(disconnected.state.observedMachine, ended.observedMachine)
-        XCTAssertEqual(disconnected.state.execution, ended.execution)
-    }
-
-    func testMotionPossibleIsMonotonicAcrossSilenceFailureDisconnectAndInterruption() throws {
-        for event in SafetyFailureEvent.allCases {
-            let h = Harness(freshness: 50)
-            let running = try h.runningTransition().state
-            h.advance()
-            let transition: WorkoutExecutionTransition
-            switch event {
-            case .silence:
-                h.advance(by: 50)
-                transition = h.reduce(running, .tick(epoch: h.epoch))
-            case .disconnect:
-                transition = h.reduce(running, .connectionLost(epoch: h.epoch, reason: "link lost"))
-            case .interruption:
-                transition = h.reduce(running, .appBecameInactive(epoch: h.epoch, reason: "background"))
-            case .permissionLoss:
-                transition = h.reduce(running, .controlPermissionLost(epoch: h.epoch, reason: "console override"))
-            }
-            XCTAssertTrue(transition.state.motionPossible, "Latch cleared for \(event)")
-            XCTAssertTrue(transition.effects.contains(.directUserToConsoleAndSafetyKey))
-            XCTAssertFalse(transition.effects.contains(where: { $0.record != nil }))
-        }
-    }
-
-    func testInterruptionBeforeActuationEndsWithoutStopClaimOrAutomaticEffect() throws {
-        let h = Harness()
-        let armed = try h.armedState()
-        h.advance()
-        let transition = h.reduce(armed, .appBecameInactive(epoch: h.epoch, reason: "foreground lost"))
-
-        XCTAssertFailedClosed(transition, .foregroundLost("foreground lost"))
-        XCTAssertEqual(transition.state.execution, .ended(.failedBeforeActuation(.foregroundLost("foreground lost"))))
-        XCTAssertFalse(transition.state.motionPossible)
-        XCTAssertTrue(transition.effects.isEmpty)
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .endedWithoutPhysicalStopClaim)
-    }
-
-    func testConfirmedCancellationBeforeActuationMakesNoPhysicalStopClaim() throws {
-        let h = Harness()
-        var transition = accepted(
-            h.reduce(try h.armedState(), .userRequestsStop(epoch: h.epoch, reason: .cancelled))
-        )
-        h.advance()
-        transition = accepted(h.reduce(transition.state, .userConfirmsStop(epoch: h.epoch)))
-
-        XCTAssertEqual(transition.state.execution, .ended(.cancelledBeforeActuation))
-        XCTAssertEqual(WorkoutExecutionPresentation(state: transition.state).stopState, .endedWithoutPhysicalStopClaim)
-        XCTAssertTrue(transition.effects.isEmpty)
-    }
-
-    func testUnexpectedHumanMotionBeforeActuationRaisesLatchAndRequiresHumanStop() throws {
-        let h = Harness()
-        let armed = try h.armedState()
-        h.advance()
-        let transition = h.reduce(armed, .humanObservesMotion(epoch: h.epoch))
-
-        XCTAssertFailedClosed(transition, .telemetry("Unexpected human observation of motion"))
-        XCTAssertTrue(transition.state.motionPossible)
-        guard case .failedAwaitingHumanStop = transition.state.execution else { return XCTFail("Expected human-stop gate") }
-        XCTAssertTrue(transition.effects.contains(.directUserToConsoleAndSafetyKey))
-    }
-
-    func testConnectionLossNeverReconnectsAndInvalidatesAllCurrentEvidence() throws {
-        let h = Harness(freshness: 50)
-        let running = try h.runningTransition().state
-        h.advance()
-        let transition = h.reduce(running, .connectionLost(epoch: h.epoch, reason: "radio lost"))
-
-        XCTAssertEqual(transition.state.connection, .lost(previousEpoch: h.epoch, reason: "radio lost"))
-        XCTAssertEqual(transition.state.observedMachine, .unknown)
-        XCTAssertEqual(transition.state.telemetry, .unavailable("Connection lost"))
-        XCTAssertFalse(transition.effects.contains(where: { $0.record != nil }))
-        guard case .invalidated = transition.state.controlPermission else { return XCTFail("Expected invalidated control") }
-    }
-
-    func testCapabilityChangeFailsRatherThanAdaptingFrozenPlan() throws {
-        let h = Harness(freshness: 50)
-        let running = try h.runningTransition().state
-        let changed = FR30zCapabilitySnapshot(
-            identity: "new snapshot",
-            equipmentIdentity: h.capability.equipmentIdentity,
-            planCapabilities: h.capability.planCapabilities,
-            controlPointSupportsWrite: true,
-            controlPointSupportsIndicate: true,
-            controlPointIndicationsEnabled: true,
-            passiveSubscriptionOutcomesResolved: true
-        )
-        h.advance()
-        let transition = h.reduce(running, .capabilityChanged(epoch: h.epoch, capability: changed))
-
-        XCTAssertFailedClosed(transition, .capabilityChanged)
-        XCTAssertEqual(transition.state.armedWorkout?.capability, h.capability)
-        XCTAssertTrue(transition.effects.filter { $0.record != nil }.isEmpty)
-        XCTAssertEqual(
-            transition.state.connection,
-            .invalidated(previousEpoch: h.epoch, reason: "Capability evidence changed")
-        )
-        XCTAssertTrue(WorkoutExecutionPresentation(state: transition.state).preflightBlockers.contains(.connectionNotReady))
-    }
-
-    func testInvalidatedConnectionRequiresAnIncreasingExplicitEpochBeforeRestart() throws {
-        let h = Harness(epochValue: 7)
-        let armed = try h.armedState()
-        let changed = FR30zCapabilitySnapshot(
-            identity: "changed",
-            equipmentIdentity: h.capability.equipmentIdentity,
-            planCapabilities: h.capability.planCapabilities,
-            controlPointSupportsWrite: true,
-            controlPointSupportsIndicate: true,
-            controlPointIndicationsEnabled: true,
-            passiveSubscriptionOutcomesResolved: true
-        )
-        h.advance()
-        let invalidated = h.reduce(armed, .capabilityChanged(epoch: h.epoch, capability: changed)).state
-
-        XCTAssertRejected(h.reduce(invalidated, .userStartsConnection(h.epoch)), .wrongEpoch)
-        XCTAssertRejected(h.reduce(invalidated, .userStartsConnection(.init(rawValue: 6))), .wrongEpoch)
-        let restarted = accepted(h.reduce(invalidated, .userStartsConnection(.init(rawValue: 8))))
-        XCTAssertEqual(restarted.state.connection, .connecting(.init(rawValue: 8)))
-        XCTAssertTrue(restarted.effects.isEmpty)
-    }
-
-    func testNonMonotonicClockEventIsRejectedWithoutMutation() throws {
-        let h = Harness()
-        var state = try h.armedState()
-        h.advance(by: 10)
-        state = accepted(h.reduce(state, .telemetry(epoch: h.epoch, h.telemetry(speed: "0", inclination: "0")))).state
-        h.setTime(state.lastEventTime.seconds - 1)
-        let transition = h.reduce(state, .tick(epoch: h.epoch))
-
-        XCTAssertRejected(transition, .nonMonotonicTime)
-        XCTAssertEqual(transition.state, state)
-    }
-
-    func testPresentationExposesDesignReadyPreflightCurrentNextCountdownAxesElapsedDistanceAndStop() throws {
-        let h = Harness(freshness: 50)
-        var transition = try h.runningTransition(distance: "42.25")
-        h.advance(by: 3)
-        transition = accepted(h.reduce(transition.state, .tick(epoch: h.epoch)))
-        let presentation = WorkoutExecutionPresentation(state: transition.state)
-
-        XCTAssertTrue(presentation.preflightBlockers.isEmpty)
-        XCTAssertEqual(presentation.activity, .indoorRunning)
-        XCTAssertEqual(presentation.currentStep?.label, "Warm up")
-        XCTAssertEqual(presentation.currentStep?.remainingSeconds, 7)
-        XCTAssertEqual(presentation.nextStep?.label, "Run")
-        XCTAssertEqual(presentation.requestedSpeed, speed("5"))
-        XCTAssertEqual(presentation.actualSpeed, speed("5"))
-        XCTAssertEqual(presentation.speedCommandState, .targetObserved)
-        XCTAssertEqual(presentation.requestedInclination, inclination("0"))
-        XCTAssertEqual(presentation.actualInclination, inclination("0"))
-        XCTAssertEqual(presentation.inclinationCommandState, .targetObserved)
-        XCTAssertEqual(presentation.elapsedActiveSeconds, 3)
-        guard case let .trustworthy(metres, _) = presentation.distance else { return XCTFail("Expected trustworthy distance") }
-        XCTAssertEqual(metres, decimal("42.25"))
-        XCTAssertEqual(presentation.stopState, .available)
-        XCTAssertEqual(presentation.frozenCeilings, h.ceilings)
-        XCTAssertEqual(presentation.executionProfileIdentity, h.profile.identity)
-    }
-
-    func testFinalStepExpiryRequiresStopConfirmationBeforeAnyStopIntent() throws {
-        let h = Harness(requiresStart: false, freshness: 100, repeatedTargets: true)
-        var transition = try h.runningTransition(stepIndex: 2)
-        h.advance(by: 10)
-        transition = accepted(h.reduce(transition.state, .tick(epoch: h.epoch)))
-
-        XCTAssertTrue(transition.effects.isEmpty)
-        guard case let .stopConfirmationRequested(request) = transition.state.execution else { return XCTFail("Expected confirmation") }
-        XCTAssertEqual(request.reason, .completedPlan)
-        XCTAssertFalse(transition.state.isEnded)
-    }
+    let movingHarness = Harness(stepDuration: 20)
+    var moving = movingHarness.accept(
+      movingHarness.send(
+        try movingHarness.pausedState(activeSeconds: 3),
+        .userEndsWorkout(epoch: movingHarness.epoch)))
+    moving = movingHarness.send(
+      moving.state,
+      .telemetry(epoch: movingHarness.epoch, movingHarness.sample("0.5", "0"))
+    )
+    XCTAssertEqual(
+      moving.state.execution,
+      .failed(.contradictoryEvidence("Treadmill reported movement while ending"))
+    )
+
+    let staleHarness = Harness(stepDuration: 20)
+    var stale = staleHarness.accept(
+      staleHarness.send(
+        try staleHarness.pausedState(activeSeconds: 3),
+        .userEndsWorkout(epoch: staleHarness.epoch)))
+    guard case .ending(let context) = stale.state.execution,
+      case .telemetry(let sample) = context.stationaryEvidence
+    else { return XCTFail("Expected telemetry-backed ending") }
+    stale = staleHarness.send(
+      at: sample.receivedAt.seconds + 2.1,
+      stale.state,
+      .localEndingSucceeded(epoch: staleHarness.epoch)
+    )
+    XCTAssertEqual(stale.state.execution, .interrupted(.stationaryEvidenceExpired))
+    guard case .stale = stale.state.telemetry else { return XCTFail("Expected stale telemetry") }
+    XCTAssertEqual(stale.effects, [.directUserToConsoleAndSafetyKey])
+  }
+
+  func testFinalCompletionWaitsForPhysicalStopAndNeverEmitsStop() throws {
+    let h = Harness(stepDuration: 3)
+    var state = try h.runningState()
+    state = try h.advanceToNextSegment(state)
+    state = try h.advanceToNextSegment(state)
+    let started = state.currentSegment!.activeStartedAt!.seconds
+    state =
+      h.accept(
+        h.send(at: started + 2.5, state, .telemetry(epoch: h.epoch, h.sample("4", "0")))
+      ).state
+    var t = h.accept(h.send(at: started + 3, state, .tick(epoch: h.epoch)))
+    XCTAssertEqual(t.state.execution, .awaitingPhysicalStopForCompletion)
+    XCTAssertTrue(t.effects.isEmpty)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0", "0"))))
+    guard case .readyToEnd = t.state.execution else { return XCTFail("Expected End gate") }
+    t = h.accept(h.send(t.state, .userEndsWorkout(epoch: h.epoch)))
+    XCTAssertNotNil(t.finalization)
+    XCTAssertFalse(t.effects.containsTargetSubmission)
+  }
+
+  func testStopStartGapWithoutPauseEvidenceContinuesWithoutRestoration() throws {
+    let h = Harness(stepDuration: 20)
+    var state = try h.runningState()
+    let sampleAt = state.lastEventTime.seconds
+    state = h.accept(h.send(at: sampleAt + 3, state, .tick(epoch: h.epoch))).state
+    let resumed = h.accept(
+      h.send(at: sampleAt + 8, state, .telemetry(epoch: h.epoch, h.sample("0.5", "0")))
+    )
+    XCTAssertEqual(resumed.state.execution, .runningSegment)
+    XCTAssertNil(resumed.state.targetSequence)
+    XCTAssertTrue(resumed.effects.isEmpty)
+  }
+
+  func testEpochTimeAndTerminalGuardsPreventImplicitRecovery() throws {
+    let h = Harness(epochValue: 3, stepDuration: 20)
+    let state = try h.runningState()
+    let stale = h.send(state, .tick(epoch: .init(rawValue: 2)))
+    XCTAssertEqual(stale.disposition, .ignored(.staleEpoch))
+    let future = h.send(state, .tick(epoch: .init(rawValue: 4)))
+    XCTAssertEqual(future.disposition, .rejected(.wrongEpoch))
+    let backward = h.send(at: state.lastEventTime.seconds - 0.1, state, .tick(epoch: h.epoch))
+    XCTAssertEqual(backward.disposition, .rejected(.nonMonotonicTime))
+
+    let interrupted = h.send(state, .controlPermissionLost(epoch: h.epoch, reason: "lost"))
+    let late = h.send(interrupted.state, .telemetry(epoch: h.epoch, h.sample("5", "0")))
+    XCTAssertEqual(late.state, interrupted.state)
+    XCTAssertEqual(late.disposition, .ignored(.wrongState))
+    XCTAssertEqual(
+      h.send(interrupted.state, .userStartsConnection(h.epoch)).disposition, .rejected(.wrongEpoch))
+    let next = ConnectionEpoch(rawValue: 4)
+    let restarted = h.accept(h.send(interrupted.state, .userStartsConnection(next)))
+    XCTAssertEqual(restarted.state.connection, .connecting(next))
+    XCTAssertEqual(restarted.state.execution, .idle)
+    XCTAssertTrue(restarted.effects.isEmpty)
+  }
+
+  func testWrongCorrelationAndDuplicateProcedureEvidenceFailClosed() throws {
+    let correlationHarness = Harness()
+    let current = try correlationHarness.initialSpeedTransition()
+    let record = try XCTUnwrap(current.record)
+    let wrongID = ProcedureID(epoch: correlationHarness.epoch, sequence: record.id.sequence + 1)
+    let mismatched = correlationHarness.send(
+      current.state,
+      .intentSubmitted(epoch: correlationHarness.epoch, procedureID: wrongID)
+    )
+    XCTAssertEqual(
+      mismatched.state.execution,
+      .failed(.procedure(.correlationFailure(expected: record.id, received: wrongID)))
+    )
+    XCTAssertTrue(mismatched.state.motionPossible)
+    XCTAssertEqual(mismatched.effects, [.directUserToConsoleAndSafetyKey])
+
+    let duplicateHarness = Harness()
+    var completed = duplicateHarness.accept(
+      duplicateHarness.send(
+        try duplicateHarness.preflightState(),
+        .beginWorkout(epoch: duplicateHarness.epoch, readiness: duplicateHarness.readiness)))
+    let completedRecord = try XCTUnwrap(completed.record)
+    completed = try duplicateHarness.acknowledgeCurrent(completed)
+    let duplicate = duplicateHarness.send(
+      completed.state,
+      .protocolAcknowledged(
+        epoch: duplicateHarness.epoch,
+        procedureID: completedRecord.id)
+    )
+    XCTAssertEqual(
+      duplicate.state.execution,
+      .failed(.procedure(.duplicateOrLate(completedRecord.id)))
+    )
+    XCTAssertFalse(duplicate.state.motionPossible)
+    XCTAssertTrue(duplicate.effects.isEmpty)
+  }
 }
 
-private extension WorkoutExecutionReducerTests {
-    enum FailureEvent: CaseIterable { case submission, att, `protocol`, unsupported, malformed, unknown }
-    enum SafetyFailureEvent: CaseIterable { case silence, disconnect, interruption, permissionLoss }
+extension WorkoutExecutionReducerTests {
+  fileprivate final class Harness {
+    let reducer = WorkoutExecutionReducer()
+    let epoch: ConnectionEpoch
+    let capability: FR30zCapabilitySnapshot
+    let ceilings: WorkoutSessionCeilings
+    let profile: FR30zExecutionProfile
+    let plan: WorkoutPlanValidator.ValidatedPlan
+    let readiness = WorkoutOperatorReadiness(
+      deckClear: true,
+      consoleImmediatelyReachable: true,
+      safetyKeyImmediatelyReachable: true,
+      physicallyStationary: true
+    )
+    private(set) var now: TimeInterval = 10
 
-    final class Harness {
-        private var seconds: TimeInterval = 10
-        let epoch: ConnectionEpoch
-        let capability: FR30zCapabilitySnapshot
-        let ceilings: WorkoutSessionCeilings
-        let profile: FR30zExecutionProfile
-        let plan: WorkoutPlanValidator.ValidatedPlan
-        let readiness = WorkoutOperatorReadiness(
-            deckClear: true,
-            consoleImmediatelyReachable: true,
-            safetyKeyImmediatelyReachable: true,
-            physicallyStationary: true
+    init(epochValue: UInt64 = 1, stepDuration: Int = 5, repeatedTargets: Bool = false) {
+      epoch = .init(rawValue: epochValue)
+      let capabilities = WorkoutPlanCapabilities(
+        speed: .supported(
+          .init(minimum: Self.speed("0.5"), maximum: Self.speed("20"), increment: Self.speed("0.1"))
+        ),
+        inclination: .supported(
+          .init(
+            minimum: Self.inclination("0"), maximum: Self.inclination("15"),
+            increment: Self.inclination("1"))
         )
-
-        lazy var reducer = WorkoutExecutionReducer(clock: { [unowned self] in self.now })
-        var now: MonotonicInstant { .init(seconds: seconds) }
-
-        init(
-            epochValue: UInt64 = 1,
-            targetOrder: FR30zTargetOrder = .speedThenInclination,
-            requiresStart: Bool = true,
-            permitsStop: Bool = true,
-            freshness: TimeInterval = 50,
-            observation: TimeInterval = 8,
-            repeatedTargets: Bool = false
-        ) {
-            epoch = .init(rawValue: epochValue)
-            capability = .init(
-                identity: "capability-v1",
-                equipmentIdentity: "FR30z-test-profile",
-                planCapabilities: .init(
-                    speed: .supported(.init(minimum: Self.speed("0"), maximum: Self.speed("20"), increment: Self.speed("0.1"))),
-                    inclination: .supported(.init(minimum: Self.inclination("-3"), maximum: Self.inclination("15"), increment: Self.inclination("0.5")))
-                ),
-                controlPointSupportsWrite: true,
-                controlPointSupportsIndicate: true,
-                controlPointIndicationsEnabled: true,
-                passiveSubscriptionOutcomesResolved: true
-            )
-            ceilings = .init(
-                maximumSpeed: Self.speed("10"),
-                maximumInclination: Self.inclination("6"),
-                maximumStepSpeedChange: Self.speed("3")
-            )
-            profile = .init(
-                identity: "synthetic-fr30z-profile-v1",
-                equipmentIdentity: capability.equipmentIdentity,
-                targetOrder: targetOrder,
-                requiresStartForFirstStep: requiresStart,
-                permitsStop: permitsStop,
-                telemetryFreshnessInterval: freshness,
-                targetObservationInterval: observation,
-                procedureResponseInterval: 30,
-                requestControlEvidenceAccepted: true,
-                speedTargetEvidenceAccepted: true,
-                inclinationTargetEvidenceAccepted: true,
-                startEvidenceAccepted: requiresStart,
-                stopEvidenceAccepted: permitsStop
-            )
-            let steps = repeatedTargets
-                ? [Self.step(.warmUp, "Warm up", "5", "0"), Self.step(.interval, "Run", "5", "0"), Self.step(.coolDown, "Cool down", "5", "0")]
-                : [Self.step(.warmUp, "Warm up", "5", "0"), Self.step(.interval, "Run", "7", "1"), Self.step(.coolDown, "Cool down", "4", "0")]
-            let raw = WorkoutPlan(schemaVersion: 1, suggestedName: "Synthetic", activity: .indoorRunning, steps: steps)
-            plan = try! WorkoutPlanValidator.validate(raw, against: capability.planCapabilities).get()
-        }
-
-        func advance(by interval: TimeInterval = 1) { seconds += interval }
-        func setTime(_ value: TimeInterval) { seconds = value }
-        func reduce(_ state: WorkoutExecutionState, _ event: WorkoutExecutionEvent) -> WorkoutExecutionTransition {
-            reducer.reduce(state, event)
-        }
-
-        func accept(
-            _ transition: WorkoutExecutionTransition,
-            file: StaticString = #filePath,
-            line: UInt = #line
-        ) -> WorkoutExecutionTransition {
-            XCTAssertEqual(transition.disposition, .accepted, file: file, line: line)
-            return transition
-        }
-
-        func telemetry(speed speedValue: String, inclination inclinationValue: String, distance: String? = nil) -> WorkoutTelemetryInput {
-            .sample(
-                speed: Self.speed(speedValue),
-                inclination: Self.inclination(inclinationValue),
-                totalDistanceMetres: distance.map { Self.decimal($0) }
-            )
-        }
-
-        func armedState() throws -> WorkoutExecutionState {
-            var state = WorkoutExecutionState()
-            state = accept(reduce(state, .userStartsConnection(epoch))).state
-            advance()
-            state = accept(reduce(state, .connectionBecomesReady(epoch: epoch, capability: capability))).state
-            advance()
-            return accept(reduce(state, .arm(plan: plan, ceilings: ceilings, profile: profile))).state
-        }
-
-        func readyToBeginState() throws -> WorkoutExecutionState {
-            var transition = accept(reduce(try armedState(), .userRequestsControl(epoch: epoch, readiness: readiness)))
-            transition = try acknowledgeCurrent(transition)
-            return transition.state
-        }
-
-        func beginTransition() throws -> WorkoutExecutionTransition {
-            var state = try readyToBeginState()
-            advance()
-            state = accept(reduce(state, .telemetry(epoch: epoch, telemetry(speed: "0", inclination: "0")))).state
-            advance()
-            return accept(reduce(state, .userBegins(epoch: epoch, readiness: readiness)))
-        }
-
-        func observationPendingTransition() throws -> WorkoutExecutionTransition {
-            var transition = try beginTransition()
-            repeat {
-                transition = try acknowledgeCurrent(transition)
-            } while transition.effects.contains(where: { $0.record != nil })
-            return transition
-        }
-
-        func runningTransition(distance: String? = nil, stepIndex: Int = 0) throws -> WorkoutExecutionTransition {
-            var transition = try observationPendingTransition()
-            advance()
-            transition = accept(reduce(transition.state, .telemetry(epoch: epoch, telemetry(speed: "5", inclination: "0", distance: distance))))
-            if stepIndex == 0 { return transition }
-            var state = transition.state
-            for index in 1...stepIndex {
-                advance(by: 10)
-                transition = accept(reduce(state, .tick(epoch: epoch)))
-                while !transition.effects.isEmpty { transition = try acknowledgeCurrent(transition) }
-                advance()
-                let step = plan.plan.steps[index]
-                transition = accept(reduce(transition.state, .telemetry(epoch: epoch, .sample(speed: step.targetSpeed, inclination: step.targetInclination, totalDistanceMetres: nil))))
-                state = transition.state
-            }
-            return transition
-        }
-
-        func stopIntentTransition() throws -> WorkoutExecutionTransition {
-            var transition = try runningTransition()
-            advance()
-            transition = accept(reduce(transition.state, .userRequestsStop(epoch: epoch, reason: .userRequested)))
-            advance()
-            return accept(reduce(transition.state, .userConfirmsStop(epoch: epoch)))
-        }
-
-        func acknowledgeCurrent(_ initial: WorkoutExecutionTransition) throws -> WorkoutExecutionTransition {
-            accept(try acknowledgeCurrentAllowingFailure(initial))
-        }
-
-        func acknowledgeCurrentAllowingFailure(_ initial: WorkoutExecutionTransition) throws -> WorkoutExecutionTransition {
-            var transition = initial
-            let id = try XCTUnwrap(transition.state.procedure.activeRecord?.id)
-            advance()
-            transition = accept(reduce(transition.state, .intentSubmitted(epoch: epoch, procedureID: id)))
-            advance()
-            transition = accept(reduce(transition.state, .attAccepted(epoch: epoch, procedureID: id)))
-            advance()
-            return reduce(transition.state, .protocolAcknowledged(epoch: epoch, procedureID: id))
-        }
-
-        private static func step(_ kind: WorkoutStepKind, _ label: String, _ speedValue: String, _ inclinationValue: String) -> WorkoutStep {
-            .init(
-                kind: kind,
-                label: label,
-                duration: .init(value: 10, unit: .seconds),
-                targetSpeed: speed(speedValue),
-                targetInclination: inclination(inclinationValue)
-            )
-        }
-
-        private static func speed(_ value: String) -> WorkoutSpeed {
-            .init(value: decimal(value), unit: .kilometresPerHour)
-        }
-
-        private static func inclination(_ value: String) -> WorkoutInclination {
-            .init(value: decimal(value), unit: .percent)
-        }
-
-        private static func decimal(_ value: String) -> Decimal {
-            Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))!
-        }
+      )
+      capability = .init(
+        peripheralIdentity: "local-peripheral",
+        equipmentIdentity: "operator-confirmed-fr30z",
+        fitnessMachineServicePresent: true,
+        requiredCharacteristicPropertiesMatch: true,
+        fitnessMachineFeatureEvidence: .matched,
+        supportedSpeedRangeEvidence: .matched,
+        supportedInclinationRangeEvidence: .matched,
+        treadmillDataNotificationsEnabled: true,
+        controlPointIndicationsEnabled: true,
+        optionalSubscriptionOutcomesResolved: true,
+        planCapabilities: capabilities
+      )
+      ceilings = .init(
+        maximumSpeed: Self.speed("10"),
+        maximumInclination: Self.inclination("6"),
+        maximumStepSpeedChange: Self.speed("3")
+      )
+      profile = .init(
+        peripheralIdentity: capability.peripheralIdentity,
+        equipmentIdentity: capability.equipmentIdentity)
+      let steps =
+        repeatedTargets
+        ? [
+          Self.step(.warmUp, "Warm up", stepDuration, "5", "0"),
+          Self.step(.interval, "Run", stepDuration, "5", "0"),
+          Self.step(.coolDown, "Cool down", stepDuration, "5", "0"),
+        ]
+        : [
+          Self.step(.warmUp, "Warm up", stepDuration, "5", "0"),
+          Self.step(.interval, "Run", stepDuration, "7", "1"),
+          Self.step(.coolDown, "Cool down", stepDuration, "4", "0"),
+        ]
+      let raw = WorkoutPlan(
+        schemaVersion: WorkoutPlanSchema.currentVersion,
+        suggestedName: "Synthetic",
+        activity: .indoorRunning,
+        steps: steps
+      )
+      plan = try! WorkoutPlanValidator.validate(raw, against: capabilities).get()
     }
 
-    func accepted(
-        _ transition: WorkoutExecutionTransition,
-        file: StaticString = #filePath,
-        line: UInt = #line
+    func send(
+      at explicitTime: TimeInterval? = nil,
+      _ state: WorkoutExecutionState,
+      _ event: WorkoutExecutionEvent
     ) -> WorkoutExecutionTransition {
-        XCTAssertEqual(transition.disposition, .accepted, file: file, line: line)
-        return transition
+      if let explicitTime {
+        now = explicitTime
+      } else {
+        now = max(now, state.lastEventTime.seconds) + 0.1
+      }
+      return reducer.reduce(state, event, at: .init(seconds: now))
     }
 
-    func XCTAssertRejected(
-        _ transition: WorkoutExecutionTransition,
-        _ reason: WorkoutGuardRejection,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) {
-        XCTAssertEqual(transition.disposition, .rejected(reason), file: file, line: line)
-        XCTAssertTrue(transition.effects.isEmpty, file: file, line: line)
+    func accept(
+      _ transition: WorkoutExecutionTransition,
+      file: StaticString = #filePath,
+      line: UInt = #line
+    ) -> WorkoutExecutionTransition {
+      XCTAssertEqual(transition.disposition, .accepted, file: file, line: line)
+      return transition
     }
 
-    func XCTAssertFailedClosed(
-        _ transition: WorkoutExecutionTransition,
-        _ failure: WorkoutExecutionFailure,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) {
-        XCTAssertEqual(transition.disposition, .failedClosed(failure), file: file, line: line)
+    func connectingState() -> WorkoutExecutionState {
+      accept(send(WorkoutExecutionState(), .userStartsConnection(epoch))).state
     }
 
-    func speed(_ value: String) -> WorkoutSpeed {
-        .init(value: decimal(value), unit: .kilometresPerHour)
+    func preflightState() throws -> WorkoutExecutionState {
+      var state = connectingState()
+      state =
+        accept(send(state, .connectionBecomesReady(epoch: epoch, capability: capability))).state
+      return accept(send(state, .arm(plan: plan, ceilings: ceilings, profile: profile))).state
     }
 
-    func inclination(_ value: String) -> WorkoutInclination {
-        .init(value: decimal(value), unit: .percent)
+    func waitingState() throws -> WorkoutExecutionState {
+      var t = accept(send(try preflightState(), .beginWorkout(epoch: epoch, readiness: readiness)))
+      t = try acknowledgeCurrent(t)
+      return t.state
     }
 
-    func decimal(_ value: String) -> Decimal {
-        Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))!
+    func initialSpeedTransition() throws -> WorkoutExecutionTransition {
+      accept(send(try waitingState(), .telemetry(epoch: epoch, sample("0.5", "0"))))
     }
+
+    func runningState() throws -> WorkoutExecutionState {
+      var t = try initialSpeedTransition()
+      t = try acknowledgeCurrent(t)
+      t = try acknowledgeCurrent(t)
+      return accept(send(t.state, .telemetry(epoch: epoch, sample("5", "0")))).state
+    }
+
+    func pausedState(activeSeconds: TimeInterval) throws -> WorkoutExecutionState {
+      let state = try runningState()
+      let started = state.currentSegment!.activeStartedAt!.seconds
+      return accept(
+        send(at: started + activeSeconds, state, .telemetry(epoch: epoch, sample("0", "0")))
+      ).state
+    }
+
+    func readyToEndState() throws -> WorkoutExecutionState {
+      var state = try runningState()
+      state = try advanceToNextSegment(state)
+      state = try advanceToNextSegment(state)
+      let started = state.currentSegment!.activeStartedAt!.seconds
+      let target = effectiveTarget(state)
+      state =
+        accept(
+          send(
+            at: started + TimeInterval(plan.plan.steps[2].duration.value) - 0.5,
+            state,
+            .telemetry(epoch: epoch, sample(target.speed, target.inclination))
+          )
+        ).state
+      state =
+        accept(
+          send(
+            at: started + TimeInterval(plan.plan.steps[2].duration.value),
+            state,
+            .tick(epoch: epoch)
+          )
+        ).state
+      XCTAssertEqual(state.execution, .awaitingPhysicalStopForCompletion)
+      return accept(send(state, .telemetry(epoch: epoch, sample("0", "0")))).state
+    }
+
+    func acknowledgeCurrent(_ initial: WorkoutExecutionTransition) throws
+      -> WorkoutExecutionTransition
+    {
+      var t = initial
+      let record = try XCTUnwrap(t.state.procedure.unresolvedRecord)
+      if case .intentCreated = t.state.procedure {
+        t = accept(send(t.state, .intentSubmitted(epoch: epoch, procedureID: record.id)))
+      }
+      t = accept(send(t.state, .attAccepted(epoch: epoch, procedureID: record.id)))
+      return accept(send(t.state, .protocolAcknowledged(epoch: epoch, procedureID: record.id)))
+    }
+
+    func advanceToNextSegment(_ original: WorkoutExecutionState) throws -> WorkoutExecutionState {
+      var state = original
+      let segment = try XCTUnwrap(state.currentSegment)
+      let started = try XCTUnwrap(segment.activeStartedAt).seconds
+      let duration = TimeInterval(plan.plan.steps[segment.stepIndex].duration.value)
+      let target = effectiveTarget(state)
+      state =
+        accept(
+          send(
+            at: started + duration - 0.5,
+            state,
+            .telemetry(epoch: epoch, sample(target.speed, target.inclination))
+          )
+        ).state
+      var t = accept(send(at: started + duration, state, .tick(epoch: epoch)))
+      while t.record != nil { t = try acknowledgeCurrent(t) }
+      if case .runningSegment = t.state.execution { return t.state }
+      let next = effectiveTarget(t.state)
+      return accept(send(t.state, .telemetry(epoch: epoch, sample(next.speed, next.inclination))))
+        .state
+    }
+
+    func sample(_ speed: String, _ inclination: String) -> WorkoutTelemetryInput {
+      sample(Self.speed(speed), Self.inclination(inclination))
+    }
+
+    func sample(_ speed: WorkoutSpeed, _ inclination: WorkoutInclination) -> WorkoutTelemetryInput {
+      .sample(speed: speed, inclination: inclination, totalDistanceMetres: nil)
+    }
+
+    func effectiveTarget(_ state: WorkoutExecutionState) -> WorkoutTarget {
+      let segment = state.currentSegment!
+      let step = plan.plan.steps[segment.stepIndex]
+      return .init(
+        speed: segment.speedOverride ?? step.targetSpeed,
+        inclination: segment.inclinationOverride ?? step.targetInclination
+      )
+    }
+
+    func capabilityReplacingFeatureEvidence(
+      _ evidence: FR30zProfileEvidence
+    ) -> FR30zCapabilitySnapshot {
+      .init(
+        peripheralIdentity: capability.peripheralIdentity,
+        equipmentIdentity: capability.equipmentIdentity,
+        fitnessMachineServicePresent: capability.fitnessMachineServicePresent,
+        requiredCharacteristicPropertiesMatch: capability.requiredCharacteristicPropertiesMatch,
+        fitnessMachineFeatureEvidence: evidence,
+        supportedSpeedRangeEvidence: capability.supportedSpeedRangeEvidence,
+        supportedInclinationRangeEvidence: capability.supportedInclinationRangeEvidence,
+        treadmillDataNotificationsEnabled: capability.treadmillDataNotificationsEnabled,
+        controlPointIndicationsEnabled: capability.controlPointIndicationsEnabled,
+        optionalSubscriptionOutcomesResolved: capability.optionalSubscriptionOutcomesResolved,
+        planCapabilities: capability.planCapabilities
+      )
+    }
+
+    static func speed(_ value: String) -> WorkoutSpeed {
+      .init(value: decimal(value), unit: .kilometresPerHour)
+    }
+
+    static func inclination(_ value: String) -> WorkoutInclination {
+      .init(value: decimal(value), unit: .percent)
+    }
+
+    static func decimal(_ value: String) -> Decimal {
+      Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))!
+    }
+
+    static func step(
+      _ kind: WorkoutStepKind,
+      _ label: String,
+      _ duration: Int,
+      _ speed: String,
+      _ inclination: String
+    ) -> WorkoutStep {
+      .init(
+        kind: kind,
+        label: label,
+        duration: .init(value: duration, unit: .seconds),
+        targetSpeed: self.speed(speed),
+        targetInclination: self.inclination(inclination)
+      )
+    }
+  }
 }
 
-private extension WorkoutExecutionEffect {
-    var record: WorkoutProcedureRecord? {
-        guard case let .submit(record) = self else { return nil }
-        return record
-    }
+extension WorkoutExecutionTransition {
+  fileprivate var record: WorkoutProcedureRecord? {
+    effects.compactMap {
+      guard case .submit(let record) = $0 else { return nil }
+      return record
+    }.first
+  }
 
-    var intent: WorkoutControlPointIntent? { record?.intent }
+  fileprivate var finalization: WorkoutCompletionContext? {
+    effects.compactMap {
+      guard case .finalizeLocally(let context) = $0 else { return nil }
+      return context
+    }.first
+  }
 }
 
-private extension WorkoutProcedureOutcome {
-    var record: WorkoutProcedureRecord {
-        switch self {
-        case let .acknowledged(record, _), let .failed(record, _), let .timedOutUnknown(record): record
-        }
+extension Array where Element == WorkoutExecutionEffect {
+  fileprivate var containsTargetSubmission: Bool {
+    contains {
+      guard case .submit(let record) = $0 else { return false }
+      switch record.intent {
+      case .setTargetSpeed, .setTargetInclination: return true
+      case .requestControl: return false
+      }
     }
-}
-
-private extension WorkoutTelemetryState {
-    var sample: WorkoutTelemetrySample? {
-        guard case let .fresh(sample) = self else { return nil }
-        return sample
-    }
-}
-
-private extension WorkoutExecutionState {
-    var isEnded: Bool {
-        guard case .ended = execution else { return false }
-        return true
-    }
+  }
 }
