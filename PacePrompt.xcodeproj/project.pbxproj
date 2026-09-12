@@ -81,6 +81,11 @@
 		C70000000000000000001005 /* FTMSControlPointTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002005 /* FTMSControlPointTransportTests.swift */; };
 		D10000000000000000001001 /* RequestControlDiagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000002001 /* RequestControlDiagnostic.swift */; };
 		D10000000000000000001002 /* RequestControlDiagnosticTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000002002 /* RequestControlDiagnosticTests.swift */; };
+		C80000000000000000001001 /* WorkoutPreflightPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80000000000000000002001 /* WorkoutPreflightPresentation.swift */; };
+		C80000000000000000001002 /* WorkoutPreflightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80000000000000000002002 /* WorkoutPreflightView.swift */; };
+		C80000000000000000001003 /* WorkoutPreflightUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80000000000000000002003 /* WorkoutPreflightUITestSupport.swift */; };
+		C80000000000000000001004 /* WorkoutPreflightPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80000000000000000002004 /* WorkoutPreflightPresentationTests.swift */; };
+		C80000000000000000001005 /* WorkoutPreflightFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80000000000000000002005 /* WorkoutPreflightFlowUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -134,6 +139,11 @@
 		C70000000000000000002005 /* FTMSControlPointTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointTransportTests.swift; sourceTree = "<group>"; };
 		D10000000000000000002001 /* RequestControlDiagnostic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestControlDiagnostic.swift; sourceTree = "<group>"; };
 		D10000000000000000002002 /* RequestControlDiagnosticTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestControlDiagnosticTests.swift; sourceTree = "<group>"; };
+		C80000000000000000002001 /* WorkoutPreflightPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPreflightPresentation.swift; sourceTree = "<group>"; };
+		C80000000000000000002002 /* WorkoutPreflightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPreflightView.swift; sourceTree = "<group>"; };
+		C80000000000000000002003 /* WorkoutPreflightUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPreflightUITestSupport.swift; sourceTree = "<group>"; };
+		C80000000000000000002004 /* WorkoutPreflightPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPreflightPresentationTests.swift; sourceTree = "<group>"; };
+		C80000000000000000002005 /* WorkoutPreflightFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPreflightFlowUITests.swift; sourceTree = "<group>"; };
 		AA000000000000000000200F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000002011 /* FTMSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSParserTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002012 /* TreadmillPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreadmillPresentationTests.swift; sourceTree = "<group>"; };
@@ -305,6 +315,8 @@
 				AA0000000000000000002017 /* PlansViewModel.swift */,
 				AA0000000000000000002019 /* PlansUITestSupport.swift */,
 				AA000000000000000000200C /* TreadmillSetupViewModel.swift */,
+				C80000000000000000002001 /* WorkoutPreflightPresentation.swift */,
+				C80000000000000000002003 /* WorkoutPreflightUITestSupport.swift */,
 			);
 			path = Presentation;
 			sourceTree = "<group>";
@@ -329,6 +341,7 @@
 				AA0000000000000000002005 /* HistoryView.swift */,
 				AA0000000000000000002006 /* SettingsView.swift */,
 				AA0000000000000000002007 /* TreadmillSetupView.swift */,
+				C80000000000000000002002 /* WorkoutPreflightView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -348,6 +361,7 @@
 				AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */,
 				B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */,
 				AA0000000000000000002018 /* PlansPresentationTests.swift */,
+				C80000000000000000002004 /* WorkoutPreflightPresentationTests.swift */,
 			);
 			path = PacePromptTests;
 			sourceTree = "<group>";
@@ -378,6 +392,7 @@
 			children = (
 				B40000000000000000002004 /* HomeFlowUITests.swift */,
 				AA000000000000000000201A /* PlansFlowUITests.swift */,
+				C80000000000000000002005 /* WorkoutPreflightFlowUITests.swift */,
 			);
 			path = PacePromptUITests;
 			sourceTree = "<group>";
@@ -646,6 +661,9 @@
 				B40000000000000000001001 /* HomePresentation.swift in Sources */,
 				B40000000000000000001002 /* HomeUITestSupport.swift in Sources */,
 				B50000000000000000001001 /* PlansPresentation.swift in Sources */,
+				C80000000000000000001001 /* WorkoutPreflightPresentation.swift in Sources */,
+				C80000000000000000001002 /* WorkoutPreflightView.swift in Sources */,
+				C80000000000000000001003 /* WorkoutPreflightUITestSupport.swift in Sources */,
 				AD000000000000000000000A /* ImportDiagnostics.swift */,
 				AD0000000000000000000006 /* WorkoutImportView.swift */,
 				AD0000000000000000000005 /* WorkoutImportViewModel.swift */,
@@ -696,6 +714,7 @@
 				AF0000000000000000000003 /* WorkoutHistoryRepositoryTests.swift in Sources */,
 				B60000000000000000001002 /* WorkoutExecutionReducerTests.swift in Sources */,
 				AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */,
+				C80000000000000000001004 /* WorkoutPreflightPresentationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -705,6 +724,7 @@
 			files = (
 				B40000000000000000001004 /* HomeFlowUITests.swift in Sources */,
 				AA000000000000000000101A /* PlansFlowUITests.swift in Sources */,
+				C80000000000000000001005 /* WorkoutPreflightFlowUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
