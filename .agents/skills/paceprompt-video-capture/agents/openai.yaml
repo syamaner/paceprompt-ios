@@ -1,0 +1,4 @@
+interface:
+  display_name: "PacePrompt Video Capture"
+  short_description: "Capture privacy-reviewed simulator and Codex clips"
+  default_prompt: "Use $paceprompt-video-capture to capture a privacy-safe PacePrompt simulator or Codex workflow video."
