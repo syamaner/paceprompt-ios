@@ -6,34 +6,37 @@ struct WorkoutExerciseView: View {
   var reduceMotionOverride: Bool? = nil
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var showingPlan = false
   @State private var showingEndConfirmation = false
   @State private var showingStationaryConfirmation = false
 
   var body: some View {
     GeometryReader { geometry in
-      ScrollView {
-        Group {
-          if geometry.size.width > geometry.size.height
-            && !dynamicTypeSize.isAccessibilitySize
-          {
-            landscapeLayout
-          } else {
+      if geometry.size.width > geometry.size.height {
+        landscapeLayout
+          .padding(.horizontal, 12)
+          .padding(.vertical, 10)
+          .frame(width: geometry.size.width, height: geometry.size.height)
+          .overlay {
+            landscapeConfirmationOverlay
+          }
+      } else {
+        ScrollView {
+          Group {
             portraitLayout
           }
+          .padding(.horizontal, 18)
+          .padding(.vertical, 14)
+          .frame(minHeight: geometry.size.height)
+          .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-        .frame(minHeight: geometry.size.height)
-        .frame(maxWidth: .infinity)
+        .scrollIndicators(.hidden)
       }
-      .scrollIndicators(.hidden)
     }
     .background(WorkoutExercisePalette.background.ignoresSafeArea())
     .preferredColorScheme(.dark)
     .interactiveDismissDisabled(!presentation.allowsDismissal)
-    .accessibilityIdentifier("exercise.screen")
+    .exerciseLayoutMarker("exercise.screen", label: "Exercise screen")
     .sheet(isPresented: $showingPlan) {
       planSheet
         .presentationDetents([.medium, .large])
@@ -51,7 +54,9 @@ struct WorkoutExerciseView: View {
         .accessibilitySortPriority(80)
       HStack(alignment: .top, spacing: 12) {
         axisCard(presentation.speed, tint: .yellow, speed: true)
+          .exerciseLayoutMarker("exercise.speed", label: "Speed controls")
         axisCard(presentation.inclination, tint: .cyan, speed: false)
+          .exerciseLayoutMarker("exercise.inclination", label: "Inclination controls")
       }
       .accessibilitySortPriority(70)
       actionRegion
@@ -61,64 +66,289 @@ struct WorkoutExerciseView: View {
   }
 
   private var landscapeLayout: some View {
-    HStack(alignment: .top, spacing: 14) {
-      VStack(alignment: .leading, spacing: 14) {
-        header
-        progressRegion
-        evidenceBoundary
-      }
-      .frame(maxWidth: .infinity, alignment: .topLeading)
-      .accessibilitySortPriority(100)
+    GeometryReader { geometry in
+      let columnSpacing: CGFloat = 12
+      let availableWidth = max(0, geometry.size.width - columnSpacing)
+      let leftWidth = availableWidth * 0.57
+      let rightWidth = availableWidth - leftWidth
+      let rowSpacing: CGFloat = 10
+      let availableHeight = max(0, geometry.size.height - rowSpacing)
+      let axisHeight = availableHeight * 0.72
+      let actionHeight = availableHeight - axisHeight
+      let cardSpacing: CGFloat = 10
+      let cardWidth = max(0, (rightWidth - cardSpacing) / 2)
 
-      HStack(alignment: .top, spacing: 12) {
-        axisCard(presentation.speed, tint: .yellow, speed: true)
-        axisCard(presentation.inclination, tint: .cyan, speed: false)
-      }
-      .frame(maxWidth: .infinity)
-      .accessibilitySortPriority(80)
+      HStack(alignment: .top, spacing: columnSpacing) {
+        landscapePlanRegion
+          .frame(width: leftWidth, height: geometry.size.height, alignment: .topLeading)
+          .accessibilitySortPriority(100)
+          .exerciseLayoutMarker("exercise.landscape.left", label: "Plan and timer region")
 
-      actionRegion
-        .frame(width: 190)
-        .accessibilitySortPriority(60)
+        VStack(spacing: rowSpacing) {
+          HStack(alignment: .top, spacing: cardSpacing) {
+            axisCard(presentation.speed, tint: .yellow, speed: true, compact: true)
+              .frame(width: cardWidth)
+              .exerciseLayoutMarker("exercise.speed", label: "Speed controls")
+            axisCard(
+              presentation.inclination,
+              tint: .cyan,
+              speed: false,
+              compact: true
+            )
+            .frame(width: cardWidth)
+            .exerciseLayoutMarker("exercise.inclination", label: "Inclination controls")
+          }
+          .frame(width: rightWidth, height: axisHeight, alignment: .top)
+          .accessibilitySortPriority(80)
+          .exerciseLayoutMarker("exercise.landscape.axes", label: "Adjustment cards region")
+
+          landscapeActionRegion
+            .frame(width: rightWidth, height: actionHeight)
+            .accessibilitySortPriority(60)
+            .exerciseLayoutMarker("exercise.landscape.actions", label: "Workout actions region")
+        }
+        .frame(width: rightWidth, height: geometry.size.height, alignment: .top)
+        .exerciseLayoutMarker("exercise.landscape.right", label: "Controls region")
+      }
+      .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+      .exerciseLayoutMarker("exercise.landscape", label: "Landscape exercise layout")
     }
-    .frame(maxWidth: 1_200)
+  }
+
+  private var landscapePlanRegion: some View {
+    VStack(alignment: .leading, spacing: 7) {
+      statusSummary
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("exercise.status")
+        .accessibilityValue("\(presentation.status.title). \(presentation.status.detail)")
+
+      Text(presentation.currentInterval)
+        .font(.subheadline.weight(.bold))
+        .tracking(0.9)
+        .textCase(.uppercase)
+        .foregroundStyle(statusTint)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
+        .accessibilityIdentifier("exercise.interval")
+
+      Text(presentation.countdown)
+        .font(.system(size: 76, weight: .bold, design: .rounded))
+        .minimumScaleFactor(0.7)
+        .lineLimit(1)
+        .monospacedDigit()
+        .accessibilityLabel("Time remaining in current interval")
+        .accessibilityValue(presentation.countdown)
+        .accessibilityIdentifier("exercise.countdown")
+
+      ProgressView(value: presentation.overallProgress)
+        .tint(.blue)
+        .accessibilityLabel("Overall workout progress")
+        .accessibilityValue(presentation.overallProgressLabel)
+        .accessibilityIdentifier("exercise.progress")
+
+      Text(presentation.nextInterval)
+        .font(.subheadline)
+        .foregroundStyle(WorkoutExercisePalette.muted)
+        .lineLimit(2)
+        .minimumScaleFactor(0.8)
+        .accessibilityIdentifier("exercise.next")
+
+      landscapeEvidenceBoundary
+
+      Spacer(minLength: 0)
+
+      HStack(alignment: .bottom, spacing: 12) {
+        metric(title: "Elapsed active", value: presentation.elapsedActiveTime)
+        metric(
+          title: "Distance",
+          value: presentation.distance,
+          detail: presentation.distanceDetail
+        )
+        fullPlanButton(minimumHeight: 48)
+          .fixedSize(horizontal: true, vertical: false)
+      }
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("exercise.progress-region")
+  }
+
+  private var landscapeEvidenceBoundary: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(
+        "Actual is treadmill reported. Planned is the segment target. Effective includes any current-segment override."
+      )
+      .font(.caption2)
+      .foregroundStyle(WorkoutExercisePalette.muted)
+      .lineLimit(2)
+      .minimumScaleFactor(0.8)
+      if let restorationDetail = presentation.restorationDetail {
+        Text(restorationDetail)
+          .font(.caption2.weight(.semibold))
+          .foregroundStyle(.yellow)
+          .lineLimit(2)
+          .minimumScaleFactor(0.8)
+          .accessibilityIdentifier("exercise.restoration")
+      }
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("exercise.evidence-boundary")
+  }
+
+  private var landscapeActionRegion: some View {
+    HStack(alignment: .center, spacing: 8) {
+      VStack(alignment: .leading, spacing: 3) {
+        Label(
+          "Start and Stop remain on the physical treadmill console",
+          systemImage: "hand.raised.fill"
+        )
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(WorkoutExercisePalette.muted)
+        .lineLimit(3)
+        .minimumScaleFactor(0.75)
+        .accessibilityIdentifier("exercise.console-authority")
+
+        if let overrideLabel = presentation.overrideLabel {
+          Text(overrideLabel)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.yellow)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .accessibilityIdentifier("exercise.override-state")
+        } else {
+          Text(
+            shouldReduceMotion
+              ? "Reduced motion: static status" : "Status changes use a gentle pulse only"
+          )
+          .font(.caption2)
+          .foregroundStyle(WorkoutExercisePalette.muted)
+          .lineLimit(2)
+          .minimumScaleFactor(0.75)
+          .accessibilityIdentifier("exercise.motion")
+          .accessibilityValue(shouldReduceMotion ? "Static guidance" : "Gentle pulse")
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+
+      if presentation.canConfirmOperatorStationary {
+        Button("I observed the treadmill stationary") {
+          showingStationaryConfirmation = true
+        }
+        .landscapeExerciseActionStyle(tint: .orange)
+        .accessibilityIdentifier("exercise.confirm-stationary")
+      } else {
+        if presentation.canReturnToPlan {
+          Button("Return to plan") { send(.returnToPlan) }
+            .landscapeExerciseActionStyle(tint: .blue)
+            .accessibilityIdentifier("exercise.return-to-plan")
+        }
+
+        if presentation.canEndWorkout {
+          Button("End workout") { showingEndConfirmation = true }
+            .landscapeExerciseActionStyle(tint: .red)
+            .accessibilityHint("Confirms and saves the local app attempt. Sends no FTMS Stop.")
+            .accessibilityIdentifier("exercise.end")
+        }
+      }
+    }
+    .padding(8)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(WorkoutExercisePalette.surface, in: RoundedRectangle(cornerRadius: 14))
+    .overlay {
+      RoundedRectangle(cornerRadius: 14)
+        .stroke(WorkoutExercisePalette.border, lineWidth: 1)
+    }
+  }
+
+  @ViewBuilder
+  private var landscapeConfirmationOverlay: some View {
+    if presentation.canConfirmOperatorStationary && showingStationaryConfirmation {
+      landscapeConfirmationBackdrop {
+        confirmationPanel(
+          title: "Operator-confirmed stationary",
+          message:
+            "Confirm only after directly observing that the treadmill is stationary. Silence, stale telemetry and disconnection are not stationary evidence.",
+          actionTitle: "Confirm treadmill is stationary",
+          tint: .orange
+        ) {
+          showingStationaryConfirmation = false
+          send(.confirmOperatorStationary)
+        } cancel: {
+          showingStationaryConfirmation = false
+        }
+      }
+    } else if presentation.canEndWorkout && showingEndConfirmation {
+      landscapeConfirmationBackdrop {
+        confirmationPanel(
+          title: "End workout?",
+          message:
+            "This sends no FTMS Stop. The treadmill remains under physical-console control.",
+          actionTitle: "End and save local attempt",
+          tint: .red
+        ) {
+          showingEndConfirmation = false
+          send(.endWorkout)
+        } cancel: {
+          showingEndConfirmation = false
+        }
+      }
+    }
+  }
+
+  private func landscapeConfirmationBackdrop<Content: View>(
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    ZStack {
+      Color.black.opacity(0.72)
+        .ignoresSafeArea()
+      content()
+        .frame(maxWidth: 380)
+        .padding(20)
+    }
   }
 
   private var header: some View {
     HStack(alignment: .top, spacing: 12) {
-      Label {
-        VStack(alignment: .leading, spacing: 3) {
-          Text(presentation.status.title)
-            .font(.headline)
-          Text(presentation.status.detail)
-            .font(.caption)
-            .foregroundStyle(WorkoutExercisePalette.muted)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-      } icon: {
-        Image(systemName: presentation.status.symbol)
-          .foregroundStyle(statusTint)
-          .symbolEffect(
-            .pulse,
-            options: .repeating,
-            isActive: presentation.stage == .checking && !shouldReduceMotion
-          )
-          .accessibilityHidden(true)
-      }
+      statusSummary
       Spacer(minLength: 8)
-      Button {
-        showingPlan = true
-      } label: {
-        Label("Full plan", systemImage: "list.bullet.rectangle")
-          .font(.subheadline.weight(.semibold))
-          .frame(minHeight: 44)
-      }
-      .buttonStyle(.bordered)
-      .accessibilityIdentifier("exercise.plan.open")
+      fullPlanButton(minimumHeight: 44)
     }
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("exercise.status")
     .accessibilityValue("\(presentation.status.title). \(presentation.status.detail)")
+  }
+
+  private var statusSummary: some View {
+    Label {
+      VStack(alignment: .leading, spacing: 3) {
+        Text(presentation.status.title)
+          .font(.headline)
+        Text(presentation.status.detail)
+          .font(.caption)
+          .foregroundStyle(WorkoutExercisePalette.muted)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+    } icon: {
+      Image(systemName: presentation.status.symbol)
+        .foregroundStyle(statusTint)
+        .symbolEffect(
+          .pulse,
+          options: .repeating,
+          isActive: presentation.stage == .checking && !shouldReduceMotion
+        )
+        .accessibilityHidden(true)
+    }
+  }
+
+  private func fullPlanButton(minimumHeight: CGFloat) -> some View {
+    Button {
+      showingPlan = true
+    } label: {
+      Label("Full plan", systemImage: "list.bullet.rectangle")
+        .font(.subheadline.weight(.semibold))
+        .frame(minHeight: minimumHeight)
+    }
+    .buttonStyle(.bordered)
+    .accessibilityIdentifier("exercise.plan.open")
   }
 
   private var progressRegion: some View {
@@ -193,9 +423,10 @@ struct WorkoutExerciseView: View {
   private func axisCard(
     _ axis: WorkoutExerciseAxisPresentation,
     tint: Color,
-    speed: Bool
+    speed: Bool,
+    compact: Bool = false
   ) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: compact ? 5 : 12) {
       HStack {
         Text(axis.title)
           .font(.caption.weight(.bold))
@@ -213,9 +444,9 @@ struct WorkoutExerciseView: View {
         }
       }
 
-      valueRow(label: "Actual", value: axis.actual, emphasis: true)
-      valueRow(label: "Planned", value: axis.planned)
-      valueRow(label: "Effective", value: axis.effective)
+      valueRow(label: "Actual", value: axis.actual, emphasis: true, compact: compact)
+      valueRow(label: "Planned", value: axis.planned, compact: compact)
+      valueRow(label: "Effective", value: axis.effective, compact: compact)
 
       Label(axis.evidence.label, systemImage: axis.evidence.symbol)
         .font(.caption.weight(.semibold))
@@ -228,7 +459,9 @@ struct WorkoutExerciseView: View {
       Text(axis.evidenceDetail)
         .font(.caption2)
         .foregroundStyle(WorkoutExercisePalette.muted)
-        .fixedSize(horizontal: false, vertical: true)
+        .lineLimit(compact ? 3 : nil)
+        .minimumScaleFactor(compact ? 0.75 : 1)
+        .fixedSize(horizontal: false, vertical: !compact)
 
       HStack(spacing: 10) {
         adjustmentButton(
@@ -236,26 +469,27 @@ struct WorkoutExerciseView: View {
           label: axis.decrementLabel,
           target: axis.decrementTarget,
           speed: speed,
-          tint: tint
+          tint: tint,
+          compact: compact
         )
         adjustmentButton(
           symbol: "plus",
           label: axis.incrementLabel,
           target: axis.incrementTarget,
           speed: speed,
-          tint: tint
+          tint: tint,
+          compact: compact
         )
       }
     }
-    .padding(14)
-    .frame(maxWidth: .infinity, alignment: .topLeading)
+    .padding(compact ? 10 : 14)
+    .frame(maxWidth: .infinity, maxHeight: compact ? .infinity : nil, alignment: .topLeading)
     .background(WorkoutExercisePalette.surface, in: RoundedRectangle(cornerRadius: 16))
     .overlay {
       RoundedRectangle(cornerRadius: 16)
         .stroke(WorkoutExercisePalette.border, lineWidth: 1)
     }
     .accessibilityElement(children: .contain)
-    .accessibilityIdentifier("exercise.\(speed ? "speed" : "inclination")")
   }
 
   private func adjustmentButton(
@@ -263,7 +497,8 @@ struct WorkoutExerciseView: View {
     label: String,
     target: Decimal?,
     speed: Bool,
-    tint: Color
+    tint: Color,
+    compact: Bool = false
   ) -> some View {
     Button {
       guard let target else { return }
@@ -275,7 +510,7 @@ struct WorkoutExerciseView: View {
     } label: {
       Image(systemName: symbol)
         .font(.title2.weight(.bold))
-        .frame(maxWidth: .infinity, minHeight: 56)
+        .frame(maxWidth: .infinity, minHeight: compact ? 48 : 56)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -468,7 +703,12 @@ struct WorkoutExerciseView: View {
     .accessibilityElement(children: .combine)
   }
 
-  private func valueRow(label: String, value: String, emphasis: Bool = false) -> some View {
+  private func valueRow(
+    label: String,
+    value: String,
+    emphasis: Bool = false,
+    compact: Bool = false
+  ) -> some View {
     HStack(alignment: .firstTextBaseline) {
       Text(label)
         .font(.caption)
@@ -477,7 +717,9 @@ struct WorkoutExerciseView: View {
       Text(value)
         .font(
           emphasis
-            ? .title2.monospacedDigit().weight(.bold)
+            ? (compact
+              ? .title3.monospacedDigit().weight(.bold)
+              : .title2.monospacedDigit().weight(.bold))
             : .subheadline.monospacedDigit().weight(.semibold)
         )
         .minimumScaleFactor(0.65)
@@ -519,11 +761,37 @@ private enum WorkoutExercisePalette {
 }
 
 extension View {
+  fileprivate func exerciseLayoutMarker(_ identifier: String, label: String) -> some View {
+    background {
+      Color.clear
+        .contentShape(Rectangle())
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(identifier)
+    }
+  }
+
   fileprivate func exerciseActionStyle(tint: Color) -> some View {
     font(.headline)
       .foregroundStyle(.white)
       .frame(maxWidth: .infinity, minHeight: 56)
       .background(tint.opacity(0.78), in: RoundedRectangle(cornerRadius: 14))
       .contentShape(RoundedRectangle(cornerRadius: 14))
+  }
+
+  fileprivate func landscapeExerciseActionStyle(tint: Color) -> some View {
+    font(.caption.weight(.semibold))
+      .foregroundStyle(.white)
+      .lineLimit(2)
+      .minimumScaleFactor(0.75)
+      .frame(maxWidth: .infinity, minHeight: 48)
+      .padding(.horizontal, 6)
+      .background(tint.opacity(0.2), in: RoundedRectangle(cornerRadius: 12))
+      .overlay {
+        RoundedRectangle(cornerRadius: 12)
+          .stroke(tint.opacity(0.9), lineWidth: 1)
+      }
+      .contentShape(RoundedRectangle(cornerRadius: 12))
   }
 }
