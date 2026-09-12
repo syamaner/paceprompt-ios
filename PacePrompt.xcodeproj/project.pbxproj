@@ -75,6 +75,8 @@
 		B50000000000000000001001 /* PlansPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B50000000000000000002001 /* PlansPresentation.swift */; };
 		B60000000000000000001001 /* WorkoutExecutionReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60000000000000000002001 /* WorkoutExecutionReducer.swift */; };
 		B60000000000000000001002 /* WorkoutExecutionReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */; };
+		B70000000000000000001001 /* WorkoutExecutionOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70000000000000000002001 /* WorkoutExecutionOrchestrator.swift */; };
+		B70000000000000000001002 /* WorkoutExecutionOrchestratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70000000000000000002002 /* WorkoutExecutionOrchestratorTests.swift */; };
 		C70000000000000000001001 /* FTMSControlPointCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002001 /* FTMSControlPointCodec.swift */; };
 		C70000000000000000001002 /* FTMSControlPointTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002002 /* FTMSControlPointTransport.swift */; };
 		C70000000000000000001004 /* FTMSControlPointCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000002004 /* FTMSControlPointCodecTests.swift */; };
@@ -133,6 +135,8 @@
 		B50000000000000000002001 /* PlansPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansPresentation.swift; sourceTree = "<group>"; };
 		B60000000000000000002001 /* WorkoutExecutionReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionReducer.swift; sourceTree = "<group>"; };
 		B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionReducerTests.swift; sourceTree = "<group>"; };
+		B70000000000000000002001 /* WorkoutExecutionOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionOrchestrator.swift; sourceTree = "<group>"; };
+		B70000000000000000002002 /* WorkoutExecutionOrchestratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionOrchestratorTests.swift; sourceTree = "<group>"; };
 		C70000000000000000002001 /* FTMSControlPointCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointCodec.swift; sourceTree = "<group>"; };
 		C70000000000000000002002 /* FTMSControlPointTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointTransport.swift; sourceTree = "<group>"; };
 		C70000000000000000002004 /* FTMSControlPointCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSControlPointCodecTests.swift; sourceTree = "<group>"; };
@@ -302,6 +306,7 @@
 			isa = PBXGroup;
 			children = (
 				B60000000000000000002001 /* WorkoutExecutionReducer.swift */,
+				B70000000000000000002001 /* WorkoutExecutionOrchestrator.swift */,
 			);
 			path = Execution;
 			sourceTree = "<group>";
@@ -360,6 +365,7 @@
 				AE0000000000000000001002 /* SavedPlanExportTests.swift */,
 				AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */,
 				B60000000000000000002002 /* WorkoutExecutionReducerTests.swift */,
+				B70000000000000000002002 /* WorkoutExecutionOrchestratorTests.swift */,
 				AA0000000000000000002018 /* PlansPresentationTests.swift */,
 				C80000000000000000002004 /* WorkoutPreflightPresentationTests.swift */,
 			);
@@ -691,6 +697,7 @@
 				AF0000000000000000000001 /* WorkoutExecutionSummary.swift in Sources */,
 				AF0000000000000000000002 /* WorkoutHistoryRepository.swift in Sources */,
 				B60000000000000000001001 /* WorkoutExecutionReducer.swift in Sources */,
+				B70000000000000000001001 /* WorkoutExecutionOrchestrator.swift in Sources */,
 				AA0000000000000000001016 /* ManualWorkoutPlan.swift in Sources */,
 				AA0000000000000000001017 /* PlansViewModel.swift in Sources */,
 				AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */,
@@ -713,6 +720,7 @@
 				AE0000000000000000000002 /* SavedPlanExportTests.swift in Sources */,
 				AF0000000000000000000003 /* WorkoutHistoryRepositoryTests.swift in Sources */,
 				B60000000000000000001002 /* WorkoutExecutionReducerTests.swift in Sources */,
+				B70000000000000000001002 /* WorkoutExecutionOrchestratorTests.swift in Sources */,
 				AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */,
 				C80000000000000000001004 /* WorkoutPreflightPresentationTests.swift in Sources */,
 			);

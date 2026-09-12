@@ -131,6 +131,7 @@ struct WorkoutProcedureRecord: Equatable {
 }
 
 enum WorkoutProcedureFailure: Equatable {
+  case notSubmitted(String)
   case submissionRejected(String)
   case attRejected(String)
   case protocolRejected(String)
@@ -345,6 +346,7 @@ enum WorkoutExecutionFailure: Equatable {
   case incompleteTelemetry
   case contradictoryEvidence(String)
   case targetObservationTimeout
+  case localHistoryPersistence(String)
   case localFinalization(String)
 }
 
@@ -416,6 +418,11 @@ enum WorkoutExecutionEvent: Equatable {
   case userEndsWorkout(epoch: ConnectionEpoch)
   case localEndingSucceeded(epoch: ConnectionEpoch)
   case localEndingFailed(epoch: ConnectionEpoch, reason: String)
+  case localHistoryPersistenceFailed(
+    epoch: ConnectionEpoch,
+    reason: String,
+    definitelyNotSubmittedProcedureID: ProcedureID?
+  )
   case connectionLost(epoch: ConnectionEpoch, reason: String)
   case capabilityChanged(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
   case controlPermissionLost(epoch: ConnectionEpoch, reason: String)
@@ -672,6 +679,15 @@ struct WorkoutExecutionReducer {
     case .localEndingFailed(_, let reason):
       guard case .ending = state.execution else { return rejected(original, .wrongState) }
       disposition = fail(.localFinalization(reason), state: &state, effects: &effects)
+    case .localHistoryPersistenceFailed(_, let reason, let definitelyNotSubmittedProcedureID):
+      guard attemptNeedsHistory(state.execution) else { return rejected(original, .wrongState) }
+      if let definitelyNotSubmittedProcedureID {
+        markProcedureDefinitelyNotSubmitted(
+          definitelyNotSubmittedProcedureID,
+          state: &state
+        )
+      }
+      disposition = fail(.localHistoryPersistence(reason), state: &state, effects: &effects)
 
     case .connectionLost(_, let reason):
       let epoch = state.connection.epoch!
@@ -739,6 +755,7 @@ extension WorkoutExecutionReducer {
       .returnToPlan(let epoch), .humanConfirmsStationary(let epoch, _),
       .humanObservesMotion(let epoch, _), .userEndsWorkout(let epoch),
       .localEndingSucceeded(let epoch), .localEndingFailed(let epoch, _),
+      .localHistoryPersistenceFailed(let epoch, _, _),
       .connectionLost(let epoch, _), .capabilityChanged(let epoch, _),
       .controlPermissionLost(let epoch, _), .appBecameInactive(let epoch, _):
       epoch
@@ -762,6 +779,17 @@ extension WorkoutExecutionReducer {
       .protocolMalformed, .protocolUnknown:
       true
     default:
+      false
+    }
+  }
+
+  fileprivate func attemptNeedsHistory(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .acquiringControl, .waitingForPhysicalStart, .applyingTargets, .runningSegment,
+      .checkingTreadmill, .paused, .restoringTargets, .awaitingPhysicalStopForCompletion,
+      .readyToEnd, .ending:
+      true
+    case .idle, .preflight, .finished, .interrupted, .failed:
       false
     }
   }
@@ -1552,6 +1580,21 @@ extension WorkoutExecutionReducer {
     state.procedure = .timedOutUnknown(record: record)
     if !state.procedureHistory.contains(.timedOutUnknown(record)) {
       state.procedureHistory.append(.timedOutUnknown(record))
+    }
+  }
+
+  fileprivate func markProcedureDefinitelyNotSubmitted(
+    _ procedureID: ProcedureID,
+    state: inout WorkoutExecutionState
+  ) {
+    guard case .intentCreated(let record) = state.procedure, record.id == procedureID else {
+      return
+    }
+    let failure = WorkoutProcedureFailure.notSubmitted(
+      "Execution ended before procedure submission")
+    state.procedure = .failed(record: record, failure: failure)
+    if !state.procedureHistory.contains(.failed(record, failure)) {
+      state.procedureHistory.append(.failed(record, failure))
     }
   }
 
