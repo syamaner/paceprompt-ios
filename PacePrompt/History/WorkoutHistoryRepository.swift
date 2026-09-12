@@ -48,6 +48,7 @@ enum WorkoutHistoryMutationFailure: Error, Equatable {
     case invalidSummary
     case immutableAttemptFieldsChanged(UUID)
     case staleUpdate(UUID)
+    case unexpectedRepositoryFailure
     case writeFailed(WriteStage)
 }
 

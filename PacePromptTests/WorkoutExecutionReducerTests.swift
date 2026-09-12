@@ -293,6 +293,25 @@ final class WorkoutExecutionReducerTests: XCTestCase {
   }
 
   func testTargetFailuresAndDeadlinesInvalidateWithoutRetry() throws {
+    let unsubmittedHarness = Harness()
+    let unsubmitted = try unsubmittedHarness.initialSpeedTransition()
+    let unsubmittedRecord = try XCTUnwrap(unsubmitted.record)
+    let historyFailure = unsubmittedHarness.send(
+      unsubmitted.state,
+      .localHistoryPersistenceFailed(
+        epoch: unsubmittedHarness.epoch,
+        reason: "Synthetic history failure",
+        definitelyNotSubmittedProcedureID: unsubmittedRecord.id
+      )
+    )
+    XCTAssertEqual(
+      historyFailure.state.procedure,
+      .failed(
+        record: unsubmittedRecord,
+        failure: .notSubmitted("Execution ended before procedure submission")
+      )
+    )
+
     let rejectedHarness = Harness()
     let initial = try rejectedHarness.initialSpeedTransition()
     let record = try XCTUnwrap(initial.record)
