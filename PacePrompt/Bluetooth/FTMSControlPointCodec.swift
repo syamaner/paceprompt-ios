@@ -4,16 +4,12 @@ enum FitnessMachineControlIntent: Equatable {
     case requestControl
     case setTargetSpeed(kilometresPerHour: Double)
     case setTargetInclination(percent: Double)
-    case start
-    case stop
 
     var opcode: UInt8 {
         switch self {
         case .requestControl: 0x00
         case .setTargetSpeed: 0x02
         case .setTargetInclination: 0x03
-        case .start: 0x07
-        case .stop: 0x08
         }
     }
 }
@@ -138,10 +134,6 @@ enum FTMSControlPointCodec {
             )
             let field = UInt16(bitPattern: Int16(raw))
             return Data([0x03, UInt8(field & 0x00FF), UInt8(field >> 8)])
-        case .start:
-            return Data([0x07])
-        case .stop:
-            return Data([0x08, 0x01])
         }
     }
 
@@ -152,7 +144,7 @@ enum FTMSControlPointCodec {
         guard data[0] == 0x80 else {
             throw FTMSControlPointCodecError.invalidResponseOpcode(data[0])
         }
-        guard [UInt8(0x00), 0x02, 0x03, 0x07, 0x08].contains(data[1]) else {
+        guard [UInt8(0x00), 0x02, 0x03].contains(data[1]) else {
             throw FTMSControlPointCodecError.unsupportedResponseRequestOpcode(data[1])
         }
         guard let result = FTMSControlPointResult(rawValue: data[2]) else {

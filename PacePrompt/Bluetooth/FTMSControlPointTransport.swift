@@ -302,7 +302,7 @@ final class FTMSSingleProcedureTransport: FitnessMachineControlTransport {
             if case .held = state.permission {
                 throw FTMSControlPointTransportError.requestControlWhileHeld
             }
-        case .setTargetSpeed, .setTargetInclination, .start, .stop:
+        case .setTargetSpeed, .setTargetInclination:
             guard case let .held(heldEpoch, _) = state.permission, heldEpoch == epoch else {
                 throw FTMSControlPointTransportError.controlNotHeld
             }

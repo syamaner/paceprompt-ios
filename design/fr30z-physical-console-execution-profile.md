@@ -1,6 +1,6 @@
 # FR30z physical-console execution profile
 
-Status: documentation-only MVP profile candidate for GitHub issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57), prepared from the sanitised [11 September 2026 characterisation](../docs/validation/fr30z-console-target-characterisation-2026-09-11.md). On acceptance it becomes the immutable policy for later software slices; it does not itself authorise an executable Control Point write or physical treadmill session.
+Status: accepted MVP profile from GitHub issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57), prepared from the sanitised [11 September 2026 characterisation](../docs/validation/fr30z-console-target-characterisation-2026-09-11.md) and bound to the production composition root by issue [#61](https://github.com/syamaner/paceprompt-ios/issues/61). The ordinary app remains locked; this document and the software binding do not authorise an executable Control Point write or physical treadmill session.
 
 ## Protocol authority
 
@@ -92,7 +92,7 @@ Production prohibits:
 - more than one procedure in flight;
 - automatic retry, reconnect, control reacquisition or guessed compensating commands.
 
-Historical codec tests or sanitised diagnostic evidence may retain prohibited opcode representations, but no production adapter, reducer effect or enabled UI action may reach them.
+The production codec rejects prohibited response opcodes and exposes no Start, Stop or Pause intent. No production adapter, reducer effect or enabled UI action can represent or reach those commands.
 
 ## Session targets and ceilings
 

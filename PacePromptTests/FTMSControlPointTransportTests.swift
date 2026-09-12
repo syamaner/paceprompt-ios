@@ -96,8 +96,6 @@ final class FTMSControlPointTransportTests: XCTestCase {
         let intents: [FitnessMachineControlIntent] = [
             .setTargetSpeed(kilometresPerHour: 4.5),
             .setTargetInclination(percent: 2),
-            .start,
-            .stop,
         ]
         for intent in intents {
             XCTAssertThrowsTransportError(.controlNotHeld) {
@@ -114,8 +112,6 @@ final class FTMSControlPointTransportTests: XCTestCase {
         let cases: [(FitnessMachineControlIntent, Data, UInt8)] = [
             (.setTargetSpeed(kilometresPerHour: 4.5), Data([0x02, 0xC2, 0x01]), 0x02),
             (.setTargetInclination(percent: -2.5), Data([0x03, 0xE7, 0xFF]), 0x03),
-            (.start, Data([0x07]), 0x07),
-            (.stop, Data([0x08, 0x01]), 0x08),
         ]
 
         for (offset, item) in cases.enumerated() {
@@ -136,7 +132,7 @@ final class FTMSControlPointTransportTests: XCTestCase {
                 .held(harness.epoch, acknowledgedAt: MonotonicInstant(seconds: 2))
             )
         }
-        XCTAssertEqual(harness.link.writes.count, 5)
+        XCTAssertEqual(harness.link.writes.count, 3)
     }
 
     func testRequestControlCannotBeRepeatedWhilePermissionIsHeld() throws {

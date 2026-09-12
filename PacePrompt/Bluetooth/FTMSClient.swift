@@ -9,6 +9,9 @@ protocol FTMSClientDelegate: AnyObject {
 @MainActor
 protocol FTMSClientProtocol: AnyObject {
     var delegate: (any FTMSClientDelegate)? { get set }
+    var connectedPeripheralIdentifier: UUID? { get }
+    var connectedPeripheralName: String? { get }
+    var controlPointLink: (any FTMSControlPointLink)? { get }
 #if DEBUG
     var requestControlDiagnosticJournalRecords: [RequestControlDiagnosticJournalEntry] { get }
 #endif
@@ -17,6 +20,12 @@ protocol FTMSClientProtocol: AnyObject {
     func stopScan()
     func connect(to identifier: UUID)
     func disconnect()
+}
+
+extension FTMSClientProtocol {
+    var connectedPeripheralIdentifier: UUID? { nil }
+    var connectedPeripheralName: String? { nil }
+    var controlPointLink: (any FTMSControlPointLink)? { nil }
 }
 
 #if DEBUG
@@ -36,9 +45,14 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
     private var currentName = "Treadmill"
     private var pendingInitialReads: Set<String> = []
     private var deferredNotificationCharacteristics: [String: CBCharacteristic] = [:]
+    private var retainedControlPointLink: CoreBluetoothFTMSControlPointLink?
 #if DEBUG
     private var retainedRequestControlJournalRecords: [RequestControlDiagnosticJournalEntry] = []
 #endif
+
+    var connectedPeripheralIdentifier: UUID? { currentPeripheral?.identifier }
+    var connectedPeripheralName: String? { currentPeripheral.map { _ in currentName } }
+    var controlPointLink: (any FTMSControlPointLink)? { retainedControlPointLink }
 
     override init() {
 #if DEBUG
@@ -140,6 +154,11 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
         deferredNotificationCharacteristics.removeAll()
     }
 
+    private func invalidateControlPointLink(reason: String?) {
+        retainedControlPointLink?.receiveDisconnect(reason)
+        retainedControlPointLink = nil
+    }
+
     private static func availability(from state: CBManagerState) -> BluetoothAvailability {
         switch state {
         case .unknown: .notDetermined
@@ -161,6 +180,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         let hadActivePeripheral = currentPeripheral != nil
         central.stopScan()
         resetPendingOperations()
+        invalidateControlPointLink(reason: availability.title)
         currentPeripheral = nil
         publishInactiveSubscriptions(reason: availability.title)
         if hadActivePeripheral {
@@ -199,6 +219,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         error: Error?
     ) {
         resetPendingOperations()
+        invalidateControlPointLink(reason: error?.localizedDescription ?? "Connection failed")
         currentPeripheral = nil
         publishInactiveSubscriptions(reason: "Connection failed")
         delegate?.ftmsClient(
@@ -215,6 +236,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         error: Error?
     ) {
         resetPendingOperations()
+        invalidateControlPointLink(reason: error?.localizedDescription)
         currentPeripheral = nil
         publishInactiveSubscriptions(reason: "Disconnected")
         delegate?.ftmsClient(
@@ -269,6 +291,14 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         for characteristic in characteristics {
             characteristicsByUUID[characteristic.uuid.uuidString.uppercased()] = characteristic
         }
+        if let controlPoint = characteristicsByUUID[FTMSUUID.fitnessMachineControlPoint] {
+            retainedControlPointLink = CoreBluetoothFTMSControlPointLink(
+                peripheral: peripheral,
+                characteristic: controlPoint
+            )
+        } else {
+            invalidateControlPointLink(reason: "Control Point characteristic was not discovered")
+        }
 
         for (uuid, characteristic) in characteristicsByUUID {
             if FTMSUUID.initialReads.contains(uuid),
@@ -315,6 +345,10 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         error: Error?
     ) {
         let uuid = characteristic.uuid.uuidString.uppercased()
+        if uuid == FTMSUUID.fitnessMachineControlPoint {
+            retainedControlPointLink?.receiveIndication(characteristic.value, error: error)
+            return
+        }
         let wasInitialRead = pendingInitialReads.remove(uuid) != nil
         let source: FTMSValueSource = wasInitialRead
             ? .initialRead
@@ -351,6 +385,13 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         error: Error?
     ) {
         let uuid = characteristic.uuid.uuidString.uppercased()
+        if uuid == FTMSUUID.fitnessMachineControlPoint {
+            retainedControlPointLink?.receiveNotificationState(
+                isNotifying: characteristic.isNotifying,
+                error: error
+            )
+            return
+        }
         guard FTMSUUID.passiveNotifications.contains(uuid) else { return }
 
         if let error {
@@ -371,6 +412,17 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
                     : .failed(message: "CoreBluetooth did not enable notifications")
             )
         )
+    }
+
+    func peripheral(
+        _ peripheral: CBPeripheral,
+        didWriteValueFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        guard characteristic.uuid.uuidString.uppercased() == FTMSUUID.fitnessMachineControlPoint else {
+            return
+        }
+        retainedControlPointLink?.receiveWriteResult(error)
     }
 }
 

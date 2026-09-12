@@ -30,8 +30,19 @@ test "$(xcodebuild -version | sed -n '1p')" = "Xcode 26.6"
 test "$(xcodebuild -version | sed -n '2p')" = "Build version 17F113"
 test "$(xcrun --sdk iphonesimulator --show-sdk-version)" = "26.5"
 
-if rg -n '\.writeValue\(|submitRequestControlDiagnosticOnce|CoreBluetoothFTMSControlPointLink' PacePrompt; then
-  echo "App source unexpectedly contains an executable Control Point write path" >&2
+control_write_sites=$(rg -n '\.writeValue\(' PacePrompt --glob '*.swift' || true)
+if [[ $(printf '%s\n' "$control_write_sites" | sed '/^$/d' | wc -l | tr -d ' ') -ne 1 ]] \
+  || [[ "$control_write_sites" != *"CoreBluetoothFTMSControlPointLink.swift"* ]]; then
+  echo "Production must contain exactly one reviewed CoreBluetooth write edge" >&2
+  printf '%s\n' "$control_write_sites" >&2
+  exit 1
+fi
+
+if rg -n 'case (start|stop)$|case \.(start|stop)|submit\(\.(start|stop)' \
+  PacePrompt/Bluetooth/FTMSControlPointCodec.swift \
+  PacePrompt/Bluetooth/FTMSControlPointTransport.swift \
+  PacePrompt/Execution/ProductionWorkoutExecutionBinding.swift; then
+  echo "Production unexpectedly contains an FTMS Start or Stop command route" >&2
   exit 1
 fi
 
@@ -64,21 +75,21 @@ scripts/export_xcode_coverage.sh \
   "$production_derived_data" \
   "$production_coverage"
 
-assert_read_only_binary() {
+assert_target_only_binary() {
   local configuration=$1
   local binary=$2
-  if nm -j "$binary" | rg 'CoreBluetoothFTMSControlPointLink|submitRequestControlDiagnosticOnce' >/dev/null; then
-    echo "$configuration binary unexpectedly contains a Control Point diagnostic symbol" >&2
+  if nm -j "$binary" | rg 'submitRequestControlDiagnosticOnce' >/dev/null; then
+    echo "$configuration binary unexpectedly contains the historical Control Point diagnostic" >&2
     exit 1
   fi
-  if strings "$binary" | rg 'writeValue:forCharacteristic:type:|PACEPROMPT_ISSUE51|Send one Request Control' >/dev/null; then
-    echo "$configuration binary unexpectedly contains a Control Point write path" >&2
+  if strings "$binary" | rg 'PACEPROMPT_ISSUE51|Send one Request Control' >/dev/null; then
+    echo "$configuration binary unexpectedly contains the historical proof-session UI" >&2
     exit 1
   fi
 }
 
 debug_binary="$production_derived_data/Build/Products/Debug-iphonesimulator/PacePrompt.app/PacePrompt"
-assert_read_only_binary "Debug" "$debug_binary"
+assert_target_only_binary "Debug" "$debug_binary"
 
 xcodebuild \
   -project PacePrompt.xcodeproj \
@@ -90,7 +101,7 @@ xcodebuild \
   build
 
 release_binary="$release_derived_data/Build/Products/Release-iphonesimulator/PacePrompt.app/PacePrompt"
-assert_read_only_binary "Release" "$release_binary"
+assert_target_only_binary "Release" "$release_binary"
 
 xcodebuild \
   -project PacePrompt.xcodeproj \
