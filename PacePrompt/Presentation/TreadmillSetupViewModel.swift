@@ -17,6 +17,7 @@ final class TreadmillSetupViewModel: ObservableObject {
     @Published private(set) var lastError: String?
 
     private let client: any FTMSClientProtocol
+    private(set) var executionBinding: ProductionWorkoutExecutionBinding?
     private let now: () -> Date
     private let monotonicNow: () -> TimeInterval
     private let diagnosticLimit: Int
@@ -32,6 +33,7 @@ final class TreadmillSetupViewModel: ObservableObject {
 
     init(
         client: (any FTMSClientProtocol)? = nil,
+        executionBinding: ProductionWorkoutExecutionBinding? = nil,
         now: @escaping () -> Date = { Date() },
         monotonicNow: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
         diagnosticLimit: Int = 100,
@@ -41,6 +43,8 @@ final class TreadmillSetupViewModel: ObservableObject {
         precondition(captureDiagnosticLimit >= diagnosticLimit)
         let resolvedClient = client ?? FTMSClient()
         self.client = resolvedClient
+        self.executionBinding = executionBinding
+            ?? (client == nil ? ProductionWorkoutExecutionBinding(client: resolvedClient) : nil)
         self.now = now
         self.monotonicNow = monotonicNow
         self.diagnosticLimit = diagnosticLimit
@@ -175,7 +179,7 @@ final class TreadmillSetupViewModel: ObservableObject {
             "Application state at report generation: \(applicationActivity.title)",
             "Policy state: measurement only; no freshness window or target-observation deadline has been adopted",
             "Evidence boundary: packet silence and the last sample are not proof of current treadmill state or a stop",
-            "Build boundary: no FTMS Control Point write path is compiled in any configuration",
+            "Command boundary: this diagnostic screen cannot issue a Control Point procedure; ordinary production execution remains proof-session locked",
             "",
             "Discovered FTMS devices",
         ]
@@ -246,7 +250,7 @@ final class TreadmillSetupViewModel: ObservableObject {
         lines.append(contentsOf: [
             "",
             "Operator markers record only the operator's button press and description; they are not protocol or sensor evidence.",
-            "Read-only capture. No FTMS Control Point 0x2AD9 write path is available in any build configuration.",
+            "Read-only capture. This diagnostic surface cannot issue an FTMS Control Point 0x2AD9 procedure.",
         ])
         return lines.joined(separator: "\n")
     }
@@ -331,7 +335,7 @@ final class TreadmillSetupViewModel: ObservableObject {
 #endif
         lines.append(contentsOf: [
             "",
-            "Read-only capture. No FTMS Control Point 0x2AD9 write path is compiled in any build configuration.",
+            "Read-only capture. This diagnostic surface cannot issue an FTMS Control Point 0x2AD9 procedure.",
         ])
         return lines.joined(separator: "\n")
     }
@@ -368,6 +372,7 @@ final class TreadmillSetupViewModel: ObservableObject {
         guard applicationActivity != activity else { return }
         applicationActivity = activity
         appendCaptureMarker(.applicationActivity(activity))
+        executionBinding?.setApplicationActivity(activity)
     }
 
     func subscription(for uuid: String) -> FTMSSubscriptionState {
@@ -649,6 +654,7 @@ extension TreadmillSetupViewModel: FTMSClientDelegate {
             lastError = message
             appendCaptureMarker(.valueError(uuid: uuid, source: source, message: message))
         }
+        executionBinding?.receive(event)
     }
 }
 

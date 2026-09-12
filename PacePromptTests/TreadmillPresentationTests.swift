@@ -258,7 +258,7 @@ final class TreadmillPresentationTests: XCTestCase {
         XCTAssertTrue(report.contains("0x2ACD Treadmill Data: Inactive - No terminal subscription outcome recorded"))
         XCTAssertTrue(
             report.contains(
-                "No FTMS Control Point 0x2AD9 write path is compiled in any build configuration"
+                "This diagnostic surface cannot issue an FTMS Control Point 0x2AD9 procedure"
             )
         )
     }
@@ -350,8 +350,8 @@ final class TreadmillPresentationTests: XCTestCase {
 
         let report = model.treadmillDataFreshnessReport
         XCTAssertTrue(report.contains("0x2ACD Treadmill Data: Subscribed"))
-        XCTAssertTrue(report.contains("no FTMS Control Point write path is compiled in any configuration"))
-        XCTAssertTrue(report.contains("No FTMS Control Point 0x2AD9 write path is available in any build configuration"))
+        XCTAssertTrue(report.contains("this diagnostic screen cannot issue a Control Point procedure"))
+        XCTAssertTrue(report.contains("This diagnostic surface cannot issue an FTMS Control Point 0x2AD9 procedure"))
     }
 
     func testClearDiagnosticsDoesNotChangeSubscriptionEvidence() {
@@ -421,7 +421,7 @@ final class TreadmillPresentationTests: XCTestCase {
         XCTAssertEqual(model.diagnostics.count, 2)
         XCTAssertTrue(model.diagnosticReport.contains("Packet log (3/10000; dropped 0)"))
         XCTAssertEqual(model.diagnosticReport.components(separatedBy: "0x2AD3 Notification").count - 1, 3)
-        XCTAssertTrue(model.diagnosticReport.contains("No FTMS Control Point 0x2AD9 write path is compiled in any build configuration"))
+        XCTAssertTrue(model.diagnosticReport.contains("This diagnostic surface cannot issue an FTMS Control Point 0x2AD9 procedure"))
     }
 
     func testIssue51ReportPreservesTerminalSubscriptionOutcomesAfterDisconnect() {

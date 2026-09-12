@@ -19,6 +19,7 @@ enum WorkoutTargetControlTransportEffect: Equatable {
   case cancelAwaitingCallback(ProcedureID)
 }
 
+@MainActor
 protocol WorkoutTargetControlTransport {
   func perform(_ effect: WorkoutTargetControlTransportEffect)
 }

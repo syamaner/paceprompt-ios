@@ -261,13 +261,13 @@ No screen may shorten these into a stronger success or stop claim.
 
 ## Delivery sequence
 
-The remaining bounded work is:
+The bounded delivery sequence is:
 
-1. #81 — implement this successor as a pure reducer with exhaustive synthetic tests.
-2. #58 — Preflight and waiting-for-physical-Start UI using synthetic state.
-3. #59 — synthetic orchestration, target overrides and incremental history.
-4. #60 — portrait/landscape Exercise UI using synthetic orchestration.
-5. #61 — bind only Request Control, speed and inclination to production transport.
-6. #62 — separately authorise one narrow physical-console workout proof.
+1. Completed: #81 — pure successor reducer with exhaustive synthetic tests.
+2. Completed: #58 — Preflight and waiting-for-physical-Start UI using synthetic state.
+3. Completed: #59 — synthetic orchestration, target overrides and incremental history.
+4. Completed: #60 — portrait/landscape Exercise UI using synthetic orchestration.
+5. Completed: #61 — production binding for Request Control, speed and inclination only, locked without separate proof authority.
+6. Remaining: #62 — separately authorise one narrow physical-console workout proof.
 
 No implementation slice inherits physical-session authority from this document.

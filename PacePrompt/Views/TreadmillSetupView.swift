@@ -251,7 +251,7 @@ struct TreadmillSetupView: View {
         } header: {
             Text("Issue #52 · Read-only timing capture")
         } footer: {
-            Text("Markers record only when you press them; they do not verify treadmill state. Packet intervals use a monotonic clock. No freshness window or target deadline is applied, and no build configuration contains a Control Point write path.")
+            Text("Markers record only when you press them; they do not verify treadmill state. Packet intervals use a monotonic clock. This measurement view applies no freshness or target deadline and cannot issue a Control Point procedure.")
         }
     }
 
@@ -272,7 +272,7 @@ struct TreadmillSetupView: View {
         Section {
             Label("Read-only capability check", systemImage: "lock.shield")
         } footer: {
-            Text("No build configuration can write to FTMS Control Point 0x2AD9. The physical console and safety key remain authoritative.")
+            Text("This capability view cannot write FTMS Control Point 0x2AD9. Ordinary production execution remains proof-session locked; the physical console and safety key stay authoritative.")
         }
     }
 

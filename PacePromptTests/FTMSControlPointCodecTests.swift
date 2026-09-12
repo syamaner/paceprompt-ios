@@ -32,8 +32,6 @@ final class FTMSControlPointCodecTests: XCTestCase {
         XCTAssertEqual(try encode(.requestControl), Data([0x00]))
         XCTAssertEqual(try encode(.setTargetSpeed(kilometresPerHour: 4.5)), Data([0x02, 0xC2, 0x01]))
         XCTAssertEqual(try encode(.setTargetInclination(percent: -2.5)), Data([0x03, 0xE7, 0xFF]))
-        XCTAssertEqual(try encode(.start), Data([0x07]))
-        XCTAssertEqual(try encode(.stop), Data([0x08, 0x01]))
     }
 
     func testEncodesInclusiveRangeBoundariesAndLittleEndianFields() throws {
@@ -197,7 +195,7 @@ final class FTMSControlPointCodecTests: XCTestCase {
     }
 
     func testDecodesEveryDefinedResultForEverySupportedRequestOpcode() throws {
-        for opcode: UInt8 in [0x00, 0x02, 0x03, 0x07, 0x08] {
+        for opcode: UInt8 in [0x00, 0x02, 0x03] {
             for result in [
                 FTMSControlPointResult.success,
                 .opcodeNotSupported,
@@ -227,7 +225,7 @@ final class FTMSControlPointCodecTests: XCTestCase {
         XCTAssertCodecError(.invalidResponseOpcode(0x81)) {
             try FTMSControlPointCodec.decodeResponse(Data([0x81, 0x00, 0x01]))
         }
-        for opcode: UInt8 in [0x01, 0x06, 0x09, 0xFF] {
+        for opcode: UInt8 in [0x01, 0x06, 0x07, 0x08, 0x09, 0xFF] {
             XCTAssertCodecError(.unsupportedResponseRequestOpcode(opcode)) {
                 try FTMSControlPointCodec.decodeResponse(Data([0x80, opcode, 0x01]))
             }
