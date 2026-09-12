@@ -43,6 +43,7 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
       "waiting", "applying", "running", "override", "checking",
       "paused", "restoring", "ending", "failed", "interrupted",
     ]
+    var referenceRegionFrames: [String: CGRect]?
 
     for scenario in scenarios {
       launch(scenario: scenario, orientation: .landscapeLeft)
@@ -51,8 +52,126 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
       XCTAssertTrue(element("exercise.inclination").exists, scenario)
       XCTAssertGreaterThan(
         element("exercise.speed").frame.minX, element("exercise.progress-region").frame.minX)
+      let regionFrames = landscapeRegionFrames()
+      if let referenceRegionFrames {
+        for (identifier, frame) in regionFrames {
+          XCTAssertEqual(frame, referenceRegionFrames[identifier], "\(scenario): \(identifier)")
+        }
+      } else {
+        referenceRegionFrames = regionFrames
+      }
       attachScreenshot(named: "landscape-\(scenario)")
     }
+  }
+
+  func testLandscapeReferenceSizeUsesFixedTwoColumnGeometryWithoutScrolling() {
+    launch(scenario: "running", orientation: .landscapeLeft)
+
+    let screen = app.windows.firstMatch.frame
+    XCTAssertEqual(screen.width, 874, accuracy: 1)
+    XCTAssertEqual(screen.height, 402, accuracy: 1)
+    attachScreenshot(named: "landscape-reference-geometry")
+    assertFixedLandscapeGeometry()
+  }
+
+  func testLandscapeAlternateSizeKeepsImportantRegionsVisible() {
+    launch(scenario: "running", orientation: .landscapeLeft)
+
+    attachScreenshot(named: "landscape-alternate-geometry")
+    assertFixedLandscapeGeometry()
+    for identifier in [
+      "exercise.countdown", "exercise.next", "exercise.speed", "exercise.inclination",
+      "exercise.landscape.actions", "exercise.plan.open",
+    ] {
+      let item = element(identifier)
+      XCTAssertTrue(item.exists, identifier)
+      XCTAssertTrue(app.windows.firstMatch.frame.intersects(item.frame), identifier)
+    }
+  }
+
+  func testLandscapeRegionsStayFixedAfterActiveOverride() {
+    launch(scenario: "running", orientation: .landscapeLeft)
+
+    let identifiers = [
+      "exercise.landscape.left", "exercise.landscape.right",
+      "exercise.landscape.axes", "exercise.landscape.actions",
+      "exercise.speed", "exercise.inclination",
+    ]
+    let initialFrames = Dictionary(
+      uniqueKeysWithValues: identifiers.map { ($0, element($0).frame) }
+    )
+
+    app.buttons["exercise.speed.plus"].tap()
+    XCTAssertTrue(element("exercise.override-state").waitForExistence(timeout: 2))
+
+    for identifier in identifiers {
+      XCTAssertEqual(element(identifier).frame, initialFrames[identifier], identifier)
+    }
+  }
+
+  func testLandscapeEndKeepsExistingLocalOnlyConfirmation() {
+    launch(scenario: "paused", orientation: .landscapeLeft)
+
+    let initialRegionFrames = landscapeRegionFrames()
+    let end = app.buttons["exercise.end"]
+    XCTAssertTrue(end.isHittable)
+    XCTAssertGreaterThanOrEqual(end.frame.height, 48)
+    end.tap()
+
+    let confirmEnd = app.buttons["End and save local attempt"]
+    XCTAssertTrue(confirmEnd.waitForExistence(timeout: 2))
+    XCTAssertEqual(landscapeRegionFrames(), initialRegionFrames)
+    XCTAssertTrue(
+      app.staticTexts[
+        "This sends no FTMS Stop. The treadmill remains under physical-console control."
+      ].exists
+    )
+    confirmEnd.tap()
+    XCTAssertTrue(app.staticTexts["Ending workout"].waitForExistence(timeout: 2))
+  }
+
+  func testLandscapeCheckingKeepsOperatorObservationConfirmation() {
+    launch(scenario: "checking", orientation: .landscapeLeft)
+
+    let initialRegionFrames = landscapeRegionFrames()
+    let observedStationary = app.buttons["exercise.confirm-stationary"]
+    XCTAssertTrue(observedStationary.isHittable)
+    XCTAssertGreaterThanOrEqual(observedStationary.frame.height, 48)
+    observedStationary.tap()
+
+    let confirmStationary = app.buttons["Confirm treadmill is stationary"]
+    XCTAssertTrue(confirmStationary.waitForExistence(timeout: 2))
+    XCTAssertEqual(landscapeRegionFrames(), initialRegionFrames)
+    XCTAssertTrue(
+      app.staticTexts.matching(
+        NSPredicate(
+          format: "label == %@",
+          "Confirm only after directly observing that the treadmill is stationary. Silence, stale telemetry and disconnection are not stationary evidence."
+        )
+      ).firstMatch.exists
+    )
+    confirmStationary.tap()
+    XCTAssertTrue(
+      app.staticTexts["Workout paused — press Start on the treadmill to resume"]
+        .waitForExistence(timeout: 2)
+    )
+  }
+
+  func testLandscapeAccessibilityDynamicTypeRemainsFixedAndNonScrolling() {
+    launch(
+      scenario: "running",
+      orientation: .landscapeLeft,
+      extraArguments: [
+        "-UIPreferredContentSizeCategoryName",
+        "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge",
+      ]
+    )
+
+    XCTAssertEqual(app.scrollViews.count, 0)
+    XCTAssertTrue(element("exercise.landscape").exists)
+    XCTAssertTrue(element("exercise.countdown").exists)
+    XCTAssertTrue(element("exercise.speed").exists)
+    XCTAssertTrue(element("exercise.inclination").exists)
   }
 
   func testControlsAreLargeTypedAndContainNoBeltStartStopPauseOrResume() {
@@ -210,10 +329,59 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
   }
 
   private func attachScreenshot(named name: String) {
-    let attachment = XCTAttachment(screenshot: app.screenshot())
+    let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
     attachment.name = name
     attachment.lifetime = .keepAlways
     add(attachment)
+  }
+
+  private func assertFixedLandscapeGeometry() {
+    let left = element("exercise.landscape.left")
+    let right = element("exercise.landscape.right")
+    let axes = element("exercise.landscape.axes")
+    let actions = element("exercise.landscape.actions")
+    let speed = element("exercise.speed")
+    let inclination = element("exercise.inclination")
+
+    for item in [left, right, axes, actions, speed, inclination] {
+      XCTAssertTrue(item.exists, item.identifier)
+    }
+    XCTAssertEqual(app.scrollViews.count, 0)
+
+    let columnRatio = left.frame.width / (left.frame.width + right.frame.width)
+    XCTAssertEqual(columnRatio, 0.57, accuracy: 0.015)
+    XCTAssertEqual(speed.frame.width, inclination.frame.width, accuracy: 1)
+    XCTAssertEqual(speed.frame.minY, inclination.frame.minY, accuracy: 1)
+    XCTAssertEqual(speed.frame.maxY, inclination.frame.maxY, accuracy: 1)
+    XCTAssertGreaterThan(actions.frame.minY, axes.frame.maxY)
+
+    let regionHeight = axes.frame.height + actions.frame.height
+    XCTAssertEqual(axes.frame.height / regionHeight, 0.72, accuracy: 0.015)
+
+    let countdown = element("exercise.countdown")
+    let fullPlan = app.buttons["exercise.plan.open"]
+    XCTAssertLessThan(countdown.frame.minY, fullPlan.frame.minY)
+    XCTAssertTrue(fullPlan.isHittable)
+    XCTAssertGreaterThanOrEqual(fullPlan.frame.height, 48)
+
+    for identifier in [
+      "exercise.speed.minus", "exercise.speed.plus",
+      "exercise.inclination.minus", "exercise.inclination.plus",
+    ] {
+      let control = app.buttons[identifier]
+      XCTAssertTrue(control.isHittable, identifier)
+      XCTAssertGreaterThanOrEqual(control.frame.width, 48, identifier)
+      XCTAssertGreaterThanOrEqual(control.frame.height, 48, identifier)
+    }
+  }
+
+  private func landscapeRegionFrames() -> [String: CGRect] {
+    let identifiers = [
+      "exercise.landscape.left", "exercise.landscape.right",
+      "exercise.landscape.axes", "exercise.landscape.actions",
+      "exercise.speed", "exercise.inclination",
+    ]
+    return Dictionary(uniqueKeysWithValues: identifiers.map { ($0, element($0).frame) })
   }
 
   private func element(_ identifier: String) -> XCUIElement {
