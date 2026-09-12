@@ -7,6 +7,7 @@ struct PacePromptApp: App {
     private let workoutCapabilitiesOverride: WorkoutPlanCapabilities?
 #if DEBUG
     private let preflightUITestConfiguration: WorkoutPreflightUITestConfiguration?
+    private let exerciseUITestConfiguration: WorkoutExerciseUITestConfiguration?
 #endif
 
     init() {
@@ -21,6 +22,7 @@ struct PacePromptApp: App {
         )
         workoutCapabilitiesOverride = configuration.capabilities
         preflightUITestConfiguration = WorkoutPreflightUITestConfiguration.current
+        exerciseUITestConfiguration = WorkoutExerciseUITestConfiguration.current
 #else
         _treadmill = StateObject(wrappedValue: TreadmillSetupViewModel())
         _plans = StateObject(wrappedValue: PlansViewModel())
@@ -31,7 +33,9 @@ struct PacePromptApp: App {
     var body: some Scene {
         WindowGroup {
 #if DEBUG
-            if let preflightUITestConfiguration {
+            if let exerciseUITestConfiguration {
+                WorkoutExerciseUITestHost(configuration: exerciseUITestConfiguration)
+            } else if let preflightUITestConfiguration {
                 WorkoutPreflightUITestHost(configuration: preflightUITestConfiguration)
             } else {
                 rootView
