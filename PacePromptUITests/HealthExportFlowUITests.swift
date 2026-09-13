@@ -23,7 +23,11 @@ final class HealthExportFlowUITests: XCTestCase {
     app.alerts["Save to Apple Health?"].buttons["Save"].tap()
 
     let status = app.descendants(matching: .any)["history.health.status"]
-    let predicate = NSPredicate(format: "label == %@", "Saved to Apple Health with distance")
+    let predicate = NSPredicate(
+      format: "label BEGINSWITH %@ AND label ENDSWITH %@",
+      "Saved to Apple Health on ",
+      " with distance"
+    )
     expectation(for: predicate, evaluatedWith: status)
     waitForExpectations(timeout: 3)
     XCTAssertFalse(app.buttons["history.health.save"].exists)

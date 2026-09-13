@@ -473,6 +473,30 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     XCTAssertEqual(reason, "Execution ended before procedure submission")
   }
 
+  func testRunningCheckpointAfterTargetChangeDoesNotPublishPartialTimeline() throws {
+    let h = try Harness.running(stepDuration: 20)
+    h.send(.setSpeedOverride(epoch: h.epoch, h.speed("5.5")))
+    try h.acknowledgeCurrent()
+    h.send(.telemetry(epoch: h.epoch, h.sample("5.5", "0")))
+    let activeStartedAt = try XCTUnwrap(h.orchestrator.state.currentSegment?.activeStartedAt)
+
+    let checkpoint = h.send(
+      .tick(epoch: h.epoch),
+      monotonic: activeStartedAt.seconds + 1.1
+    )
+
+    guard case let .recorded(summary) = checkpoint.historyCheckpoint else {
+      return XCTFail("Expected a coherent running checkpoint")
+    }
+    guard case .unavailable = summary.activityTimeline else {
+      return XCTFail("An open interval must not be published as a recorded timeline")
+    }
+    XCTAssertEqual(summary.outcome, .inProgress)
+    if case .failed = checkpoint.state.execution {
+      XCTFail("A coherent checkpoint must not fail the workout")
+    }
+  }
+
   func testRestartRecoveryConvertsOnlyInProgressRecordsWithoutAnyExecutionEffect() throws {
     let h = Harness()
     let inProgress = h.historySummary(

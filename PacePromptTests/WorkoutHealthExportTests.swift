@@ -300,7 +300,8 @@ final class WorkoutHealthExportTests: XCTestCase {
       HistoryHealthExportPresenter.make(summary: savedSummary, isSaving: false)
     )
     XCTAssertNil(saved.actionTitle)
-    XCTAssertEqual(saved.status, "Saved to Apple Health with distance")
+    XCTAssertTrue(saved.status.hasPrefix("Saved to Apple Health on "))
+    XCTAssertTrue(saved.status.hasSuffix(" with distance"))
   }
 
   private func fixture() -> WorkoutExecutionSummary {
