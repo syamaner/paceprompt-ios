@@ -25,8 +25,13 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
         let preflight = harness.preflightState()
         let requesting = harness.requestingState(from: preflight)
         let waiting = harness.waitingState(from: preflight)
+    let checking = harness.reduce(
+      waiting,
+      .tick(epoch: harness.epoch),
+      at: 6.4
+    ).state
         var locked = preflight
-        locked.telemetry = .unavailable("Synthetic unavailable")
+    locked.telemetry = .malformed("Synthetic malformed")
         let failed = harness.reduce(
             preflight,
             .connectionLost(epoch: harness.epoch, reason: "Synthetic loss"),
@@ -37,7 +42,7 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
             harness.presentation(state: WorkoutExecutionState(), now: 1),
             harness.presentation(state: harness.connectingState(), now: 1.1),
             harness.presentation(state: harness.unsupportedState(), now: 2.1),
-            harness.presentation(state: preflight, now: 6.1),
+      harness.presentation(state: checking, now: 6.4),
             harness.presentation(state: locked, now: 4.2),
             harness.presentation(
                 state: preflight,
@@ -58,7 +63,7 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
                 .unsupported,
                 .stale,
                 .lockedOrUnknown,
-                .readyToRequestControl,
+        .readyForConfirmations,
                 .requestingControl,
                 .readyToBegin,
                 .waitingForPhysicalStart,
@@ -112,24 +117,28 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
                 readiness: readiness,
                 activityConfirmed: true
             )
-            XCTAssertEqual(presentation.stage, .readyToRequestControl)
+      XCTAssertEqual(presentation.stage, .readyForConfirmations)
             XCTAssertFalse(presentation.canBeginWorkout)
         }
         XCTAssertTrue(harness.presentation(state: state).canBeginWorkout)
     }
 
-    func testFreshStationaryEvidenceIsRequiredAndLastKnownValuesDoNotEnableBegin() {
+  func testMissingOrStaleStationaryTelemetryDoesNotBlockBeginButCurrentMotionDoes() {
         let harness = Harness()
         let preflight = harness.preflightState()
 
         XCTAssertTrue(harness.presentation(state: preflight, now: 4.1).canBeginWorkout)
-        XCTAssertEqual(harness.presentation(state: preflight, now: 6.01).stage, .stale)
+    XCTAssertTrue(harness.presentation(state: preflight, now: 6.01).canBeginWorkout)
 
         var lastKnown = preflight
         if case .fresh(let sample) = lastKnown.telemetry {
             lastKnown.telemetry = .stale(sample)
         }
-        XCTAssertEqual(harness.presentation(state: lastKnown, now: 4.1).stage, .stale)
+    XCTAssertTrue(harness.presentation(state: lastKnown, now: 4.1).canBeginWorkout)
+
+    var unavailable = preflight
+    unavailable.telemetry = .unavailable("No stationary packets received")
+    XCTAssertTrue(harness.presentation(state: unavailable, now: 4.1).canBeginWorkout)
 
         let moving = harness.reduce(
             preflight,
@@ -209,8 +218,17 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
 
         XCTAssertEqual(waiting.stage, .waitingForPhysicalStart)
         XCTAssertTrue(waiting.status.detail.contains("matching FTMS Request Control success"))
-        XCTAssertTrue(waiting.status.detail.contains("No speed or inclination target has been sent"))
+    XCTAssertTrue(waiting.status.detail.contains("Fresh movement is still required"))
         XCTAssertFalse(waiting.canBeginWorkout)
+
+    let preControlState = harness.reduce(
+      preflight,
+      .beginWorkout(epoch: harness.epoch, readiness: harness.confirmedReadiness),
+      at: 4.1
+    ).state
+    let preControl = harness.presentation(state: preControlState, now: 4.2)
+    XCTAssertEqual(preControl.stage, .waitingForPhysicalStart)
+    XCTAssertTrue(preControl.status.detail.contains("No Control Point procedure has been sent"))
     }
 }
 
@@ -303,12 +321,14 @@ private struct Harness {
             .connectionBecomesReady(epoch: epoch, capability: matchingCapability),
             at: 2
         ).state
-        state = reduce(
+    state =
+      reduce(
             state,
             .arm(plan: validatedPlan, ceilings: ceilings, profile: profile),
             at: 3
         ).state
-        state = reduce(
+    state =
+      reduce(
             state,
             .telemetry(
                 epoch: epoch,
@@ -320,11 +340,19 @@ private struct Harness {
     }
 
     func requestingState(from preflight: WorkoutExecutionState) -> WorkoutExecutionState {
-        reduce(
+    let waiting = reduce(
             preflight,
             .beginWorkout(epoch: epoch, readiness: confirmedReadiness),
             at: 4.1
         ).state
+    return reduce(
+      waiting,
+      .telemetry(
+        epoch: epoch,
+        .sample(speed: speed(0.5), inclination: inclination(0), totalDistanceMetres: 0)
+      ),
+      at: 4.2
+    ).state
     }
 
     func waitingState(from preflight: WorkoutExecutionState) -> WorkoutExecutionState {
@@ -333,23 +361,31 @@ private struct Harness {
             .beginWorkout(epoch: epoch, readiness: confirmedReadiness),
             at: 4.1
         )
+    transition = reduce(
+      transition.state,
+      .telemetry(
+        epoch: epoch,
+        .sample(speed: speed(0.5), inclination: inclination(0), totalDistanceMetres: 0)
+      ),
+      at: 4.2
+    )
         guard case .submit(let record) = transition.effects.first else {
             preconditionFailure("Expected Request Control intent")
         }
         transition = reduce(
             transition.state,
             .intentSubmitted(epoch: epoch, procedureID: record.id),
-            at: 4.2
+      at: 4.3
         )
         transition = reduce(
             transition.state,
             .attAccepted(epoch: epoch, procedureID: record.id),
-            at: 4.3
+      at: 4.4
         )
         transition = reduce(
             transition.state,
             .protocolAcknowledged(epoch: epoch, procedureID: record.id),
-            at: 4.4
+      at: 6.3
         )
         return transition.state
     }
@@ -391,10 +427,12 @@ private struct Harness {
                 ),
             ]
         )
-        guard case .success(let validated) = WorkoutPlanValidator.validate(
+    guard
+      case .success(let validated) = WorkoutPlanValidator.validate(
             plan,
             against: matchingCapability.planCapabilities
-        ) else {
+      )
+    else {
             preconditionFailure("Synthetic plan must validate")
         }
         return validated

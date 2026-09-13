@@ -22,7 +22,8 @@ The physical treadmill console owns belt motion:
 
 PacePrompt owns the workout and targets:
 
-- **Begin workout** creates the foreground app attempt, obtains control and waits for physical Start;
+- **Begin workout** creates the foreground app attempt and waits for physical Start without sending a procedure;
+- the first fresh non-zero movement report permits Request Control, whose acknowledgement then permits the initial target sequence while telemetry remains fresh;
 - validated plan segments supply speed and inclination targets;
 - the user may override either target for the current segment;
 - physical Stop freezes the workout after the telemetry policy detects uncertainty/zero;
@@ -73,6 +74,8 @@ The production profile may arm only when every current-connection condition belo
 6. The app is foreground-active, one connection epoch is current, and no failure or delivery uncertainty has invalidated it.
 
 Any identity, characteristic, property, byte, range, increment, subscription, epoch or foreground mismatch blocks arming. The profile does not claim support for another FR30z, dongle or firmware revision.
+
+Confirmed `0x2ACD` subscription is required for arming, but receipt of a packet is not. The characterised FR30z may remain silent while stationary. Before Begin, a current malformed or contradictory packet still blocks progress, and fresh reported movement conflicts with the operator's stationary confirmation.
 
 ## Allowed Control Point procedures
 
@@ -126,9 +129,11 @@ These windows are conservative product policy derived from normal observed deliv
 
 ### Physical Start and Resume
 
-After Request Control success, PacePrompt displays **Press Start on the treadmill** and emits no target while the accepted current speed is zero.
+After Begin workout, PacePrompt displays **Press Start on the treadmill** with control not held and emits no Control Point procedure. Packet silence while waiting is unknown and does not itself fail or establish movement.
 
-One fresh, well-formed current-epoch sample reporting speed above zero while waiting establishes that the FR30z reported movement at that instant. It permits the initial or restore target sequence; it does not prove continuing motion between samples.
+The first fresh, well-formed current-epoch sample reporting speed above zero while waiting establishes that the FR30z reported movement at that instant and permits one Request Control procedure. A matching Request Control acknowledgement permits the initial speed-then-inclination target sequence while that movement sample remains fresh; otherwise PacePrompt waits for another fresh non-zero sample. No target is emitted before both movement evidence and acknowledged control. The report does not prove continuing motion between samples.
+
+This telemetry-first ordering applies only to the initial physical Start. Resume retains the already-held control permission for the same uninterrupted connection and begins restoration only after a fresh non-zero report.
 
 If the operator stops and restarts before a zero-speed sample or operator stationary confirmation establishes pause, PacePrompt cannot distinguish that cycle. It treats a returning non-zero stream as continuing the current segment and performs no resume restoration. The UI therefore instructs the operator to wait for **Paused** before pressing physical Start again.
 

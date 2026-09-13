@@ -80,7 +80,7 @@ Only `idle` permits another procedure. A terminal procedure record must be consu
 | `malformed(raw, error)` | The packet cannot be used. |
 | `contradictory(evidence)` | Current machine/human evidence conflicts with the active execution claim. |
 
-During execution, staleness freezes active time at the freshness boundary and enters `checkingTreadmill`. A required packet within 10.0 seconds may resolve checking; longer silence terminates execution as interrupted/physically uncertain.
+After movement has been observed or control is held, staleness freezes active time at the freshness boundary and enters `checkingTreadmill`. A required packet within 10.0 seconds may resolve checking; longer silence terminates execution as interrupted/physically uncertain. Before control, `waitingForPhysicalStart` may remain unknown through stationary-report expiry or packet silence because it cannot emit a procedure until a fresh non-zero report arrives.
 
 ### Observed machine
 
@@ -109,7 +109,7 @@ Overrides survive pause/resume and clear on the next planned segment. An adjustm
 | `idle` | No attempt exists. |
 | `armed(plan, capabilities, ceilings, profile)` | Immutable reviewed inputs are ready. |
 | `acquiringControl` | Request Control is in flight. |
-| `waitingForPhysicalStart` | Control is held; the UI instructs the operator to press physical Start. |
+| `waitingForPhysicalStart` | The app attempt is active and the UI instructs the operator to press physical Start. Before the first movement report, control is not held and no procedure has been sent. |
 | `applyingTargets(step, phase)` | Speed then inclination procedures/observations are being applied. |
 | `runningStep(step, activeElapsed, segmentStartedAt)` | Effective targets were acknowledged and later jointly observed; active time runs. |
 | `checkingTreadmill(previousState, freshnessBoundary)` | Telemetry became stale; timers and plan progression are frozen. |
@@ -125,9 +125,9 @@ Overrides survive pause/resume and clear on the next planned segment. An adjustm
 ```mermaid
 flowchart TD
     IDLE[Idle] -->|Review validated plan and ceilings| ARMED[Armed]
-    ARMED -->|Begin workout| CONTROL[Request Control]
-    CONTROL -->|ATT plus matching FTMS success| WAIT[Press Start on treadmill]
-    WAIT -->|Fresh speed above zero| APPLY[Apply effective targets]
+    ARMED -->|Begin workout; no procedure| WAIT[Press Start on treadmill]
+    WAIT -->|Fresh speed above zero| CONTROL[Request Control]
+    CONTROL -->|ATT plus matching FTMS success and fresh movement| APPLY[Apply effective targets]
     APPLY -->|Acknowledgements plus later joint exact report| RUN[Running segment]
     RUN -->|Manual override or next segment| APPLY
     RUN -->|Telemetry older than 2 seconds| CHECK[Checking treadmill]
@@ -150,11 +150,11 @@ flowchart TD
 
 ### Arm and Begin workout
 
-Arming requires a validated immutable plan, exact current profile match, explicit session speed, inclination and maximum interval-change ceilings covering the complete plan, foreground activity, current connection readiness and no adverse evidence.
+Arming requires a validated immutable plan, exact current profile match, explicit session speed, inclination and maximum interval-change ceilings covering the complete plan, foreground activity, current connection readiness and no adverse evidence. A confirmed Treadmill Data subscription is required; a stationary packet is not.
 
-Begin workout is accepted only from `armed`. It creates the local attempt and emits one Request Control effect. It emits no motion or target effect. Matching ATT acceptance plus `80 00 01` moves to `waitingForPhysicalStart`; any other result ends before actuation or interrupts if motion was separately observed.
+Begin workout is accepted only from `armed`. It creates the local attempt, initialises the first segment and moves to `waitingForPhysicalStart` without emitting any procedure, motion or target effect.
 
-The waiting UI shows the first segment targets and **Press Start on the treadmill**. A fresh zero keeps waiting. A fresh non-zero permits target application.
+The waiting UI shows the first segment targets and **Press Start on the treadmill**. A fresh zero keeps waiting, and its later expiry or a missing stationary report does not end this command-free pre-control wait. The first fresh non-zero report creates one Request Control effect. Matching ATT acceptance plus `80 00 01` permits initial target application while movement evidence remains fresh; otherwise another fresh non-zero report is required. Any Control Point failure ends before target actuation or interrupts if motion was separately observed.
 
 ### Target application and confirmation
 

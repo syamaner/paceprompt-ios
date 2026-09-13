@@ -246,7 +246,7 @@
         didBeginCurrentSequence = true
         didBeginAnySequence = true
         record(
-          "Begin workout accepted; Request Control may be submitted, but belt Start remains physical"
+          "Begin workout accepted with no procedure sent; fresh physical-Start telemetry may submit Request Control"
         )
         notice = nil
         refresh()
@@ -601,7 +601,7 @@
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
             } else {
-              ProgressView("Waiting for exact profile, indications and fresh complete telemetry")
+              ProgressView("Waiting for the exact profile and Control Point indications")
             }
           }
           .padding(20)

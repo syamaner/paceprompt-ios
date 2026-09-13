@@ -6,7 +6,7 @@ enum WorkoutPreflightStage: Equatable {
     case unsupported
     case stale
     case lockedOrUnknown
-    case readyToRequestControl
+  case readyForConfirmations
     case requestingControl
     case readyToBegin
     case waitingForPhysicalStart
@@ -123,9 +123,9 @@ struct WorkoutPreflightPresentation: Equatable {
         )
 
         stage = Self.stage(for: context, at: now)
-        status = Self.status(for: stage)
+    status = Self.status(for: stage, state: context.executionState)
         confirmations = Self.confirmations(for: context, activity: activity)
-        canEditConfirmations = stage == .readyToRequestControl || stage == .readyToBegin
+    canEditConfirmations = stage == .readyForConfirmations || stage == .readyToBegin
         canBeginWorkout = stage == .readyToBegin
     }
 
@@ -151,7 +151,7 @@ struct WorkoutPreflightPresentation: Equatable {
             return .preparing
         case .lost, .invalidated:
             return .failed
-        case let .ready(currentEpoch, currentCapability):
+    case .ready(let currentEpoch, let currentCapability):
             epoch = currentEpoch
             capability = currentCapability
         }
@@ -162,10 +162,19 @@ struct WorkoutPreflightPresentation: Equatable {
         case .acquiringControl:
             return .requestingControl
         case .waitingForPhysicalStart:
-            guard case .held(let heldEpoch, _) = state.controlPermission,
-                  heldEpoch == epoch,
+      let permissionMatches: Bool
+      switch state.controlPermission {
+      case .notHeld:
+        permissionMatches = true
+      case .held(let heldEpoch, _):
+        permissionMatches = heldEpoch == epoch
+      case .requesting, .invalidated:
+        permissionMatches = false
+      }
+      guard permissionMatches,
                   case .idle = state.procedure,
-                  armedWorkoutMatchesContext(context) else {
+        armedWorkoutMatchesContext(context)
+      else {
                 return .lockedOrUnknown
             }
             return .waitingForPhysicalStart
@@ -177,16 +186,17 @@ struct WorkoutPreflightPresentation: Equatable {
         }
 
         switch state.telemetry {
-        case .stale:
-            return .stale
-        case let .fresh(sample):
+    case .stale, .unavailable:
+      break
+    case .fresh(let sample):
             let age = now.seconds - sample.receivedAt.seconds
-            guard age >= 0,
-                  age <= FR30zExecutionProfile.telemetryFreshnessInterval else {
-                return .stale
+      if age >= 0,
+        age <= FR30zExecutionProfile.telemetryFreshnessInterval,
+        sample.speed.value != 0
+      {
+        return .lockedOrUnknown
             }
-            guard sample.speed.value == 0 else { return .lockedOrUnknown }
-        case .unavailable, .malformed, .contradictory:
+    case .malformed, .contradictory:
             return .lockedOrUnknown
         }
 
@@ -197,7 +207,8 @@ struct WorkoutPreflightPresentation: Equatable {
             epoch: epoch,
             readiness: fullyConfirmedReadiness,
             at: now
-              ) else {
+      )
+    else {
             return .lockedOrUnknown
         }
 
@@ -207,15 +218,17 @@ struct WorkoutPreflightPresentation: Equatable {
                 epoch: epoch,
                 readiness: context.operatorReadiness,
                 at: now
-              ) else {
-            return .readyToRequestControl
+      )
+    else {
+      return .readyForConfirmations
         }
         return .readyToBegin
     }
 
     private static func armedWorkoutMatchesContext(_ context: WorkoutPreflightContext) -> Bool {
         guard let armed = context.executionState.armedWorkout,
-              case .ready(_, let capability) = context.executionState.connection else {
+      case .ready(_, let capability) = context.executionState.connection
+    else {
             return false
         }
         return armed.plan == context.validatedPlan
@@ -256,9 +269,11 @@ struct WorkoutPreflightPresentation: Equatable {
             at: now
         )
         guard transition.disposition == .accepted,
-              transition.effects.count == 1,
-              case .submit(let record) = transition.effects[0],
-              record.intent == .requestControl else {
+      transition.effects.isEmpty,
+      transition.state.execution == .waitingForPhysicalStart,
+      transition.state.procedure == .idle,
+      transition.state.controlPermission == .notHeld
+    else {
             return false
         }
         return true
@@ -272,76 +287,105 @@ struct WorkoutPreflightPresentation: Equatable {
     )
 
     private static func status(
-        for stage: WorkoutPreflightStage
+    for stage: WorkoutPreflightStage,
+    state: WorkoutExecutionState
     ) -> WorkoutPreflightStatusPresentation {
         switch stage {
         case .disconnected:
             .init(
                 title: "Disconnected",
-                detail: "Connect the accepted FR30z before preflight can continue. No control request has been made.",
+        detail:
+          "Connect the accepted FR30z before preflight can continue. No control request has been made.",
                 symbol: "bolt.slash.fill",
                 tone: .neutral
             )
         case .preparing:
             .init(
                 title: "Preparing",
-                detail: "Reading current capabilities, subscriptions and profile evidence. Control is not held.",
+        detail:
+          "Reading current capabilities, subscriptions and profile evidence. Control is not held.",
                 symbol: "ellipsis.circle.fill",
                 tone: .neutral
             )
         case .unsupported:
             .init(
                 title: "Unsupported profile",
-                detail: "This connection does not exactly match the accepted FR30z profile. Control remains unavailable.",
+        detail:
+          "This connection does not exactly match the accepted FR30z profile. Control remains unavailable.",
                 symbol: "xmark.shield.fill",
                 tone: .failure
             )
         case .stale:
             .init(
                 title: "Treadmill data stale",
-                detail: "Current speed and inclination evidence is older than 2 seconds. Last-known values are not readiness.",
+        detail:
+          "Current speed and inclination evidence is older than 2 seconds. Last-known values are not readiness.",
                 symbol: "clock.badge.exclamationmark.fill",
                 tone: .warning
             )
         case .lockedOrUnknown:
             .init(
                 title: "Readiness locked",
-                detail: "A required current fact is unknown, invalid or unsafe. Begin workout remains unavailable.",
+        detail:
+          "A required current fact is unknown, invalid or unsafe. Begin workout remains unavailable.",
                 symbol: "lock.shield.fill",
                 tone: .warning
             )
-        case .readyToRequestControl:
+    case .readyForConfirmations:
             .init(
-                title: "Ready to request control",
-                detail: "Current system checks pass. Complete every confirmation before Begin workout can request control.",
+        title: "Ready for safety checks",
+        detail:
+          "The exact profile is ready. Complete every confirmation before Begin workout waits for physical Start.",
                 symbol: "checkmark.shield.fill",
                 tone: .ready
             )
         case .requestingControl:
             .init(
                 title: "Requesting control",
-                detail: "A Request Control procedure is in progress. Intent, submission or ATT acceptance alone is not control.",
+        detail:
+          "A Request Control procedure is in progress. Intent, submission or ATT acceptance alone is not control.",
                 symbol: "arrow.triangle.2.circlepath.circle.fill",
                 tone: .neutral
             )
         case .readyToBegin:
             .init(
                 title: "Ready to begin",
-                detail: "All current guards and confirmations pass. Begin workout requests control; it does not start the belt.",
+        detail:
+          "All current guards and confirmations pass. Begin workout sends nothing and waits for physical Start.",
                 symbol: "checkmark.circle.fill",
                 tone: .ready
             )
         case .waitingForPhysicalStart:
+      switch state.controlPermission {
+      case .held:
             .init(
                 title: "Control confirmed",
-                detail: "A matching FTMS Request Control success is held for this connection. No speed or inclination target has been sent.",
+          detail:
+            "A matching FTMS Request Control success is held. Fresh movement is still required before any target.",
                 symbol: "checkmark.shield.fill",
                 tone: .ready
             )
+      case .notHeld:
+        .init(
+          title: "Waiting for physical Start",
+          detail:
+            "No Control Point procedure has been sent. Fresh reported movement permits Request Control.",
+          symbol: "figure.walk.motion",
+          tone: .ready
+        )
+      case .requesting, .invalidated:
+        .init(
+          title: "Readiness locked",
+          detail: "Control state is not valid for physical Start.",
+          symbol: "lock.shield.fill",
+          tone: .warning
+        )
+      }
         case .failed:
             .init(
                 title: "Preflight failed",
-                detail: "This attempt cannot continue. Use the physical console and safety key, then begin a new attempt.",
+        detail:
+          "This attempt cannot continue. Use the physical console and safety key, then begin a new attempt.",
                 symbol: "exclamationmark.triangle.fill",
                 tone: .failure
             )
@@ -380,7 +424,8 @@ struct WorkoutPreflightPresentation: Equatable {
             .init(
                 kind: .physicallyStationary,
                 title: "Treadmill is physically stationary",
-                detail: "Confirm the belt is stopped before PacePrompt requests control.",
+        detail:
+          "Confirm the belt is stopped before the app attempt begins. Control waits for fresh movement.",
                 isConfirmed: context.operatorReadiness.physicallyStationary
             ),
         ]
@@ -391,7 +436,8 @@ struct WorkoutPreflightPresentation: Equatable {
         let hours = seconds / 3_600
         let minutes = seconds % 3_600 / 60
         let remainingSeconds = seconds % 60
-        let duration = hours > 0
+    let duration =
+      hours > 0
             ? String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
             : String(format: "%d:%02d", minutes, remainingSeconds)
         let distance = PlanValueFormatter.estimatedDistanceText(
@@ -408,7 +454,8 @@ struct WorkoutPreflightPresentation: Equatable {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 1
         formatter.maximumFractionDigits = 2
-        let text = formatter.string(from: NSDecimalNumber(decimal: value))
+    let text =
+      formatter.string(from: NSDecimalNumber(decimal: value))
             ?? PlanValueFormatter.localizedText(value, locale: locale)
         return "\(text) \(unit)"
     }

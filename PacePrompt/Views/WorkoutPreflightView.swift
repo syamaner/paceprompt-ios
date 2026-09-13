@@ -69,7 +69,7 @@ struct WorkoutPreflightView: View {
                 .disabled(!presentation.canBeginWorkout)
                 .accessibilityHint(
                     presentation.canBeginWorkout
-                        ? "Requests treadmill control for this app attempt. It does not start the belt."
+                        ? "Starts the app attempt and waits for physical Start. It sends no treadmill procedure."
                         : "Unavailable until every current readiness guard and confirmation passes."
                 )
                 .accessibilityIdentifier("preflight.begin")

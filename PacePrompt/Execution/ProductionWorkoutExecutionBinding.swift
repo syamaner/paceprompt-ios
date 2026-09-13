@@ -364,8 +364,7 @@ final class ProductionWorkoutExecutionBinding {
     guard let capability = currentCapability,
       let profile = executionProfile,
       profile.matches(capability),
-      applicationActivity == .active,
-      telemetryIsFresh
+      applicationActivity == .active
     else { return false }
     return true
   }

@@ -18,7 +18,10 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         XCTAssertTrue(element("preflight.ceilings").exists)
         XCTAssertTrue((element("preflight.ceilings").value as? String)?.contains("10.0 km/h") == true)
         XCTAssertTrue(element("preflight.health").exists)
-        XCTAssertTrue(app.staticTexts["No permission is requested and no workout or health data is saved on this screen."].exists)
+    XCTAssertTrue(
+      app.staticTexts[
+        "No permission is requested and no workout or health data is saved on this screen."
+      ].exists)
         XCTAssertTrue(element("preflight.activity").exists)
         XCTAssertTrue(element("preflight.safety").exists)
         XCTAssertTrue(element("preflight.console-guidance").exists)
@@ -37,8 +40,8 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["5.0 km/h"].exists)
         XCTAssertTrue(app.staticTexts["0.0 %"].exists)
         XCTAssertTrue(element("preflight.waiting.target-boundary").exists)
-        XCTAssertTrue(statusValue().hasPrefix("Control confirmed."))
-        XCTAssertTrue(statusValue().contains("No speed or inclination target has been sent"))
+    XCTAssertTrue(statusValue().hasPrefix("Waiting for physical Start."))
+    XCTAssertTrue(statusValue().contains("No Control Point procedure has been sent"))
         XCTAssertFalse(app.buttons["preflight.begin"].exists)
     }
 
@@ -49,7 +52,7 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
             ("unsupported", "Unsupported profile."),
             ("stale", "Treadmill data stale."),
             ("locked", "Readiness locked."),
-            ("ready-to-request-control", "Ready to request control."),
+      ("ready-to-request-control", "Ready for safety checks."),
             ("requesting", "Requesting control."),
             ("failed", "Preflight failed."),
         ]
@@ -120,7 +123,8 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         XCTAssertTrue(begin.isHittable)
         XCTAssertGreaterThanOrEqual(begin.frame.height, 56)
         XCTAssertEqual(begin.label, "Begin workout")
-        XCTAssertTrue((begin.value as? String) == nil || !(begin.value as? String ?? "").contains("Start"))
+    XCTAssertTrue(
+      (begin.value as? String) == nil || !(begin.value as? String ?? "").contains("Start"))
     }
 
     func testReducedMotionUsesStaticWaitingGuidanceWithTheSameSafetyMeaning() {

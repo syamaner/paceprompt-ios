@@ -19,7 +19,7 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertEqual(FR30zExecutionProfile.targetObservationInterval, 30)
   }
 
-  func testBeginCreatesOnlyRequestControlIntentAndRequiresReadiness() throws {
+  func testBeginWaitsForPhysicalStartWithoutAProcedureAndRequiresReadiness() throws {
     let h = Harness()
     let state = try h.preflightState()
     let missing = WorkoutOperatorReadiness(
@@ -33,17 +33,22 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertEqual(rejected.state, state)
 
     let accepted = h.accept(h.send(state, .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
-    XCTAssertEqual(accepted.state.execution, .acquiringControl)
-    XCTAssertEqual(accepted.record?.intent, .requestControl)
+    XCTAssertEqual(accepted.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(accepted.state.controlPermission, .notHeld)
+    XCTAssertEqual(accepted.state.procedure, .idle)
+    XCTAssertEqual(accepted.state.currentSegment?.stepIndex, 0)
     XCTAssertFalse(accepted.state.motionPossible)
-    XCTAssertFalse(accepted.effects.containsTargetSubmission)
+    XCTAssertTrue(accepted.effects.isEmpty)
   }
 
   func testIntentSubmissionATTAndFTMSAcknowledgementRemainDistinct() throws {
     let h = Harness()
     var t = h.accept(
       h.send(try h.preflightState(), .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
+    XCTAssertTrue(t.effects.isEmpty)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
     let record = try XCTUnwrap(t.record)
+    XCTAssertEqual(record.intent, .requestControl)
     t = h.accept(h.send(t.state, .intentSubmitted(epoch: h.epoch, procedureID: record.id)))
     guard case .submitted = t.state.procedure else { return XCTFail("Expected submitted") }
     XCTAssertEqual(t.state.execution, .acquiringControl)
@@ -51,7 +56,8 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     guard case .attAccepted = t.state.procedure else { return XCTFail("Expected ATT accepted") }
     XCTAssertEqual(t.state.execution, .acquiringControl)
     t = h.accept(h.send(t.state, .protocolAcknowledged(epoch: h.epoch, procedureID: record.id)))
-    XCTAssertEqual(t.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(t.state.execution, .applyingTargets(.initial))
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5")))
     guard case .held(h.epoch, _) = t.state.controlPermission else {
       return XCTFail("Expected control")
     }
@@ -61,6 +67,7 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     let h = Harness()
     var t = h.accept(
       h.send(try h.preflightState(), .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
     let record = try XCTUnwrap(t.record)
     t = h.accept(h.send(t.state, .intentSubmitted(epoch: h.epoch, procedureID: record.id)))
     t = h.accept(h.send(t.state, .protocolAcknowledged(epoch: h.epoch, procedureID: record.id)))
@@ -70,7 +77,8 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertNotNil(provisional.ftmsAcknowledgedAt)
     XCTAssertEqual(t.state.execution, .acquiringControl)
     t = h.accept(h.send(t.state, .attAccepted(epoch: h.epoch, procedureID: record.id)))
-    XCTAssertEqual(t.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(t.state.execution, .applyingTargets(.initial))
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5")))
   }
 
   func testPhysicalStartNeedsFreshNonzeroTelemetryAndAppliesSpeedThenInclination() throws {
@@ -82,6 +90,9 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertTrue(t.effects.isEmpty)
 
     t = h.accept(h.send(state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
+    XCTAssertEqual(t.state.execution, .acquiringControl)
+    XCTAssertEqual(t.record?.intent, .requestControl)
+    t = try h.acknowledgeCurrent(t)
     XCTAssertEqual(t.state.execution, .applyingTargets(.initial))
     XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5")))
     t = try h.acknowledgeCurrent(t)
@@ -93,6 +104,30 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertEqual(t.state.execution, .applyingTargets(.initial))
     t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("5", "0"))))
     XCTAssertEqual(t.state.execution, .runningSegment)
+  }
+
+  func testPreControlWaitAllowsStationaryTelemetryToExpireOrBecomeUnavailable() throws {
+    let h = Harness()
+    var t = h.accept(
+      h.send(try h.waitingState(), .telemetry(epoch: h.epoch, h.sample("0", "0"))))
+    XCTAssertEqual(t.state.execution, .waitingForPhysicalStart)
+    XCTAssertTrue(t.effects.isEmpty)
+
+    t = h.accept(h.send(at: 11, t.state, .tick(epoch: h.epoch)))
+    XCTAssertEqual(t.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(t.state.controlPermission, .notHeld)
+    XCTAssertTrue(t.effects.isEmpty)
+
+    t = h.accept(
+      h.send(
+        at: 12,
+        t.state,
+        .telemetry(epoch: h.epoch, .unavailable("No stationary report"))
+      )
+    )
+    XCTAssertEqual(t.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(t.state.controlPermission, .notHeld)
+    XCTAssertTrue(t.effects.isEmpty)
   }
 
   func testWaitingForPhysicalStartAdjustmentsStayPendingAndBecomeInitialTargets() throws {
@@ -107,6 +142,8 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertEqual(t.state.currentSegment?.inclinationOverride, Harness.inclination("1"))
 
     t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
+    XCTAssertEqual(t.record?.intent, .requestControl)
+    t = try h.acknowledgeCurrent(t)
     XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5.5")))
     t = try h.acknowledgeCurrent(t)
     XCTAssertEqual(t.record?.intent, .setTargetInclination(Harness.inclination("1")))
@@ -724,8 +761,27 @@ final class WorkoutExecutionReducerTests: XCTestCase {
       duplicateHarness.send(
         try duplicateHarness.preflightState(),
         .beginWorkout(epoch: duplicateHarness.epoch, readiness: duplicateHarness.readiness)))
+    completed = duplicateHarness.accept(
+      duplicateHarness.send(
+        completed.state,
+        .telemetry(epoch: duplicateHarness.epoch, duplicateHarness.sample("0.5", "0"))))
     let completedRecord = try XCTUnwrap(completed.record)
-    completed = try duplicateHarness.acknowledgeCurrent(completed)
+    completed = duplicateHarness.accept(
+      duplicateHarness.send(
+        completed.state,
+        .intentSubmitted(epoch: duplicateHarness.epoch, procedureID: completedRecord.id)))
+    completed = duplicateHarness.accept(
+      duplicateHarness.send(
+        completed.state,
+        .attAccepted(epoch: duplicateHarness.epoch, procedureID: completedRecord.id)))
+    completed = duplicateHarness.accept(
+      duplicateHarness.send(
+        at: completed.state.lastEventTime.seconds + 2.1,
+        completed.state,
+        .protocolAcknowledged(
+          epoch: duplicateHarness.epoch,
+          procedureID: completedRecord.id)))
+    XCTAssertEqual(completed.state.execution, .waitingForPhysicalStart)
     let duplicate = duplicateHarness.send(
       completed.state,
       .protocolAcknowledged(
@@ -736,8 +792,8 @@ final class WorkoutExecutionReducerTests: XCTestCase {
       duplicate.state.execution,
       .failed(.procedure(.duplicateOrLate(completedRecord.id)))
     )
-    XCTAssertFalse(duplicate.state.motionPossible)
-    XCTAssertTrue(duplicate.effects.isEmpty)
+    XCTAssertTrue(duplicate.state.motionPossible)
+    XCTAssertEqual(duplicate.effects, [.directUserToConsoleAndSafetyKey])
   }
 }
 
@@ -845,13 +901,13 @@ extension WorkoutExecutionReducerTests {
     }
 
     func waitingState() throws -> WorkoutExecutionState {
-      var t = accept(send(try preflightState(), .beginWorkout(epoch: epoch, readiness: readiness)))
-      t = try acknowledgeCurrent(t)
-      return t.state
+      accept(send(try preflightState(), .beginWorkout(epoch: epoch, readiness: readiness))).state
     }
 
     func initialSpeedTransition() throws -> WorkoutExecutionTransition {
-      accept(send(try waitingState(), .telemetry(epoch: epoch, sample("0.5", "0"))))
+      let request = accept(
+        send(try waitingState(), .telemetry(epoch: epoch, sample("0.5", "0"))))
+      return try acknowledgeCurrent(request)
     }
 
     func runningState() throws -> WorkoutExecutionState {

@@ -11,9 +11,11 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     let h = Harness()
     let sourcePlanID = h.uuid(44)
     try h.prepare(sourcePlanID: sourcePlanID)
-    let request = try h.begin()
+    try h.begin()
 
-    XCTAssertEqual(request.intent, .requestControl)
+    XCTAssertTrue(h.transport.submissions.isEmpty)
+    XCTAssertEqual(h.orchestrator.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(h.orchestrator.state.controlPermission, .notHeld)
     XCTAssertEqual(h.orchestrator.frozenAttempt?.sourcePlanID, sourcePlanID)
     XCTAssertEqual(h.orchestrator.frozenAttempt?.plan, h.plan)
     XCTAssertEqual(h.orchestrator.frozenAttempt?.capability, h.capability)
@@ -26,6 +28,12 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     XCTAssertEqual(h.history.records[0].outcome, .inProgress)
     XCTAssertEqual(h.history.records[0].activeDuration, .measured(seconds: 0))
 
+    h.send(.telemetry(epoch: h.epoch, h.sample("0", "0", distance: "0")))
+    XCTAssertTrue(h.transport.submissions.isEmpty)
+    h.send(.telemetry(epoch: h.epoch, h.sample("0.5", "0", distance: "1")))
+    let request = try XCTUnwrap(h.transport.submissions.last)
+    XCTAssertEqual(request.intent, .requestControl)
+
     h.send(.intentSubmitted(epoch: h.epoch, procedureID: request.id))
     guard case .submitted = h.orchestrator.state.procedure else {
       return XCTFail("Submission must remain distinct")
@@ -35,12 +43,6 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
       return XCTFail("ATT acceptance must remain distinct")
     }
     h.send(.protocolAcknowledged(epoch: h.epoch, procedureID: request.id))
-    XCTAssertEqual(h.orchestrator.state.execution, .waitingForPhysicalStart)
-
-    let noTargetCount = h.transport.submissions.count
-    h.send(.telemetry(epoch: h.epoch, h.sample("0", "0", distance: "0")))
-    XCTAssertEqual(h.transport.submissions.count, noTargetCount)
-    h.send(.telemetry(epoch: h.epoch, h.sample("0.5", "0", distance: "1")))
     XCTAssertEqual(h.transport.submissions.last?.intent, .setTargetSpeed(h.speed("5")))
     try h.acknowledgeCurrent()
     XCTAssertEqual(
@@ -343,8 +345,16 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
 
     let duplicate = Harness()
     try duplicate.prepare()
-    let request = try duplicate.begin()
-    try duplicate.acknowledgeCurrent()
+    try duplicate.begin()
+    duplicate.send(.telemetry(epoch: duplicate.epoch, duplicate.sample("0.5", "0")))
+    let request = try XCTUnwrap(duplicate.transport.submissions.last)
+    duplicate.send(.intentSubmitted(epoch: duplicate.epoch, procedureID: request.id))
+    duplicate.send(.attAccepted(epoch: duplicate.epoch, procedureID: request.id))
+    duplicate.send(
+      .protocolAcknowledged(epoch: duplicate.epoch, procedureID: request.id),
+      monotonic: duplicate.orchestrator.state.lastEventTime.seconds + 2.1
+    )
+    XCTAssertEqual(duplicate.orchestrator.state.execution, .waitingForPhysicalStart)
     duplicate.send(.protocolAcknowledged(epoch: duplicate.epoch, procedureID: request.id))
     guard
       case .failed(.procedure(.duplicateOrLate(request.id))) =
@@ -386,7 +396,9 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
 
     let pending = Harness()
     try pending.prepare()
-    let request = try pending.begin()
+    try pending.begin()
+    pending.send(.telemetry(epoch: pending.epoch, pending.sample("0.5", "0")))
+    let request = try XCTUnwrap(pending.transport.submissions.last)
     let cancelled = pending.orchestrator.cancelAttempt(epoch: pending.epoch)
     XCTAssertEqual(cancelled.transportEffects, [.cancelAwaitingCallback(request.id)])
     guard case .timedOutUnknown = pending.orchestrator.state.procedure else {
@@ -407,8 +419,7 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
 
     let progress = Harness()
     try progress.prepare()
-    _ = try progress.begin()
-    try progress.acknowledgeCurrent()
+    try progress.begin()
     progress.history.failure = .writeFailed(.atomicReplacement)
     let failed = progress.send(.telemetry(epoch: progress.epoch, progress.sample("0.5", "0")))
     XCTAssertEqual(failed.historyCheckpoint, .failed(.writeFailed(.atomicReplacement)))
@@ -416,12 +427,12 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
       progress.orchestrator.state.execution,
       .failed(.localHistoryPersistence("Incremental history write failed"))
     )
-    XCTAssertEqual(progress.transport.submissions.count, 1)
+    XCTAssertTrue(progress.transport.submissions.isEmpty)
     guard
       case .failed(let unforwarded, .notSubmitted(let reason)) =
         progress.orchestrator.state.procedure
-    else { return XCTFail("Expected definitely-not-submitted target evidence") }
-    XCTAssertEqual(unforwarded.intent, .setTargetSpeed(progress.speed("5")))
+    else { return XCTFail("Expected definitely-not-submitted control evidence") }
+    XCTAssertEqual(unforwarded.intent, .requestControl)
     XCTAssertEqual(reason, "Execution ended before procedure submission")
   }
 
@@ -536,9 +547,9 @@ extension WorkoutExecutionOrchestratorTests {
     static func running(stepDuration: Int) throws -> Harness {
       let h = Harness(stepDuration: stepDuration)
       try h.prepare()
-      _ = try h.begin()
-      try h.acknowledgeCurrent()
+      try h.begin()
       h.send(.telemetry(epoch: h.epoch, h.sample("0.5", "0")))
+      try h.acknowledgeCurrent()
       try h.acknowledgeCurrent()
       try h.acknowledgeCurrent()
       h.send(.telemetry(epoch: h.epoch, h.sample("5", "0")))
@@ -548,9 +559,9 @@ extension WorkoutExecutionOrchestratorTests {
     static func applyingInitialTarget() throws -> Harness {
       let h = Harness()
       try h.prepare()
-      _ = try h.begin()
-      try h.acknowledgeCurrent()
+      try h.begin()
       h.send(.telemetry(epoch: h.epoch, h.sample("0.5", "0")))
+      try h.acknowledgeCurrent()
       return h
     }
 
@@ -569,10 +580,13 @@ extension WorkoutExecutionOrchestratorTests {
       XCTAssertEqual(orchestrator.state.execution, .preflight)
     }
 
-    func begin() throws -> WorkoutProcedureRecord {
+    func begin() throws {
       let result = send(.beginWorkout(epoch: epoch, readiness: readiness))
       assertAccepted(result)
-      return try XCTUnwrap(transport.submissions.last)
+      XCTAssertTrue(result.reducerEffects.isEmpty)
+      XCTAssertTrue(result.transportEffects.isEmpty)
+      XCTAssertTrue(transport.submissions.isEmpty)
+      XCTAssertEqual(orchestrator.state.execution, .waitingForPhysicalStart)
     }
 
     func acknowledgeCurrent() throws {
