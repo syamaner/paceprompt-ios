@@ -1,5 +1,23 @@
 import Foundation
 
+enum FTMSProtocolDecimal {
+    static func speed(kilometresPerHour value: Double) -> Decimal {
+        canonical(value, fractionalDigits: 2)
+    }
+
+    static func inclination(percent value: Double) -> Decimal {
+        canonical(value, fractionalDigits: 1)
+    }
+
+    private static func canonical(_ value: Double, fractionalDigits: Int) -> Decimal {
+        guard value.isFinite else { return .nan }
+        var converted = Decimal(value)
+        var canonical = Decimal()
+        NSDecimalRound(&canonical, &converted, fractionalDigits, .plain)
+        return canonical
+    }
+}
+
 struct FTMSFeatureFlags: Equatable {
     let machineFeatures: UInt32
     let targetSettingFeatures: UInt32

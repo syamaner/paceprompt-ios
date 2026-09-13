@@ -116,6 +116,8 @@ The low-value physical characterisation covered speed 0.50–0.70 km/h and incli
 
 Only a well-formed current-epoch `0x2ACD` notification that includes instantaneous speed and inclination is execution telemetry. `0x2AD3`, `0x2ADA`, packet silence and cached values cannot establish current motion, stationary state, control or target achievement.
 
+FTMS encodes the relevant speed and inclination fields as scaled integers. After binary parsing, convert speed to an exact two-decimal `Decimal` and inclination to an exact one-decimal `Decimal` before they enter capability or execution state. This removes only binary floating-point representation tails such as `0.7000000000000001`; it does not introduce approximate target matching, rounding of user input or acceptance of an off-grid value. Reducer comparisons remain exact between canonical protocol values and validated plan values.
+
 ### Freshness and checking
 
 - A sample is fresh for **2.0 seconds** from its monotonic receipt time.

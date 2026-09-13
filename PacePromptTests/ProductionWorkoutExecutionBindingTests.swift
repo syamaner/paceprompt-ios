@@ -133,6 +133,34 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(h.binding.orchestrator.state.execution, .runningSegment)
   }
 
+  func testProtocolScaledTelemetryCanonicalizesFloatingTailBeforeTargetObservation() throws {
+    let h = Harness(authorized: true)
+    h.reachRunning()
+    let epoch = try XCTUnwrap(h.binding.epoch)
+
+    let adjustment = try XCTUnwrap(
+      h.binding.handle(
+        .setSpeedOverride(
+          epoch: epoch,
+          .init(value: Decimal(7) / 10, unit: .kilometresPerHour)
+        )
+      )
+    )
+    XCTAssertEqual(adjustment.reducerDisposition, .accepted)
+    XCTAssertEqual(h.link.writes.last, Data([0x02, 0x46, 0x00]))
+    h.link.send(.writeAccepted)
+    h.link.send(.indication(Data([0x80, 0x02, 0x01])))
+
+    h.clock.advance(by: 0.001)
+    h.publishTelemetry(speedRaw: 70)
+
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .runningSegment)
+    guard case .fresh(let sample) = h.binding.orchestrator.state.telemetry else {
+      return XCTFail("Expected canonical fresh telemetry")
+    }
+    XCTAssertEqual(sample.speed.value, Decimal(7) / 10)
+  }
+
   func testForegroundLossInvalidatesAndSuppressesFurtherProceduresWithoutReconnect() throws {
     let h = Harness(authorized: true)
     h.makeReadyWithFreshStationaryTelemetry()

@@ -498,11 +498,17 @@ final class ProductionWorkoutExecutionBinding {
       do {
         let decoded = try FTMSParser.treadmillData(data)
         let speed = decoded.instantaneousSpeedKilometresPerHour.map {
-          WorkoutSpeed(value: Self.decimal($0), unit: .kilometresPerHour)
+          WorkoutSpeed(
+            value: FTMSProtocolDecimal.speed(kilometresPerHour: $0),
+            unit: .kilometresPerHour
+          )
         }
         let inclination: WorkoutInclination?
         if case .value(let value)? = decoded.inclinationPercent {
-          inclination = .init(value: Self.decimal(value), unit: .percent)
+          inclination = .init(
+            value: FTMSProtocolDecimal.inclination(percent: value),
+            unit: .percent
+          )
         } else {
           inclination = nil
         }
@@ -804,10 +810,6 @@ final class ProductionWorkoutExecutionBinding {
   private func stopTicks() {
     tickTimer?.invalidate()
     tickTimer = nil
-  }
-
-  private static func decimal(_ value: Double) -> Decimal {
-    Decimal(string: String(value), locale: Locale(identifier: "en_US_POSIX")) ?? .nan
   }
 }
 
