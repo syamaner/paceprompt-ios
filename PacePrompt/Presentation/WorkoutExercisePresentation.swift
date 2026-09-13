@@ -692,8 +692,10 @@ struct WorkoutExercisePresentation: Equatable {
   }
 
   private static func summaryDistance(_ summary: WorkoutExecutionSummary) -> Decimal? {
-    guard case .measured(let metres) = summary.distance else { return nil }
-    return metres
+    switch summary.distance {
+    case .measured(let metres), .measuredWithProvenance(let metres, _): metres
+    case .unavailable: nil
+    }
   }
 
   private static func canConfirmOperatorStationary(
