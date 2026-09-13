@@ -165,9 +165,100 @@ final class WorkoutHistoryRepositoryTests: XCTestCase {
         XCTAssertNil(fileSystem.files[fileSystem.stagingURL])
     }
 
+    func testVersionTwoTimelineDistanceAndHealthStateRoundTripWithoutRewritingLegacy() throws {
+        let legacy = summary(id: uuid(1))
+        let versionTwo = versionTwoSummary(id: uuid(2))
+        let fileSystem = try seededFileSystem([legacy, versionTwo])
+        let repository = WorkoutHistoryRepository(fileSystem: fileSystem)
+
+        XCTAssertEqual(availableSummaries(repository), [legacy, versionTwo])
+        XCTAssertEqual(availableSummaries(repository).first?.schemaVersion, 1)
+        XCTAssertNil(availableSummaries(repository).first?.activityTimeline)
+
+        try repository.updateHealthExport(
+            summaryID: versionTwo.id,
+            state: .pending(attemptedAt: date(25), syncVersion: 1)
+        )
+        try repository.updateHealthExport(
+            summaryID: versionTwo.id,
+            state: .saved(
+                savedAt: date(30),
+                syncVersion: 1,
+                workoutUUID: uuid(64),
+                mirroredIntervalCount: 1,
+                distanceIncluded: true
+            )
+        )
+        let updated = availableSummaries(repository)[1]
+        XCTAssertEqual(updated.activityTimeline, versionTwo.activityTimeline)
+        XCTAssertEqual(updated.distance, versionTwo.distance)
+        XCTAssertEqual(updated.outcome, versionTwo.outcome)
+    }
+
+    func testVersionTwoRejectsInconsistentTimelineDuration() {
+        let invalid = versionTwoSummary(id: uuid(2), activeSeconds: 9)
+        XCTAssertThrowsError(try WorkoutHistoryRepository(fileSystem: MemoryWorkoutHistoryFileSystem()).record(invalid)) {
+            XCTAssertEqual($0 as? WorkoutHistoryMutationFailure, .invalidSummary)
+        }
+    }
+
     private func availableSummaries(_ repository: WorkoutHistoryRepository) -> [WorkoutExecutionSummary] {
         guard case let .available(summaries) = repository.list().canonical else { XCTFail("Expected available summaries"); return [] }
         return summaries
+    }
+
+    private func versionTwoSummary(id: UUID, activeSeconds: Int = 10) -> WorkoutExecutionSummary {
+        let suppliedPlan = plan()
+        let step = suppliedPlan.steps[0]
+        let interval = WorkoutExecutedInterval(
+            segmentIndex: 0,
+            intervalIndex: 0,
+            startedAt: date(10),
+            endedAt: date(20),
+            prescribed: .init(
+                kind: step.kind,
+                speedKilometresPerHour: step.targetSpeed.value,
+                inclinationPercent: step.targetInclination.value
+            ),
+            effectiveSpeed: .init(kilometresPerHour: step.targetSpeed.value, source: .planned),
+            effectiveInclination: .init(percent: step.targetInclination.value, source: .planned),
+            settledObservation: .init(
+                observedAt: date(10),
+                speedKilometresPerHour: step.targetSpeed.value,
+                inclinationPercent: step.targetInclination.value,
+                provenance: .fr30zTreadmillDataCurrentEpoch
+            ),
+            endReason: .endedByUser
+        )
+        return .init(
+            id: id,
+            schemaVersion: 2,
+            sourcePlanID: uuid(99),
+            planSnapshot: suppliedPlan,
+            attemptedAt: date(10),
+            lastUpdatedAt: date(20),
+            outcome: .stoppedByUser(reason: reason("ended-from-accepted-pause")),
+            activeDuration: .measured(seconds: activeSeconds),
+            distance: .measuredWithProvenance(
+                metres: 25,
+                provenance: .init(
+                    method: .fr30zCumulativeDistanceDelta,
+                    startCumulativeMetres: 10,
+                    startObservedAt: date(10),
+                    finalCumulativeMetres: 35,
+                    finalObservedAt: date(20)
+                )
+            ),
+            progress: .init(completedStepCount: 0, currentStepIndex: 0, activeSecondsInCurrentStep: activeSeconds),
+            physicalStopConfirmation: .humanConfirmed(at: date(20)),
+            activityTimeline: .recorded(
+                startedAt: date(10),
+                endedAt: date(20),
+                timingProvenance: .executionClock,
+                executedIntervals: [interval]
+            ),
+            healthExport: .notRequested
+        )
     }
 
     private func summary(id: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, plan suppliedPlan: WorkoutPlan? = nil, updatedAt: Date = Date(timeIntervalSince1970: 20), outcome: WorkoutExecutionOutcome = .inProgress, activeDuration: WorkoutActiveDuration = .measured(seconds: 10), distance: WorkoutDistance = .measured(metres: 25), progress: WorkoutExecutionProgress = .init(completedStepCount: 0, currentStepIndex: 0, activeSecondsInCurrentStep: 10), stop: WorkoutPhysicalStopConfirmation = .notRequired) -> WorkoutExecutionSummary {

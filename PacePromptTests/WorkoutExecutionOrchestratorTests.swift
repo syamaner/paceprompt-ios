@@ -85,8 +85,35 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     XCTAssertEqual(final.progress.completedStepCount, 3)
     XCTAssertNil(final.progress.currentStepIndex)
     XCTAssertEqual(final.activeDuration, .measured(seconds: 15))
-    XCTAssertEqual(final.distance, .measured(metres: h.decimal("42")))
+    guard case let .measuredWithProvenance(metres, distanceProvenance) = final.distance else {
+      return XCTFail("Expected current-attempt cumulative-distance delta")
+    }
+    XCTAssertEqual(metres, h.decimal("39"))
+    XCTAssertEqual(distanceProvenance.method, .fr30zCumulativeDistanceDelta)
+    XCTAssertEqual(distanceProvenance.startCumulativeMetres, h.decimal("3"))
+    XCTAssertEqual(distanceProvenance.startObservedAt.timeIntervalSince1970, 1_011.5, accuracy: 0.000_001)
+    XCTAssertEqual(distanceProvenance.finalCumulativeMetres, h.decimal("42"))
+    XCTAssertEqual(distanceProvenance.finalObservedAt.timeIntervalSince1970, 1_029, accuracy: 0.000_001)
+    guard case let .recorded(startedAt, endedAt, provenance, intervals) = final.activityTimeline else {
+      return XCTFail("Expected a recorded execution-clock timeline")
+    }
+    XCTAssertEqual(provenance, .executionClock)
+    XCTAssertEqual(startedAt, intervals.first?.startedAt)
+    XCTAssertEqual(endedAt, intervals.last?.endedAt)
+    XCTAssertEqual(intervals.count, 5)
+    XCTAssertEqual(intervals[0].effectiveSpeed.source, .planned)
+    XCTAssertEqual(intervals[1].effectiveSpeed.source, .manualOverride)
+    XCTAssertEqual(intervals[1].effectiveInclination.source, .planned)
+    XCTAssertEqual(intervals[1].settledObservation.speedKilometresPerHour, h.decimal("5.5"))
+    XCTAssertEqual(intervals[1].settledObservation.inclinationPercent, h.decimal("0"))
+    XCTAssertEqual(final.healthExport, .notRequested)
     XCTAssertEqual(final.physicalStopConfirmation, .notRequired)
+    guard case let .eligible(healthPayload) = WorkoutHealthPayloadFactory.make(
+      summary: final,
+      syncVersion: 1
+    ) else { return XCTFail("Completed orchestrator summary must be Health-export eligible") }
+    XCTAssertEqual(healthPayload.intervals.count, intervals.count)
+    XCTAssertEqual(healthPayload.distanceMetres, h.decimal("39"))
 
     XCTAssertTrue(
       h.transport.submissions.allSatisfy {
@@ -118,7 +145,10 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
       monotonic: start + 1
     )
     XCTAssertEqual(h.history.recordCalls.count, writes + 1)
-    XCTAssertEqual(h.orchestrator.lastPersistedSummary?.distance, .measured(metres: h.decimal("6")))
+    XCTAssertEqual(
+      h.orchestrator.lastPersistedSummary?.distance,
+      .unavailable(reason: .init(rawValue: "distance-provenance-unavailable"))
+    )
   }
 
   func testPausedAdjustmentChangesPendingTargetsAndResumeRestoresSpeedThenInclination() throws {

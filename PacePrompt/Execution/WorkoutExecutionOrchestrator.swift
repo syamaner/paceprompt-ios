@@ -95,6 +95,21 @@ final class WorkoutExecutionOrchestrator {
     let sourcePlanID: UUID?
   }
 
+  private struct OpenExecutedInterval {
+    let segmentIndex: Int
+    let intervalIndex: Int
+    let startedAt: Date
+    let prescribed: WorkoutPrescribedIntervalValues
+    let effectiveSpeed: WorkoutEffectiveSpeed
+    let effectiveInclination: WorkoutEffectiveInclination
+    let settledObservation: WorkoutSettledObservation
+  }
+
+  private struct DistanceObservation {
+    let metres: Decimal
+    let observedAt: Date
+  }
+
   private let reducer: WorkoutExecutionReducer
   private let transport: any WorkoutTargetControlTransport
   private let history: any WorkoutHistoryRepositoryProtocol
@@ -104,6 +119,12 @@ final class WorkoutExecutionOrchestrator {
   private var preparedInputs: PreparedInputs?
   private var latestDistance: WorkoutDistance = .unavailable(
     reason: .init(rawValue: "distance-not-yet-measured"))
+  private var openExecutedInterval: OpenExecutedInterval?
+  private var closedExecutedIntervals: [WorkoutExecutedInterval] = []
+  private var nextIntervalIndexBySegment: [Int: Int] = [:]
+  private var distanceStart: DistanceObservation?
+  private var latestCumulativeDistance: DistanceObservation?
+  private var distanceProvenanceInvalid = false
   private var humanStationaryDate: Date?
   private var lastCheckpointTrigger: CheckpointTrigger?
   private var forwardedProcedureIDs: Set<ProcedureID> = []
@@ -201,7 +222,9 @@ final class WorkoutExecutionOrchestrator {
         distance: summary.distance,
         progress: summary.progress,
         physicalStopConfirmation: recoveredStopConfirmation(
-          summary.physicalStopConfirmation)
+          summary.physicalStopConfirmation),
+        activityTimeline: summary.activityTimeline,
+        healthExport: summary.healthExport
       )
       do {
         try history.record(updated)
@@ -295,6 +318,12 @@ final class WorkoutExecutionOrchestrator {
     }
 
     updateEphemeralEvidence(event: event, transition: transition, reading: reading)
+    updateExecutedTimeline(
+      original: original,
+      event: event,
+      transition: transition,
+      reading: reading
+    )
 
     if transition.effects.contains(where: isLocalFinalizationEffect) {
       return finalizeLocally(
@@ -492,6 +521,20 @@ final class WorkoutExecutionOrchestrator {
     transition: WorkoutExecutionTransition,
     reading: WorkoutOrchestrationTime
   ) {
+    if transition.disposition == .accepted {
+      switch event {
+      case .connectionLost, .capabilityChanged:
+        distanceProvenanceInvalid = true
+        refreshMeasuredDistance()
+      case .telemetry(_, .malformed), .telemetry(_, .unavailable):
+        if distanceStart != nil {
+          distanceProvenanceInvalid = true
+          refreshMeasuredDistance()
+        }
+      default:
+        break
+      }
+    }
     switch transition.state.observedMachine {
     case .reportedMoving, .humanObservedMoving:
       humanStationaryDate = nil
@@ -508,12 +551,187 @@ final class WorkoutExecutionOrchestrator {
     }
     if transition.disposition == .accepted,
       case .fresh(let sample) = transition.state.telemetry,
+      case .telemetry = event,
       let metres = sample.totalDistanceMetres,
-      !metres.isNaN,
+      metres.isFinite,
       metres >= 0
     {
-      latestDistance = .measured(metres: metres)
+      let observation = DistanceObservation(metres: metres, observedAt: reading.wallClock)
+      if let latestCumulativeDistance, metres < latestCumulativeDistance.metres {
+        distanceProvenanceInvalid = true
+      }
+      latestCumulativeDistance = observation
+      refreshMeasuredDistance()
     }
+  }
+
+  private func updateExecutedTimeline(
+    original: WorkoutExecutionState,
+    event: WorkoutExecutionEvent,
+    transition: WorkoutExecutionTransition,
+    reading: WorkoutOrchestrationTime
+  ) {
+    guard frozenAttempt != nil else { return }
+
+    if case .runningSegment = original.execution,
+       !isRunning(transition.state.execution),
+       let open = openExecutedInterval {
+      let end = intervalEnd(
+        original: original,
+        transition: transition,
+        reading: reading
+      )
+      closeExecutedInterval(open, at: end, reason: intervalEndReason(event, transition))
+      openExecutedInterval = nil
+    }
+
+    guard transition.disposition == .accepted,
+          case .telemetry = event,
+          isRunning(transition.state.execution), openExecutedInterval == nil,
+          let segment = transition.state.currentSegment,
+          let sample = freshTelemetrySample(transition.state),
+          let step = frozenAttempt?.plan.plan.steps[safe: segment.stepIndex]
+    else { return }
+
+    let effectiveSpeed = segment.speedOverride ?? step.targetSpeed
+    let effectiveInclination = segment.inclinationOverride ?? step.targetInclination
+    guard sample.speed == effectiveSpeed, sample.inclination == effectiveInclination else { return }
+
+    let intervalIndex = nextIntervalIndexBySegment[segment.stepIndex, default: 0]
+    nextIntervalIndexBySegment[segment.stepIndex] = intervalIndex + 1
+    let startDate = wallClock(for: segment.activeStartedAt ?? reading.monotonic, reading: reading)
+    openExecutedInterval = .init(
+      segmentIndex: segment.stepIndex,
+      intervalIndex: intervalIndex,
+      startedAt: startDate,
+      prescribed: .init(
+        kind: step.kind,
+        speedKilometresPerHour: step.targetSpeed.value,
+        inclinationPercent: step.targetInclination.value
+      ),
+      effectiveSpeed: .init(
+        kilometresPerHour: effectiveSpeed.value,
+        source: segment.speedOverride == nil ? .planned : .manualOverride
+      ),
+      effectiveInclination: .init(
+        percent: effectiveInclination.value,
+        source: segment.inclinationOverride == nil ? .planned : .manualOverride
+      ),
+      settledObservation: .init(
+        observedAt: reading.wallClock,
+        speedKilometresPerHour: sample.speed.value,
+        inclinationPercent: sample.inclination.value,
+        provenance: .fr30zTreadmillDataCurrentEpoch
+      )
+    )
+    if distanceStart == nil, let metres = sample.totalDistanceMetres,
+       metres.isFinite, metres >= 0 {
+      let observation = DistanceObservation(metres: metres, observedAt: reading.wallClock)
+      distanceStart = observation
+      latestCumulativeDistance = observation
+      refreshMeasuredDistance()
+    }
+  }
+
+  private func closeExecutedInterval(
+    _ open: OpenExecutedInterval,
+    at endDate: Date,
+    reason: WorkoutExecutedIntervalEndReason
+  ) {
+    guard endDate > open.startedAt else { return }
+    closedExecutedIntervals.append(
+      .init(
+        segmentIndex: open.segmentIndex,
+        intervalIndex: open.intervalIndex,
+        startedAt: open.startedAt,
+        endedAt: endDate,
+        prescribed: open.prescribed,
+        effectiveSpeed: open.effectiveSpeed,
+        effectiveInclination: open.effectiveInclination,
+        settledObservation: open.settledObservation,
+        endReason: reason
+      )
+    )
+  }
+
+  private func intervalEnd(
+    original: WorkoutExecutionState,
+    transition: WorkoutExecutionTransition,
+    reading: WorkoutOrchestrationTime
+  ) -> Date {
+    if case .checkingTreadmill(let checking) = transition.state.execution {
+      let instant = checking.freshnessBoundary
+      return wallClock(for: instant, reading: reading)
+    }
+    if case .awaitingPhysicalStopForCompletion = transition.state.execution,
+       let segment = original.currentSegment,
+       let activeStart = segment.activeStartedAt,
+       let step = frozenAttempt?.plan.plan.steps[safe: segment.stepIndex] {
+      let remaining = max(0, TimeInterval(step.duration.value) - segment.accumulatedActiveSeconds)
+      let instant = activeStart.advanced(by: remaining)
+      return wallClock(for: instant, reading: reading)
+    }
+    return reading.wallClock
+  }
+
+  private func intervalEndReason(
+    _ event: WorkoutExecutionEvent,
+    _ transition: WorkoutExecutionTransition
+  ) -> WorkoutExecutedIntervalEndReason {
+    switch transition.state.execution {
+    case .applyingTargets(let purpose):
+      return purpose == .plannedTransition ? .planTransition : .targetChanged
+    case .checkingTreadmill, .paused, .restoringTargets:
+      return .paused
+    case .awaitingPhysicalStopForCompletion:
+      return .completed
+    case .finished(let context):
+      return context.reason == .completedPlan ? .completed : .endedByUser
+    case .interrupted:
+      return .interrupted
+    case .failed:
+      return .failed
+    default:
+      if case .userEndsWorkout = event { return .endedByUser }
+      return .targetChanged
+    }
+  }
+
+  private func isRunning(_ phase: WorkoutExecutionPhase) -> Bool {
+    if case .runningSegment = phase { return true }
+    return false
+  }
+
+  private func freshTelemetrySample(_ state: WorkoutExecutionState) -> WorkoutTelemetrySample? {
+    if case .fresh(let sample) = state.telemetry { return sample }
+    return nil
+  }
+
+  private func wallClock(
+    for instant: MonotonicInstant,
+    reading: WorkoutOrchestrationTime
+  ) -> Date {
+    reading.wallClock.addingTimeInterval(instant.seconds - reading.monotonic.seconds)
+  }
+
+  private func refreshMeasuredDistance() {
+    guard !distanceProvenanceInvalid,
+          let start = distanceStart,
+          let final = latestCumulativeDistance,
+          final.metres >= start.metres else {
+      latestDistance = .unavailable(reason: .init(rawValue: "distance-provenance-unavailable"))
+      return
+    }
+    latestDistance = .measuredWithProvenance(
+      metres: final.metres - start.metres,
+      provenance: .init(
+        method: .fr30zCumulativeDistanceDelta,
+        startCumulativeMetres: start.metres,
+        startObservedAt: start.observedAt,
+        finalCumulativeMetres: final.metres,
+        finalObservedAt: final.observedAt
+      )
+    )
   }
 
   private func makeSummary(
@@ -530,10 +748,35 @@ final class WorkoutExecutionOrchestrator {
       lastUpdatedAt: max(attempt.attemptedAt, updatedAt),
       outcome: historyOutcome(state.execution),
       activeDuration: .measured(seconds: measuredTotalSeconds(state)),
-      distance: latestDistance,
+      distance: distanceForSummary(),
       progress: progress(state),
-      physicalStopConfirmation: stopConfirmation(state.execution)
+      physicalStopConfirmation: stopConfirmation(state.execution),
+      activityTimeline: activityTimeline(),
+      healthExport: .notRequested
     )
+  }
+
+  private func activityTimeline() -> WorkoutActivityTimeline {
+    guard let first = closedExecutedIntervals.first,
+          let last = closedExecutedIntervals.last else {
+      return .unavailable(reason: .init(rawValue: "timeline-not-yet-recorded"))
+    }
+    return .recorded(
+      startedAt: first.startedAt,
+      endedAt: last.endedAt,
+      timingProvenance: .executionClock,
+      executedIntervals: closedExecutedIntervals
+    )
+  }
+
+  private func distanceForSummary() -> WorkoutDistance {
+    guard case let .measuredWithProvenance(metres, provenance) = latestDistance,
+          case let .recorded(startedAt, endedAt, _, _) = activityTimeline(),
+          provenance.startObservedAt == startedAt,
+          provenance.finalObservedAt >= endedAt else {
+      return .unavailable(reason: .init(rawValue: "distance-provenance-unavailable"))
+    }
+    return .measuredWithProvenance(metres: metres, provenance: provenance)
   }
 
   private func historyOutcome(_ phase: WorkoutExecutionPhase) -> WorkoutExecutionOutcome {
@@ -741,6 +984,12 @@ final class WorkoutExecutionOrchestrator {
     frozenAttempt = nil
     lastPersistedSummary = nil
     latestDistance = .unavailable(reason: .init(rawValue: "distance-not-yet-measured"))
+    openExecutedInterval = nil
+    closedExecutedIntervals = []
+    nextIntervalIndexBySegment = [:]
+    distanceStart = nil
+    latestCumulativeDistance = nil
+    distanceProvenanceInvalid = false
     humanStationaryDate = nil
     lastCheckpointTrigger = nil
     forwardedProcedureIDs = []
@@ -755,5 +1004,11 @@ final class WorkoutExecutionOrchestrator {
     case .notRequired, .unconfirmed:
       .unconfirmed
     }
+  }
+}
+
+private extension Collection {
+  subscript(safe index: Index) -> Element? {
+    indices.contains(index) ? self[index] : nil
   }
 }

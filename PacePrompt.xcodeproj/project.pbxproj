@@ -97,6 +97,10 @@
 		C90000000000000000001003 /* WorkoutExerciseUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C90000000000000000002003 /* WorkoutExerciseUITestSupport.swift */; };
 		C90000000000000000001004 /* WorkoutExercisePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C90000000000000000002004 /* WorkoutExercisePresentationTests.swift */; };
 		C90000000000000000001005 /* WorkoutExerciseFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C90000000000000000002005 /* WorkoutExerciseFlowUITests.swift */; };
+		D30000000000000000001001 /* WorkoutHealthExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000002001 /* WorkoutHealthExport.swift */; };
+		D30000000000000000001002 /* HistoryHealthExportPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000002002 /* HistoryHealthExportPresentation.swift */; };
+		D30000000000000000001003 /* WorkoutHealthExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000002004 /* WorkoutHealthExportTests.swift */; };
+		D30000000000000000001004 /* HealthExportFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000002005 /* HealthExportFlowUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -179,6 +183,11 @@
 		AA0000000000000000002101 /* PacePrompt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PacePrompt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000002102 /* PacePromptTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PacePromptTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000002103 /* PacePromptUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PacePromptUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D30000000000000000002001 /* WorkoutHealthExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHealthExport.swift; sourceTree = "<group>"; };
+		D30000000000000000002002 /* HistoryHealthExportPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryHealthExportPresentation.swift; sourceTree = "<group>"; };
+		D30000000000000000002003 /* PacePrompt.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PacePrompt.entitlements; sourceTree = "<group>"; };
+		D30000000000000000002004 /* WorkoutHealthExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHealthExportTests.swift; sourceTree = "<group>"; };
+		D30000000000000000002005 /* HealthExportFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthExportFlowUITests.swift; sourceTree = "<group>"; };
 		AB0000000000000000002001 /* PacePromptEvaluationApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptEvaluationApp.swift; sourceTree = "<group>"; };
 		AB0000000000000000002002 /* EvaluationReadinessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationReadinessView.swift; sourceTree = "<group>"; };
 		AB0000000000000000002003 /* EvaluationLaunchReadiness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationLaunchReadiness.swift; sourceTree = "<group>"; };
@@ -281,15 +290,26 @@
 			);
 			sourceTree = "<group>";
 		};
+		D30000000000000000005001 /* Health */ = {
+			isa = PBXGroup;
+			children = (
+				D30000000000000000002001 /* WorkoutHealthExport.swift */,
+				D30000000000000000002002 /* HistoryHealthExportPresentation.swift */,
+			);
+			path = Health;
+			sourceTree = "<group>";
+		};
 		AA0000000000000000005002 /* PacePrompt */ = {
 			isa = PBXGroup;
 			children = (
 				AA000000000000000000200F /* Assets.xcassets */,
 				AA0000000000000000002001 /* PacePromptApp.swift */,
+				D30000000000000000002003 /* PacePrompt.entitlements */,
 				AA0000000000000000002002 /* RootTabView.swift */,
 				AA0000000000000000005003 /* Bluetooth */,
 				AA0000000000000000005009 /* Plans */,
 				AF0000000000000000005001 /* History */,
+				D30000000000000000005001 /* Health */,
 				B60000000000000000005001 /* Execution */,
 				AA0000000000000000005004 /* Presentation */,
 				AA0000000000000000005005 /* Views */,
@@ -378,6 +398,7 @@
 		AA0000000000000000005006 /* PacePromptTests */ = {
 			isa = PBXGroup;
 			children = (
+				D30000000000000000002004 /* WorkoutHealthExportTests.swift */,
 				E10000000000000000002003 /* ProductionWorkoutExecutionBindingTests.swift */,
 				D10000000000000000002002 /* RequestControlDiagnosticTests.swift */,
 				C70000000000000000002004 /* FTMSControlPointCodecTests.swift */,
@@ -422,6 +443,7 @@
 		AA000000000000000000500A /* PacePromptUITests */ = {
 			isa = PBXGroup;
 			children = (
+				D30000000000000000002005 /* HealthExportFlowUITests.swift */,
 				B40000000000000000002004 /* HomeFlowUITests.swift */,
 				AA000000000000000000201A /* PlansFlowUITests.swift */,
 				C80000000000000000002005 /* WorkoutPreflightFlowUITests.swift */,
@@ -688,6 +710,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D30000000000000000001001 /* WorkoutHealthExport.swift in Sources */,
+				D30000000000000000001002 /* HistoryHealthExportPresentation.swift in Sources */,
 				D10000000000000000001001 /* RequestControlDiagnostic.swift in Sources */,
 				E10000000000000000001001 /* CoreBluetoothFTMSControlPointLink.swift in Sources */,
 				E10000000000000000001002 /* ProductionWorkoutExecutionBinding.swift in Sources */,
@@ -741,6 +765,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D30000000000000000001003 /* WorkoutHealthExportTests.swift in Sources */,
 				E10000000000000000001003 /* ProductionWorkoutExecutionBindingTests.swift in Sources */,
 				D10000000000000000001002 /* RequestControlDiagnosticTests.swift in Sources */,
 				C70000000000000000001004 /* FTMSControlPointCodecTests.swift in Sources */,
@@ -765,6 +790,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D30000000000000000001004 /* HealthExportFlowUITests.swift in Sources */,
 				B40000000000000000001004 /* HomeFlowUITests.swift in Sources */,
 				AA000000000000000000101A /* PlansFlowUITests.swift in Sources */,
 				C80000000000000000001005 /* WorkoutPreflightFlowUITests.swift in Sources */,
@@ -938,6 +964,7 @@
 			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = PacePrompt/PacePrompt.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
@@ -945,6 +972,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = PacePrompt;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "PacePrompt uses Bluetooth to discover and read capabilities from your treadmill.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -969,6 +997,7 @@
 			baseConfigurationReference = AA0000000000000000002021 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = PacePrompt/PacePrompt.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
@@ -976,6 +1005,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = PacePrompt;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "PacePrompt uses Bluetooth to discover and read capabilities from your treadmill.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

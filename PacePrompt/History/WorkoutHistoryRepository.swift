@@ -165,6 +165,17 @@ struct WorkoutHistoryJSONCodec: WorkoutHistoryStoreCoding {
 protocol WorkoutHistoryRepositoryProtocol {
     func list() -> WorkoutHistoryRepositoryStatus
     func record(_ summary: WorkoutExecutionSummary) throws
+    func updateHealthExport(summaryID: UUID, state: WorkoutHealthExportState) throws
+}
+
+extension WorkoutHistoryRepositoryProtocol {
+    func updateHealthExport(summaryID: UUID, state: WorkoutHealthExportState) throws {
+        guard case let .available(summaries) = list().canonical,
+              let summary = summaries.first(where: { $0.id == summaryID }) else {
+            throw WorkoutHistoryMutationFailure.invalidSummary
+        }
+        try record(summary.replacingHealthExport(with: state))
+    }
 }
 
 final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
@@ -229,6 +240,57 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
             summaries.append(summary)
         }
         try persist(summaries)
+    }
+
+    func updateHealthExport(summaryID: UUID, state: WorkoutHealthExportState) throws {
+        var summaries = try summariesForMutation()
+        guard let index = summaries.firstIndex(where: { $0.id == summaryID }) else {
+            throw WorkoutHistoryMutationFailure.invalidSummary
+        }
+        let existing = summaries[index]
+        guard existing.schemaVersion == WorkoutExecutionSummarySchema.currentVersion,
+              let previous = existing.healthExport,
+              healthExportTransitionIsValid(from: previous, to: state) else {
+            throw WorkoutHistoryMutationFailure.invalidSummary
+        }
+        let updated = existing.replacingHealthExport(with: state)
+        guard summaryIsStructurallyValid(updated) else {
+            throw WorkoutHistoryMutationFailure.invalidSummary
+        }
+        summaries[index] = updated
+        try persist(summaries)
+    }
+
+    private func healthExportTransitionIsValid(
+        from previous: WorkoutHealthExportState,
+        to next: WorkoutHealthExportState
+    ) -> Bool {
+        switch (previous, next) {
+        case (.notRequested, .pending(_, 1)),
+             (.notRequested, .unavailable),
+             (.denied, .pending(_, 1)),
+             (.unavailable, .pending(_, 1)):
+            return true
+        case let (.pending(_, previousVersion), .saved(_, nextVersion, _, _, _)),
+             let (.pending(_, previousVersion), .failedRetryable(_, nextVersion)),
+             let (.pending(_, previousVersion), .failedAmbiguous(_, nextVersion)):
+            return previousVersion == nextVersion
+        case (.pending, .denied), (.pending, .unavailable):
+            return true
+        case let (.failedRetryable(_, previousVersion), .pending(_, nextVersion)):
+            return nextVersion == previousVersion + 1
+        case let (.failedAmbiguous(_, previousVersion), .pending(_, nextVersion)):
+            return nextVersion == previousVersion + 1
+        case let (.pending(_, previousVersion), .pending(_, nextVersion)):
+            return nextVersion == previousVersion + 1
+        case let (.saved(previousDate, previousVersion, previousUUID, previousCount, previousDistance),
+                  .saved(nextDate, nextVersion, nextUUID, nextCount, nextDistance)):
+            return previousDate == nextDate && previousVersion == nextVersion
+                && previousUUID == nextUUID && previousCount == nextCount
+                && previousDistance == nextDistance
+        default:
+            return false
+        }
     }
 
     private func summariesForMutation() throws -> [WorkoutExecutionSummary] {
@@ -342,7 +404,7 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
     }
 
     private func summaryIsStructurallyValid(_ summary: WorkoutExecutionSummary) -> Bool {
-        guard summary.schemaVersion == WorkoutExecutionSummarySchema.currentVersion,
+        guard WorkoutExecutionSummarySchema.supportedVersions.contains(summary.schemaVersion),
               summary.planSnapshot.schemaVersion == WorkoutPlanSchema.currentVersion,
               WorkoutPlanValidator.structuralIssues(in: summary.planSnapshot).isEmpty,
               summary.attemptedAt <= summary.lastUpdatedAt,
@@ -363,16 +425,114 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
         case let .unavailable(reason): guard reasonIsValid(reason) else { return false }
         }
         switch summary.distance {
-        case let .measured(metres): guard metres.isFinite && metres >= 0 else { return false }
+        case let .measured(metres):
+            guard summary.schemaVersion == WorkoutExecutionSummarySchema.legacyVersion,
+                  metres.isFinite, metres >= 0 else { return false }
+        case let .measuredWithProvenance(metres, provenance):
+            guard summary.schemaVersion == WorkoutExecutionSummarySchema.currentVersion,
+                  metres.isFinite, metres >= 0,
+                  provenance.startCumulativeMetres.isFinite,
+                  provenance.finalCumulativeMetres.isFinite,
+                  provenance.startCumulativeMetres >= 0,
+                  provenance.finalCumulativeMetres >= provenance.startCumulativeMetres,
+                  provenance.finalCumulativeMetres - provenance.startCumulativeMetres == metres,
+                  provenance.startObservedAt >= summary.attemptedAt,
+                  provenance.finalObservedAt >= provenance.startObservedAt,
+                  provenance.finalObservedAt <= summary.lastUpdatedAt else { return false }
         case let .unavailable(reason): guard reasonIsValid(reason) else { return false }
         }
         if case let .humanConfirmed(at) = summary.physicalStopConfirmation,
            at < summary.attemptedAt || at > summary.lastUpdatedAt { return false }
+        if summary.schemaVersion == WorkoutExecutionSummarySchema.legacyVersion {
+            guard summary.activityTimeline == nil, summary.healthExport == nil else { return false }
+            if case .measuredWithProvenance = summary.distance { return false }
+            return true
+        }
+        guard let timeline = summary.activityTimeline,
+              let healthExport = summary.healthExport,
+              timelineIsStructurallyValid(timeline, for: summary),
+              healthExportIsStructurallyValid(healthExport, timeline: timeline) else { return false }
+        if case let .measuredWithProvenance(_, provenance) = summary.distance {
+            guard case let .recorded(startedAt, endedAt, _, _) = timeline,
+                  provenance.startObservedAt == startedAt,
+                  provenance.finalObservedAt >= endedAt else { return false }
+        }
         return true
     }
 
     private func reasonIsValid(_ reason: WorkoutExecutionReasonCode) -> Bool {
         !reason.rawValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func timelineIsStructurallyValid(
+        _ timeline: WorkoutActivityTimeline,
+        for summary: WorkoutExecutionSummary
+    ) -> Bool {
+        switch timeline {
+        case let .unavailable(reason):
+            return reasonIsValid(reason)
+        case let .recorded(startedAt, endedAt, provenance, intervals):
+            guard provenance == .executionClock, !intervals.isEmpty,
+                  startedAt == intervals.first?.startedAt,
+                  endedAt == intervals.last?.endedAt,
+                  startedAt >= summary.attemptedAt,
+                  endedAt <= summary.lastUpdatedAt,
+                  startedAt < endedAt else { return false }
+            var previousEnd: Date?
+            var previousSegmentIndex: Int?
+            var nextIntervalIndex: [Int: Int] = [:]
+            var duration: TimeInterval = 0
+            for interval in intervals {
+                guard summary.planSnapshot.steps.indices.contains(interval.segmentIndex),
+                      previousSegmentIndex.map({ interval.segmentIndex >= $0 }) ?? true,
+                      interval.intervalIndex == nextIntervalIndex[interval.segmentIndex, default: 0],
+                      interval.startedAt < interval.endedAt,
+                      interval.startedAt >= startedAt,
+                      interval.endedAt <= endedAt else { return false }
+                if let previousEnd, interval.startedAt < previousEnd { return false }
+                let step = summary.planSnapshot.steps[interval.segmentIndex]
+                guard interval.prescribed.kind == step.kind,
+                      interval.prescribed.speedKilometresPerHour == step.targetSpeed.value,
+                      interval.prescribed.inclinationPercent == step.targetInclination.value,
+                      interval.effectiveSpeed.source != .planned
+                        || interval.effectiveSpeed.kilometresPerHour
+                          == interval.prescribed.speedKilometresPerHour,
+                      interval.effectiveInclination.source != .planned
+                        || interval.effectiveInclination.percent
+                          == interval.prescribed.inclinationPercent,
+                      interval.effectiveSpeed.kilometresPerHour.isFinite,
+                      interval.effectiveInclination.percent.isFinite,
+                      interval.settledObservation.speedKilometresPerHour.isFinite,
+                      interval.settledObservation.inclinationPercent.isFinite,
+                      interval.settledObservation.observedAt == interval.startedAt,
+                      interval.settledObservation.speedKilometresPerHour
+                        == interval.effectiveSpeed.kilometresPerHour,
+                      interval.settledObservation.inclinationPercent
+                        == interval.effectiveInclination.percent else { return false }
+                nextIntervalIndex[interval.segmentIndex, default: 0] += 1
+                previousEnd = interval.endedAt
+                previousSegmentIndex = interval.segmentIndex
+                duration += interval.endedAt.timeIntervalSince(interval.startedAt)
+            }
+            guard case let .measured(seconds) = summary.activeDuration else { return false }
+            return Int(floor(duration + 0.000_000_001)) == seconds
+        }
+    }
+
+    private func healthExportIsStructurallyValid(
+        _ state: WorkoutHealthExportState,
+        timeline: WorkoutActivityTimeline
+    ) -> Bool {
+        switch state {
+        case .notRequested, .denied, .unavailable:
+            return true
+        case let .pending(_, version), let .failedRetryable(_, version),
+             let .failedAmbiguous(_, version):
+            return version > 0
+        case let .saved(_, version, _, count, _):
+            guard case let .recorded(_, _, _, intervals) = timeline else { return false }
+            return version > 0 && count == intervals.count
+        }
     }
 
     private func immutableFieldsMatch(_ lhs: WorkoutExecutionSummary, _ rhs: WorkoutExecutionSummary) -> Bool {
@@ -388,16 +548,84 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
     }
 
     private func summaryHasExpectedShape(_ value: [String: Any]) -> Bool {
-        let required = Set(["id", "schemaVersion", "planSnapshot", "attemptedAt", "lastUpdatedAt", "outcome", "activeDuration", "distance", "progress", "physicalStopConfirmation"])
+        let base = Set(["id", "schemaVersion", "planSnapshot", "attemptedAt", "lastUpdatedAt", "outcome", "activeDuration", "distance", "progress", "physicalStopConfirmation"])
+        guard let schemaVersion = value["schemaVersion"] as? Int else { return false }
+        let required = schemaVersion == WorkoutExecutionSummarySchema.currentVersion
+            ? base.union(["activityTimeline", "healthExport"]) : base
         let allowed = required.union(["sourcePlanID"])
         guard Set(value.keys).isSubset(of: allowed), required.isSubset(of: Set(value.keys)),
               let plan = value["planSnapshot"] as? [String: Any], planHasExpectedShape(plan),
               let outcome = value["outcome"] as? [String: Any], taggedObjectHasExpectedShape(outcome, valueKey: "reasonCode", valueRequiredFor: ["stoppedByUser", "interrupted", "failed"]),
               let duration = value["activeDuration"] as? [String: Any], taggedObjectHasExpectedShape(duration, valueKey: "seconds", valueRequiredFor: ["measured"], alternateKey: "reasonCode", alternateRequiredFor: ["unavailable"]),
-              let distance = value["distance"] as? [String: Any], taggedObjectHasExpectedShape(distance, valueKey: "metres", valueRequiredFor: ["measured"], alternateKey: "reasonCode", alternateRequiredFor: ["unavailable"]),
+              let distance = value["distance"] as? [String: Any], distanceHasExpectedShape(distance),
               let progress = value["progress"] as? [String: Any], Set(progress.keys).isSubset(of: ["completedStepCount", "currentStepIndex", "activeSecondsInCurrentStep"]), Set(["completedStepCount", "activeSecondsInCurrentStep"]).isSubset(of: Set(progress.keys)),
               let stop = value["physicalStopConfirmation"] as? [String: Any], taggedObjectHasExpectedShape(stop, valueKey: "confirmedAt", valueRequiredFor: ["humanConfirmed"]) else { return false }
+        if schemaVersion == WorkoutExecutionSummarySchema.currentVersion {
+            guard let timeline = value["activityTimeline"] as? [String: Any],
+                  activityTimelineHasExpectedShape(timeline),
+                  let healthExport = value["healthExport"] as? [String: Any],
+                  healthExportHasExpectedShape(healthExport) else { return false }
+        }
         return true
+    }
+
+    private func distanceHasExpectedShape(_ value: [String: Any]) -> Bool {
+        guard let state = value["state"] as? String else { return false }
+        if state == "unavailable" { return Set(value.keys) == ["state", "reasonCode"] }
+        guard state == "measured" else { return false }
+        let keys = Set(value.keys)
+        if keys == ["state", "metres"] { return true }
+        guard keys == ["state", "metres", "provenance"],
+              let provenance = value["provenance"] as? [String: Any] else { return false }
+        return Set(provenance.keys) == [
+            "method", "startCumulativeMetres", "startObservedAt",
+            "finalCumulativeMetres", "finalObservedAt"
+        ]
+    }
+
+    private func activityTimelineHasExpectedShape(_ value: [String: Any]) -> Bool {
+        guard let state = value["state"] as? String else { return false }
+        if state == "unavailable" { return Set(value.keys) == ["state", "reasonCode"] }
+        guard state == "recorded",
+              Set(value.keys) == [
+                "state", "startedAt", "endedAt", "timingProvenance", "executedIntervals"
+              ],
+              let intervals = value["executedIntervals"] as? [[String: Any]] else { return false }
+        return intervals.allSatisfy { interval in
+            guard Set(interval.keys) == [
+                "segmentIndex", "intervalIndex", "startedAt", "endedAt", "prescribed",
+                "effectiveSpeed", "effectiveInclination", "settledObservation", "endReason"
+            ], let prescribed = interval["prescribed"] as? [String: Any],
+               Set(prescribed.keys) == [
+                "kind", "speedKilometresPerHour", "inclinationPercent"
+               ], let speed = interval["effectiveSpeed"] as? [String: Any],
+               Set(speed.keys) == ["kilometresPerHour", "source"],
+               let inclination = interval["effectiveInclination"] as? [String: Any],
+               Set(inclination.keys) == ["percent", "source"],
+               let observation = interval["settledObservation"] as? [String: Any],
+               Set(observation.keys) == [
+                "observedAt", "speedKilometresPerHour", "inclinationPercent", "provenance"
+               ] else { return false }
+            return true
+        }
+    }
+
+    private func healthExportHasExpectedShape(_ value: [String: Any]) -> Bool {
+        guard let state = value["state"] as? String else { return false }
+        let expected: Set<String>
+        switch state {
+        case "notRequested": expected = ["state"]
+        case "pending": expected = ["state", "attemptedAt", "syncVersion"]
+        case "saved": expected = [
+            "state", "savedAt", "syncVersion", "workoutUUID", "mirroredIntervalCount",
+            "distanceIncluded"
+        ]
+        case "denied": expected = ["state", "writeType"]
+        case "unavailable": expected = ["state", "category"]
+        case "failedRetryable", "failedAmbiguous": expected = ["state", "category", "syncVersion"]
+        default: return false
+        }
+        return Set(value.keys) == expected
     }
 
     private func taggedObjectHasExpectedShape(
@@ -431,7 +659,8 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
               let summaries = root["summaries"] as? [[String: Any]] else { return (nil, nil) }
         for summary in summaries {
             guard let idText = summary["id"] as? String, let id = UUID(uuidString: idText) else { continue }
-            if let version = summary["schemaVersion"] as? Int, version != WorkoutExecutionSummarySchema.currentVersion {
+            if let version = summary["schemaVersion"] as? Int,
+               !WorkoutExecutionSummarySchema.supportedVersions.contains(version) {
                 return ((id, version), nil)
             }
             if let plan = summary["planSnapshot"] as? [String: Any], let version = plan["schemaVersion"] as? Int,
