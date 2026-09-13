@@ -9,6 +9,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     let h = Harness(authorized: false)
     h.publishExactProfile()
 
+    XCTAssertNotNil(h.binding.proofConnectionCandidate)
     XCTAssertFalse(h.binding.canExposeArming)
     XCTAssertEqual(h.link.enableIndicationsCount, 0)
     XCTAssertTrue(h.link.writes.isEmpty)
@@ -152,12 +153,64 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       return XCTFail("Foreground loss must truthfully interrupt the attempt")
     }
     XCTAssertEqual(h.link.invalidateCount, 1)
+    XCTAssertEqual(h.authority.invalidationCount, 1)
+    XCTAssertNil(h.authority.activeAuthorization)
     XCTAssertEqual(h.link.writes, [Data([0x00])])
 
     h.binding.setApplicationActivity(.active)
     XCTAssertEqual(h.link.enableIndicationsCount, 1, "The binding must not reconnect or resume")
     XCTAssertEqual(h.link.writes, [Data([0x00])])
   }
+
+  func testExplicitReconnectCanPrepareAnotherAuthorisedSequence() {
+    let h = Harness(authorized: true)
+    h.makeReadyWithFreshStationaryTelemetry()
+    XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
+
+    h.binding.receive(.connection(.disconnected(message: "Synthetic explicit disconnect")))
+    XCTAssertNil(h.authority.activeAuthorization)
+    guard case .interrupted = h.binding.orchestrator.state.execution else {
+      return XCTFail("The first sequence must terminate before another connection")
+    }
+
+    h.authority.activeAuthorization = .init(
+      sessionID: UUID(),
+      peripheralIdentifier: Harness.peripheralID,
+      equipmentIdentity: Harness.equipment
+    )
+    h.makeReadyWithFreshStationaryTelemetry()
+
+    XCTAssertTrue(h.binding.canExposeArming)
+    XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .preflight)
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  #if PACEPROMPT_ISSUE62_PROOF
+    func testIssue62AuthorityCanCreateANewSessionAfterExplicitInvalidation() throws {
+      let firstSessionID = UUID()
+      let secondSessionID = UUID()
+      var sessionIDs = [firstSessionID, secondSessionID]
+      let authority = Issue62WorkoutProofSessionAuthority(
+        nextSessionID: { sessionIDs.removeFirst() }
+      )
+      let candidate = WorkoutProofConnectionCandidate(
+        peripheralIdentifier: UUID(),
+        equipmentIdentity: "Synthetic FR30z"
+      )
+
+      XCTAssertTrue(authority.canAuthorize)
+      XCTAssertTrue(authority.authorize(candidate))
+      XCTAssertEqual(authority.activeAuthorization?.sessionID, firstSessionID)
+      XCTAssertFalse(authority.canAuthorize)
+
+      authority.invalidateAuthorization()
+      XCTAssertNil(authority.activeAuthorization)
+      XCTAssertTrue(authority.canAuthorize)
+      XCTAssertTrue(authority.authorize(candidate))
+      XCTAssertEqual(authority.activeAuthorization?.sessionID, secondSessionID)
+    }
+  #endif
 
   func testAcceptedPhysicalResumeRestoresEffectiveSpeedThenInclination() throws {
     let h = Harness(authorized: true)
@@ -498,8 +551,13 @@ private final class BindingClient: FTMSClientProtocol {
 @MainActor
 private final class BindingAuthority: WorkoutProofSessionAuthorizing {
   var activeAuthorization: WorkoutProofSessionAuthorization?
+  private(set) var invalidationCount = 0
   init(authorization: WorkoutProofSessionAuthorization?) {
     activeAuthorization = authorization
+  }
+  func invalidateAuthorization() {
+    if activeAuthorization != nil { invalidationCount += 1 }
+    activeAuthorization = nil
   }
 }
 

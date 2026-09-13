@@ -9,6 +9,11 @@ struct WorkoutProofSessionAuthorization: Equatable {
 @MainActor
 protocol WorkoutProofSessionAuthorizing: AnyObject {
   var activeAuthorization: WorkoutProofSessionAuthorization? { get }
+  func invalidateAuthorization()
+}
+
+extension WorkoutProofSessionAuthorizing {
+  func invalidateAuthorization() {}
 }
 
 /// Production's default authority. A later, separately authorised proof slice
@@ -16,6 +21,11 @@ protocol WorkoutProofSessionAuthorizing: AnyObject {
 @MainActor
 final class LockedWorkoutProofSessionAuthority: WorkoutProofSessionAuthorizing {
   var activeAuthorization: WorkoutProofSessionAuthorization? { nil }
+}
+
+struct WorkoutProofConnectionCandidate: Equatable {
+  let peripheralIdentifier: UUID
+  let equipmentIdentity: String
 }
 
 struct SystemWorkoutOrchestrationClock: WorkoutOrchestrationClock {
@@ -318,7 +328,7 @@ final class ProductionWorkoutExecutionBinding {
     )
 
     targetTransport.contextProvider = { [weak self] in self?.transmissionContext() }
-    targetTransport.eventSink = { [weak self] event in _ = self?.orchestrator.handle(event) }
+    targetTransport.eventSink = { [weak self] event in _ = self?.apply(event) }
     targetTransport.stateObserver = { [weak self] state in self?.consumeControlState(state) }
   }
 
@@ -332,6 +342,22 @@ final class ProductionWorkoutExecutionBinding {
 
   var currentCapability: FR30zCapabilitySnapshot? {
     makeCapability(controlPointReady: controlPointIsReady)
+  }
+
+  var proofConnectionCandidate: WorkoutProofConnectionCandidate? {
+    guard applicationActivity == .active,
+      isConnected,
+      let peripheralIdentifier = client.connectedPeripheralIdentifier,
+      let equipmentIdentity = client.connectedPeripheralName,
+      passiveProfileMatches(
+        peripheralIdentifier: peripheralIdentifier,
+        equipmentIdentity: equipmentIdentity
+      )
+    else { return nil }
+    return .init(
+      peripheralIdentifier: peripheralIdentifier,
+      equipmentIdentity: equipmentIdentity
+    )
   }
 
   var canExposeArming: Bool {
@@ -367,12 +393,12 @@ final class ProductionWorkoutExecutionBinding {
   @discardableResult
   func beginWorkout(readiness: WorkoutOperatorReadiness) -> WorkoutOrchestrationResult? {
     guard canExposeArming, let epoch else { return nil }
-    return orchestrator.handle(.beginWorkout(epoch: epoch, readiness: readiness))
+    return apply(.beginWorkout(epoch: epoch, readiness: readiness))
   }
 
   @discardableResult
   func handle(_ event: WorkoutExecutionEvent) -> WorkoutOrchestrationResult {
-    orchestrator.handle(event)
+    apply(event)
   }
 
   func setApplicationActivity(_ activity: FTMSApplicationActivity) {
@@ -382,9 +408,11 @@ final class ProductionWorkoutExecutionBinding {
       stopTicks()
       controlSuppressedUntilNewConnection = true
       if let epoch {
-        _ = orchestrator.handle(
+        _ = apply(
           .appBecameInactive(epoch: epoch, reason: "Application left the foreground")
         )
+      } else {
+        authority.invalidateAuthorization()
       }
       controlTransport.disconnect()
       establishedLinkIdentity = nil
@@ -413,7 +441,7 @@ final class ProductionWorkoutExecutionBinding {
         latestTelemetryAt = nil
         latestTelemetryIsComplete = false
         latestTelemetryInput = .malformed(message)
-        _ = orchestrator.handle(.telemetry(epoch: epoch, .malformed(message)))
+        _ = apply(.telemetry(epoch: epoch, .malformed(message)))
       }
     case .availability, .devices:
       break
@@ -423,7 +451,7 @@ final class ProductionWorkoutExecutionBinding {
   func tick() {
     guard applicationActivity == .active, let epoch else { return }
     refreshCapability()
-    _ = orchestrator.handle(.tick(epoch: epoch))
+    _ = apply(.tick(epoch: epoch))
   }
 
   private var controlPointIsReady: Bool {
@@ -451,7 +479,7 @@ final class ProductionWorkoutExecutionBinding {
       let newEpoch = ConnectionEpoch(rawValue: nextEpoch)
       nextEpoch += 1
       epoch = newEpoch
-      _ = orchestrator.handle(.userStartsConnection(newEpoch))
+      _ = apply(.userStartsConnection(newEpoch))
     case .connected:
       isConnected = true
       refreshCapability()
@@ -489,14 +517,14 @@ final class ProductionWorkoutExecutionBinding {
         latestTelemetryInput = input
         refreshCapability()
         if let epoch, lastPublishedCapability != nil {
-          _ = orchestrator.handle(.telemetry(epoch: epoch, input))
+          _ = apply(.telemetry(epoch: epoch, input))
         }
       } catch {
         latestTelemetryAt = nil
         latestTelemetryIsComplete = false
         latestTelemetryInput = .malformed(error.localizedDescription)
         if let epoch {
-          _ = orchestrator.handle(
+          _ = apply(
             .telemetry(epoch: epoch, .malformed(error.localizedDescription))
           )
         }
@@ -508,7 +536,7 @@ final class ProductionWorkoutExecutionBinding {
       status == .controlPermissionLost,
       let epoch
     {
-      _ = orchestrator.handle(
+      _ = apply(
         .controlPermissionLost(epoch: epoch, reason: "FTMS reported control permission lost")
       )
       controlSuppressedUntilNewConnection = true
@@ -539,14 +567,14 @@ final class ProductionWorkoutExecutionBinding {
     }
     if lastPublishedCapability == nil {
       lastPublishedCapability = capability
-      _ = orchestrator.handle(.connectionBecomesReady(epoch: epoch, capability: capability))
+      _ = apply(.connectionBecomesReady(epoch: epoch, capability: capability))
       if let latestTelemetryInput {
-        _ = orchestrator.handle(.telemetry(epoch: epoch, latestTelemetryInput))
+        _ = apply(.telemetry(epoch: epoch, latestTelemetryInput))
       }
       startTicks()
     } else if lastPublishedCapability != capability {
       lastPublishedCapability = capability
-      _ = orchestrator.handle(.capabilityChanged(epoch: epoch, capability: capability))
+      _ = apply(.capabilityChanged(epoch: epoch, capability: capability))
     }
   }
 
@@ -596,8 +624,22 @@ final class ProductionWorkoutExecutionBinding {
 
   private var preliminaryProfileMatches: Bool {
     guard let authorization = authority.activeAuthorization,
-      client.connectedPeripheralIdentifier == authorization.peripheralIdentifier,
-      client.connectedPeripheralName == authorization.equipmentIdentity,
+      passiveProfileMatches(
+        peripheralIdentifier: authorization.peripheralIdentifier,
+        equipmentIdentity: authorization.equipmentIdentity
+      )
+    else {
+      return false
+    }
+    return true
+  }
+
+  private func passiveProfileMatches(
+    peripheralIdentifier: UUID,
+    equipmentIdentity: String
+  ) -> Bool {
+    guard client.connectedPeripheralIdentifier == peripheralIdentifier,
+      client.connectedPeripheralName == equipmentIdentity,
       values[FTMSUUID.fitnessMachineFeature] == Self.expectedFeature,
       values[FTMSUUID.supportedSpeedRange] == Self.expectedSpeedRange,
       values[FTMSUUID.supportedInclinationRange] == Self.expectedInclinationRange
@@ -689,7 +731,7 @@ final class ProductionWorkoutExecutionBinding {
         optionalSubscriptionOutcomesResolved: false,
         planCapabilities: .unavailable
       )
-    _ = orchestrator.handle(.capabilityChanged(epoch: epoch, capability: unavailable))
+    _ = apply(.capabilityChanged(epoch: epoch, capability: unavailable))
   }
 
   private func invalidateConnection(reason: String) {
@@ -699,7 +741,9 @@ final class ProductionWorkoutExecutionBinding {
     controlTransport.disconnect()
     establishedLinkIdentity = nil
     if let epoch {
-      _ = orchestrator.handle(.connectionLost(epoch: epoch, reason: reason))
+      _ = apply(.connectionLost(epoch: epoch, reason: reason))
+    } else {
+      authority.invalidateAuthorization()
     }
     resetConnectionEvidence(keepEpoch: true)
   }
@@ -733,6 +777,22 @@ final class ProductionWorkoutExecutionBinding {
       latestTelemetryAt: latestTelemetryAt,
       now: clock.read().monotonic
     )
+  }
+
+  private func apply(_ event: WorkoutExecutionEvent) -> WorkoutOrchestrationResult {
+    let result = orchestrator.handle(event)
+    switch result.state.execution {
+    case .finished, .interrupted, .failed:
+      authority.invalidateAuthorization()
+      controlSuppressedUntilNewConnection = true
+      controlTransport.disconnect()
+      establishedLinkIdentity = nil
+    case .idle, .preflight, .acquiringControl, .waitingForPhysicalStart, .applyingTargets,
+      .runningSegment, .checkingTreadmill, .paused, .restoringTargets,
+      .awaitingPhysicalStopForCompletion, .readyToEnd, .ending:
+      break
+    }
+    return result
   }
 
   private func startTicks() {
