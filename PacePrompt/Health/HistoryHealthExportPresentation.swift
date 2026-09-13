@@ -43,7 +43,7 @@ enum HistoryHealthExportPresenter {
       duration: duration(payload.activeDurationSeconds),
       distance: distance,
       intervalCount: "\(payload.intervals.count)",
-      status: status(state, isSaving: isSaving),
+      status: status(state, isSaving: isSaving, formatter: formatter),
       actionTitle: action(state, isSaving: isSaving),
       confirmationTitle: "Save to Apple Health?",
       confirmationMessage: "\(activity), \(timing), \(duration(payload.activeDurationSeconds)), distance: \(distance), \(payload.intervals.count) interval metadata record\(payload.intervals.count == 1 ? "" : "s"). Each interval contains prescribed, effective-target and separately observed speed and inclination."
@@ -77,14 +77,16 @@ enum HistoryHealthExportPresenter {
 
   private static func status(
     _ state: WorkoutHealthExportState,
-    isSaving: Bool
+    isSaving: Bool,
+    formatter: DateFormatter
   ) -> String {
     if isSaving { return "Saving to Apple Health…" }
     return switch state {
     case .notRequested: "Not saved to Apple Health"
     case .pending: "Save result is uncertain"
-    case let .saved(_, _, _, _, included):
-      included ? "Saved to Apple Health with distance" : "Saved to Apple Health without distance"
+    case let .saved(savedAt, _, _, _, included):
+      "Saved to Apple Health on \(formatter.string(from: savedAt)) "
+        + (included ? "with distance" : "without distance")
     case let .denied(type):
       type == .workout ? "Apple Health workout permission denied" : "Apple Health distance permission denied"
     case .unavailable: "Apple Health is unavailable"

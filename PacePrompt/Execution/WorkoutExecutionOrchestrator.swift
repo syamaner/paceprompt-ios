@@ -757,7 +757,8 @@ final class WorkoutExecutionOrchestrator {
   }
 
   private func activityTimeline() -> WorkoutActivityTimeline {
-    guard let first = closedExecutedIntervals.first,
+    guard openExecutedInterval == nil,
+          let first = closedExecutedIntervals.first,
           let last = closedExecutedIntervals.last else {
       return .unavailable(reason: .init(rawValue: "timeline-not-yet-recorded"))
     }
