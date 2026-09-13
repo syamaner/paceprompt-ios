@@ -71,6 +71,53 @@ final class TreadmillPresentationTests: XCTestCase {
         )
     }
 
+    func testWorkoutCapabilitiesCanonicalizeProtocolScaledFloatingPointTails() {
+        let client = FakeFTMSClient()
+        let model = TreadmillSetupViewModel(client: client)
+        client.send(
+            .value(
+                uuid: FTMSUUID.fitnessMachineFeature,
+                data: Data([0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00]),
+                source: .initialRead
+            )
+        )
+        client.send(
+            .value(
+                uuid: FTMSUUID.supportedSpeedRange,
+                data: Data([0x46, 0x00, 0xCF, 0x07, 0x0A, 0x00]),
+                source: .initialRead
+            )
+        )
+        client.send(
+            .value(
+                uuid: FTMSUUID.supportedInclinationRange,
+                data: Data([0x03, 0x00, 0x99, 0x00, 0x03, 0x00]),
+                source: .initialRead
+            )
+        )
+
+        XCTAssertEqual(
+            model.workoutPlanCapabilities.speed,
+            .supported(
+                .init(
+                    minimum: .init(value: decimal("0.7"), unit: .kilometresPerHour),
+                    maximum: .init(value: decimal("19.99"), unit: .kilometresPerHour),
+                    increment: .init(value: decimal("0.1"), unit: .kilometresPerHour)
+                )
+            )
+        )
+        XCTAssertEqual(
+            model.workoutPlanCapabilities.inclination,
+            .supported(
+                .init(
+                    minimum: .init(value: decimal("0.3"), unit: .percent),
+                    maximum: .init(value: decimal("15.3"), unit: .percent),
+                    increment: .init(value: decimal("0.3"), unit: .percent)
+                )
+            )
+        )
+    }
+
     func testUnsupportedTargetFeatureWinsOverAnAvailableRange() {
         let client = FakeFTMSClient()
         let model = TreadmillSetupViewModel(client: client)

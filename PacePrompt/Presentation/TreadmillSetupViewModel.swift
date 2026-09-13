@@ -583,9 +583,21 @@ final class TreadmillSetupViewModel: ObservableObject {
         case let .value(value, _):
             return .supported(
                 WorkoutSpeedRange(
-                    minimum: .init(value: decimal(value.minimumKilometresPerHour), unit: .kilometresPerHour),
-                    maximum: .init(value: decimal(value.maximumKilometresPerHour), unit: .kilometresPerHour),
-                    increment: .init(value: decimal(value.minimumIncrementKilometresPerHour), unit: .kilometresPerHour)
+                    minimum: .init(
+                        value: FTMSProtocolDecimal.speed(
+                            kilometresPerHour: value.minimumKilometresPerHour),
+                        unit: .kilometresPerHour
+                    ),
+                    maximum: .init(
+                        value: FTMSProtocolDecimal.speed(
+                            kilometresPerHour: value.maximumKilometresPerHour),
+                        unit: .kilometresPerHour
+                    ),
+                    increment: .init(
+                        value: FTMSProtocolDecimal.speed(
+                            kilometresPerHour: value.minimumIncrementKilometresPerHour),
+                        unit: .kilometresPerHour
+                    )
                 )
             )
         }
@@ -616,16 +628,22 @@ final class TreadmillSetupViewModel: ObservableObject {
         case let .value(value, _):
             return .supported(
                 WorkoutInclinationRange(
-                    minimum: .init(value: decimal(value.minimumPercent), unit: .percent),
-                    maximum: .init(value: decimal(value.maximumPercent), unit: .percent),
-                    increment: .init(value: decimal(value.minimumIncrementPercent), unit: .percent)
+                    minimum: .init(
+                        value: FTMSProtocolDecimal.inclination(percent: value.minimumPercent),
+                        unit: .percent
+                    ),
+                    maximum: .init(
+                        value: FTMSProtocolDecimal.inclination(percent: value.maximumPercent),
+                        unit: .percent
+                    ),
+                    increment: .init(
+                        value: FTMSProtocolDecimal.inclination(
+                            percent: value.minimumIncrementPercent),
+                        unit: .percent
+                    )
                 )
             )
         }
-    }
-
-    private static func decimal(_ value: Double) -> Decimal {
-        Decimal(string: String(value), locale: Locale(identifier: "en_US_POSIX")) ?? .nan
     }
 }
 

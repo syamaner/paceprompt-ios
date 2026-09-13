@@ -2,6 +2,22 @@ import XCTest
 @testable import PacePrompt
 
 final class FTMSParserTests: XCTestCase {
+    func testProtocolDecimalCanonicalizesIntegerScaledFloatingPointTails() {
+        XCTAssertEqual(
+            FTMSProtocolDecimal.speed(kilometresPerHour: Double(70) * 0.01),
+            Decimal(string: "0.7")
+        )
+        XCTAssertEqual(
+            FTMSProtocolDecimal.speed(kilometresPerHour: Double(1_999) * 0.01),
+            Decimal(string: "19.99")
+        )
+        XCTAssertEqual(
+            FTMSProtocolDecimal.inclination(percent: Double(3) * 0.1),
+            Decimal(string: "0.3")
+        )
+        XCTAssertTrue(FTMSProtocolDecimal.speed(kilometresPerHour: .nan).isNaN)
+    }
+
     func testFitnessMachineFeatureParsesBothLittleEndianFields() throws {
         let data = Data([0x08, 0x04, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00])
 
