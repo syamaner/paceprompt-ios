@@ -133,6 +133,27 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(h.binding.orchestrator.state.execution, .runningSegment)
   }
 
+  func testPhysicalStartRampBelowMinimumTargetPermitsRequestControl() throws {
+    let h = Harness(authorized: true)
+    h.makeReadyWithFreshStationaryTelemetry()
+    XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
+    XCTAssertNotNil(
+      h.binding.beginWorkout(
+        readiness: .init(
+          deckClear: true,
+          consoleImmediatelyReachable: true,
+          safetyKeyImmediatelyReachable: true,
+          physicallyStationary: true
+        )
+      )
+    )
+
+    h.publishTelemetry(speedRaw: 10)
+
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .acquiringControl)
+    XCTAssertEqual(h.link.writes, [Data([0x00])])
+  }
+
   func testProtocolScaledTelemetryCanonicalizesFloatingTailBeforeTargetObservation() throws {
     let h = Harness(authorized: true)
     h.reachRunning()
@@ -236,6 +257,21 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       XCTAssertTrue(authority.canAuthorize)
       XCTAssertTrue(authority.authorize(candidate))
       XCTAssertEqual(authority.activeAuthorization?.sessionID, secondSessionID)
+    }
+
+    func testIssue62ReportUsesSanitisedTerminalCodes() {
+      XCTAssertEqual(
+        Issue62WorkoutProofCoordinator.phaseDescription(
+          .failed(.contradictoryEvidence("Synthetic detail must not appear"))
+        ),
+        "failed (evidence-contradictory)"
+      )
+      XCTAssertEqual(
+        Issue62WorkoutProofCoordinator.phaseDescription(
+          .interrupted(.connectionLost("Synthetic identity must not appear"))
+        ),
+        "interrupted (connection-lost)"
+      )
     }
   #endif
 

@@ -479,7 +479,7 @@
       )
     )
 
-    private static func phaseDescription(_ phase: WorkoutExecutionPhase) -> String {
+    static func phaseDescription(_ phase: WorkoutExecutionPhase) -> String {
       switch phase {
       case .idle: "idle"
       case .preflight: "preflight"
@@ -494,8 +494,48 @@
       case .readyToEnd: "ready to End workout"
       case .ending: "ending locally"
       case .finished: "finished"
-      case .interrupted: "interrupted"
-      case .failed: "failed"
+      case .interrupted(let reason): "interrupted (\(interruptionCode(reason)))"
+      case .failed(let reason): "failed (\(failureCode(reason)))"
+      }
+    }
+
+    private static func interruptionCode(_ reason: WorkoutInterruption) -> String {
+      switch reason {
+      case .telemetryUnavailable: "telemetry-unavailable"
+      case .telemetryStreamTimedOut: "telemetry-stream-timed-out"
+      case .stationaryEvidenceExpired: "stationary-evidence-expired"
+      case .connectionLost: "connection-lost"
+      case .foregroundLost: "app-continuity-lost"
+      case .controlPermissionLost: "control-permission-lost"
+      case .profileChanged: "profile-changed"
+      case .resumeGuardsFailed: "resume-guards-failed"
+      }
+    }
+
+    private static func failureCode(_ reason: WorkoutExecutionFailure) -> String {
+      switch reason {
+      case .procedure(let procedure): procedureFailureCode(procedure)
+      case .malformedTelemetry: "telemetry-malformed"
+      case .incompleteTelemetry: "telemetry-incomplete"
+      case .contradictoryEvidence: "evidence-contradictory"
+      case .targetObservationTimeout: "target-observation-timed-out"
+      case .localHistoryPersistence: "history-persistence-failed"
+      case .localFinalization: "history-finalization-failed"
+      }
+    }
+
+    private static func procedureFailureCode(_ failure: WorkoutProcedureFailure) -> String {
+      switch failure {
+      case .notSubmitted: "procedure-not-submitted"
+      case .submissionRejected: "procedure-submission-rejected"
+      case .attRejected: "procedure-att-rejected"
+      case .protocolRejected: "procedure-ftms-rejected"
+      case .protocolUnsupported: "procedure-ftms-unsupported"
+      case .protocolMalformed: "procedure-ftms-malformed"
+      case .protocolUnknown: "procedure-ftms-unknown"
+      case .correlationFailure: "procedure-correlation-failed"
+      case .duplicateOrLate: "procedure-duplicate-or-late"
+      case .responseTimeout: "procedure-response-timed-out"
       }
     }
 

@@ -1662,10 +1662,12 @@ extension WorkoutExecutionReducer {
       case .supported(let speedRange) = armed.capability.planCapabilities.speed,
       case .supported(let inclinationRange) = armed.capability.planCapabilities.inclination
     else { return true }
+    // The supported range describes target-setting capability, not every value the belt may
+    // report while physically accelerating from stationary. A current non-negative speed below
+    // the minimum target is valid motion evidence, but it is never itself used as a target.
     let speedIsValid =
-      sample.speed.value == 0
-      || (sample.speed.value >= speedRange.minimum.value
-        && sample.speed.value <= speedRange.maximum.value)
+      sample.speed.value >= 0
+      && sample.speed.value <= speedRange.maximum.value
     return speedIsValid
       && sample.inclination.value >= inclinationRange.minimum.value
       && sample.inclination.value <= inclinationRange.maximum.value

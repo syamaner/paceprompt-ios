@@ -106,6 +106,20 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertEqual(t.state.execution, .runningSegment)
   }
 
+  func testPhysicalStartAcceptsReportedRampSpeedBelowMinimumTarget() throws {
+    let h = Harness()
+    let transition = h.accept(
+      h.send(
+        try h.waitingState(),
+        .telemetry(epoch: h.epoch, h.sample("0.1", "0"))
+      )
+    )
+
+    XCTAssertEqual(transition.state.execution, .acquiringControl)
+    XCTAssertEqual(transition.record?.intent, .requestControl)
+    XCTAssertTrue(transition.state.motionPossible)
+  }
+
   func testPreControlWaitAllowsStationaryTelemetryToExpireOrBecomeUnavailable() throws {
     let h = Harness()
     var t = h.accept(
@@ -455,6 +469,20 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     )
     XCTAssertEqual(
       unavailable.state.execution, .interrupted(.telemetryUnavailable("subscription ended")))
+  }
+
+  func testNegativeOrAboveMaximumReportedSpeedRemainsContradictory() throws {
+    for speed in ["-0.1", "20.1"] {
+      let h = Harness()
+      let transition = h.send(
+        try h.waitingState(),
+        .telemetry(epoch: h.epoch, h.sample(speed, "0"))
+      )
+      guard case .failed(.contradictoryEvidence) = transition.state.execution else {
+        return XCTFail("Expected contradictory evidence for \(speed) km/h")
+      }
+      XCTAssertFalse(transition.effects.containsTargetSubmission)
+    }
   }
 
   func testConnectionControlForegroundAndCapabilityChangesInterruptWithoutContinuation() throws {

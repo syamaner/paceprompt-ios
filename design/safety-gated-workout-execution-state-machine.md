@@ -80,6 +80,8 @@ Only `idle` permits another procedure. A terminal procedure record must be consu
 | `malformed(raw, error)` | The packet cannot be used. |
 | `contradictory(evidence)` | Current machine/human evidence conflicts with the active execution claim. |
 
+Advertised supported ranges constrain target-setting. A complete non-negative speed report below the advertised minimum target remains valid physical-start ramp evidence; it does not become a requested target. Negative speed or a report above the accepted maximum remains contradictory.
+
 After movement has been observed or control is held, staleness freezes active time at the freshness boundary and enters `checkingTreadmill`. A required packet within 10.0 seconds may resolve checking; longer silence terminates execution as interrupted/physically uncertain. Before control, `waitingForPhysicalStart` may remain unknown through stationary-report expiry or packet silence because it cannot emit a procedure until a fresh non-zero report arrives.
 
 ### Observed machine
