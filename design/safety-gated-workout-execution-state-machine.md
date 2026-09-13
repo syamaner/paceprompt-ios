@@ -82,7 +82,7 @@ Only `idle` permits another procedure. A terminal procedure record must be consu
 
 Advertised supported ranges constrain target-setting. A complete non-negative speed report below the advertised minimum target remains valid physical-start ramp evidence; it does not become a requested target. Negative speed or a report above the accepted maximum remains contradictory.
 
-After movement has been observed or control is held, staleness freezes active time at the freshness boundary and enters `checkingTreadmill`. A required packet within 10.0 seconds may resolve checking; longer silence terminates execution as interrupted/physically uncertain. Before control, `waitingForPhysicalStart` may remain unknown through stationary-report expiry or packet silence because it cannot emit a procedure until a fresh non-zero report arrives.
+After movement has been observed or control is held, staleness freezes active time at the freshness boundary and enters `checkingTreadmill`. Checking remains command-free while telemetry is absent. Fresh telemetry may resolve the uncertainty, or the operator may separately confirm the treadmill stationary; silence alone never establishes stop and no longer terminates the attempt on a timer. Before control, `waitingForPhysicalStart` may remain unknown through stationary-report expiry or packet silence because it cannot emit a procedure until a fresh non-zero report arrives.
 
 ### Observed machine
 
@@ -134,9 +134,10 @@ flowchart TD
     RUN -->|Manual override or next segment| APPLY
     RUN -->|Telemetry older than 2 seconds| CHECK[Checking treadmill]
     APPLY -->|Telemetry older than 2 seconds| CHECK
-    CHECK -->|Fresh zero within 10 seconds| PAUSED[Paused]
-    CHECK -->|Fresh non-zero within 10 seconds| PREV[Return to applying/running]
-    CHECK -->|No packet by 10 seconds| INTERRUPTED[Interrupted]
+    CHECK -->|Fresh zero| PAUSED[Paused]
+    CHECK -->|Operator confirms stationary| PAUSED
+    CHECK -->|Fresh non-zero| PREV[Return to applying/running]
+    CHECK -->|Silence continues| CHECK
     RUN -->|Fresh zero| PAUSED
     PAUSED -->|Physical Start; fresh non-zero| RESTORE[Restore effective targets]
     RESTORE -->|Acknowledgements plus later joint exact report| RUN
@@ -198,9 +199,10 @@ From `applyingTargets` or `runningStep`:
 
 - a fresh zero enters `paused` immediately;
 - telemetry age above 2.0 seconds freezes time at the freshness boundary and enters `checkingTreadmill`;
-- fresh zero within 10.0 seconds enters `paused`;
-- fresh non-zero within 10.0 seconds and no adverse evidence returns to the preceding applying/running state, excluding the uncertain gap from active duration;
-- no required packet by 10.0 seconds enters `interrupted` and invalidates control assumptions.
+- fresh zero enters `paused`;
+- a separate deliberate operator stationary confirmation enters `paused` without inventing telemetry;
+- fresh non-zero and no adverse evidence returns to the preceding applying/running state, excluding the uncertain gap from active duration;
+- continued silence remains `checkingTreadmill`, with active timing and plan progression frozen and no write emitted.
 
 Packet silence does not establish pause. A separately deliberate operator stationary confirmation may establish `paused`/`readyToEnd` without inventing telemetry.
 
@@ -238,8 +240,7 @@ The first matching rule wins:
 | ATT error, negative/malformed/mismatched/duplicate response or correlation failure | Fail procedure, invalidate control, interrupt, no retry. |
 | FTMS indication timeout | `timedOutUnknown`; require a new user-created attempt/link for later work. |
 | Target-observation timeout | Target not confirmed; interrupt; no retry/compensation. |
-| Telemetry stale for 2–10 seconds | `checkingTreadmill`; freeze time/progression; no write. |
-| Telemetry absent beyond 10 seconds | `interrupted`; physical state uncertain; no later automatic continuation. |
+| Telemetry stale or absent after 2 seconds | `checkingTreadmill`; freeze time/progression; no write; await fresh evidence or operator confirmation. |
 | Contradictory telemetry or human observation | Preserve evidence, interrupt and return authority to console/safety key. |
 | Explicit `0x2ADA` control loss | Invalidate control and interrupt. |
 | Missing `0x2AD3` or `0x2ADA` notification | No permissive or state-preserving effect. |

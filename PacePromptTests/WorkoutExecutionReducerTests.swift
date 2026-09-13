@@ -15,7 +15,6 @@ final class WorkoutExecutionReducerTests: XCTestCase {
 
     XCTAssertEqual(try Harness().preflightState().execution, .preflight)
     XCTAssertEqual(FR30zExecutionProfile.telemetryFreshnessInterval, 2)
-    XCTAssertEqual(FR30zExecutionProfile.telemetryCheckingInterval, 10)
     XCTAssertEqual(FR30zExecutionProfile.targetObservationInterval, 30)
   }
 
@@ -185,7 +184,7 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertTrue(t.effects.isEmpty)
   }
 
-  func testDelayedZeroPausesButSilenceOrDeadlineTelemetryInterrupts() throws {
+  func testDelayedZeroPausesAndSilenceKeepsCheckingUntilEvidence() throws {
     let h = Harness(stepDuration: 20)
     var state = try h.runningState()
     let sampleAt = state.lastEventTime.seconds
@@ -203,10 +202,26 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     let otherSampleAt = other.lastEventTime.seconds
     other =
       silence.accept(silence.send(at: otherSampleAt + 3, other, .tick(epoch: silence.epoch))).state
-    let interrupted = silence.send(at: otherSampleAt + 10, other, .tick(epoch: silence.epoch))
-    XCTAssertEqual(interrupted.state.execution, .interrupted(.telemetryStreamTimedOut))
-    XCTAssertEqual(interrupted.effects, [.directUserToConsoleAndSafetyKey])
-    XCTAssertFalse(interrupted.effects.containsTargetSubmission)
+    let stillChecking = silence.accept(
+      silence.send(at: otherSampleAt + 60, other, .tick(epoch: silence.epoch)))
+    guard case .checkingTreadmill = stillChecking.state.execution else {
+      return XCTFail("Expected silence to remain checking")
+    }
+    XCTAssertEqual(stillChecking.state.currentSegment?.accumulatedActiveSeconds, 2)
+    XCTAssertTrue(stillChecking.effects.isEmpty)
+    XCTAssertFalse(stillChecking.effects.containsTargetSubmission)
+
+    let humanPaused = silence.accept(
+      silence.send(
+        at: otherSampleAt + 61,
+        stillChecking.state,
+        .humanConfirmsStationary(epoch: silence.epoch, note: "Console stopped")
+      )
+    )
+    guard case .paused(.human) = humanPaused.state.execution else {
+      return XCTFail("Expected human-confirmed pause after prolonged silence")
+    }
+    XCTAssertFalse(humanPaused.effects.containsTargetSubmission)
 
     let boundary = Harness(stepDuration: 20)
     var boundaryState = try boundary.runningState()
@@ -215,12 +230,37 @@ final class WorkoutExecutionReducerTests: XCTestCase {
       boundary.accept(
         boundary.send(at: boundaryAt + 3, boundaryState, .tick(epoch: boundary.epoch))
       ).state
-    let late = boundary.send(
-      at: boundaryAt + 10,
-      boundaryState,
-      .telemetry(epoch: boundary.epoch, boundary.sample("5", "0"))
+    let late = boundary.accept(
+      boundary.send(
+        at: boundaryAt + 60,
+        boundaryState,
+        .telemetry(epoch: boundary.epoch, boundary.sample("5", "0"))
+      ))
+    XCTAssertEqual(late.state.execution, .runningSegment)
+    XCTAssertEqual(late.state.currentSegment?.accumulatedActiveSeconds, 2)
+    XCTAssertTrue(late.effects.isEmpty)
+
+    let disconnected = Harness(stepDuration: 20)
+    var disconnectedState = try disconnected.runningState()
+    let disconnectedAt = disconnectedState.lastEventTime.seconds
+    disconnectedState =
+      disconnected.accept(
+        disconnected.send(
+          at: disconnectedAt + 60,
+          disconnectedState,
+          .tick(epoch: disconnected.epoch)
+        )
+      ).state
+    let connectionLost = disconnected.send(
+      at: disconnectedAt + 61,
+      disconnectedState,
+      .connectionLost(epoch: disconnected.epoch, reason: "link lost")
     )
-    XCTAssertEqual(late.state.execution, .interrupted(.telemetryStreamTimedOut))
+    guard case .interrupted(.connectionLost) = connectionLost.state.execution else {
+      return XCTFail("Expected real connection loss to interrupt checking")
+    }
+    XCTAssertEqual(connectionLost.effects, [.directUserToConsoleAndSafetyKey])
+    XCTAssertFalse(connectionLost.effects.containsTargetSubmission)
   }
 
   func testDirectPausePreservesSegmentAndPhysicalResumeRestoresBothTargets() throws {

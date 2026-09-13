@@ -227,8 +227,7 @@ final class WorkoutExercisePresentationTests: XCTestCase {
       .checkingTreadmill(
         .init(
           origin: .awaitingPhysicalStopForCompletion,
-          freshnessBoundary: .init(seconds: 100),
-          interruptionDeadline: .init(seconds: 130)
+          freshnessBoundary: .init(seconds: 100)
         )
       ),
       .readyToEnd(completion),
