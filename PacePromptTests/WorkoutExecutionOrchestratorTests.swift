@@ -287,7 +287,7 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     }
   }
 
-  func testDelayedZeroPausesButAbsentZeroInterruptsWithoutRetry() throws {
+  func testDelayedZeroPausesAndAbsentTelemetryWaitsForOperatorWithoutRetry() throws {
     let delayed = try Harness.running(stepDuration: 20)
     let sampleAt = delayed.orchestrator.state.lastEventTime.seconds
     delayed.send(.tick(epoch: delayed.epoch), monotonic: sampleAt + 2.1)
@@ -307,13 +307,20 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     let absent = try Harness.running(stepDuration: 20)
     let absentAt = absent.orchestrator.state.lastEventTime.seconds
     absent.send(.tick(epoch: absent.epoch), monotonic: absentAt + 2.1)
-    absent.send(.tick(epoch: absent.epoch), monotonic: absentAt + 10)
-    XCTAssertEqual(absent.orchestrator.state.execution, .interrupted(.telemetryStreamTimedOut))
+    absent.send(.tick(epoch: absent.epoch), monotonic: absentAt + 60)
+    guard case .checkingTreadmill = absent.orchestrator.state.execution else {
+      return XCTFail("Expected absent telemetry to remain checking")
+    }
     XCTAssertEqual(absent.transport.submissions.count, count)
-    XCTAssertEqual(
-      absent.orchestrator.lastPersistedSummary?.outcome,
-      .interrupted(reason: .init(rawValue: "telemetry-stream-timed-out"))
+    absent.send(
+      .humanConfirmsStationary(epoch: absent.epoch, note: "Synthetic direct observation"),
+      monotonic: absentAt + 61
     )
+    guard case .paused(.human) = absent.orchestrator.state.execution else {
+      return XCTFail("Expected operator-confirmed pause")
+    }
+    XCTAssertEqual(absent.transport.submissions.count, count)
+    XCTAssertEqual(absent.orchestrator.lastPersistedSummary?.outcome, .inProgress)
   }
 
   func testStaleMalformedContradictoryAndDuplicateEventsCannotContinue() throws {

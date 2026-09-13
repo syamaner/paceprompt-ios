@@ -50,7 +50,6 @@ struct WorkoutSessionCeilings: Equatable {
 struct FR30zExecutionProfile: Equatable {
   static let identity = "fr30z-physical-console-v1"
   static let telemetryFreshnessInterval: TimeInterval = 2
-  static let telemetryCheckingInterval: TimeInterval = 10
   static let targetObservationInterval: TimeInterval = 30
   static let procedureResponseInterval: TimeInterval = 30
 
@@ -303,7 +302,6 @@ enum WorkoutCheckingOrigin: Equatable {
 struct WorkoutCheckingState: Equatable {
   let origin: WorkoutCheckingOrigin
   let freshnessBoundary: MonotonicInstant
-  let interruptionDeadline: MonotonicInstant
 }
 
 enum WorkoutCompletionReason: Equatable {
@@ -1056,10 +1054,6 @@ extension WorkoutExecutionReducer {
     state: inout WorkoutExecutionState,
     effects: inout [WorkoutExecutionEffect]
   ) -> WorkoutReductionDisposition {
-    if case .checkingTreadmill(let checking) = state.execution, now >= checking.interruptionDeadline
-    {
-      return interrupt(.telemetryStreamTimedOut, state: &state, effects: &effects)
-    }
     if let deadline = state.targetSequence?.observationDeadline,
       now >= deadline,
       isTargetObservationRelevant(state.execution)
@@ -1279,10 +1273,7 @@ extension WorkoutExecutionReducer {
     {
       return fail(.targetObservationTimeout, state: &state, effects: &effects)
     }
-    if case .checkingTreadmill(let checking) = state.execution {
-      if now >= checking.interruptionDeadline {
-        return interrupt(.telemetryStreamTimedOut, state: &state, effects: &effects)
-      }
+    if case .checkingTreadmill = state.execution {
       return .accepted
     }
     if let sample = currentTelemetrySample(state.telemetry),
@@ -1296,14 +1287,9 @@ extension WorkoutExecutionReducer {
       state.observedMachine = .unknown
       let checking = WorkoutCheckingState(
         origin: checkingOrigin(state.execution),
-        freshnessBoundary: freshnessBoundary,
-        interruptionDeadline: sample.receivedAt.advanced(
-          by: FR30zExecutionProfile.telemetryCheckingInterval)
+        freshnessBoundary: freshnessBoundary
       )
       state.execution = .checkingTreadmill(checking)
-      if now >= checking.interruptionDeadline {
-        return interrupt(.telemetryStreamTimedOut, state: &state, effects: &effects)
-      }
       return .accepted
     }
     if case .runningSegment = state.execution {

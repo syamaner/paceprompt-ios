@@ -219,8 +219,7 @@
         state.execution = .checkingTreadmill(
           .init(
             origin: .runningSegment,
-            freshnessBoundary: .init(seconds: 98),
-            interruptionDeadline: .init(seconds: 108)
+            freshnessBoundary: .init(seconds: 98)
           )
         )
       case .paused:

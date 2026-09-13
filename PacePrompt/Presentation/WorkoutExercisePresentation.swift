@@ -347,7 +347,7 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Checking treadmill",
         detail:
-          "Telemetry is delayed or stale. Belt state is unknown; this does not mean the treadmill stopped.",
+          "Telemetry is delayed or stale, so timing is frozen. This does not mean the treadmill stopped; confirm below only after the operator observes it stationary.",
         symbol: "clock.badge.exclamationmark.fill",
         tone: .warning
       )

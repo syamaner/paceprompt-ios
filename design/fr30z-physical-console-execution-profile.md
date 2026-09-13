@@ -124,12 +124,13 @@ FTMS encodes the relevant speed and inclination fields as scaled integers. After
 
 - A sample is fresh for **2.0 seconds** from its monotonic receipt time.
 - When a required sample becomes older than 2.0 seconds, freeze active workout and segment timing at `sample.receivedAt + 2.0 seconds`, suppress plan transitions and enter **Checking treadmill**.
-- Checking may continue until **10.0 seconds** after the last well-formed required sample. This allows the observed 8.010-second console-stop gap without pretending the gap itself is stationary evidence.
+- Checking continues while required telemetry is absent. Silence is a signal to freeze and ask the operator what the physical console shows; it is never stationary evidence and never emits a procedure.
 - A fresh zero-speed sample received during checking establishes the telemetry-based pause condition.
-- A fresh non-zero sample received during checking, before the 10.0-second boundary and with no other adverse evidence, returns to the preceding target-observation or running state. The uncertain gap is excluded from active duration.
-- If no required sample arrives by 10.0 seconds, the workout becomes interrupted/physically uncertain. Invalidate control assumptions, emit no further procedure and direct the operator to the console/safety key. Later packets remain evidence but cannot restart that attempt automatically.
+- A fresh non-zero sample received during checking, with no other adverse evidence, returns to the preceding target-observation or running state. The uncertain gap is excluded from active duration.
+- The operator may deliberately confirm that the treadmill is physically stationary at any time while checking. That separately recorded human evidence establishes pause or ending eligibility without inventing a zero-speed packet.
+- Explicit telemetry unavailability, malformed or contradictory evidence, connection/control/profile loss, app deactivation and procedure or target-observation deadlines retain their fail-closed outcomes. Silence alone has no terminal deadline.
 
-These windows are conservative product policy derived from normal observed delivery near 0.5 seconds and one 8.010-second post-stop gap. They are not Bluetooth guarantees.
+The 2.0-second freshness window is conservative product policy derived from normal observed delivery near 0.5 seconds. It is not a Bluetooth guarantee.
 
 ### Physical Start and Resume
 
