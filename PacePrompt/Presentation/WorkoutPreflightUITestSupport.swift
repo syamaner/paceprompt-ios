@@ -22,7 +22,8 @@ struct WorkoutPreflightUITestConfiguration {
         let process = ProcessInfo.processInfo
         guard process.arguments.contains("--paceprompt-preflight-ui-testing"),
               let value = process.environment["PACEPROMPT_PREFLIGHT_SCENARIO"],
-              let scenario = WorkoutPreflightUITestScenario(rawValue: value) else {
+        let scenario = WorkoutPreflightUITestScenario(rawValue: value)
+      else {
             return nil
         }
         return .init(
@@ -54,7 +55,7 @@ struct WorkoutPreflightUITestHost: View {
 
     private func handle(_ intent: WorkoutPreflightIntent) {
         switch intent {
-        case let .setConfirmation(kind, isConfirmed):
+      case .setConfirmation(let kind, let isConfirmed):
             setConfirmation(kind, isConfirmed: isConfirmed)
         case .beginWorkout:
             beginWorkout()
@@ -116,36 +117,21 @@ struct WorkoutPreflightUITestHost: View {
             locale: Locale(identifier: "en_GB")
         )
         guard presentation.canBeginWorkout,
-              let epoch = context.executionState.connection.epoch else { return }
+        let epoch = context.executionState.connection.epoch
+      else { return }
 
         let reducer = WorkoutExecutionReducer()
-        var transition = reducer.reduce(
+      let transition = reducer.reduce(
             context.executionState,
             .beginWorkout(epoch: epoch, readiness: context.operatorReadiness),
             at: now.advanced(by: 0.1)
         )
         guard transition.disposition == .accepted,
-              case .submit(let record) = transition.effects.first else { return }
+        transition.effects.isEmpty,
+        transition.state.execution == .waitingForPhysicalStart
+      else { return }
 
-        transition = reducer.reduce(
-            transition.state,
-            .intentSubmitted(epoch: epoch, procedureID: record.id),
-            at: now.advanced(by: 0.2)
-        )
-        transition = reducer.reduce(
-            transition.state,
-            .attAccepted(epoch: epoch, procedureID: record.id),
-            at: now.advanced(by: 0.3)
-        )
-        transition = reducer.reduce(
-            transition.state,
-            .protocolAcknowledged(epoch: epoch, procedureID: record.id),
-            at: now.advanced(by: 0.4)
-        )
-        guard transition.disposition == .accepted,
-              transition.state.execution == .waitingForPhysicalStart else { return }
-
-        now = now.advanced(by: 0.4)
+      now = now.advanced(by: 0.1)
         context = .init(
             validatedPlan: context.validatedPlan,
             ceilings: context.ceilings,
@@ -191,7 +177,8 @@ private enum WorkoutPreflightFixtures {
         var state = WorkoutExecutionState()
         let reducer = WorkoutExecutionReducer()
         let epoch = ConnectionEpoch(rawValue: 58)
-        state = reducer.reduce(
+      state =
+        reducer.reduce(
             state,
             .userStartsConnection(epoch),
             at: .init(seconds: 1)
@@ -221,10 +208,12 @@ private enum WorkoutPreflightFixtures {
             )
         }
 
-        let connectedCapability = scenario == .unsupported
+      let connectedCapability =
+        scenario == .unsupported
             ? capabilityReplacingFeatureEvidence(capability, evidence: .mismatch)
             : capability
-        state = reducer.reduce(
+      state =
+        reducer.reduce(
             state,
             .connectionBecomesReady(epoch: epoch, capability: connectedCapability),
             at: .init(seconds: 2)
@@ -242,12 +231,14 @@ private enum WorkoutPreflightFixtures {
             )
         }
 
-        state = reducer.reduce(
+      state =
+        reducer.reduce(
             state,
             .arm(plan: plan, ceilings: ceilings, profile: profile),
             at: .init(seconds: 3)
         ).state
-        state = reducer.reduce(
+      state =
+        reducer.reduce(
             state,
             .telemetry(
                 epoch: epoch,
@@ -258,6 +249,43 @@ private enum WorkoutPreflightFixtures {
 
         switch scenario {
         case .stale:
+        var transition = reducer.reduce(
+          state,
+          .beginWorkout(epoch: epoch, readiness: confirmed),
+          at: .init(seconds: 4.1)
+        )
+        transition = reducer.reduce(
+          transition.state,
+          .telemetry(
+            epoch: epoch,
+            .sample(speed: speed(0.5), inclination: inclination(0), totalDistanceMetres: 0)
+          ),
+          at: .init(seconds: 4.2)
+        )
+        guard case .submit(let record) = transition.effects.first else {
+          preconditionFailure("Expected Request Control after fresh movement")
+        }
+        transition = reducer.reduce(
+          transition.state,
+          .intentSubmitted(epoch: epoch, procedureID: record.id),
+          at: .init(seconds: 4.3)
+        )
+        transition = reducer.reduce(
+          transition.state,
+          .attAccepted(epoch: epoch, procedureID: record.id),
+          at: .init(seconds: 4.4)
+        )
+        transition = reducer.reduce(
+          transition.state,
+          .protocolAcknowledged(epoch: epoch, procedureID: record.id),
+          at: .init(seconds: 6.3)
+        )
+        state =
+          reducer.reduce(
+            transition.state,
+            .tick(epoch: epoch),
+            at: .init(seconds: 6.4)
+          ).state
             return make(
                 plan: plan,
                 ceilings: ceilings,
@@ -265,12 +293,13 @@ private enum WorkoutPreflightFixtures {
                 state: state,
                 readiness: confirmed,
                 activityConfirmed: true,
-                now: 6.1
+          now: 6.4
             )
         case .locked:
-            state = reducer.reduce(
+        state =
+          reducer.reduce(
                 state,
-                .telemetry(epoch: epoch, .unavailable("Synthetic current sample unavailable")),
+            .telemetry(epoch: epoch, .malformed("Synthetic malformed current sample")),
                 at: .init(seconds: 4.1)
             ).state
             return make(
@@ -308,10 +337,7 @@ private enum WorkoutPreflightFixtures {
                 .beginWorkout(epoch: epoch, readiness: confirmed),
                 at: .init(seconds: 4.1)
             )
-            guard case .submit(let record) = transition.effects.first else {
-                preconditionFailure("Synthetic Begin workout did not create Request Control")
-            }
-            if scenario == .requesting {
+        if scenario == .waitingForPhysicalStart {
                 return make(
                     plan: plan,
                     ceilings: ceilings,
@@ -324,18 +350,11 @@ private enum WorkoutPreflightFixtures {
             }
             transition = reducer.reduce(
                 transition.state,
-                .intentSubmitted(epoch: epoch, procedureID: record.id),
+          .telemetry(
+            epoch: epoch,
+            .sample(speed: speed(0.5), inclination: inclination(0), totalDistanceMetres: 0)
+          ),
                 at: .init(seconds: 4.2)
-            )
-            transition = reducer.reduce(
-                transition.state,
-                .attAccepted(epoch: epoch, procedureID: record.id),
-                at: .init(seconds: 4.3)
-            )
-            transition = reducer.reduce(
-                transition.state,
-                .protocolAcknowledged(epoch: epoch, procedureID: record.id),
-                at: .init(seconds: 4.4)
             )
             return make(
                 plan: plan,
@@ -344,10 +363,11 @@ private enum WorkoutPreflightFixtures {
                 state: transition.state,
                 readiness: confirmed,
                 activityConfirmed: true,
-                now: 4.4
+          now: 4.3
             )
         case .failed:
-            state = reducer.reduce(
+        state =
+          reducer.reduce(
                 state,
                 .connectionLost(epoch: epoch, reason: "Synthetic connection loss"),
                 at: .init(seconds: 4.1)
@@ -417,10 +437,12 @@ private enum WorkoutPreflightFixtures {
                 ),
             ]
         )
-        guard case .success(let validated) = WorkoutPlanValidator.validate(
+      guard
+        case .success(let validated) = WorkoutPlanValidator.validate(
             plan,
             against: matchingCapability().planCapabilities
-        ) else {
+        )
+      else {
             preconditionFailure("Synthetic preflight plan must validate")
         }
         return validated

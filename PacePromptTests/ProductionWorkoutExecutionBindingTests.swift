@@ -60,14 +60,14 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
-  func testExactAuthorisedProfileRequiresControlIndicationAndFreshTelemetry() {
+  func testExactAuthorisedProfileRequiresControlIndicationButNotAStationaryPacket() {
     let h = Harness(authorized: true)
     h.publishExactProfile()
 
     XCTAssertEqual(h.link.enableIndicationsCount, 1)
     XCTAssertFalse(h.binding.canExposeArming)
     h.link.send(.indicationsEnabled)
-    XCTAssertFalse(h.binding.canExposeArming)
+    XCTAssertTrue(h.binding.canExposeArming)
 
     h.binding.receive(
       .value(
@@ -76,19 +76,18 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
         source: .notification
       )
     )
-    XCTAssertFalse(
-      h.binding.canExposeArming, "A fresh but incomplete packet is not accepted telemetry")
+    XCTAssertTrue(h.binding.canExposeArming)
 
     h.publishTelemetry(speedRaw: 0)
     XCTAssertTrue(h.binding.canExposeArming)
     XCTAssertEqual(h.binding.currentCapability?.fitnessMachineFeatureEvidence, .matched)
 
     h.clock.advance(by: 2.001)
-    XCTAssertFalse(h.binding.canExposeArming)
+    XCTAssertTrue(h.binding.canExposeArming)
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
-  func testEndToEndRequestControlThenPhysicalStartSequencesOnlySpeedAndInclination() throws {
+  func testEndToEndPhysicalStartThenRequestControlSequencesOnlySpeedAndInclination() throws {
     let h = Harness(authorized: true)
     h.makeReadyWithFreshStationaryTelemetry()
     XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
@@ -100,6 +99,12 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       physicallyStationary: true
     )
     XCTAssertNotNil(h.binding.beginWorkout(readiness: readiness))
+    XCTAssertTrue(h.link.writes.isEmpty)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
+
+    h.publishTelemetry(speedRaw: 0)
+    XCTAssertTrue(h.link.writes.isEmpty, "Accepted zero speed is not Start evidence")
+    h.publishTelemetry(speedRaw: 50)
     XCTAssertEqual(h.link.writes, [Data([0x00])])
     guard case .submitted = h.binding.orchestrator.state.procedure else {
       return XCTFail("Intent and submission must remain separate from ATT acceptance")
@@ -110,12 +115,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       return XCTFail("ATT acceptance must remain separate from the FTMS result")
     }
     h.link.send(.indication(Data([0x80, 0x00, 0x01])))
-    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
-
-    h.publishTelemetry(speedRaw: 0)
-    XCTAssertEqual(
-      h.link.writes.count, 1, "Accepted zero speed is Stop evidence, not Start evidence")
-    h.publishTelemetry(speedRaw: 50)
     XCTAssertEqual(h.link.writes.last, Data([0x02, 0xF4, 0x01]))
     XCTAssertEqual(h.link.writes.map(\.first), [0x00, 0x02])
 
@@ -146,7 +145,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
         physicallyStationary: true
       )
     )
-    XCTAssertEqual(h.link.writes, [Data([0x00])])
+    XCTAssertTrue(h.link.writes.isEmpty)
 
     h.binding.setApplicationActivity(.inactive)
     guard case .interrupted(.foregroundLost) = h.binding.orchestrator.state.execution else {
@@ -155,11 +154,11 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(h.link.invalidateCount, 1)
     XCTAssertEqual(h.authority.invalidationCount, 1)
     XCTAssertNil(h.authority.activeAuthorization)
-    XCTAssertEqual(h.link.writes, [Data([0x00])])
+    XCTAssertTrue(h.link.writes.isEmpty)
 
     h.binding.setApplicationActivity(.active)
     XCTAssertEqual(h.link.enableIndicationsCount, 1, "The binding must not reconnect or resume")
-    XCTAssertEqual(h.link.writes, [Data([0x00])])
+    XCTAssertTrue(h.link.writes.isEmpty)
   }
 
   func testExplicitReconnectCanPrepareAnotherAuthorisedSequence() {
@@ -469,9 +468,9 @@ extension ProductionWorkoutExecutionBindingTests {
           physicallyStationary: true
         )
       )
+      publishTelemetry(speedRaw: 50)
       link.send(.writeAccepted)
       link.send(.indication(Data([0x80, 0x00, 0x01])))
-      publishTelemetry(speedRaw: 50)
       link.send(.writeAccepted)
       link.send(.indication(Data([0x80, 0x02, 0x01])))
       link.send(.writeAccepted)

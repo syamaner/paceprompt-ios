@@ -538,7 +538,7 @@ struct WorkoutExecutionReducer {
 
     case .beginWorkout(_, let readiness):
       guard case .preflight = state.execution,
-        case .ready(let epoch, let capability) = state.connection,
+        case .ready(_, let capability) = state.connection,
         case .notHeld = state.controlPermission,
         case .idle = state.procedure,
         state.isForegroundActive,
@@ -547,12 +547,16 @@ struct WorkoutExecutionReducer {
         armed.capability == capability,
         armed.profile.matches(capability)
       else { return rejected(original, beginRejection(state, readiness: readiness)) }
-      let record = makeProcedure(
-        .requestControl, epoch: epoch, stepIndex: nil, at: now, state: &state)
-      state.procedure = .intentCreated(record)
-      state.controlPermission = .requesting(record.id)
-      state.execution = .acquiringControl
-      effects.append(.submit(record))
+      state.currentSegment = .init(
+        stepIndex: 0,
+        accumulatedActiveSeconds: 0,
+        activeStartedAt: nil,
+        speedOverride: nil,
+        inclinationOverride: nil
+      )
+      state.telemetry = .unavailable("Awaiting fresh physical Start evidence")
+      state.observedMachine = .unknown
+      state.execution = .waitingForPhysicalStart
 
     case .intentSubmitted(_, let procedureID):
       guard case .intentCreated(var record) = state.procedure else {
@@ -910,16 +914,19 @@ extension WorkoutExecutionReducer {
       guard case .acquiringControl = state.execution else {
         return fail(.procedure(.duplicateOrLate(record.id)), state: &state, effects: &effects)
       }
-      state.currentSegment = .init(
-        stepIndex: 0,
-        accumulatedActiveSeconds: 0,
-        activeStartedAt: nil,
-        speedOverride: nil,
-        inclinationOverride: nil
-      )
+      guard state.currentSegment != nil else { return .rejected(.noCurrentSegment) }
       state.controlPermission = .held(
         epoch: record.id.epoch, acknowledgedAt: max(attAcceptedAt, ftmsAcknowledgedAt))
       state.execution = .waitingForPhysicalStart
+      if let sample = freshSample(state, at: state.lastEventTime), sample.speed.value > 0 {
+        return startTargetSequence(
+          purpose: .initial,
+          forceBothAxes: true,
+          at: state.lastEventTime,
+          state: &state,
+          effects: &effects
+        )
+      }
     case .setTargetSpeed(let target):
       guard var sequence = state.targetSequence, sequence.stepIndex == record.stepIndex else {
         return fail(.procedure(.duplicateOrLate(record.id)), state: &state, effects: &effects)
@@ -1064,7 +1071,7 @@ extension WorkoutExecutionReducer {
     case .unavailable(let reason):
       state.telemetry = .unavailable(reason)
       state.observedMachine = .unknown
-      if attemptNeedsTelemetry(state.execution) {
+      if attemptNeedsTelemetry(state.execution), !isWaitingWithoutControl(state) {
         return interrupt(.telemetryUnavailable(reason), state: &state, effects: &effects)
       }
       return .accepted
@@ -1151,8 +1158,30 @@ extension WorkoutExecutionReducer {
     switch state.execution {
     case .waitingForPhysicalStart:
       guard state.currentSegment != nil else { return .rejected(.noCurrentSegment) }
-      return startTargetSequence(
-        purpose: .initial, forceBothAxes: true, at: now, state: &state, effects: &effects)
+      switch state.controlPermission {
+      case .notHeld:
+        guard case .idle = state.procedure,
+          case .ready(let epoch, _) = state.connection,
+          state.isForegroundActive
+        else { return interrupt(.resumeGuardsFailed, state: &state, effects: &effects) }
+        let record = makeProcedure(
+          .requestControl, epoch: epoch, stepIndex: nil, at: now, state: &state)
+        state.procedure = .intentCreated(record)
+        state.controlPermission = .requesting(record.id)
+        state.execution = .acquiringControl
+        effects.append(.submit(record))
+        return .accepted
+      case .held:
+        return startTargetSequence(
+          purpose: .initial,
+          forceBothAxes: true,
+          at: now,
+          state: &state,
+          effects: &effects
+        )
+      case .requesting, .invalidated:
+        return interrupt(.resumeGuardsFailed, state: &state, effects: &effects)
+      }
     case .paused:
       guard case .idle = state.procedure else {
         return interrupt(.resumeGuardsFailed, state: &state, effects: &effects)
@@ -1257,7 +1286,7 @@ extension WorkoutExecutionReducer {
       return .accepted
     }
     if let sample = currentTelemetrySample(state.telemetry),
-      phaseRequiresFreshTelemetry(state.execution),
+      phaseRequiresFreshTelemetry(state),
       now.seconds - sample.receivedAt.seconds > FR30zExecutionProfile.telemetryFreshnessInterval
     {
       let freshnessBoundary = sample.receivedAt.advanced(
@@ -1660,8 +1689,9 @@ extension WorkoutExecutionReducer {
     }
   }
 
-  fileprivate func phaseRequiresFreshTelemetry(_ phase: WorkoutExecutionPhase) -> Bool {
-    switch phase {
+  fileprivate func phaseRequiresFreshTelemetry(_ state: WorkoutExecutionState) -> Bool {
+    if isWaitingWithoutControl(state) { return false }
+    return switch state.execution {
     case .waitingForPhysicalStart, .applyingTargets, .runningSegment,
       .restoringTargets, .awaitingPhysicalStopForCompletion:
       true
@@ -1672,6 +1702,14 @@ extension WorkoutExecutionReducer {
     default:
       false
     }
+  }
+
+  fileprivate func isWaitingWithoutControl(_ state: WorkoutExecutionState) -> Bool {
+    guard case .waitingForPhysicalStart = state.execution,
+      case .notHeld = state.controlPermission,
+      !state.motionPossible
+    else { return false }
+    return true
   }
 
   fileprivate func attemptNeedsTelemetry(_ phase: WorkoutExecutionPhase) -> Bool {
