@@ -63,7 +63,7 @@ Issue [#37](https://github.com/syamaner/paceprompt-ios/issues/37) introduces a s
 
 An `inProgress` record is a crash-recovery fact, not a live-state or completion claim. On a later launch it must be shown as interrupted with completion unknown unless separately accepted evidence proves a more specific terminal outcome. A partially completed record retains the plan snapshot, measured values and progress that were successfully written; it must not invent remaining steps, duration, distance, physical stop or treadmill state.
 
-This minimum summary intentionally excludes heart-rate traces, inclination traces, per-packet treadmill samples, Control Point acknowledgements, HealthKit save status and Watch data. A later contract may add a justified summary field or separately protected collection, with a new version and explicit retention/export decision; the product concept alone is not authority to persist it.
+This minimum version-1 summary intentionally excludes heart-rate traces, inclination traces, per-packet treadmill samples, Control Point acknowledgements, HealthKit save status and Watch data. The later [iPhone-only Apple Health workout export contract](apple-health-workout-export-contract.md) defines the version-2 aggregate prescribed-versus-executed timeline, trustworthy distance provenance and logically separate Health-export state within the same protected history record. It does not authorise raw telemetry persistence or reinterpret version-1 records.
 
 ## Deliberately non-persistent data
 
@@ -153,7 +153,7 @@ The accepted contract enables, but does not authorise, these separately bounded 
 2. issue [#11](https://github.com/syamaner/paceprompt-ios/issues/11): manual plan creation, deterministic validation, readable preview, explicit confirmation and save in the Plans tab, using that repository;
 3. issue [#37](https://github.com/syamaner/paceprompt-ios/issues/37): the versioned execution-summary schema and incremental history repository boundary, without execution integration or History presentation;
 4. Plans and History listing, editing, deletion, clear-history, reset and recovery presentation;
-5. deliberate previewable JSON export through the system share sheet;
+5. deliberate previewable JSON export through the system share sheet, with the later workout-history shape governed by the [iPhone-only Apple Health workout export contract](apple-health-workout-export-contract.md);
 6. separately contracted natural-language import and credential handling under issue #6; and
 7. separately authorised on-device Data Protection and recovery validation.
 
