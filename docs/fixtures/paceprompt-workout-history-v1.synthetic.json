@@ -1,0 +1,160 @@
+{
+  "createdAt": "2026-09-13T12:00:00Z",
+  "formatVersion": 1,
+  "workouts": [
+    {
+      "activity": "indoorWalking",
+      "distance": {
+        "finalCumulativeMetres": 55,
+        "finalObservedAt": "2026-09-13T11:55:00Z",
+        "metres": 45,
+        "provenance": "fr30zCumulativeDistanceDelta",
+        "startCumulativeMetres": 10,
+        "startObservedAt": "2026-09-13T11:50:00Z",
+        "state": "measured"
+      },
+      "executedIntervals": [
+        {
+          "effectiveInclination": {
+            "percent": 0,
+            "source": "planned"
+          },
+          "effectiveSpeed": {
+            "kilometresPerHour": 0.5,
+            "source": "planned"
+          },
+          "endReason": "planTransition",
+          "endedAt": "2026-09-13T11:51:00Z",
+          "intervalIndex": 0,
+          "prescribed": {
+            "inclinationPercent": 0,
+            "kind": "warmUp",
+            "speedKilometresPerHour": 0.5
+          },
+          "segmentIndex": 0,
+          "settledObservation": {
+            "inclinationPercent": 0,
+            "observedAt": "2026-09-13T11:50:00Z",
+            "provenance": "fr30zTreadmillDataCurrentEpoch",
+            "speedKilometresPerHour": 0.5,
+            "state": "observed"
+          },
+          "startedAt": "2026-09-13T11:50:00Z"
+        },
+        {
+          "effectiveInclination": {
+            "percent": 0,
+            "source": "planned"
+          },
+          "effectiveSpeed": {
+            "kilometresPerHour": 0.6,
+            "source": "planned"
+          },
+          "endReason": "targetChanged",
+          "endedAt": "2026-09-13T11:52:00Z",
+          "intervalIndex": 0,
+          "prescribed": {
+            "inclinationPercent": 0,
+            "kind": "interval",
+            "speedKilometresPerHour": 0.6
+          },
+          "segmentIndex": 1,
+          "settledObservation": {
+            "inclinationPercent": 0,
+            "observedAt": "2026-09-13T11:51:00Z",
+            "provenance": "fr30zTreadmillDataCurrentEpoch",
+            "speedKilometresPerHour": 0.6,
+            "state": "observed"
+          },
+          "startedAt": "2026-09-13T11:51:00Z"
+        },
+        {
+          "effectiveInclination": {
+            "percent": 1,
+            "source": "manualOverride"
+          },
+          "effectiveSpeed": {
+            "kilometresPerHour": 0.7,
+            "source": "manualOverride"
+          },
+          "endReason": "planTransition",
+          "endedAt": "2026-09-13T11:54:00Z",
+          "intervalIndex": 1,
+          "prescribed": {
+            "inclinationPercent": 0,
+            "kind": "interval",
+            "speedKilometresPerHour": 0.6
+          },
+          "segmentIndex": 1,
+          "settledObservation": {
+            "inclinationPercent": 1,
+            "observedAt": "2026-09-13T11:52:00Z",
+            "provenance": "fr30zTreadmillDataCurrentEpoch",
+            "speedKilometresPerHour": 0.7,
+            "state": "observed"
+          },
+          "startedAt": "2026-09-13T11:52:00Z"
+        },
+        {
+          "effectiveInclination": {
+            "percent": 0,
+            "source": "planned"
+          },
+          "effectiveSpeed": {
+            "kilometresPerHour": 0.5,
+            "source": "planned"
+          },
+          "endReason": "completed",
+          "endedAt": "2026-09-13T11:55:00Z",
+          "intervalIndex": 0,
+          "prescribed": {
+            "inclinationPercent": 0,
+            "kind": "coolDown",
+            "speedKilometresPerHour": 0.5
+          },
+          "segmentIndex": 2,
+          "settledObservation": {
+            "inclinationPercent": 0,
+            "observedAt": "2026-09-13T11:54:00Z",
+            "provenance": "fr30zTreadmillDataCurrentEpoch",
+            "speedKilometresPerHour": 0.5,
+            "state": "observed"
+          },
+          "startedAt": "2026-09-13T11:54:00Z"
+        }
+      ],
+      "outcome": "completed",
+      "prescribedSegments": [
+        {
+          "durationSeconds": 60,
+          "inclinationPercent": 0,
+          "kind": "warmUp",
+          "segmentIndex": 0,
+          "speedKilometresPerHour": 0.5
+        },
+        {
+          "durationSeconds": 180,
+          "inclinationPercent": 0,
+          "kind": "interval",
+          "segmentIndex": 1,
+          "speedKilometresPerHour": 0.6
+        },
+        {
+          "durationSeconds": 60,
+          "inclinationPercent": 0,
+          "kind": "coolDown",
+          "segmentIndex": 2,
+          "speedKilometresPerHour": 0.5
+        }
+      ],
+      "summaryID": "00000000-0000-0000-0000-000000000001",
+      "summarySchemaVersion": 2,
+      "timing": {
+        "activeDurationSeconds": 300,
+        "endedAt": "2026-09-13T11:55:00Z",
+        "provenance": "executionClock",
+        "startedAt": "2026-09-13T11:50:00Z"
+      }
+    }
+  ]
+}

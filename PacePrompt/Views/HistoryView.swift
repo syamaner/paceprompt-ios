@@ -42,6 +42,14 @@ struct HistoryView: View {
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.large)
         .task { model.reload() }
+        .sheet(
+            isPresented: Binding(
+                get: { model.isHistoryExportPresented },
+                set: { if !$0, model.isHistoryExportPresented { model.cancelHistoryExport() } }
+            )
+        ) {
+            WorkoutHistoryExportFlowView(model: model)
+        }
     }
 
     private func historyList(_ rows: [HistoryWorkoutRow]) -> some View {
@@ -72,6 +80,17 @@ struct HistoryView: View {
             }
         }
         .listStyle(.plain)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    model.beginHistoryExport()
+                } label: {
+                    Label("Export workouts", systemImage: "square.and.arrow.up")
+                }
+                .disabled(!model.canBeginHistoryExport)
+                .accessibilityIdentifier("history.export.begin")
+            }
+        }
     }
 
     private func blockedView(_ message: HistoryRepositoryMessage) -> some View {
@@ -218,14 +237,17 @@ private struct HistoryWorkoutDetailView: View {
             }
 
             Section {
-                Button("Export JSON") {}
-                    .disabled(true)
+                Button("Export JSON") {
+                    model.beginHistoryExport(preselecting: summaryID)
+                }
+                    .disabled(!model.canExport(summaryID: summaryID))
                     .accessibilityIdentifier("history.export-json")
                 Button("Delete", role: .destructive) {}
                     .disabled(true)
                     .accessibilityIdentifier("history.delete")
             } footer: {
-                Text("Workout JSON export and deletion are not available in this version.")
+                Text(model.historyExportFailure(summaryID: summaryID)
+                     ?? "JSON export creates a deliberate protected copy. Deletion is not available in this version.")
             }
         }
     }
@@ -240,6 +262,162 @@ private struct HistoryWorkoutDetailView: View {
         default: "clock.badge.exclamationmark"
         }
     }
+}
+
+private struct WorkoutHistoryExportFlowView: View {
+    @ObservedObject var model: HistoryLibraryViewModel
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let preview = model.historyExportPreview {
+                    previewView(preview)
+                } else {
+                    selectionView
+                }
+            }
+            .navigationTitle(model.historyExportPreview == nil ? "Export workout history" : "Review export")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { model.cancelHistoryExport() }
+                        .accessibilityIdentifier("history.export.cancel")
+                }
+            }
+        }
+        .interactiveDismissDisabled()
+        .sheet(item: shareArtifactBinding) { artifact in
+            WorkoutHistoryActivityView(url: artifact.url) {
+                model.completeHistorySharing()
+            }
+        }
+    }
+
+    private var shareArtifactBinding: Binding<WorkoutHistoryExportArtifact?> {
+        Binding(
+            get: { model.historyShareArtifact },
+            set: {
+                if $0 == nil, model.historyShareArtifact != nil {
+                    model.completeHistorySharing()
+                }
+            }
+        )
+    }
+
+    private var selectionView: some View {
+        Form {
+            Section("Choose workouts") {
+                ForEach(model.historyExportSelections) { record in
+                    if record.isEligible {
+                        Button {
+                            model.toggleHistoryExportSelection(record.id)
+                        } label: {
+                            exportSelectionLabel(record)
+                        }
+                        .accessibilityLabel(
+                            "\(record.title), \(model.selectedHistoryExportIDs.contains(record.id) ? "selected" : "not selected")"
+                        )
+                        .accessibilityIdentifier("history.export.select.\(record.id.uuidString)")
+                    } else {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(record.title).foregroundStyle(.primary)
+                            Text(record.detail).font(.subheadline).foregroundStyle(.secondary)
+                            Text(record.failure?.message ?? "Unavailable for export")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("history.export.ineligible.\(record.id.uuidString)")
+                    }
+                }
+            }
+
+            exportErrorSection
+
+            Section {
+                Button("Review exact export") { model.reviewHistoryExport() }
+                    .frame(maxWidth: .infinity)
+                    .disabled(!model.canReviewHistoryExport)
+                    .accessibilityIdentifier("history.export.review")
+            } footer: {
+                Text("No file is created until you review the selected workouts and separately choose Share.")
+            }
+        }
+    }
+
+    private func exportSelectionLabel(_ record: WorkoutHistoryExportSelection) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(record.title).foregroundStyle(.primary)
+                Text(record.detail).font(.subheadline).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(
+                systemName: model.selectedHistoryExportIDs.contains(record.id)
+                    ? "checkmark.circle.fill" : "circle"
+            )
+            .accessibilityHidden(true)
+        }
+    }
+
+    private func previewView(_ preview: WorkoutHistoryExportPreview) -> some View {
+        Form {
+            Section("Exact export") {
+                LabeledContent("Filename", value: preview.fileName)
+                    .accessibilityIdentifier("history.export.filename")
+                LabeledContent("Workouts", value: preview.recordCount.formatted())
+            }
+
+            Section("Included evidence") {
+                ForEach(preview.includedFields, id: \.self) { field in Text(field) }
+            }
+
+            Section("Selected workouts") {
+                ForEach(preview.sourceSummaries, id: \.id) { summary in
+                    Text(summary.planSnapshot.suggestedName)
+                }
+            }
+
+            exportErrorSection
+
+            Section {
+                Button("Back to selection") { model.returnToHistoryExportSelection() }
+                    .accessibilityIdentifier("history.export.back")
+                Button("Share JSON copy") { model.prepareHistoryExportForSharing() }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("history.export.share")
+            } footer: {
+                Text("The export contains prescribed, effective-target and separately observed speed and inclination, timing, outcome and optional trustworthy distance. PacePrompt removes the protected temporary copy when sharing finishes or is cancelled. Persistent History is unchanged.")
+                    .accessibilityIdentifier("history.export.disclosure")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var exportErrorSection: some View {
+        if let message = model.historyExportError {
+            Section("Export failed") {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            }
+            .accessibilityIdentifier("history.export.error")
+        }
+    }
+}
+
+private struct WorkoutHistoryActivityView: UIViewControllerRepresentable {
+    let url: URL
+    let completion: @MainActor () -> Void
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, _, _, _ in
+            Task { @MainActor in completion() }
+        }
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 private struct HistoryRepeatReviewView: View {
