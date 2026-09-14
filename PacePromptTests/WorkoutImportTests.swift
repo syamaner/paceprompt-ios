@@ -742,15 +742,26 @@ final class ImportSessionTransportTests: XCTestCase {
     func testLocalProtocolHTTPFailuresNeverRetry() async throws {
         for status in [401, 429, 503, 302, 307] {
             LocalImportProtocol.reset(status: status)
-            let transport = SessionImportTransport(makeConfiguration: mockConfiguration)
+            var sessionSetups = 0
+            let transport = SessionImportTransport {
+                sessionSetups += 1
+                return self.mockConfiguration()
+            }
             let done = expectation(description: "one response \(status)")
-            let request = try ImportResources().request(for: .init(text: "Synthetic status", capabilities: known()))
+            let requestIdentifier = UUID().uuidString
+            var request = try ImportResources().request(for: .init(text: "Synthetic status", capabilities: known()))
+            request.setValue(requestIdentifier, forHTTPHeaderField: LocalImportProtocol.requestIdentifierHeader)
             transport.send(request) { result in
                 guard case let .success((_, response)) = result else { XCTFail("Expected local HTTP response"); done.fulfill(); return }
                 XCTAssertEqual(response.statusCode, status); done.fulfill()
             }
             await fulfillment(of: [done], timeout: 3)
-            XCTAssertEqual(LocalImportProtocol.count, 1)
+            XCTAssertEqual(sessionSetups, 1, "Status \(status) created more than one transport session")
+            XCTAssertEqual(
+                LocalImportProtocol.count(for: requestIdentifier),
+                1,
+                "Status \(status) restarted the identified request"
+            )
         }
     }
     func testCancellationCompletesOnceAndNoSecondRequest() async throws {
