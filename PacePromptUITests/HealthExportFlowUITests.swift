@@ -65,6 +65,20 @@ final class HealthExportFlowUITests: XCTestCase {
       app.staticTexts.matching(identifier: "history.detail.outcome").firstMatch.label,
       "Completed"
     )
+
+    let repeatButton = app.buttons["history.repeat"]
+    XCTAssertTrue(repeatButton.waitForExistence(timeout: 3))
+    XCTAssertTrue(repeatButton.isHittable)
+    repeatButton.tap()
+    XCTAssertTrue(app.navigationBars["Repeat Synthetic steady walk"].waitForExistence(timeout: 5))
+    let reviewOnly = app.staticTexts[
+      "Review only. This does not arm, connect to or operate a treadmill, and it does not create or save a new plan."
+    ]
+    for _ in 0..<4 where !reviewOnly.exists { app.swipeUp() }
+    XCTAssertTrue(reviewOnly.exists)
+    app.buttons["Done"].tap()
+    XCTAssertTrue(repeatButton.waitForExistence(timeout: 3))
+
     app.swipeUp()
     XCTAssertTrue(app.descendants(matching: .any)["history.executed.0-0"].waitForExistence(timeout: 2))
 
@@ -75,10 +89,6 @@ final class HealthExportFlowUITests: XCTestCase {
     XCTAssertFalse(export.isEnabled)
     XCTAssertTrue(delete.exists)
     XCTAssertFalse(delete.isEnabled)
-
-    app.buttons["history.repeat"].tap()
-    XCTAssertTrue(app.navigationBars["Repeat Synthetic steady walk"].waitForExistence(timeout: 2))
-    XCTAssertTrue(app.staticTexts["Review only. This does not arm, connect to or operate a treadmill, and it does not create or save a new plan."].exists)
   }
 
   func testHistoryReadFailureIsNotPresentedAsEmptyAndOffersRetry() {
