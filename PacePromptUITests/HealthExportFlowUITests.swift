@@ -1,13 +1,28 @@
 import XCTest
 
 final class HealthExportFlowUITests: XCTestCase {
+  private var app: XCUIApplication!
+
+  override func tearDown() {
+    app?.terminate()
+    app = nil
+    super.tearDown()
+  }
+
   func testDeliberateSaveShowsTruthfulPreviewThenSavedState() {
-    let app = XCUIApplication()
+    app = XCUIApplication()
     app.launchArguments = ["--paceprompt-health-export-ui-testing"]
     app.launch()
 
     app.tabBars.buttons["History"].tap()
+    let record = app.descendants(matching: .any)[
+      "history.record.00000000-0000-0000-0000-000000000064"
+    ]
+    XCTAssertTrue(record.waitForExistence(timeout: 3))
+    record.tap()
+
     let save = app.buttons["history.health.save"]
+    for _ in 0..<6 where !save.exists { app.swipeUp() }
     XCTAssertTrue(save.waitForExistence(timeout: 3))
     XCTAssertEqual(save.label, "Save to Apple Health")
     XCTAssertEqual(
@@ -31,5 +46,49 @@ final class HealthExportFlowUITests: XCTestCase {
     expectation(for: predicate, evaluatedWith: status)
     waitForExpectations(timeout: 3)
     XCTAssertFalse(app.buttons["history.health.save"].exists)
+  }
+
+  func testHistoryListDetailRepeatAndDeferredActions() {
+    app = XCUIApplication()
+    app.launchArguments = ["--paceprompt-history-ui-testing"]
+    app.launch()
+
+    app.tabBars.buttons["History"].tap()
+    let record = app.descendants(matching: .any)[
+      "history.record.00000000-0000-0000-0000-000000000064"
+    ]
+    XCTAssertTrue(record.waitForExistence(timeout: 3))
+    XCTAssertTrue(record.value as? String != nil)
+    record.tap()
+
+    XCTAssertEqual(
+      app.staticTexts.matching(identifier: "history.detail.outcome").firstMatch.label,
+      "Completed"
+    )
+    app.swipeUp()
+    XCTAssertTrue(app.descendants(matching: .any)["history.executed.0-0"].waitForExistence(timeout: 2))
+
+    let export = app.buttons["history.export-json"]
+    let delete = app.buttons["history.delete"]
+    for _ in 0..<8 where !export.exists { app.swipeUp() }
+    XCTAssertTrue(export.exists)
+    XCTAssertFalse(export.isEnabled)
+    XCTAssertTrue(delete.exists)
+    XCTAssertFalse(delete.isEnabled)
+
+    app.buttons["history.repeat"].tap()
+    XCTAssertTrue(app.navigationBars["Repeat Synthetic steady walk"].waitForExistence(timeout: 2))
+    XCTAssertTrue(app.staticTexts["Review only. This does not arm, connect to or operate a treadmill, and it does not create or save a new plan."].exists)
+  }
+
+  func testHistoryReadFailureIsNotPresentedAsEmptyAndOffersRetry() {
+    app = XCUIApplication()
+    app.launchArguments = ["--paceprompt-history-read-failure-ui-testing"]
+    app.launch()
+
+    app.tabBars.buttons["History"].tap()
+    XCTAssertTrue(app.staticTexts["History could not be read"].waitForExistence(timeout: 3))
+    XCTAssertTrue(app.buttons["history.retry"].isEnabled)
+    XCTAssertFalse(app.descendants(matching: .any)["history.empty"].exists)
   }
 }

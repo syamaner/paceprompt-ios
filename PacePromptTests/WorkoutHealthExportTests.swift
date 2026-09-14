@@ -304,6 +304,171 @@ final class WorkoutHealthExportTests: XCTestCase {
     XCTAssertTrue(saved.status.hasSuffix(" with distance"))
   }
 
+  func testHistoryLibrarySortsNewestFirstAndKeepsHealthStateSeparate() {
+    let older = fixture()
+    let newer = WorkoutExecutionSummary(
+      id: uuid(65),
+      schemaVersion: older.schemaVersion,
+      sourcePlanID: older.sourcePlanID,
+      planSnapshot: older.planSnapshot,
+      attemptedAt: older.attemptedAt.addingTimeInterval(100),
+      lastUpdatedAt: older.lastUpdatedAt.addingTimeInterval(100),
+      outcome: .interrupted(reason: .init(rawValue: "synthetic-interruption")),
+      activeDuration: older.activeDuration,
+      distance: older.distance,
+      progress: older.progress,
+      physicalStopConfirmation: .notRequired,
+      activityTimeline: older.activityTimeline,
+      healthExport: .failedRetryable(category: .builder, syncVersion: 2)
+    )
+    let presentation = HistoryLibraryPresentation(
+      status: .init(canonical: .available(summaries: [older, newer]), staging: .absent),
+      locale: Locale(identifier: "en_GB"),
+      timeZone: TimeZone(secondsFromGMT: 0)!
+    )
+    guard case let .populated(rows) = presentation.content else {
+      return XCTFail("Expected populated history")
+    }
+    XCTAssertEqual(rows.map(\.id), [newer.id, older.id])
+    XCTAssertEqual(rows[0].outcome, "Interrupted")
+    XCTAssertEqual(rows[0].health, "Apple Health save failed")
+    XCTAssertNil(presentation.warning)
+  }
+
+  func testHistoryLibraryPreservesEveryBlockedRepositoryStateAndStagingWarning() {
+    let blocked: [(WorkoutHistoryCanonicalState, String)] = [
+      (.protectedDataUnavailable, "History is locked"),
+      (.readFailure, "History could not be read"),
+      (.corruptData, "History data is unreadable"),
+      (.partialWriteDetected, "A partial history write was detected"),
+      (.unsupportedStoreVersion(7), "History was saved by a newer version"),
+      (.unsupportedSummaryVersion(summaryID: uuid(1), version: 7), "A workout uses a newer version"),
+      (.unsupportedPlanVersion(summaryID: uuid(1), version: 7), "A plan snapshot uses a newer version"),
+    ]
+    for (state, expectedTitle) in blocked {
+      let presentation = HistoryLibraryPresentation(
+        status: .init(canonical: state, staging: .absent)
+      )
+      guard case let .blocked(message) = presentation.content else {
+        return XCTFail("Expected blocked state for \(expectedTitle)")
+      }
+      XCTAssertEqual(message.title, expectedTitle)
+    }
+
+    let readableWithStaging = HistoryLibraryPresentation(
+      status: .init(
+        canonical: .available(summaries: [fixture()]),
+        staging: .staleArtifactPresent
+      )
+    )
+    guard case .populated = readableWithStaging.content else {
+      return XCTFail("Valid canonical history must remain visible")
+    }
+    XCTAssertEqual(readableWithStaging.warning?.title, "A previous history save needs attention")
+  }
+
+  func testHistoryDetailKeepsPrescribedEffectiveAndObservedValuesDistinct() {
+    let detail = HistoryWorkoutDetailPresenter.make(
+      summary: fixture(),
+      isSaving: false,
+      healthMutationAllowed: true,
+      locale: Locale(identifier: "en_GB"),
+      timeZone: TimeZone(secondsFromGMT: 0)!
+    )
+    XCTAssertEqual(detail.outcome, "Completed")
+    XCTAssertEqual(detail.prescribed.count, 2)
+    XCTAssertEqual(detail.executed.count, 2)
+    XCTAssertTrue(detail.executed[0].prescribed.contains("5 km/h · 1%"))
+    XCTAssertTrue(detail.executed[0].effective.contains("5.2 km/h (manual override)"))
+    XCTAssertTrue(detail.executed[0].effective.contains("1% (planned)"))
+    XCTAssertTrue(detail.executed[0].observed.contains("Observed · 5.2 km/h · 1%"))
+    XCTAssertNil(detail.executionUnavailable)
+    XCTAssertEqual(detail.health.actionTitle, "Save to Apple Health")
+  }
+
+  func testLegacyDetailRemainsVisibleWithoutExecutionOrHealthReconstruction() {
+    let current = fixture()
+    let legacy = copy(
+      current,
+      schemaVersion: 1,
+      timeline: .some(nil),
+      distance: .measured(metres: decimal("12.50")),
+      healthExport: .some(nil)
+    )
+    let detail = HistoryWorkoutDetailPresenter.make(
+      summary: legacy,
+      isSaving: false,
+      healthMutationAllowed: true,
+      locale: Locale(identifier: "en_GB"),
+      timeZone: TimeZone(secondsFromGMT: 0)!
+    )
+    XCTAssertEqual(detail.title, legacy.planSnapshot.suggestedName)
+    XCTAssertTrue(detail.executed.isEmpty)
+    XCTAssertTrue(detail.executionUnavailable?.contains("schema v1") == true)
+    XCTAssertEqual(detail.health.title, "Not eligible for Apple Health")
+    XCTAssertTrue(detail.health.detail.contains("not reconstructed"))
+    XCTAssertNil(detail.health.actionTitle)
+  }
+
+  func testHistoryDetailTruthfullyNamesAllOutcomesAndPhysicalUncertainty() {
+    let summary = fixture()
+    let cases: [(WorkoutExecutionOutcome, WorkoutPhysicalStopConfirmation, String)] = [
+      (.completed, .humanConfirmed(at: summary.lastUpdatedAt), "Completed"),
+      (.stoppedByUser(reason: .init(rawValue: "user")), .humanConfirmed(at: summary.lastUpdatedAt), "Ended by you"),
+      (.inProgress, .notRequired, "Interrupted · completion unknown"),
+      (.interrupted(reason: .init(rawValue: "interrupt")), .notRequired, "Interrupted"),
+      (.failed(reason: .init(rawValue: "failure")), .notRequired, "Failed"),
+      (.completed, .unconfirmed, "Physically uncertain"),
+    ]
+    for (outcome, stop, expected) in cases {
+      XCTAssertEqual(
+        HistoryWorkoutDetailPresenter.outcome(copy(summary, outcome: outcome, stop: stop)),
+        expected
+      )
+    }
+  }
+
+  func testHistoryViewModelStartsLoadingAndRetriesRepositoryStatus() {
+    let history = FakeHistory(fixture())
+    let model = HistoryLibraryViewModel(history: history, healthStore: FakeHealthStore())
+    XCTAssertEqual(model.presentation, .loading)
+    model.reload()
+    guard case let .populated(rows) = model.presentation.content else {
+      return XCTFail("Expected records after reload")
+    }
+    XCTAssertEqual(rows.map(\.id), [history.summary.id])
+  }
+
+  func testHistoryDetailPresentsEveryHealthSaveStateWithTruthfulAction() {
+    let summary = fixture()
+    let states: [(WorkoutHealthExportState, String, String?)] = [
+      (.notRequested, "Save to Apple Health", "Save to Apple Health"),
+      (.pending(attemptedAt: Date(timeIntervalSince1970: 400), syncVersion: 1), "Apple Health result uncertain", "Retry Apple Health Save"),
+      (.saved(savedAt: Date(timeIntervalSince1970: 500), syncVersion: 1, workoutUUID: uuid(164), mirroredIntervalCount: 2, distanceIncluded: false), "Saved to Apple Health", nil),
+      (.denied(writeType: .workout), "Apple Health permission denied", "Save to Apple Health"),
+      (.unavailable(category: .unavailable), "Apple Health unavailable", "Save to Apple Health"),
+      (.failedRetryable(category: .builder, syncVersion: 1), "Apple Health save failed", "Retry Apple Health Save"),
+      (.failedAmbiguous(category: .builder, syncVersion: 1), "Apple Health result uncertain", "Retry Apple Health Save"),
+    ]
+    for (state, title, action) in states {
+      let detail = HistoryWorkoutDetailPresenter.make(
+        summary: copy(summary, healthExport: state),
+        isSaving: false,
+        healthMutationAllowed: true
+      )
+      XCTAssertEqual(detail.health.title, title)
+      XCTAssertEqual(detail.health.actionTitle, action)
+    }
+
+    let storageBlocked = HistoryWorkoutDetailPresenter.make(
+      summary: summary,
+      isSaving: false,
+      healthMutationAllowed: false
+    )
+    XCTAssertNil(storageBlocked.health.actionTitle)
+    XCTAssertTrue(storageBlocked.health.detail.contains("storage needs attention"))
+  }
+
   private func fixture() -> WorkoutExecutionSummary {
     let start = Date(timeIntervalSince1970: 100)
     let firstEnd = start.addingTimeInterval(10)

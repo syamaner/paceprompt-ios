@@ -108,90 +108,74 @@ enum HistoryHealthExportPresenter {
   }
 }
 
-@MainActor
-final class HistoryHealthExportViewModel: ObservableObject {
-  @Published private(set) var summary: WorkoutExecutionSummary?
-  @Published private(set) var isSaving = false
-  private let history: any WorkoutHistoryRepositoryProtocol
-  private let coordinator: WorkoutHealthExportCoordinator
-
-  init(
-    history: any WorkoutHistoryRepositoryProtocol,
-    healthStore: any WorkoutHealthStoreProtocol
-  ) {
-    self.history = history
-    coordinator = WorkoutHealthExportCoordinator(history: history, healthStore: healthStore)
-    refresh()
-  }
-
-  var presentation: HistoryHealthExportPresentation? {
-    summary.flatMap { HistoryHealthExportPresenter.make(summary: $0, isSaving: isSaving) }
-  }
-
-  func save() async {
-    guard let summary else { return }
-    isSaving = true
-    _ = await coordinator.save(summary)
-    refresh()
-    isSaving = false
-  }
-
-  private func refresh() {
-    guard case let .available(summaries) = history.list().canonical else {
-      summary = nil
-      return
-    }
-    summary = summaries
-      .filter { HistoryHealthExportPresenter.make(summary: $0, isSaving: false) != nil }
-      .max(by: { $0.lastUpdatedAt < $1.lastUpdatedAt })
-  }
-}
-
 #if DEBUG
-@MainActor
-enum HistoryHealthExportUITestConfiguration {
-  static func makeViewModelIfRequested() -> HistoryHealthExportViewModel? {
-    guard ProcessInfo.processInfo.arguments.contains("--paceprompt-health-export-ui-testing") else {
-      return nil
-    }
-    let summary = syntheticSummary()
-    let history = UITestHistory(summary: summary)
-    return .init(history: history, healthStore: UITestHealthStore())
-  }
-
-  private static func syntheticSummary() -> WorkoutExecutionSummary {
+enum HistoryUITestFixtures {
+  static func syntheticSummary() -> WorkoutExecutionSummary {
     let start = Date(timeIntervalSince1970: 1_780_000_000)
-    let end = start.addingTimeInterval(90)
+    let firstEnd = start.addingTimeInterval(30)
+    let secondEnd = firstEnd.addingTimeInterval(30)
+    let end = secondEnd.addingTimeInterval(30)
     let plan = WorkoutPlan(
       schemaVersion: 1,
       suggestedName: "Synthetic steady walk",
       activity: .indoorWalking,
       steps: [
         .init(
+          kind: .warmUp,
+          label: "Warm up",
+          duration: .init(value: 30, unit: .seconds),
+          targetSpeed: .init(value: 3.5, unit: .kilometresPerHour),
+          targetInclination: .init(value: 0, unit: .percent)
+        ),
+        .init(
           kind: .interval,
           label: "Steady",
-          duration: .init(value: 90, unit: .seconds),
+          duration: .init(value: 30, unit: .seconds),
           targetSpeed: .init(value: 4.2, unit: .kilometresPerHour),
           targetInclination: .init(value: 1, unit: .percent)
-        )
+        ),
+        .init(
+          kind: .coolDown,
+          label: "Cool down",
+          duration: .init(value: 30, unit: .seconds),
+          targetSpeed: .init(value: 3.2, unit: .kilometresPerHour),
+          targetInclination: .init(value: 0, unit: .percent)
+        ),
       ]
     )
-    let interval = WorkoutExecutedInterval(
-      segmentIndex: 0,
-      intervalIndex: 0,
-      startedAt: start,
-      endedAt: end,
-      prescribed: .init(kind: .interval, speedKilometresPerHour: 4.2, inclinationPercent: 1),
-      effectiveSpeed: .init(kilometresPerHour: 4.2, source: .planned),
-      effectiveInclination: .init(percent: 1, source: .planned),
-      settledObservation: .init(
-        observedAt: start,
-        speedKilometresPerHour: 4.2,
-        inclinationPercent: 1,
-        provenance: .fr30zTreadmillDataCurrentEpoch
-      ),
-      endReason: .completed
-    )
+    func interval(
+      _ segment: Int,
+      _ intervalStart: Date,
+      _ intervalEnd: Date,
+      _ endReason: WorkoutExecutedIntervalEndReason
+    ) -> WorkoutExecutedInterval {
+      let step = plan.steps[segment]
+      return .init(
+        segmentIndex: segment,
+        intervalIndex: 0,
+        startedAt: intervalStart,
+        endedAt: intervalEnd,
+        prescribed: .init(
+          kind: step.kind,
+          speedKilometresPerHour: step.targetSpeed.value,
+          inclinationPercent: step.targetInclination.value
+        ),
+        effectiveSpeed: .init(kilometresPerHour: step.targetSpeed.value, source: .planned),
+        effectiveInclination: .init(percent: step.targetInclination.value, source: .planned),
+        settledObservation: .init(
+          observedAt: intervalStart,
+          speedKilometresPerHour: step.targetSpeed.value,
+          inclinationPercent: step.targetInclination.value,
+          provenance: .fr30zTreadmillDataCurrentEpoch
+        ),
+        endReason: endReason
+      )
+    }
+    let intervals = [
+      interval(0, start, firstEnd, .planTransition),
+      interval(1, firstEnd, secondEnd, .planTransition),
+      interval(2, secondEnd, end, .completed),
+    ]
     return .init(
       id: UUID(uuidString: "00000000-0000-0000-0000-000000000064")!,
       schemaVersion: 2,
@@ -211,13 +195,13 @@ enum HistoryHealthExportUITestConfiguration {
           finalObservedAt: end
         )
       ),
-      progress: .init(completedStepCount: 1, currentStepIndex: nil, activeSecondsInCurrentStep: 0),
+      progress: .init(completedStepCount: 3, currentStepIndex: nil, activeSecondsInCurrentStep: 0),
       physicalStopConfirmation: .humanConfirmed(at: end),
       activityTimeline: .recorded(
         startedAt: start,
         endedAt: end,
         timingProvenance: .executionClock,
-        executedIntervals: [interval]
+        executedIntervals: intervals
       ),
       healthExport: .notRequested
     )
@@ -242,5 +226,530 @@ private final class UITestHealthStore: WorkoutHealthStoreProtocol {
   func save(_ payload: WorkoutHealthExportPayload) async throws -> UUID {
     UUID(uuidString: "00000000-0000-0000-0000-000000000164")!
   }
+}
+#endif
+
+enum HistoryRepositoryTone: Equatable { case neutral, warning, failure }
+
+struct HistoryRepositoryMessage: Equatable {
+  let title: String
+  let detail: String
+  let symbol: String
+  let tone: HistoryRepositoryTone
+}
+
+struct HistoryWorkoutRow: Equatable, Identifiable {
+  let id: UUID
+  let title: String
+  let outcome: String
+  let activity: String
+  let date: String
+  let duration: String
+  let distance: String
+  let health: String
+
+  var accessibilityValue: String {
+    "\(outcome), \(activity), \(date), duration \(duration), distance \(distance), \(health)"
+  }
+}
+
+enum HistoryLibraryContent: Equatable {
+  case loading
+  case empty
+  case populated([HistoryWorkoutRow])
+  case blocked(HistoryRepositoryMessage)
+}
+
+struct HistoryLibraryPresentation: Equatable {
+  let content: HistoryLibraryContent
+  let warning: HistoryRepositoryMessage?
+
+  static let loading = Self(content: .loading, warning: nil)
+
+  private init(content: HistoryLibraryContent, warning: HistoryRepositoryMessage?) {
+    self.content = content
+    self.warning = warning
+  }
+
+  init(
+    status: WorkoutHistoryRepositoryStatus,
+    locale: Locale = .autoupdatingCurrent,
+    timeZone: TimeZone = .autoupdatingCurrent
+  ) {
+    warning = Self.warning(status.staging)
+    switch status.canonical {
+    case .empty:
+      content = .empty
+    case let .available(summaries):
+      let rows = summaries.sorted {
+        $0.attemptedAt == $1.attemptedAt
+          ? $0.id.uuidString < $1.id.uuidString
+          : $0.attemptedAt > $1.attemptedAt
+      }.map { HistoryWorkoutRow(summary: $0, locale: locale, timeZone: timeZone) }
+      content = rows.isEmpty ? .empty : .populated(rows)
+    case .protectedDataUnavailable:
+      content = .blocked(Self.message(
+        "History is locked",
+        "Unlock this iPhone, then retry. Stored workouts were preserved and were not treated as empty.",
+        "lock.fill",
+        .neutral
+      ))
+    case .readFailure:
+      content = .blocked(Self.message(
+        "History could not be read",
+        "PacePrompt could not read the protected history file. The file was preserved.",
+        "exclamationmark.triangle.fill",
+        .failure
+      ))
+    case .corruptData:
+      content = .blocked(Self.message(
+        "History data is unreadable",
+        "The stored file could not be decoded safely. It was preserved without guessing or showing an empty library.",
+        "exclamationmark.triangle.fill",
+        .failure
+      ))
+    case .partialWriteDetected:
+      content = .blocked(Self.message(
+        "A partial history write was detected",
+        "The incomplete data was preserved. PacePrompt will not promote, merge or guess its contents.",
+        "exclamationmark.triangle.fill",
+        .warning
+      ))
+    case let .unsupportedStoreVersion(version):
+      content = .blocked(Self.message(
+        "History was saved by a newer version",
+        "This store uses format v\(version). It was preserved unchanged and cannot be shown safely.",
+        "exclamationmark.circle.fill",
+        .neutral
+      ))
+    case let .unsupportedSummaryVersion(_, version):
+      content = .blocked(Self.message(
+        "A workout uses a newer version",
+        "One workout uses schema v\(version). The complete store was preserved unchanged.",
+        "exclamationmark.circle.fill",
+        .neutral
+      ))
+    case let .unsupportedPlanVersion(_, version):
+      content = .blocked(Self.message(
+        "A plan snapshot uses a newer version",
+        "One workout plan uses schema v\(version). The complete store was preserved unchanged.",
+        "exclamationmark.circle.fill",
+        .neutral
+      ))
+    }
+  }
+
+  private static func message(
+    _ title: String,
+    _ detail: String,
+    _ symbol: String,
+    _ tone: HistoryRepositoryTone
+  ) -> HistoryRepositoryMessage {
+    .init(title: title, detail: detail, symbol: symbol, tone: tone)
+  }
+
+  private static func warning(_ staging: WorkoutHistoryStagingState) -> HistoryRepositoryMessage? {
+    switch staging {
+    case .absent:
+      nil
+    case .staleArtifactPresent:
+      .init(
+        title: "A previous history save needs attention",
+        detail: "Readable workouts remain visible, but Apple Health save-state changes are disabled while the stale staging file is preserved.",
+        symbol: "exclamationmark.triangle.fill",
+        tone: .warning
+      )
+    case .presenceUnavailable:
+      .init(
+        title: "History save status is unavailable",
+        detail: "PacePrompt could not check for a staging file. Workouts remain visible, but Apple Health save-state changes are disabled.",
+        symbol: "exclamationmark.triangle.fill",
+        tone: .warning
+      )
+    }
+  }
+}
+
+struct HistoryPlanSegment: Equatable, Identifiable {
+  let id: Int
+  let title: String
+  let duration: String
+  let targets: String
+}
+
+struct HistoryExecutedIntervalDetail: Equatable, Identifiable {
+  let id: String
+  let title: String
+  let timing: String
+  let prescribed: String
+  let effective: String
+  let observed: String
+  let ended: String
+}
+
+struct HistoryHealthCard: Equatable {
+  let title: String
+  let detail: String
+  let symbol: String
+  let actionTitle: String?
+  let confirmationTitle: String?
+  let confirmationMessage: String?
+}
+
+struct HistoryWorkoutDetail: Equatable {
+  let id: UUID
+  let title: String
+  let outcome: String
+  let activityAndDate: String
+  let duration: String
+  let distance: String
+  let progress: String
+  let prescribed: [HistoryPlanSegment]
+  let executed: [HistoryExecutedIntervalDetail]
+  let executionUnavailable: String?
+  let health: HistoryHealthCard
+}
+
+enum HistoryWorkoutDetailPresenter {
+  static func make(
+    summary: WorkoutExecutionSummary,
+    isSaving: Bool,
+    healthMutationAllowed: Bool,
+    locale: Locale = .autoupdatingCurrent,
+    timeZone: TimeZone = .autoupdatingCurrent
+  ) -> HistoryWorkoutDetail {
+    let dateFormatter = historyDateFormatter(locale: locale, timeZone: timeZone)
+    let timeFormatter = historyTimeFormatter(locale: locale, timeZone: timeZone)
+    let executed: [HistoryExecutedIntervalDetail]
+    let unavailable: String?
+    if summary.schemaVersion == WorkoutExecutionSummarySchema.legacyVersion {
+      executed = []
+      unavailable = "Executed interval detail is unavailable in schema v1. PacePrompt does not reconstruct it from plan targets or summary timestamps."
+    } else {
+      switch summary.activityTimeline {
+      case let .recorded(_, _, _, intervals):
+        executed = intervals.map { interval in
+          .init(
+            id: "\(interval.segmentIndex)-\(interval.intervalIndex)",
+            title: "Segment \(interval.segmentIndex + 1) · interval \(interval.intervalIndex + 1)",
+            timing: "\(timeFormatter.string(from: interval.startedAt))–\(timeFormatter.string(from: interval.endedAt))",
+            prescribed: "Prescribed · \(historyDecimal(interval.prescribed.speedKilometresPerHour, locale: locale)) km/h · \(historyDecimal(interval.prescribed.inclinationPercent, locale: locale))%",
+            effective: "Effective · \(historyDecimal(interval.effectiveSpeed.kilometresPerHour, locale: locale)) km/h (\(source(interval.effectiveSpeed.source))) · \(historyDecimal(interval.effectiveInclination.percent, locale: locale))% (\(source(interval.effectiveInclination.source)))",
+            observed: "Observed · \(historyDecimal(interval.settledObservation.speedKilometresPerHour, locale: locale)) km/h · \(historyDecimal(interval.settledObservation.inclinationPercent, locale: locale))% at \(timeFormatter.string(from: interval.settledObservation.observedAt))",
+            ended: "Ended · \(endReason(interval.endReason))"
+          )
+        }
+        unavailable = nil
+      case let .unavailable(reason):
+        executed = []
+        unavailable = "Executed interval timing is unavailable (\(reason.rawValue)). No detail was inferred."
+      case nil:
+        executed = []
+        unavailable = "Executed interval detail is unavailable. No detail was inferred."
+      }
+    }
+
+    return .init(
+      id: summary.id,
+      title: summary.planSnapshot.suggestedName,
+      outcome: outcome(summary),
+      activityAndDate: "\(activity(summary.planSnapshot.activity)) · \(dateFormatter.string(from: summary.attemptedAt))",
+      duration: duration(summary.activeDuration),
+      distance: distance(summary.distance, locale: locale),
+      progress: progress(summary),
+      prescribed: summary.planSnapshot.steps.enumerated().map { index, step in
+        .init(
+          id: index,
+          title: "\(index + 1). \(step.kind.historyName) · \(step.label)",
+          duration: historyDuration(step.duration.value),
+          targets: "\(historyDecimal(step.targetSpeed.value, locale: locale)) km/h · \(historyDecimal(step.targetInclination.value, locale: locale))%"
+        )
+      },
+      executed: executed,
+      executionUnavailable: unavailable,
+      health: healthCard(
+        summary: summary,
+        isSaving: isSaving,
+        mutationAllowed: healthMutationAllowed
+      )
+    )
+  }
+
+  static func outcome(_ summary: WorkoutExecutionSummary) -> String {
+    if case .unconfirmed = summary.physicalStopConfirmation { return "Physically uncertain" }
+    return switch summary.outcome {
+    case .completed: "Completed"
+    case .stoppedByUser: "Ended by you"
+    case .inProgress: "Interrupted · completion unknown"
+    case .interrupted: "Interrupted"
+    case .failed: "Failed"
+    }
+  }
+
+  static func activity(_ value: WorkoutActivity) -> String {
+    value == .indoorWalking ? "Indoor walking" : "Indoor running"
+  }
+
+  static func duration(_ value: WorkoutActiveDuration) -> String {
+    switch value {
+    case let .measured(seconds): historyDuration(seconds)
+    case .unavailable: "Unavailable"
+    }
+  }
+
+  static func distance(_ value: WorkoutDistance, locale: Locale) -> String {
+    switch value {
+    case let .measured(metres), let .measuredWithProvenance(metres, _):
+      if metres >= 1_000 {
+        return "\(historyDecimal(metres / 1_000, locale: locale)) km"
+      }
+      return "\(historyDecimal(metres, locale: locale)) m"
+    case .unavailable:
+      return "Unavailable"
+    }
+  }
+
+  private static func healthCard(
+    summary: WorkoutExecutionSummary,
+    isSaving: Bool,
+    mutationAllowed: Bool
+  ) -> HistoryHealthCard {
+    guard let export = HistoryHealthExportPresenter.make(summary: summary, isSaving: isSaving) else {
+      let detail: String
+      if summary.schemaVersion == WorkoutExecutionSummarySchema.legacyVersion {
+        detail = "Schema v1 stays local and is not reconstructed for Apple Health."
+      } else if case .inProgress = summary.outcome {
+        detail = "This persisted in-progress attempt is shown as interrupted; completion is unknown."
+      } else if case .unconfirmed = summary.physicalStopConfirmation {
+        detail = "The physical stop state is uncertain, so this workout remains local only."
+      } else {
+        detail = "This outcome or execution timeline is not eligible for Apple Health."
+      }
+      return .init(
+        title: "Not eligible for Apple Health",
+        detail: detail,
+        symbol: "heart.slash",
+        actionTitle: nil,
+        confirmationTitle: nil,
+        confirmationMessage: nil
+      )
+    }
+    let status = mutationAllowed || export.actionTitle == nil
+      ? export.status
+      : "History storage needs attention before Apple Health saving."
+    return .init(
+      title: historyHealthTitle(summary.healthExport, isSaving: isSaving),
+      detail: status,
+      symbol: historyHealthSymbol(summary.healthExport, isSaving: isSaving),
+      actionTitle: mutationAllowed ? export.actionTitle : nil,
+      confirmationTitle: export.confirmationTitle,
+      confirmationMessage: export.confirmationMessage
+    )
+  }
+
+  private static func progress(_ summary: WorkoutExecutionSummary) -> String {
+    let completed = summary.progress.completedStepCount
+    let total = summary.planSnapshot.steps.count
+    if let current = summary.progress.currentStepIndex {
+      return "\(completed) of \(total) completed · step \(current + 1) active for \(historyDuration(summary.progress.activeSecondsInCurrentStep))"
+    }
+    return "\(completed) of \(total) prescribed segments completed"
+  }
+
+  private static func source(_ value: WorkoutTargetValueSource) -> String {
+    value == .planned ? "planned" : "manual override"
+  }
+
+  private static func endReason(_ value: WorkoutExecutedIntervalEndReason) -> String {
+    switch value {
+    case .planTransition: "plan transition"
+    case .targetChanged: "target changed"
+    case .paused: "paused"
+    case .completed: "completed"
+    case .endedByUser: "ended by user"
+    case .interrupted: "interrupted"
+    case .failed: "failed"
+    }
+  }
+}
+
+@MainActor
+final class HistoryLibraryViewModel: ObservableObject {
+  @Published private(set) var repositoryStatus: WorkoutHistoryRepositoryStatus?
+  @Published private(set) var savingSummaryID: UUID?
+
+  private let history: any WorkoutHistoryRepositoryProtocol
+  private let coordinator: WorkoutHealthExportCoordinator
+
+  init(
+    history: any WorkoutHistoryRepositoryProtocol,
+    healthStore: any WorkoutHealthStoreProtocol
+  ) {
+    self.history = history
+    coordinator = WorkoutHealthExportCoordinator(history: history, healthStore: healthStore)
+  }
+
+  var presentation: HistoryLibraryPresentation {
+    repositoryStatus.map { HistoryLibraryPresentation(status: $0) } ?? .loading
+  }
+
+  func reload() { repositoryStatus = history.list() }
+
+  func detail(for id: UUID) -> HistoryWorkoutDetail? {
+    guard let summary = summary(for: id) else { return nil }
+    return HistoryWorkoutDetailPresenter.make(
+      summary: summary,
+      isSaving: savingSummaryID == id,
+      healthMutationAllowed: repositoryStatus?.staging == .absent
+    )
+  }
+
+  func planSnapshot(for id: UUID) -> WorkoutPlan? { summary(for: id)?.planSnapshot }
+
+  func save(summaryID: UUID) async {
+    guard savingSummaryID == nil, repositoryStatus?.staging == .absent,
+          let summary = summary(for: summaryID) else { return }
+    savingSummaryID = summaryID
+    _ = await coordinator.save(summary)
+    reload()
+    savingSummaryID = nil
+  }
+
+  private func summary(for id: UUID) -> WorkoutExecutionSummary? {
+    guard case let .available(summaries)? = repositoryStatus?.canonical else { return nil }
+    return summaries.first { $0.id == id }
+  }
+}
+
+private extension HistoryWorkoutRow {
+  init(summary: WorkoutExecutionSummary, locale: Locale, timeZone: TimeZone) {
+    id = summary.id
+    title = summary.planSnapshot.suggestedName
+    outcome = HistoryWorkoutDetailPresenter.outcome(summary)
+    activity = HistoryWorkoutDetailPresenter.activity(summary.planSnapshot.activity)
+    date = historyDateFormatter(locale: locale, timeZone: timeZone).string(from: summary.attemptedAt)
+    duration = HistoryWorkoutDetailPresenter.duration(summary.activeDuration)
+    distance = HistoryWorkoutDetailPresenter.distance(summary.distance, locale: locale)
+    health = historyHealthRowStatus(summary.healthExport, schemaVersion: summary.schemaVersion)
+  }
+}
+
+private func historyHealthRowStatus(_ state: WorkoutHealthExportState?, schemaVersion: Int) -> String {
+  guard schemaVersion == WorkoutExecutionSummarySchema.currentVersion, let state else {
+    return "Apple Health unavailable"
+  }
+  return switch state {
+  case .notRequested: "Not saved to Apple Health"
+  case .pending: "Apple Health result uncertain"
+  case let .saved(_, _, _, _, included):
+    included ? "Saved to Apple Health with distance" : "Saved to Apple Health without distance"
+  case .denied: "Apple Health permission denied"
+  case .unavailable: "Apple Health unavailable"
+  case .failedRetryable: "Apple Health save failed"
+  case .failedAmbiguous: "Apple Health save may have completed"
+  }
+}
+
+private func historyHealthTitle(_ state: WorkoutHealthExportState?, isSaving: Bool) -> String {
+  if isSaving { return "Saving to Apple Health" }
+  return switch state ?? .notRequested {
+  case .notRequested: "Save to Apple Health"
+  case .pending, .failedAmbiguous: "Apple Health result uncertain"
+  case .saved: "Saved to Apple Health"
+  case .denied: "Apple Health permission denied"
+  case .unavailable: "Apple Health unavailable"
+  case .failedRetryable: "Apple Health save failed"
+  }
+}
+
+private func historyHealthSymbol(_ state: WorkoutHealthExportState?, isSaving: Bool) -> String {
+  if isSaving { return "arrow.triangle.2.circlepath" }
+  return switch state ?? .notRequested {
+  case .notRequested: "heart"
+  case .saved: "heart.fill"
+  case .denied, .unavailable: "heart.slash"
+  case .pending, .failedRetryable, .failedAmbiguous: "exclamationmark.triangle.fill"
+  }
+}
+
+private func historyDateFormatter(
+  locale: Locale = .autoupdatingCurrent,
+  timeZone: TimeZone = .autoupdatingCurrent
+) -> DateFormatter {
+  let formatter = DateFormatter()
+  formatter.locale = locale
+  formatter.timeZone = timeZone
+  formatter.dateStyle = .medium
+  formatter.timeStyle = .short
+  return formatter
+}
+
+private func historyTimeFormatter(locale: Locale, timeZone: TimeZone) -> DateFormatter {
+  let formatter = DateFormatter()
+  formatter.locale = locale
+  formatter.timeZone = timeZone
+  formatter.dateStyle = .none
+  formatter.timeStyle = .short
+  return formatter
+}
+
+private func historyDuration(_ seconds: Int) -> String {
+  let hours = seconds / 3_600
+  let minutes = seconds % 3_600 / 60
+  let remainder = seconds % 60
+  if hours > 0 { return String(format: "%d:%02d:%02d", hours, minutes, remainder) }
+  return String(format: "%d:%02d", minutes, remainder)
+}
+
+private func historyDecimal(_ value: Decimal, locale: Locale) -> String {
+  let formatter = NumberFormatter()
+  formatter.locale = locale
+  formatter.numberStyle = .decimal
+  formatter.maximumFractionDigits = 2
+  return formatter.string(from: NSDecimalNumber(decimal: value))
+    ?? NSDecimalNumber(decimal: value).stringValue
+}
+
+private extension WorkoutStepKind {
+  var historyName: String {
+    switch self {
+    case .warmUp: "Warm-up"
+    case .interval: "Interval"
+    case .recovery: "Recovery"
+    case .coolDown: "Cool-down"
+    }
+  }
+}
+
+#if DEBUG
+@MainActor
+enum HistoryLibraryUITestConfiguration {
+  static func makeViewModelIfRequested() -> HistoryLibraryViewModel? {
+    let arguments = ProcessInfo.processInfo.arguments
+    if arguments.contains("--paceprompt-history-read-failure-ui-testing") {
+      return .init(
+        history: UITestStatusHistory(
+          status: .init(canonical: .readFailure, staging: .absent)
+        ),
+        healthStore: UITestHealthStore()
+      )
+    }
+    guard arguments.contains("--paceprompt-history-ui-testing")
+            || arguments.contains("--paceprompt-health-export-ui-testing") else {
+      return nil
+    }
+    return .init(
+      history: UITestHistory(summary: HistoryUITestFixtures.syntheticSummary()),
+      healthStore: UITestHealthStore()
+    )
+  }
+}
+
+private final class UITestStatusHistory: WorkoutHistoryRepositoryProtocol {
+  let status: WorkoutHistoryRepositoryStatus
+
+  init(status: WorkoutHistoryRepositoryStatus) { self.status = status }
+  func list() -> WorkoutHistoryRepositoryStatus { status }
+  func record(_ summary: WorkoutExecutionSummary) {}
 }
 #endif
