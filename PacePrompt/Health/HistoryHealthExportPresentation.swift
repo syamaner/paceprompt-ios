@@ -355,14 +355,14 @@ struct HistoryLibraryPresentation: Equatable {
     case .staleArtifactPresent:
       .init(
         title: "A previous history save needs attention",
-        detail: "Readable workouts remain visible, but Apple Health save-state changes are disabled while the stale staging file is preserved.",
+        detail: "Readable workouts remain visible, but Apple Health save-state changes and JSON export are disabled while the stale staging file is preserved.",
         symbol: "exclamationmark.triangle.fill",
         tone: .warning
       )
     case .presenceUnavailable:
       .init(
         title: "History save status is unavailable",
-        detail: "PacePrompt could not check for a staging file. Workouts remain visible, but Apple Health save-state changes are disabled.",
+        detail: "PacePrompt could not check for a staging file. Workouts remain visible, but Apple Health save-state changes and JSON export are disabled.",
         symbol: "exclamationmark.triangle.fill",
         tone: .warning
       )
@@ -577,15 +577,26 @@ enum HistoryWorkoutDetailPresenter {
 final class HistoryLibraryViewModel: ObservableObject {
   @Published private(set) var repositoryStatus: WorkoutHistoryRepositoryStatus?
   @Published private(set) var savingSummaryID: UUID?
+  @Published private(set) var isHistoryExportPresented = false
+  @Published private(set) var selectedHistoryExportIDs: Set<UUID> = []
+  @Published private(set) var historyExportPreview: WorkoutHistoryExportPreview?
+  @Published private(set) var historyShareArtifact: WorkoutHistoryExportArtifact?
+  @Published private(set) var historyExportError: String?
 
   private let history: any WorkoutHistoryRepositoryProtocol
   private let coordinator: WorkoutHealthExportCoordinator
+  private let historyExporter: any WorkoutHistoryExporting
+  private let now: () -> Date
 
   init(
     history: any WorkoutHistoryRepositoryProtocol,
-    healthStore: any WorkoutHealthStoreProtocol
+    healthStore: any WorkoutHealthStoreProtocol,
+    historyExporter: any WorkoutHistoryExporting = WorkoutHistoryExporter(),
+    now: @escaping () -> Date = Date.init
   ) {
     self.history = history
+    self.historyExporter = historyExporter
+    self.now = now
     coordinator = WorkoutHealthExportCoordinator(history: history, healthStore: healthStore)
   }
 
@@ -606,6 +617,155 @@ final class HistoryLibraryViewModel: ObservableObject {
 
   func planSnapshot(for id: UUID) -> WorkoutPlan? { summary(for: id)?.planSnapshot }
 
+  var historyExportSelections: [WorkoutHistoryExportSelection] {
+    summaries.map { summary in
+      let failure: WorkoutHistoryExportEligibilityFailure?
+      switch WorkoutHistoryExportMapper.eligibility(of: summary) {
+      case .success: failure = nil
+      case let .failure(value): failure = value
+      }
+      return .init(
+        id: summary.id,
+        title: summary.planSnapshot.suggestedName,
+        detail: "\(HistoryWorkoutDetailPresenter.outcome(summary)) · \(historyDateFormatter().string(from: summary.attemptedAt))",
+        failure: failure
+      )
+    }
+  }
+
+  var canBeginHistoryExport: Bool {
+    guard repositoryStatus?.staging == .absent else { return false }
+    return !summaries.isEmpty
+  }
+
+  var canReviewHistoryExport: Bool {
+    isHistoryExportPresented && !selectedHistoryExportIDs.isEmpty
+  }
+
+  func canExport(summaryID: UUID) -> Bool {
+    guard repositoryStatus?.staging == .absent, let summary = summary(for: summaryID) else {
+      return false
+    }
+    if case .success = WorkoutHistoryExportMapper.eligibility(of: summary) { return true }
+    return false
+  }
+
+  func historyExportFailure(summaryID: UUID) -> String? {
+    guard let summary = summary(for: summaryID) else { return nil }
+    if case let .failure(failure) = WorkoutHistoryExportMapper.eligibility(of: summary) {
+      return failure.message
+    }
+    return repositoryStatus?.staging == .absent
+      ? nil : "History storage needs attention before a JSON export can be created."
+  }
+
+  func beginHistoryExport(preselecting summaryID: UUID? = nil) {
+    guard canBeginHistoryExport else { return }
+    isHistoryExportPresented = true
+    selectedHistoryExportIDs = []
+    historyExportPreview = nil
+    historyShareArtifact = nil
+    historyExportError = nil
+    if let summaryID, canExport(summaryID: summaryID) {
+      selectedHistoryExportIDs.insert(summaryID)
+    }
+  }
+
+  func toggleHistoryExportSelection(_ id: UUID) {
+    guard isHistoryExportPresented, historyExportPreview == nil,
+          let summary = summary(for: id),
+          case .success = WorkoutHistoryExportMapper.eligibility(of: summary) else { return }
+    if selectedHistoryExportIDs.contains(id) {
+      selectedHistoryExportIDs.remove(id)
+    } else {
+      selectedHistoryExportIDs.insert(id)
+    }
+    historyExportError = nil
+  }
+
+  func reviewHistoryExport() {
+    historyExportError = nil
+    guard canReviewHistoryExport,
+          repositoryStatus?.staging == .absent,
+          case let .available(current)? = repositoryStatus?.canonical else {
+      historyExportError = "Workout history is not currently available for structured export. No file was created."
+      return
+    }
+    let selected = Self.orderedSummaries(
+      current.filter { selectedHistoryExportIDs.contains($0.id) }
+    )
+    guard selected.count == selectedHistoryExportIDs.count else {
+      historyExportError = "A selected workout is no longer available. Review History and select it again. No file was created."
+      return
+    }
+    do {
+      historyExportPreview = .init(
+        createdAt: now(),
+        fileName: WorkoutHistoryExportSchema.fileName,
+        sourceSummaries: selected,
+        workouts: try selected.map(WorkoutHistoryExportMapper.map)
+      )
+    } catch let failure as WorkoutHistoryExportEligibilityFailure {
+      historyExportError = "\(failure.message) No file was created."
+    } catch {
+      historyExportError = "The selected workouts could not be prepared safely. No file was created."
+    }
+  }
+
+  func returnToHistoryExportSelection() {
+    historyExportPreview = nil
+    historyExportError = nil
+  }
+
+  func prepareHistoryExportForSharing() {
+    historyExportError = nil
+    guard let preview = historyExportPreview else { return }
+    let latest = history.list()
+    repositoryStatus = latest
+    guard latest.staging == .absent,
+          case let .available(current) = latest.canonical,
+          Self.orderedSummaries(
+            current.filter { selectedHistoryExportIDs.contains($0.id) }
+          ) == preview.sourceSummaries
+    else {
+      historyExportPreview = nil
+      historyExportError = "Workout history changed or became unavailable after preview. Review the current records again. No file was created."
+      return
+    }
+    do {
+      historyShareArtifact = try historyExporter.prepare(preview)
+    } catch {
+      historyExportError = Self.historyExportMessage(error)
+    }
+  }
+
+  func completeHistorySharing() {
+    guard let artifact = historyShareArtifact else { return }
+    historyShareArtifact = nil
+    do {
+      try historyExporter.cleanup(artifact)
+      clearHistoryExportFlow()
+    } catch {
+      clearHistoryExportFlow(preservingError: Self.historyExportMessage(error))
+    }
+  }
+
+  func cancelHistoryExport() {
+    guard let artifact = historyShareArtifact else {
+      clearHistoryExportFlow()
+      return
+    }
+    historyShareArtifact = nil
+    do {
+      try historyExporter.cleanup(artifact)
+      clearHistoryExportFlow()
+    } catch {
+      clearHistoryExportFlow(preservingError: Self.historyExportMessage(error))
+    }
+  }
+
+  func dismissHistoryExportError() { historyExportError = nil }
+
   func save(summaryID: UUID) async {
     guard savingSummaryID == nil, repositoryStatus?.staging == .absent,
           let summary = summary(for: summaryID) else { return }
@@ -618,6 +778,51 @@ final class HistoryLibraryViewModel: ObservableObject {
   private func summary(for id: UUID) -> WorkoutExecutionSummary? {
     guard case let .available(summaries)? = repositoryStatus?.canonical else { return nil }
     return summaries.first { $0.id == id }
+  }
+
+  private var summaries: [WorkoutExecutionSummary] {
+    guard case let .available(values)? = repositoryStatus?.canonical else { return [] }
+    return Self.orderedSummaries(values)
+  }
+
+  private static func orderedSummaries(
+    _ values: [WorkoutExecutionSummary]
+  ) -> [WorkoutExecutionSummary] {
+    values.sorted {
+      $0.attemptedAt == $1.attemptedAt
+        ? $0.id.uuidString < $1.id.uuidString
+        : $0.attemptedAt > $1.attemptedAt
+    }
+  }
+
+  private func clearHistoryExportFlow(preservingError: String? = nil) {
+    isHistoryExportPresented = false
+    selectedHistoryExportIDs = []
+    historyExportPreview = nil
+    historyShareArtifact = nil
+    historyExportError = preservingError
+  }
+
+  private static func historyExportMessage(_ error: Error) -> String {
+    guard let failure = error as? WorkoutHistoryExportFailure else {
+      return "The workout-history export failed without changing persistent History."
+    }
+    return switch failure {
+    case .noRecords:
+      "Select at least one supported workout before creating an export."
+    case .encoding:
+      "The selected workouts could not be encoded. No export file was created."
+    case .directoryPreparation:
+      "Protected temporary storage could not be prepared. No export file was created."
+    case .previousArtifactCleanup:
+      "The previous temporary export could not be removed, so it was not replaced."
+    case .protectedWrite:
+      "The protected temporary export could not be written."
+    case .fileProtection:
+      "Complete file protection could not be verified, so the temporary export was not shared."
+    case .cleanup:
+      "The temporary export could not be removed after sharing."
+    }
   }
 }
 

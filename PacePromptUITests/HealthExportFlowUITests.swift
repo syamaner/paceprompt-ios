@@ -48,7 +48,7 @@ final class HealthExportFlowUITests: XCTestCase {
     XCTAssertFalse(app.buttons["history.health.save"].exists)
   }
 
-  func testHistoryListDetailRepeatAndDeferredActions() {
+  func testHistoryListDetailRepeatAndDeliberateJSONPreview() {
     app = XCUIApplication()
     app.launchArguments = ["--paceprompt-history-ui-testing"]
     app.launch()
@@ -86,8 +86,29 @@ final class HealthExportFlowUITests: XCTestCase {
     let delete = app.buttons["history.delete"]
     for _ in 0..<8 where !export.exists { app.swipeUp() }
     XCTAssertTrue(export.exists)
-    XCTAssertFalse(export.isEnabled)
-    XCTAssertTrue(delete.exists)
+    XCTAssertTrue(export.isEnabled)
+    export.tap()
+
+    XCTAssertTrue(app.navigationBars["Export workout history"].waitForExistence(timeout: 3))
+    XCTAssertEqual(
+      app.buttons["history.export.select.00000000-0000-0000-0000-000000000064"].label,
+      "Synthetic steady walk, selected"
+    )
+    app.buttons["history.export.review"].tap()
+    XCTAssertTrue(app.navigationBars["Review export"].waitForExistence(timeout: 3))
+    let filename = app.descendants(matching: .any)["history.export.filename"]
+    XCTAssertTrue(filename.waitForExistence(timeout: 3))
+    XCTAssertTrue(
+      filename.label.contains("PacePrompt-workout-history.json")
+        || (filename.value as? String)?.contains("PacePrompt-workout-history.json") == true
+    )
+    let disclosure = app.descendants(matching: .any)["history.export.disclosure"]
+    for _ in 0..<6 where !disclosure.exists { app.swipeUp() }
+    XCTAssertTrue(disclosure.exists)
+    XCTAssertTrue(disclosure.label.contains("prescribed, effective-target and separately observed"))
+    app.buttons["history.export.cancel"].tap()
+
+    XCTAssertTrue(delete.waitForExistence(timeout: 3))
     XCTAssertFalse(delete.isEnabled)
   }
 

@@ -101,6 +101,8 @@
 		D30000000000000000001002 /* HistoryHealthExportPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000002002 /* HistoryHealthExportPresentation.swift */; };
 		D30000000000000000001003 /* WorkoutHealthExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000002004 /* WorkoutHealthExportTests.swift */; };
 		D30000000000000000001004 /* HealthExportFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000002005 /* HealthExportFlowUITests.swift */; };
+		D40000000000000000001001 /* WorkoutHistoryExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40000000000000000002001 /* WorkoutHistoryExport.swift */; };
+		D40000000000000000001002 /* WorkoutHistoryExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40000000000000000002002 /* WorkoutHistoryExportTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -188,6 +190,8 @@
 		D30000000000000000002003 /* PacePrompt.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PacePrompt.entitlements; sourceTree = "<group>"; };
 		D30000000000000000002004 /* WorkoutHealthExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHealthExportTests.swift; sourceTree = "<group>"; };
 		D30000000000000000002005 /* HealthExportFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthExportFlowUITests.swift; sourceTree = "<group>"; };
+		D40000000000000000002001 /* WorkoutHistoryExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryExport.swift; sourceTree = "<group>"; };
+		D40000000000000000002002 /* WorkoutHistoryExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryExportTests.swift; sourceTree = "<group>"; };
 		AB0000000000000000002001 /* PacePromptEvaluationApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptEvaluationApp.swift; sourceTree = "<group>"; };
 		AB0000000000000000002002 /* EvaluationReadinessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationReadinessView.swift; sourceTree = "<group>"; };
 		AB0000000000000000002003 /* EvaluationLaunchReadiness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationLaunchReadiness.swift; sourceTree = "<group>"; };
@@ -337,6 +341,7 @@
 			children = (
 				AF0000000000000000001001 /* WorkoutExecutionSummary.swift */,
 				AF0000000000000000001002 /* WorkoutHistoryRepository.swift */,
+				D40000000000000000002001 /* WorkoutHistoryExport.swift */,
 			);
 			path = History;
 			sourceTree = "<group>";
@@ -399,6 +404,7 @@
 			isa = PBXGroup;
 			children = (
 				D30000000000000000002004 /* WorkoutHealthExportTests.swift */,
+				D40000000000000000002002 /* WorkoutHistoryExportTests.swift */,
 				E10000000000000000002003 /* ProductionWorkoutExecutionBindingTests.swift */,
 				D10000000000000000002002 /* RequestControlDiagnosticTests.swift */,
 				C70000000000000000002004 /* FTMSControlPointCodecTests.swift */,
@@ -753,6 +759,7 @@
 				AE0000000000000000000001 /* SavedPlanExport.swift in Sources */,
 				AF0000000000000000000001 /* WorkoutExecutionSummary.swift in Sources */,
 				AF0000000000000000000002 /* WorkoutHistoryRepository.swift in Sources */,
+				D40000000000000000001001 /* WorkoutHistoryExport.swift in Sources */,
 				B60000000000000000001001 /* WorkoutExecutionReducer.swift in Sources */,
 				B70000000000000000001001 /* WorkoutExecutionOrchestrator.swift in Sources */,
 				AA0000000000000000001016 /* ManualWorkoutPlan.swift in Sources */,
@@ -766,6 +773,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D30000000000000000001003 /* WorkoutHealthExportTests.swift in Sources */,
+				D40000000000000000001002 /* WorkoutHistoryExportTests.swift in Sources */,
 				E10000000000000000001003 /* ProductionWorkoutExecutionBindingTests.swift in Sources */,
 				D10000000000000000001002 /* RequestControlDiagnosticTests.swift in Sources */,
 				C70000000000000000001004 /* FTMSControlPointCodecTests.swift in Sources */,
