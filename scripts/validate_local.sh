@@ -56,6 +56,7 @@ if rg -n 'case (start|stop)$|case \.(start|stop)|submit\(\.(start|stop)' \
 fi
 
 python3 -B scripts/verify_import_resources.py
+python3 -B scripts/verify_release_configuration.py
 python3 -B Evaluation/WorkoutImport/Scoring/scorer.py \
   --root Evaluation/WorkoutImport verify-corpus
 python3 -B -m unittest discover \
