@@ -272,7 +272,7 @@ struct TreadmillSetupView: View {
         Section {
             Label("Read-only capability check", systemImage: "lock.shield")
         } footer: {
-            Text("This capability view cannot write FTMS Control Point 0x2AD9. Ordinary production execution remains proof-session locked; the physical console and safety key stay authoritative.")
+            Text("This capability view cannot write FTMS Control Point 0x2AD9. Workout execution is started separately from a saved plan; the physical console and safety key stay authoritative.")
         }
     }
 

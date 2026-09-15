@@ -6,7 +6,6 @@ enum WorkoutPreflightStage: Equatable {
     case unsupported
     case stale
     case lockedOrUnknown
-  case readyForConfirmations
     case requestingControl
     case readyToBegin
     case waitingForPhysicalStart
@@ -27,25 +26,7 @@ struct WorkoutPreflightStatusPresentation: Equatable {
     let tone: WorkoutPreflightTone
 }
 
-enum WorkoutPreflightConfirmationKind: String, CaseIterable, Equatable {
-    case activity
-    case deckClear
-    case consoleReachable
-    case safetyKeyReachable
-    case physicallyStationary
-}
-
-struct WorkoutPreflightConfirmationPresentation: Equatable, Identifiable {
-    let kind: WorkoutPreflightConfirmationKind
-    let title: String
-    let detail: String
-    let isConfirmed: Bool
-
-    var id: WorkoutPreflightConfirmationKind { kind }
-}
-
 enum WorkoutPreflightIntent: Equatable {
-    case setConfirmation(WorkoutPreflightConfirmationKind, Bool)
     case beginWorkout
 }
 
@@ -54,8 +35,6 @@ struct WorkoutPreflightContext: Equatable {
     let ceilings: WorkoutSessionCeilings
     let profile: FR30zExecutionProfile
     let executionState: WorkoutExecutionState
-    let operatorReadiness: WorkoutOperatorReadiness
-    let activityConfirmed: Bool
 }
 
 struct WorkoutPreflightPresentation: Equatable {
@@ -71,8 +50,6 @@ struct WorkoutPreflightPresentation: Equatable {
     let initialStepLabel: String
     let initialSpeed: String
     let initialInclination: String
-    let confirmations: [WorkoutPreflightConfirmationPresentation]
-    let canEditConfirmations: Bool
     let canBeginWorkout: Bool
 
     var isWaitingForPhysicalStart: Bool {
@@ -124,8 +101,6 @@ struct WorkoutPreflightPresentation: Equatable {
 
         stage = Self.stage(for: context, at: now)
     status = Self.status(for: stage, state: context.executionState)
-        confirmations = Self.confirmations(for: context, activity: activity)
-    canEditConfirmations = stage == .readyForConfirmations || stage == .readyToBegin
         canBeginWorkout = stage == .readyToBegin
     }
 
@@ -202,26 +177,8 @@ struct WorkoutPreflightPresentation: Equatable {
 
         guard armedWorkoutMatchesContext(context),
               reducerAllowsArming(context, at: now),
-              reducerAllowsBegin(
-            state,
-            epoch: epoch,
-            readiness: fullyConfirmedReadiness,
-            at: now
-      )
-    else {
-            return .lockedOrUnknown
-        }
-
-        guard context.activityConfirmed,
-              reducerAllowsBegin(
-                state,
-                epoch: epoch,
-                readiness: context.operatorReadiness,
-                at: now
-      )
-    else {
-      return .readyForConfirmations
-        }
+              reducerAllowsBegin(state, epoch: epoch, at: now)
+        else { return .lockedOrUnknown }
         return .readyToBegin
     }
 
@@ -260,12 +217,11 @@ struct WorkoutPreflightPresentation: Equatable {
     private static func reducerAllowsBegin(
         _ state: WorkoutExecutionState,
         epoch: ConnectionEpoch,
-        readiness: WorkoutOperatorReadiness,
         at now: MonotonicInstant
     ) -> Bool {
         let transition = WorkoutExecutionReducer().reduce(
             state,
-            .beginWorkout(epoch: epoch, readiness: readiness),
+            .beginWorkout(epoch: epoch),
             at: now
         )
         guard transition.disposition == .accepted,
@@ -278,13 +234,6 @@ struct WorkoutPreflightPresentation: Equatable {
         }
         return true
     }
-
-    private static let fullyConfirmedReadiness = WorkoutOperatorReadiness(
-        deckClear: true,
-        consoleImmediatelyReachable: true,
-        safetyKeyImmediatelyReachable: true,
-        physicallyStationary: true
-    )
 
     private static func status(
     for stage: WorkoutPreflightStage,
@@ -331,14 +280,6 @@ struct WorkoutPreflightPresentation: Equatable {
                 symbol: "lock.shield.fill",
                 tone: .warning
             )
-    case .readyForConfirmations:
-            .init(
-        title: "Ready for safety checks",
-        detail:
-          "The exact profile is ready. Complete every confirmation before Begin workout waits for physical Start.",
-                symbol: "checkmark.shield.fill",
-                tone: .ready
-            )
         case .requestingControl:
             .init(
                 title: "Requesting control",
@@ -351,7 +292,7 @@ struct WorkoutPreflightPresentation: Equatable {
             .init(
                 title: "Ready to begin",
         detail:
-          "All current guards and confirmations pass. Begin workout sends nothing and waits for physical Start.",
+          "The current profile and workout are ready. Begin workout sends nothing and waits for physical Start.",
                 symbol: "checkmark.circle.fill",
                 tone: .ready
             )
@@ -390,45 +331,6 @@ struct WorkoutPreflightPresentation: Equatable {
                 tone: .failure
             )
         }
-    }
-
-    private static func confirmations(
-        for context: WorkoutPreflightContext,
-        activity: String
-    ) -> [WorkoutPreflightConfirmationPresentation] {
-        [
-            .init(
-                kind: .activity,
-                title: "Confirm \(activity.lowercased())",
-                detail: "This activity type will be offered to the later Apple Health save flow.",
-                isConfirmed: context.activityConfirmed
-            ),
-            .init(
-                kind: .deckClear,
-                title: "Treadmill deck is clear",
-                detail: "Nothing can catch underfoot or obstruct the belt.",
-                isConfirmed: context.operatorReadiness.deckClear
-            ),
-            .init(
-                kind: .consoleReachable,
-                title: "Physical console is within reach",
-                detail: "You will start and stop the belt using the treadmill console.",
-                isConfirmed: context.operatorReadiness.consoleImmediatelyReachable
-            ),
-            .init(
-                kind: .safetyKeyReachable,
-                title: "Safety key is within reach",
-                detail: "The treadmill safety key remains authoritative.",
-                isConfirmed: context.operatorReadiness.safetyKeyImmediatelyReachable
-            ),
-            .init(
-                kind: .physicallyStationary,
-                title: "Treadmill is physically stationary",
-        detail:
-          "Confirm the belt is stopped before the app attempt begins. Control waits for fresh movement.",
-                isConfirmed: context.operatorReadiness.physicallyStationary
-            ),
-        ]
     }
 
     private static func planTotals(preview: WorkoutPlanPreview, locale: Locale) -> String {

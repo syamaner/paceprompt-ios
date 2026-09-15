@@ -1,33 +1,5 @@
 import Foundation
 
-struct WorkoutProofSessionAuthorization: Equatable {
-  let sessionID: UUID
-  let peripheralIdentifier: UUID
-  let equipmentIdentity: String
-}
-
-@MainActor
-protocol WorkoutProofSessionAuthorizing: AnyObject {
-  var activeAuthorization: WorkoutProofSessionAuthorization? { get }
-  func invalidateAuthorization()
-}
-
-extension WorkoutProofSessionAuthorizing {
-  func invalidateAuthorization() {}
-}
-
-/// Production's default authority. A later, separately authorised proof slice
-/// must inject a short-lived authority; nothing is read from defaults or launch arguments.
-@MainActor
-final class LockedWorkoutProofSessionAuthority: WorkoutProofSessionAuthorizing {
-  var activeAuthorization: WorkoutProofSessionAuthorization? { nil }
-}
-
-struct WorkoutProofConnectionCandidate: Equatable {
-  let peripheralIdentifier: UUID
-  let equipmentIdentity: String
-}
-
 struct SystemWorkoutOrchestrationClock: WorkoutOrchestrationClock {
   func read() -> WorkoutOrchestrationTime {
     .init(
@@ -43,8 +15,6 @@ struct SystemWorkoutAttemptIDSource: WorkoutAttemptIDSource {
 
 @MainActor
 struct ProductionTransmissionContext {
-  var authorization: WorkoutProofSessionAuthorization?
-  var frozenAuthorizationSessionID: UUID?
   var epoch: ConnectionEpoch?
   var foreground: Bool
   var capability: FR30zCapabilitySnapshot?
@@ -126,12 +96,6 @@ final class ProductionWorkoutTargetControlTransport: WorkoutTargetControlTranspo
     context: ProductionTransmissionContext?
   ) -> String? {
     guard let context else { return "Production execution context is unavailable" }
-    guard let authorization = context.authorization else {
-      return "No authorised proof session is active"
-    }
-    guard context.frozenAuthorizationSessionID == authorization.sessionID else {
-      return "The authorised proof session changed before transmission"
-    }
     guard context.foreground else { return "The app is not active in the foreground" }
     guard let epoch = context.epoch, epoch == record.id.epoch else {
       return "The connection epoch changed before transmission"
@@ -143,11 +107,6 @@ final class ProductionWorkoutTargetControlTransport: WorkoutTargetControlTranspo
       profile.matches(capability)
     else {
       return "The accepted FR30z capability profile is not current"
-    }
-    guard profile.peripheralIdentity == authorization.peripheralIdentifier.uuidString.lowercased(),
-      profile.equipmentIdentity == authorization.equipmentIdentity
-    else {
-      return "The proof authority no longer matches the accepted FR30z profile"
     }
     guard let attempt = context.frozenAttempt,
       attempt.capability == capability,
@@ -277,7 +236,6 @@ final class ProductionWorkoutExecutionBinding {
   private static let expectedInclinationRange = Data([0x00, 0x00, 0x96, 0x00, 0x0A, 0x00])
 
   private let client: any FTMSClientProtocol
-  private let authority: any WorkoutProofSessionAuthorizing
   private let clock: any WorkoutOrchestrationClock
   private let controlTransport: any FitnessMachineControlTransport
   private let targetTransport: ProductionWorkoutTargetControlTransport
@@ -297,13 +255,11 @@ final class ProductionWorkoutExecutionBinding {
   private var establishedLinkIdentity: ObjectIdentifier?
   private var lastPublishedCapability: FR30zCapabilitySnapshot?
   private var tickTimer: Timer?
-  private var frozenAuthorizationSessionID: UUID?
   private var controlSuppressedUntilNewConnection = false
   private let automaticTicks: Bool
 
   init(
     client: any FTMSClientProtocol,
-    authority: (any WorkoutProofSessionAuthorizing)? = nil,
     controlTransport: (any FitnessMachineControlTransport)? = nil,
     history: any WorkoutHistoryRepositoryProtocol = WorkoutHistoryRepository(),
     clock: any WorkoutOrchestrationClock = SystemWorkoutOrchestrationClock(),
@@ -311,9 +267,7 @@ final class ProductionWorkoutExecutionBinding {
     automaticTicks: Bool = true
   ) {
     self.client = client
-    let resolvedAuthority = authority ?? LockedWorkoutProofSessionAuthority()
     let resolvedControlTransport = controlTransport ?? FTMSSingleProcedureTransport()
-    self.authority = resolvedAuthority
     self.clock = clock
     self.controlTransport = resolvedControlTransport
     self.automaticTicks = automaticTicks
@@ -333,31 +287,18 @@ final class ProductionWorkoutExecutionBinding {
   }
 
   var executionProfile: FR30zExecutionProfile? {
-    guard let authorization = authority.activeAuthorization else { return nil }
+    guard preliminaryProfileMatches,
+      let peripheralIdentifier = client.connectedPeripheralIdentifier,
+      let equipmentIdentity = client.connectedPeripheralName
+    else { return nil }
     return .init(
-      peripheralIdentity: authorization.peripheralIdentifier.uuidString.lowercased(),
-      equipmentIdentity: authorization.equipmentIdentity
+      peripheralIdentity: peripheralIdentifier.uuidString.lowercased(),
+      equipmentIdentity: equipmentIdentity
     )
   }
 
   var currentCapability: FR30zCapabilitySnapshot? {
     makeCapability(controlPointReady: controlPointIsReady)
-  }
-
-  var proofConnectionCandidate: WorkoutProofConnectionCandidate? {
-    guard applicationActivity == .active,
-      isConnected,
-      let peripheralIdentifier = client.connectedPeripheralIdentifier,
-      let equipmentIdentity = client.connectedPeripheralName,
-      passiveProfileMatches(
-        peripheralIdentifier: peripheralIdentifier,
-        equipmentIdentity: equipmentIdentity
-      )
-    else { return nil }
-    return .init(
-      peripheralIdentifier: peripheralIdentifier,
-      equipmentIdentity: equipmentIdentity
-    )
   }
 
   var canExposeArming: Bool {
@@ -376,23 +317,24 @@ final class ProductionWorkoutExecutionBinding {
     sourcePlanID: UUID?
   ) -> WorkoutOrchestrationResult? {
     guard canExposeArming, let profile = executionProfile else { return nil }
-    guard let authorization = authority.activeAuthorization else { return nil }
-    let result = orchestrator.arm(
+    return orchestrator.arm(
       plan: plan,
       ceilings: ceilings,
       profile: profile,
       sourcePlanID: sourcePlanID
     )
-    if result.reducerDisposition == .accepted {
-      frozenAuthorizationSessionID = authorization.sessionID
-    }
-    return result
   }
 
   @discardableResult
-  func beginWorkout(readiness: WorkoutOperatorReadiness) -> WorkoutOrchestrationResult? {
+  func beginWorkout() -> WorkoutOrchestrationResult? {
     guard canExposeArming, let epoch else { return nil }
-    return apply(.beginWorkout(epoch: epoch, readiness: readiness))
+    return apply(.beginWorkout(epoch: epoch))
+  }
+
+  @discardableResult
+  func cancelPreflight() -> WorkoutOrchestrationResult? {
+    guard let epoch else { return nil }
+    return orchestrator.cancelPreflight(epoch: epoch)
   }
 
   @discardableResult
@@ -410,8 +352,6 @@ final class ProductionWorkoutExecutionBinding {
         _ = apply(
           .appBecameInactive(epoch: epoch, reason: "Application left the foreground")
         )
-      } else {
-        authority.invalidateAuthorization()
       }
       controlTransport.disconnect()
       establishedLinkIdentity = nil
@@ -554,8 +494,7 @@ final class ProductionWorkoutExecutionBinding {
 
   private func refreshCapability() {
     guard applicationActivity == .active,
-      isConnected,
-      authority.activeAuthorization != nil
+      isConnected
     else {
       suppressControlAssumptionsIfEstablished()
       return
@@ -628,10 +567,11 @@ final class ProductionWorkoutExecutionBinding {
   }
 
   private var preliminaryProfileMatches: Bool {
-    guard let authorization = authority.activeAuthorization,
+    guard let peripheralIdentifier = client.connectedPeripheralIdentifier,
+      let equipmentIdentity = client.connectedPeripheralName,
       passiveProfileMatches(
-        peripheralIdentifier: authorization.peripheralIdentifier,
-        equipmentIdentity: authorization.equipmentIdentity
+        peripheralIdentifier: peripheralIdentifier,
+        equipmentIdentity: equipmentIdentity
       )
     else {
       return false
@@ -686,11 +626,12 @@ final class ProductionWorkoutExecutionBinding {
 
   private func makeCapability(controlPointReady: Bool) -> FR30zCapabilitySnapshot? {
     guard preliminaryProfileMatches, controlPointReady,
-      let authorization = authority.activeAuthorization
+      let peripheralIdentifier = client.connectedPeripheralIdentifier,
+      let equipmentIdentity = client.connectedPeripheralName
     else { return nil }
     return .init(
-      peripheralIdentity: authorization.peripheralIdentifier.uuidString.lowercased(),
-      equipmentIdentity: authorization.equipmentIdentity,
+      peripheralIdentity: peripheralIdentifier.uuidString.lowercased(),
+      equipmentIdentity: equipmentIdentity,
       fitnessMachineServicePresent: true,
       requiredCharacteristicPropertiesMatch: true,
       fitnessMachineFeatureEvidence: .matched,
@@ -747,8 +688,6 @@ final class ProductionWorkoutExecutionBinding {
     establishedLinkIdentity = nil
     if let epoch {
       _ = apply(.connectionLost(epoch: epoch, reason: reason))
-    } else {
-      authority.invalidateAuthorization()
     }
     resetConnectionEvidence(keepEpoch: true)
   }
@@ -765,14 +704,11 @@ final class ProductionWorkoutExecutionBinding {
     latestTelemetryAt = nil
     latestTelemetryIsComplete = false
     lastPublishedCapability = nil
-    frozenAuthorizationSessionID = nil
     if !keepEpoch { epoch = nil }
   }
 
   private func transmissionContext() -> ProductionTransmissionContext {
     .init(
-      authorization: authority.activeAuthorization,
-      frozenAuthorizationSessionID: frozenAuthorizationSessionID,
       epoch: epoch,
       foreground: applicationActivity == .active,
       capability: currentCapability,
@@ -788,7 +724,6 @@ final class ProductionWorkoutExecutionBinding {
     let result = orchestrator.handle(event)
     switch result.state.execution {
     case .finished, .interrupted, .failed:
-      authority.invalidateAuthorization()
       controlSuppressedUntilNewConnection = true
       controlTransport.disconnect()
       establishedLinkIdentity = nil
@@ -814,7 +749,7 @@ final class ProductionWorkoutExecutionBinding {
 }
 
 extension WorkoutPlanCapabilities {
-  fileprivate static var unavailable: WorkoutPlanCapabilities {
+  static var unavailable: WorkoutPlanCapabilities {
     .init(
       speed: .unknown,
       inclination: .unknown

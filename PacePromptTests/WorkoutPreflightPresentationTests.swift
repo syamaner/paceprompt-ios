@@ -17,7 +17,6 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
         XCTAssertEqual(presentation.initialStepLabel, "Warm-up")
         XCTAssertEqual(presentation.initialSpeed, "5.0 km/h")
         XCTAssertEqual(presentation.initialInclination, "0.0 %")
-        XCTAssertEqual(presentation.confirmations.first?.title, "Confirm indoor running")
     }
 
     func testEveryRequiredReadinessStageHasDistinctPresentation() {
@@ -44,11 +43,6 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
             harness.presentation(state: harness.unsupportedState(), now: 2.1),
       harness.presentation(state: checking, now: 6.4),
             harness.presentation(state: locked, now: 4.2),
-            harness.presentation(
-                state: preflight,
-                readiness: harness.unconfirmedReadiness,
-                activityConfirmed: false
-            ),
             harness.presentation(state: requesting, now: 4.2),
             harness.presentation(state: preflight),
             harness.presentation(state: waiting, now: 4.4),
@@ -63,7 +57,6 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
                 .unsupported,
                 .stale,
                 .lockedOrUnknown,
-        .readyForConfirmations,
                 .requestingControl,
                 .readyToBegin,
                 .waitingForPhysicalStart,
@@ -72,55 +65,6 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
         )
         XCTAssertEqual(Set(presentations.map(\.status.title)).count, presentations.count)
         XCTAssertEqual(presentations.filter(\.canBeginWorkout).count, 1)
-    }
-
-    func testBeginRequiresActivityAndEveryReducerOperatorConfirmation() {
-        let harness = Harness()
-        let state = harness.preflightState()
-        let missingReadiness = [
-            WorkoutOperatorReadiness(
-                deckClear: false,
-                consoleImmediatelyReachable: true,
-                safetyKeyImmediatelyReachable: true,
-                physicallyStationary: true
-            ),
-            WorkoutOperatorReadiness(
-                deckClear: true,
-                consoleImmediatelyReachable: false,
-                safetyKeyImmediatelyReachable: true,
-                physicallyStationary: true
-            ),
-            WorkoutOperatorReadiness(
-                deckClear: true,
-                consoleImmediatelyReachable: true,
-                safetyKeyImmediatelyReachable: false,
-                physicallyStationary: true
-            ),
-            WorkoutOperatorReadiness(
-                deckClear: true,
-                consoleImmediatelyReachable: true,
-                safetyKeyImmediatelyReachable: true,
-                physicallyStationary: false
-            ),
-        ]
-
-        XCTAssertFalse(
-            harness.presentation(
-                state: state,
-                readiness: harness.confirmedReadiness,
-                activityConfirmed: false
-            ).canBeginWorkout
-        )
-        for readiness in missingReadiness {
-            let presentation = harness.presentation(
-                state: state,
-                readiness: readiness,
-                activityConfirmed: true
-            )
-      XCTAssertEqual(presentation.stage, .readyForConfirmations)
-            XCTAssertFalse(presentation.canBeginWorkout)
-        }
-        XCTAssertTrue(harness.presentation(state: state).canBeginWorkout)
     }
 
   func testMissingOrStaleStationaryTelemetryDoesNotBlockBeginButCurrentMotionDoes() {
@@ -223,7 +167,7 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
 
     let preControlState = harness.reduce(
       preflight,
-      .beginWorkout(epoch: harness.epoch, readiness: harness.confirmedReadiness),
+      .beginWorkout(epoch: harness.epoch),
       at: 4.1
     ).state
     let preControl = harness.presentation(state: preControlState, now: 4.2)
@@ -235,19 +179,6 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
 private struct Harness {
     let reducer = WorkoutExecutionReducer()
     let epoch = ConnectionEpoch(rawValue: 58)
-
-    let confirmedReadiness = WorkoutOperatorReadiness(
-        deckClear: true,
-        consoleImmediatelyReachable: true,
-        safetyKeyImmediatelyReachable: true,
-        physicallyStationary: true
-    )
-    let unconfirmedReadiness = WorkoutOperatorReadiness(
-        deckClear: false,
-        consoleImmediatelyReachable: false,
-        safetyKeyImmediatelyReachable: false,
-        physicallyStationary: false
-    )
 
     var profile: FR30zExecutionProfile {
         .init(
@@ -266,8 +197,6 @@ private struct Harness {
 
     func presentation(
         state: WorkoutExecutionState,
-        readiness: WorkoutOperatorReadiness? = nil,
-        activityConfirmed: Bool = true,
         ceilings: WorkoutSessionCeilings? = nil,
         now: TimeInterval = 4.1
     ) -> WorkoutPreflightPresentation {
@@ -276,9 +205,7 @@ private struct Harness {
                 validatedPlan: validatedPlan,
                 ceilings: ceilings ?? self.ceilings,
                 profile: profile,
-                executionState: state,
-                operatorReadiness: readiness ?? confirmedReadiness,
-                activityConfirmed: activityConfirmed
+                executionState: state
             ),
             at: .init(seconds: now),
             locale: Locale(identifier: "en_GB")
@@ -342,7 +269,7 @@ private struct Harness {
     func requestingState(from preflight: WorkoutExecutionState) -> WorkoutExecutionState {
     let waiting = reduce(
             preflight,
-            .beginWorkout(epoch: epoch, readiness: confirmedReadiness),
+            .beginWorkout(epoch: epoch),
             at: 4.1
         ).state
     return reduce(
@@ -358,7 +285,7 @@ private struct Harness {
     func waitingState(from preflight: WorkoutExecutionState) -> WorkoutExecutionState {
         var transition = reduce(
             preflight,
-            .beginWorkout(epoch: epoch, readiness: confirmedReadiness),
+            .beginWorkout(epoch: epoch),
             at: 4.1
         )
     transition = reduce(

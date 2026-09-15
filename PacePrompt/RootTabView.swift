@@ -1,16 +1,26 @@
 import SwiftUI
 
 struct RootTabView: View {
+    private enum Tab: Hashable {
+        case home
+        case plans
+        case history
+        case settings
+    }
+
     @ObservedObject var treadmill: TreadmillSetupViewModel
     @ObservedObject var plans: PlansViewModel
+    @ObservedObject var workoutSession: WorkoutSessionCoordinator
     @StateObject private var credential: ImportCredentialStore
     @StateObject private var importer: WorkoutImportViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @State private var selectedTab: Tab = .home
     let workoutCapabilitiesOverride: WorkoutPlanCapabilities?
 
     init(
         treadmill: TreadmillSetupViewModel,
         plans: PlansViewModel,
+        workoutSession: WorkoutSessionCoordinator,
         workoutCapabilitiesOverride: WorkoutPlanCapabilities? = nil
     ) {
         let credential: ImportCredentialStore
@@ -31,14 +41,16 @@ struct RootTabView: View {
         _importer = StateObject(wrappedValue: WorkoutImportViewModel(generator: generator, plans: plans))
         self.treadmill = treadmill
         self.plans = plans
+        self.workoutSession = workoutSession
         self.workoutCapabilitiesOverride = workoutCapabilitiesOverride
     }
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 HomeView(treadmill: treadmill)
             }
+            .tag(Tab.home)
             .tabItem {
                 Label("Home", systemImage: "house")
             }
@@ -47,9 +59,11 @@ struct RootTabView: View {
                 PlansView(
                     viewModel: plans,
                     capabilities: capabilities,
-                    beginImport: { importer.begin(capabilities: capabilities) }
+                    beginImport: { importer.begin(capabilities: capabilities) },
+                    beginWorkout: workoutSession.begin
                 )
             }
+            .tag(Tab.plans)
             .tabItem {
                 Label("Plans", systemImage: "list.bullet.rectangle")
             }
@@ -57,6 +71,7 @@ struct RootTabView: View {
             NavigationStack {
                 HistoryView()
             }
+            .tag(Tab.history)
             .tabItem {
                 Label("History", systemImage: "clock.arrow.circlepath")
             }
@@ -64,12 +79,25 @@ struct RootTabView: View {
             NavigationStack {
                 SettingsView(treadmill: treadmill, credential: credential)
             }
+            .tag(Tab.settings)
             .tabItem {
                 Label("Settings", systemImage: "gearshape")
             }
         }
         .sheet(isPresented: Binding(get: { importer.isPresented }, set: { if !$0 { importer.cancel() } })) {
             WorkoutImportView(model: importer, plans: plans)
+        }
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { workoutSession.isPresented },
+                set: { if !$0 { workoutSession.cancelBeforeExercise() } }
+            )
+        ) {
+            WorkoutSessionHost(
+                treadmill: treadmill,
+                coordinator: workoutSession,
+                showHistory: { selectedTab = .history }
+            )
         }
         .onChange(of: capabilities) { _, value in importer.updateCapabilities(value) }
         .onChange(of: scenePhase) { _, phase in
@@ -80,6 +108,9 @@ struct RootTabView: View {
         .onAppear {
             importer.setProtectedDataAvailable(UIApplication.shared.isProtectedDataAvailable)
             treadmill.setApplicationActivity(captureActivity(for: scenePhase))
+            #if DEBUG
+            treadmill.activateUITestScenarioIfNeeded()
+            #endif
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataWillBecomeUnavailableNotification)) { _ in
             importer.setProtectedDataAvailable(false)

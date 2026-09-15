@@ -56,7 +56,7 @@ These changes adapt the accepted design language to the characterised FR30z. Nec
 
 The production profile may arm only when every current-connection condition below is true:
 
-1. The user selected the locally retained CoreBluetooth peripheral identity previously associated with the operator-confirmed FR30z. That identifier remains local and is never committed or exported.
+1. The user explicitly selected the currently connected CoreBluetooth peripheral. Its transient local identity and name bind the current connection epoch and are never committed or exported.
 2. Fitness Machine Service `0x1826` is present.
 3. The required characteristic inventory and properties match:
    - `0x2ACC` Read;
@@ -75,7 +75,7 @@ The production profile may arm only when every current-connection condition belo
 
 Any identity, characteristic, property, byte, range, increment, subscription, epoch or foreground mismatch blocks arming. The profile does not claim support for another FR30z, dongle or firmware revision.
 
-Confirmed `0x2ACD` subscription is required for arming, but receipt of a packet is not. The characterised FR30z may remain silent while stationary. Before Begin, a current malformed or contradictory packet still blocks progress, and fresh reported movement conflicts with the operator's stationary confirmation.
+Confirmed `0x2ACD` subscription is required for preparation, but receipt of a packet is not. The characterised FR30z may remain silent while stationary. Before Begin, a current malformed, contradictory or non-zero packet blocks progress. Begin is the user's deliberate intent to start the app attempt; it emits no procedure and waits for fresh physical-Start movement.
 
 ## Allowed Control Point procedures
 
@@ -228,4 +228,4 @@ The implementation must never collapse these levels:
 6. later `0x2ACD` observation;
 7. operator observation.
 
-Simulator and fake-transport tests prove software behaviour only. The separately authorised issue #62 session is required before the complete production path can be accepted against the physical FR30z.
+Simulator and fake-transport tests prove software behaviour only. Physical acceptance still requires a supervised signed-iPhone session against the selected FR30z; repository ceremony is not a substitute for that observation.

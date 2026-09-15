@@ -22,8 +22,8 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
       app.staticTexts[
         "No permission is requested and no workout or health data is saved on this screen."
       ].exists)
-        XCTAssertTrue(element("preflight.activity").exists)
-        XCTAssertTrue(element("preflight.safety").exists)
+        XCTAssertFalse(element("preflight.activity").exists)
+        XCTAssertFalse(element("preflight.safety").exists)
         XCTAssertTrue(element("preflight.console-guidance").exists)
 
         let begin = app.buttons["preflight.begin"]
@@ -52,7 +52,6 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
             ("unsupported", "Unsupported profile."),
             ("stale", "Treadmill data stale."),
             ("locked", "Readiness locked."),
-      ("ready-to-request-control", "Ready for safety checks."),
             ("requesting", "Requesting control."),
             ("failed", "Preflight failed."),
         ]
@@ -77,32 +76,19 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         XCTAssertFalse(app.buttons["preflight.begin"].exists)
     }
 
-    func testIntentOnlyConfirmationsUnlockBeginWithoutChangingPlanOrStartingBelt() {
-        launch(scenario: "ready-to-request-control")
+    func testReadyPreflightHasNoProofOnlyConfirmationControls() {
+        launch(scenario: "ready-to-begin")
 
+        XCTAssertFalse(element("preflight.activity").exists)
+        XCTAssertFalse(element("preflight.safety").exists)
+        XCTAssertFalse(
+            app.buttons.matching(
+                NSPredicate(format: "identifier BEGINSWITH %@", "preflight.confirmation.")
+            ).firstMatch.exists
+        )
         let begin = app.buttons["preflight.begin"]
         scrollTo(begin)
-        XCTAssertFalse(begin.isEnabled)
-
-        for confirmation in [
-            "activity",
-            "deckClear",
-            "consoleReachable",
-            "safetyKeyReachable",
-            "physicallyStationary",
-        ] {
-            let button = app.buttons["preflight.confirmation.\(confirmation)"]
-            scrollTo(button)
-            XCTAssertEqual(button.value as? String, "Not confirmed")
-            button.tap()
-            XCTAssertEqual(button.value as? String, "Confirmed")
-        }
-
-        scrollTo(begin)
         XCTAssertTrue(begin.isEnabled)
-        XCTAssertTrue(statusValue().hasPrefix("Ready to begin."))
-        XCTAssertTrue((element("preflight.plan").value as? String)?.contains("18:00") == true)
-        XCTAssertFalse(app.staticTexts["Start workout"].exists)
     }
 
     func testAccessibilityDynamicTypeKeepsOrderedContentScrollableAndPrimaryControlLarge() {

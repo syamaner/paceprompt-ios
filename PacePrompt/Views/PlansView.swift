@@ -5,6 +5,7 @@ struct PlansView: View {
     @ObservedObject var viewModel: PlansViewModel
     let capabilities: WorkoutPlanCapabilities
     var beginImport: (() -> Void)? = nil
+    var beginWorkout: ((SavedPlanRecord) -> Void)? = nil
 
     var body: some View {
         Group {
@@ -174,19 +175,37 @@ struct PlansView: View {
             }
             Section {
                 ForEach(rows) { row in
-                    Button {
-                        guard let record = viewModel.records.first(where: { $0.id == row.id }) else { return }
-                        viewModel.beginEdit(record)
-                    } label: {
-                        SavedPlanRow(row: row)
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel(row.name)
-                            .accessibilityValue(row.accessibilityValue)
-                            .accessibilityHint("Opens the plan editor")
+                    HStack(spacing: 12) {
+                        Button {
+                            guard let record = viewModel.records.first(where: { $0.id == row.id }) else { return }
+                            viewModel.beginEdit(record)
+                        } label: {
+                            SavedPlanRow(row: row)
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel(row.name)
+                                .accessibilityValue(row.accessibilityValue)
+                                .accessibilityHint("Opens the plan editor")
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!viewModel.canMutate)
+                        .accessibilityIdentifier("plans.record.\(row.id.uuidString)")
+
+                        if let beginWorkout,
+                           let record = viewModel.records.first(where: { $0.id == row.id }) {
+                            Button {
+                                beginWorkout(record)
+                            } label: {
+                                Label("Run", systemImage: "figure.run")
+                                    .labelStyle(.iconOnly)
+                                    .frame(minWidth: 44, minHeight: 44)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!viewModel.canMutate)
+                            .accessibilityLabel("Run \(row.name)")
+                            .accessibilityHint("Opens workout preparation for this saved plan")
+                            .accessibilityIdentifier("plans.run.\(row.id.uuidString)")
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .disabled(!viewModel.canMutate)
-                    .accessibilityIdentifier("plans.record.\(row.id.uuidString)")
                     .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
                     .listRowBackground(Color.clear)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -202,7 +221,7 @@ struct PlansView: View {
                     }
                 }
             } footer: {
-                Text("Swipe a plan to delete. Deletion asks for confirmation first.")
+                Text("Run a saved plan, tap it to edit, or swipe to delete.")
             }
         }
         .listStyle(.plain)

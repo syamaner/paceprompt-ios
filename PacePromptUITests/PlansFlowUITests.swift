@@ -66,6 +66,48 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertEqual(app.textFields["plan.step.0.duration"].value as? String, "360 s")
     }
 
+    func testSavedPlanRunsThroughNormalPreparationAndPreflightWithoutProofCeremony() {
+        launch(
+            capabilities: "known",
+            draft: "valid",
+            repository: "populated",
+            workoutReady: true
+        )
+        let identifier = "00000000-0000-0000-0000-000000000010"
+        app.buttons["plans.run.\(identifier)"].tap()
+
+        XCTAssertTrue(app.navigationBars["Prepare workout"].waitForExistence(timeout: 2))
+        XCTAssertTrue(
+            app.staticTexts[
+                "The current connection matches the accepted FR30z production profile."
+            ].waitForExistence(timeout: 3)
+        )
+        XCTAssertFalse(app.buttons["Authorise this exact connection"].exists)
+        XCTAssertFalse(app.buttons["Arm reviewed fixed plan"].exists)
+
+        app.textFields["workout.prepare.maximum-speed"].tap()
+        app.textFields["workout.prepare.maximum-speed"].typeText("11")
+        app.textFields["workout.prepare.maximum-inclination"].tap()
+        app.textFields["workout.prepare.maximum-inclination"].typeText("2")
+        app.textFields["workout.prepare.maximum-step-change"].tap()
+        app.textFields["workout.prepare.maximum-step-change"].typeText("6")
+        tapWhenVisible(app.buttons["workout.prepare.continue"])
+
+        XCTAssertTrue(app.staticTexts["Preflight"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.otherElements["preflight.safety"].exists)
+        XCTAssertFalse(app.otherElements["preflight.activity"].exists)
+        XCTAssertTrue(app.buttons["workout.preflight.cancel"].exists)
+        let begin = app.buttons["preflight.begin"]
+        XCTAssertTrue(begin.isEnabled)
+        tapWhenVisible(begin)
+        XCTAssertTrue(app.staticTexts["Press Start on the treadmill"].waitForExistence(timeout: 2))
+        XCTAssertTrue(
+            app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS %@", "No target is confirmed")
+            ).firstMatch.exists
+        )
+    }
+
     func testNewPlanHierarchyActivityAndExactFieldEditing() {
         launch(capabilities: "known", draft: "valid")
         openCreate()
@@ -358,14 +400,25 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertEqual(app.buttons["plans.retry"].exists, retry)
     }
 
-    private func launch(capabilities: String, draft: String, repository: String = "empty") {
+    private func launch(
+        capabilities: String,
+        draft: String,
+        repository: String = "empty",
+        workoutReady: Bool = false
+    ) {
         app = XCUIApplication()
         app.launchArguments = ["--paceprompt-ui-testing"]
+        if workoutReady {
+            app.launchArguments.append("--paceprompt-workout-session-ui-testing")
+        }
         app.launchEnvironment = [
             "PACEPROMPT_UI_CAPABILITIES": capabilities,
             "PACEPROMPT_UI_DRAFT": draft,
             "PACEPROMPT_UI_REPOSITORY": repository,
         ]
+        if workoutReady {
+            app.launchEnvironment["PACEPROMPT_HOME_SCENARIO"] = "workout-ready"
+        }
         app.launch()
         app.tabBars.buttons["Plans"].tap()
     }

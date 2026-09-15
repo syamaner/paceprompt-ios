@@ -7,7 +7,6 @@ enum WorkoutPreflightUITestScenario: String {
     case unsupported
     case stale
     case locked
-    case readyToRequestControl = "ready-to-request-control"
     case requesting = "requesting"
     case readyToBegin = "ready-to-begin"
     case waitingForPhysicalStart = "waiting-for-physical-start"
@@ -55,59 +54,9 @@ struct WorkoutPreflightUITestHost: View {
 
     private func handle(_ intent: WorkoutPreflightIntent) {
         switch intent {
-      case .setConfirmation(let kind, let isConfirmed):
-            setConfirmation(kind, isConfirmed: isConfirmed)
         case .beginWorkout:
             beginWorkout()
         }
-    }
-
-    private func setConfirmation(
-        _ kind: WorkoutPreflightConfirmationKind,
-        isConfirmed: Bool
-    ) {
-        var readiness = context.operatorReadiness
-        var activityConfirmed = context.activityConfirmed
-        switch kind {
-        case .activity:
-            activityConfirmed = isConfirmed
-        case .deckClear:
-            readiness = .init(
-                deckClear: isConfirmed,
-                consoleImmediatelyReachable: readiness.consoleImmediatelyReachable,
-                safetyKeyImmediatelyReachable: readiness.safetyKeyImmediatelyReachable,
-                physicallyStationary: readiness.physicallyStationary
-            )
-        case .consoleReachable:
-            readiness = .init(
-                deckClear: readiness.deckClear,
-                consoleImmediatelyReachable: isConfirmed,
-                safetyKeyImmediatelyReachable: readiness.safetyKeyImmediatelyReachable,
-                physicallyStationary: readiness.physicallyStationary
-            )
-        case .safetyKeyReachable:
-            readiness = .init(
-                deckClear: readiness.deckClear,
-                consoleImmediatelyReachable: readiness.consoleImmediatelyReachable,
-                safetyKeyImmediatelyReachable: isConfirmed,
-                physicallyStationary: readiness.physicallyStationary
-            )
-        case .physicallyStationary:
-            readiness = .init(
-                deckClear: readiness.deckClear,
-                consoleImmediatelyReachable: readiness.consoleImmediatelyReachable,
-                safetyKeyImmediatelyReachable: readiness.safetyKeyImmediatelyReachable,
-                physicallyStationary: isConfirmed
-            )
-        }
-        context = .init(
-            validatedPlan: context.validatedPlan,
-            ceilings: context.ceilings,
-            profile: context.profile,
-            executionState: context.executionState,
-            operatorReadiness: readiness,
-            activityConfirmed: activityConfirmed
-        )
     }
 
     private func beginWorkout() {
@@ -123,7 +72,7 @@ struct WorkoutPreflightUITestHost: View {
         let reducer = WorkoutExecutionReducer()
       let transition = reducer.reduce(
             context.executionState,
-            .beginWorkout(epoch: epoch, readiness: context.operatorReadiness),
+            .beginWorkout(epoch: epoch),
             at: now.advanced(by: 0.1)
         )
         guard transition.disposition == .accepted,
@@ -136,9 +85,7 @@ struct WorkoutPreflightUITestHost: View {
             validatedPlan: context.validatedPlan,
             ceilings: context.ceilings,
             profile: context.profile,
-            executionState: transition.state,
-            operatorReadiness: context.operatorReadiness,
-            activityConfirmed: context.activityConfirmed
+            executionState: transition.state
         )
     }
 }
@@ -160,18 +107,6 @@ private enum WorkoutPreflightFixtures {
             maximumInclination: inclination(6),
             maximumStepSpeedChange: speed(2)
         )
-        let confirmed = WorkoutOperatorReadiness(
-            deckClear: true,
-            consoleImmediatelyReachable: true,
-            safetyKeyImmediatelyReachable: true,
-            physicallyStationary: true
-        )
-        let unconfirmed = WorkoutOperatorReadiness(
-            deckClear: false,
-            consoleImmediatelyReachable: false,
-            safetyKeyImmediatelyReachable: false,
-            physicallyStationary: false
-        )
         let capability = matchingCapability()
 
         var state = WorkoutExecutionState()
@@ -191,8 +126,6 @@ private enum WorkoutPreflightFixtures {
                 ceilings: ceilings,
                 profile: profile,
                 state: state,
-                readiness: unconfirmed,
-                activityConfirmed: false,
                 now: 1
             )
         }
@@ -202,8 +135,6 @@ private enum WorkoutPreflightFixtures {
                 ceilings: ceilings,
                 profile: profile,
                 state: state,
-                readiness: unconfirmed,
-                activityConfirmed: false,
                 now: 1.1
             )
         }
@@ -225,8 +156,6 @@ private enum WorkoutPreflightFixtures {
                 ceilings: ceilings,
                 profile: profile,
                 state: state,
-                readiness: unconfirmed,
-                activityConfirmed: false,
                 now: 2.1
             )
         }
@@ -251,7 +180,7 @@ private enum WorkoutPreflightFixtures {
         case .stale:
         var transition = reducer.reduce(
           state,
-          .beginWorkout(epoch: epoch, readiness: confirmed),
+          .beginWorkout(epoch: epoch),
           at: .init(seconds: 4.1)
         )
         transition = reducer.reduce(
@@ -291,8 +220,6 @@ private enum WorkoutPreflightFixtures {
                 ceilings: ceilings,
                 profile: profile,
                 state: state,
-                readiness: confirmed,
-                activityConfirmed: true,
           now: 6.4
             )
         case .locked:
@@ -307,19 +234,7 @@ private enum WorkoutPreflightFixtures {
                 ceilings: ceilings,
                 profile: profile,
                 state: state,
-                readiness: confirmed,
-                activityConfirmed: true,
                 now: 4.2
-            )
-        case .readyToRequestControl:
-            return make(
-                plan: plan,
-                ceilings: ceilings,
-                profile: profile,
-                state: state,
-                readiness: unconfirmed,
-                activityConfirmed: false,
-                now: 4.1
             )
         case .readyToBegin:
             return make(
@@ -327,14 +242,12 @@ private enum WorkoutPreflightFixtures {
                 ceilings: ceilings,
                 profile: profile,
                 state: state,
-                readiness: confirmed,
-                activityConfirmed: true,
                 now: 4.1
             )
         case .requesting, .waitingForPhysicalStart:
             var transition = reducer.reduce(
                 state,
-                .beginWorkout(epoch: epoch, readiness: confirmed),
+                .beginWorkout(epoch: epoch),
                 at: .init(seconds: 4.1)
             )
         if scenario == .waitingForPhysicalStart {
@@ -343,8 +256,6 @@ private enum WorkoutPreflightFixtures {
                     ceilings: ceilings,
                     profile: profile,
                     state: transition.state,
-                    readiness: confirmed,
-                    activityConfirmed: true,
                     now: 4.2
                 )
             }
@@ -361,8 +272,6 @@ private enum WorkoutPreflightFixtures {
                 ceilings: ceilings,
                 profile: profile,
                 state: transition.state,
-                readiness: confirmed,
-                activityConfirmed: true,
           now: 4.3
             )
         case .failed:
@@ -377,8 +286,6 @@ private enum WorkoutPreflightFixtures {
                 ceilings: ceilings,
                 profile: profile,
                 state: state,
-                readiness: confirmed,
-                activityConfirmed: true,
                 now: 4.2
             )
         case .disconnected, .preparing, .unsupported:
@@ -391,8 +298,6 @@ private enum WorkoutPreflightFixtures {
         ceilings: WorkoutSessionCeilings,
         profile: FR30zExecutionProfile,
         state: WorkoutExecutionState,
-        readiness: WorkoutOperatorReadiness,
-        activityConfirmed: Bool,
         now: TimeInterval
     ) -> Fixture {
         .init(
@@ -400,9 +305,7 @@ private enum WorkoutPreflightFixtures {
                 validatedPlan: plan,
                 ceilings: ceilings,
                 profile: profile,
-                executionState: state,
-                operatorReadiness: readiness,
-                activityConfirmed: activityConfirmed
+                executionState: state
             ),
             now: .init(seconds: now)
         )

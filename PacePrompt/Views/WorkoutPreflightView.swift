@@ -34,18 +34,6 @@ struct WorkoutPreflightView: View {
                 healthCard
                     .accessibilitySortPriority(70)
 
-                if let activity = presentation.confirmations.first(where: { $0.kind == .activity }) {
-                    confirmationCard(
-                        title: "Activity type",
-                        confirmation: activity,
-                        identifier: "preflight.activity"
-                    )
-                    .accessibilitySortPriority(60)
-                }
-
-                safetyCard
-                    .accessibilitySortPriority(50)
-
                 Text("The operator starts and stops the belt using the physical treadmill console. The console and safety key remain authoritative throughout the workout.")
                     .font(.subheadline)
                     .foregroundStyle(WorkoutPreflightPalette.muted)
@@ -70,7 +58,7 @@ struct WorkoutPreflightView: View {
                 .accessibilityHint(
                     presentation.canBeginWorkout
                         ? "Starts the app attempt and waits for physical Start. It sends no treadmill procedure."
-                        : "Unavailable until every current readiness guard and confirmation passes."
+                        : "Unavailable until the current treadmill and workout readiness checks pass."
                 )
                 .accessibilityIdentifier("preflight.begin")
                 .accessibilitySortPriority(10)
@@ -186,82 +174,6 @@ struct WorkoutPreflightView: View {
         .preflightCard()
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("preflight.health")
-    }
-
-    private var safetyCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Operator safety checks")
-                .font(.headline)
-            Text("Confirm each current physical condition before PacePrompt can request control.")
-                .font(.subheadline)
-                .foregroundStyle(WorkoutPreflightPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.bottom, 6)
-
-            ForEach(presentation.confirmations.filter { $0.kind != .activity }) { confirmation in
-                confirmationButton(confirmation)
-                if confirmation.kind != .physicallyStationary {
-                    Divider()
-                        .overlay(WorkoutPreflightPalette.border)
-                }
-            }
-        }
-        .preflightCard()
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("preflight.safety")
-    }
-
-    private func confirmationCard(
-        title: String,
-        confirmation: WorkoutPreflightConfirmationPresentation,
-        identifier: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.headline)
-            confirmationButton(confirmation)
-        }
-        .preflightCard()
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(identifier)
-    }
-
-    private func confirmationButton(
-        _ confirmation: WorkoutPreflightConfirmationPresentation
-    ) -> some View {
-        Button {
-            send(.setConfirmation(confirmation.kind, !confirmation.isConfirmed))
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: confirmation.isConfirmed ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(confirmation.isConfirmed ? Color.green : WorkoutPreflightPalette.muted)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(confirmation.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(confirmation.detail)
-                        .font(.caption)
-                        .foregroundStyle(WorkoutPreflightPalette.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!presentation.canEditConfirmations)
-        .accessibilityLabel(confirmation.title)
-        .accessibilityValue(confirmation.isConfirmed ? "Confirmed" : "Not confirmed")
-        .accessibilityHint(
-            presentation.canEditConfirmations
-                ? "Double tap to \(confirmation.isConfirmed ? "clear" : "confirm")."
-                : "Confirmation is locked until current system readiness passes."
-        )
-        .accessibilityIdentifier("preflight.confirmation.\(confirmation.kind.rawValue)")
     }
 
     private func ceiling(title: String, value: String, tint: Color) -> some View {
