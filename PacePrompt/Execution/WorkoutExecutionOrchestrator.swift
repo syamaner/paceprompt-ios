@@ -849,6 +849,13 @@ final class WorkoutExecutionOrchestrator {
   }
 
   private func measuredTotalSeconds(_ state: WorkoutExecutionState) -> Int {
+    if case .recorded(_, _, _, let intervals) = activityTimeline() {
+      let executedSeconds = intervals.reduce(0.0) {
+        $0 + $1.endedAt.timeIntervalSince($1.startedAt)
+      }
+      return max(0, Int(floor(executedSeconds + 0.000_000_001)))
+    }
+
     var total = state.completedActiveSeconds
     if let segment = state.currentSegment {
       total += segment.accumulatedActiveSeconds

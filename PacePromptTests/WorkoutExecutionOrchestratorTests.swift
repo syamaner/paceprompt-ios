@@ -351,6 +351,37 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     }
   }
 
+  func testLaterSegmentFailurePersistsOnlyClosedExecutedIntervalDuration() throws {
+    let h = try Harness.running(stepDuration: 20)
+    try h.finishCurrentStep()
+    try h.finishTargetSequenceAndObserve()
+    try h.finishCurrentStep()
+
+    while h.orchestrator.state.procedure.unresolvedRecord != nil {
+      try h.acknowledgeCurrent()
+    }
+    let deadline = try XCTUnwrap(h.orchestrator.state.targetSequence?.observationDeadline)
+    h.send(.tick(epoch: h.epoch), monotonic: deadline.seconds)
+
+    guard case .failed = h.orchestrator.state.execution else {
+      return XCTFail("Expected the unsettled later target to fail closed")
+    }
+    let summary = try XCTUnwrap(h.orchestrator.lastPersistedSummary)
+    guard case .failed = summary.outcome else {
+      return XCTFail("Expected a stable failed history checkpoint")
+    }
+    guard case .recorded(_, _, _, let intervals) = summary.activityTimeline else {
+      return XCTFail("Expected the two truthful closed intervals to remain recorded")
+    }
+    XCTAssertEqual(intervals.count, 2)
+    let intervalSeconds = intervals.reduce(0.0) {
+      $0 + $1.endedAt.timeIntervalSince($1.startedAt)
+    }
+    let measuredIntervalSeconds = Int(floor(intervalSeconds + 0.000_000_001))
+    XCTAssertEqual(measuredIntervalSeconds, 39)
+    XCTAssertEqual(summary.activeDuration, .measured(seconds: measuredIntervalSeconds))
+  }
+
   func testDelayedZeroPausesAndAbsentTelemetryWaitsForOperatorWithoutRetry() throws {
     let delayed = try Harness.running(stepDuration: 20)
     let sampleAt = delayed.orchestrator.state.lastEventTime.seconds
