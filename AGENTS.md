@@ -5,6 +5,7 @@ These instructions apply to the entire repository.
 ## Authority and scope
 
 - Read the current user-authorised slice, this file and the relevant checked-in design/specification sources before changing code.
+- Treat an accepted and merged product capability as part of the current product baseline. Maintenance, integration and testing of that existing capability do not require inventing another capability-authorisation slice; only a new or broadened behaviour does.
 - Treat `design/treadmill-controller-product-spec.html` and `design/TreadmillDesign.pdf` as eventual-product context, not permission to implement every depicted feature.
 - Treat `design/prompt.md` as the proposed first implementation contract only when the user authorises that slice.
 - If product identity, safety behaviour or slice boundaries conflict, surface the conflict and stop before the affected implementation.
@@ -13,11 +14,12 @@ These instructions apply to the entire repository.
 ## Treadmill safety
 
 - Human operation of the physical console and safety key is authoritative.
-- Do not cause treadmill motion without a separately authorised motion-control slice.
-- Until such a slice is explicitly authorised, never write to FTMS Control Point `0x2AD9` and never send Request Control, Start, Stop, Pause, target-speed or target-inclination commands.
+- The accepted FR30z production-control baseline is defined by the current tracker and `design/fr30z-physical-console-execution-profile.md`: PacePrompt may request control and set validated speed and inclination targets, while physical Start and Stop remain console actions.
+- Production must not expose or send FTMS Start, Stop or Pause. Any new Control Point opcode, automatic behaviour, broader equipment profile or changed command semantics requires a separately authorised product slice and updated acceptance contract.
 - Do not add automatic reconnection that could later resume a programme.
 - Characteristic presence is not proof of capability. Decode the relevant feature fields and preserve unknown or unavailable states.
 - Never present a command or transition as successful without protocol acknowledgement and observed machine state.
+- Prefer machine-verifiable execution invariants over repeated operator attestations. Proof-only authorisation, arming and evidence-capture ceremony must not leak into the ordinary product flow.
 - Simulator results are not evidence of physical Bluetooth behaviour.
 
 ## Privacy and dependencies
@@ -43,6 +45,7 @@ These instructions apply to the entire repository.
 
 - Preserve unrelated or user-authored work.
 - Do not create or change a remote, commit, push, publish or operate physical hardware unless the user explicitly authorises that action.
+- One explicit operator direction is sufficient for the stated bounded physical session while its device, plan, limits, supervision and stop conditions remain unchanged. Do not interrupt that session with repeated repository-process permission prompts; obtain new direction only when the scope changes, the session ends, authority is withdrawn or an unsafe/ambiguous condition requires a new decision.
 - Keep signing configuration local and ignored; commit only safe examples when one is required.
 
 ## Development usage accounting

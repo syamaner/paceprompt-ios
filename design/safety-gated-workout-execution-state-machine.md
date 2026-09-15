@@ -1,6 +1,6 @@
 # Safety-gated workout execution state machine
 
-Status: documentation-only product design originally delivered by GitHub issue [#4](https://github.com/syamaner/paceprompt-ios/issues/4), revised by issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57) for the accepted physical-console FR30z workflow. The accepted executable #49 reducer remains a historical implementation snapshot; issue [#81](https://github.com/syamaner/paceprompt-ios/issues/81) owns its pure successor. This document does not authorise an executable Control Point write or physical treadmill session.
+Status: product design originally delivered by GitHub issue [#4](https://github.com/syamaner/paceprompt-ios/issues/4), revised by issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57) for the accepted physical-console FR30z workflow. The accepted executable #49 reducer remains a historical implementation snapshot; issue [#81](https://github.com/syamaner/paceprompt-ios/issues/81) owns its pure successor. Together with the accepted FR30z profile, this defines current production execution semantics rather than a future unauthorised capability. It does not by itself direct a physical treadmill session or permit behaviour beyond that profile.
 
 ## Current authority
 

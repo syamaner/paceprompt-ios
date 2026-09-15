@@ -11,7 +11,9 @@ Before implementing UUID mappings, bit fields, scaling or binary layouts, verify
 
 ## Preserve the motion boundary
 
-Apply `AGENTS.md` first. A discovery/capability slice may, when explicitly authorised:
+Apply `AGENTS.md` first. The accepted FR30z production-control baseline is the current tracker plus `design/fr30z-physical-console-execution-profile.md`. Work may integrate, maintain and test its existing Request Control, target-speed and target-inclination behaviour when the current slice authorises work on that product surface. Do not require a new motion-control authorisation slice merely because existing accepted code can reach `0x2AD9`.
+
+A discovery/capability slice may, when explicitly authorised:
 
 - scan only after a user action and prioritise FTMS service `0x1826`;
 - let the user select and connect to a peripheral;
@@ -19,9 +21,13 @@ Apply `AGENTS.md` first. A discovery/capability slice may, when explicitly autho
 - read `0x2ACC`, `0x2AD4` and `0x2AD5`;
 - subscribe to passive notifications from `0x2ACD`, `0x2AD3` and `0x2ADA` when available.
 
-It must not write `0x2AD9` or send Request Control, Start, Stop, Pause, target-speed or target-inclination commands. A later motion-control slice requires fresh, explicit authorisation and its own safety/acceptance contract.
+It must not write `0x2AD9` or send Request Control, Start, Stop, Pause, target-speed or target-inclination commands because those effects are outside a discovery/capability slice. This is a slice boundary, not a repository-wide claim that the accepted production-control capability remains unauthorised.
+
+Production must not expose or send FTMS Start, Stop or Pause. A new Control Point opcode, a changed command sequence, automatic behaviour or support beyond the accepted equipment profile requires explicit authority and its own safety/acceptance contract.
 
 Do not add automatic reconnection. The console and safety key remain authoritative.
+
+For a physical session, one explicit operator direction covers the stated device, plan, limits and test procedure until that session ends, its scope changes, authority is withdrawn or an unsafe/ambiguous condition requires a new decision. Do not add repeated proof-process permission gates to the product or repeatedly ask for the same repository-operation permission. Keep capability, ATT acceptance, FTMS acknowledgement, reported machine state and human observation distinct because they are protocol and evidence facts, not permission ceremony.
 
 ## Keep evidence and code layers explicit
 
