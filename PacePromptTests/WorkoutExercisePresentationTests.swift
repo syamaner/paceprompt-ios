@@ -181,6 +181,19 @@ final class WorkoutExercisePresentationTests: XCTestCase {
     XCTAssertTrue(makePresentation(.checking).canConfirmOperatorStationary)
     XCTAssertFalse(makePresentation(.waiting).canConfirmOperatorStationary)
     XCTAssertFalse(makePresentation(.failed).canConfirmOperatorStationary)
+    XCTAssertTrue(makePresentation(.interrupted).canConfirmOperatorStationary)
+
+    var staleFailure = WorkoutExerciseFixtures.context(for: .failed)
+    var staleFailureState = staleFailure.state
+    staleFailureState.telemetry = .stale(
+      WorkoutExerciseFixtures.sample(speed: 7, inclination: 2, at: 85)
+    )
+    staleFailure = .init(
+      state: staleFailureState,
+      frozenAttempt: staleFailure.frozenAttempt,
+      latestSummary: nil
+    )
+    XCTAssertTrue(makePresentation(staleFailure).canConfirmOperatorStationary)
   }
 
   func testNavigationCanDismissOnlyAfterTerminalOutcome() {
@@ -201,6 +214,16 @@ final class WorkoutExercisePresentationTests: XCTestCase {
       latestSummary: nil
     )
     XCTAssertTrue(makePresentation(safeFailure).allowsDismissal)
+
+    var safeInterruption = WorkoutExerciseFixtures.context(for: .interrupted)
+    var safeInterruptionState = safeInterruption.state
+    safeInterruptionState.motionPossible = false
+    safeInterruption = .init(
+      state: safeInterruptionState,
+      frozenAttempt: safeInterruption.frozenAttempt,
+      latestSummary: nil
+    )
+    XCTAssertTrue(makePresentation(safeInterruption).allowsDismissal)
   }
 
   func testCompletedFinalSegmentIsNotCountedTwiceAcrossCompletionPhases() {

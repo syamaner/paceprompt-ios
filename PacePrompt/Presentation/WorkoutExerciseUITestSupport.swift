@@ -96,7 +96,12 @@
           note: "UI-test operator observation"
         )
         state.observedMachine = .humanConfirmedStationary(evidence)
-        state.execution = .paused(.human(evidence))
+        switch state.execution {
+        case .interrupted, .failed:
+          state.motionPossible = false
+        default:
+          state.execution = .paused(.human(evidence))
+        }
       case .endWorkout:
         let evidence: WorkoutStationaryEvidence
         switch state.execution {

@@ -814,6 +814,46 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertTrue(restarted.effects.isEmpty)
   }
 
+  func testTerminalInterruptionAcceptsOnlySafeHumanStationaryAcknowledgement() throws {
+    let h = Harness(epochValue: 3, stepDuration: 20)
+    let running = try h.runningState()
+    let interrupted = h.send(
+      running,
+      .controlPermissionLost(epoch: h.epoch, reason: "Synthetic interruption")
+    )
+    guard case .interrupted(let reason) = interrupted.state.execution else {
+      return XCTFail("Expected interruption")
+    }
+
+    let tooEarly = h.send(
+      interrupted.state,
+      .humanConfirmsStationary(epoch: h.epoch, note: "Synthetic observation")
+    )
+    XCTAssertEqual(tooEarly.disposition, .ignored(.wrongState))
+    XCTAssertTrue(tooEarly.state.motionPossible)
+
+    let acknowledged = h.accept(
+      h.send(
+        at: interrupted.state.lastEventTime.seconds + 3,
+        interrupted.state,
+        .humanConfirmsStationary(epoch: h.epoch, note: "Synthetic observation")
+      )
+    )
+    XCTAssertEqual(acknowledged.state.execution, .interrupted(reason))
+    XCTAssertFalse(acknowledged.state.motionPossible)
+    guard case .humanConfirmedStationary = acknowledged.state.observedMachine else {
+      return XCTFail("Expected separate human stationary evidence")
+    }
+    XCTAssertTrue(acknowledged.effects.isEmpty)
+
+    let repeated = h.send(
+      acknowledged.state,
+      .humanConfirmsStationary(epoch: h.epoch, note: "Repeated observation")
+    )
+    XCTAssertEqual(repeated.disposition, .ignored(.wrongState))
+    XCTAssertEqual(repeated.state, acknowledged.state)
+  }
+
   func testWrongCorrelationAndDuplicateProcedureEvidenceFailClosed() throws {
     let correlationHarness = Harness()
     let current = try correlationHarness.initialSpeedTransition()

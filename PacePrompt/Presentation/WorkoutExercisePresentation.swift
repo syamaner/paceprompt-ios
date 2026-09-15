@@ -711,7 +711,7 @@ struct WorkoutExercisePresentation: Equatable {
     }
     switch state.execution {
     case .applyingTargets, .runningSegment, .checkingTreadmill,
-      .restoringTargets, .awaitingPhysicalStopForCompletion:
+      .restoringTargets, .awaitingPhysicalStopForCompletion, .interrupted, .failed:
       return true
     default:
       return false
