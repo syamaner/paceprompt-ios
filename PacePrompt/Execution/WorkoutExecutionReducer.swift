@@ -461,7 +461,9 @@ struct WorkoutExecutionReducer {
     guard now.seconds.isFinite, now >= original.lastEventTime else {
       return rejected(original, .nonMonotonicTime)
     }
-    if isTerminal(original.execution), !isNewAttempt(event) {
+    if isTerminal(original.execution), !isNewAttempt(event),
+      !isTerminalStationaryAcknowledgement(event, state: original, at: now)
+    {
       let reason: WorkoutGuardRejection =
         isProcedureLifecycleEvent(event) ? .duplicateOrLateProcedure : .wrongState
       return .init(state: original, effects: [], disposition: .ignored(reason))
@@ -734,6 +736,22 @@ extension WorkoutExecutionReducer {
     case .finished, .interrupted, .failed: true
     default: false
     }
+  }
+
+  fileprivate func isTerminalStationaryAcknowledgement(
+    _ event: WorkoutExecutionEvent,
+    state: WorkoutExecutionState,
+    at now: MonotonicInstant
+  ) -> Bool {
+    guard state.motionPossible, case .humanConfirmsStationary = event else { return false }
+    switch state.execution {
+    case .interrupted, .failed:
+      break
+    default:
+      return false
+    }
+    if let sample = freshSample(state, at: now), sample.speed.value > 0 { return false }
+    return true
   }
 
   fileprivate func canStartNewAttempt(_ state: WorkoutExecutionState) -> Bool {
@@ -1438,6 +1456,8 @@ extension WorkoutExecutionReducer {
       enterPaused(evidence, at: now, state: &state)
     case .paused:
       state.execution = .paused(evidence)
+    case .interrupted, .failed:
+      state.motionPossible = false
     default:
       return .rejected(.wrongState)
     }

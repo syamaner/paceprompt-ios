@@ -277,6 +277,31 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
     XCTAssertTrue(app.buttons["exercise.end"].exists)
   }
 
+  func testInterruptedWorkoutCanRecordStationaryObservationWithoutChangingOutcome() {
+    launch(scenario: "interrupted", orientation: .portrait)
+
+    XCTAssertTrue(app.staticTexts["Workout interrupted"].exists)
+    XCTAssertFalse(app.buttons["exercise.end"].exists)
+    app.swipeUp()
+    app.swipeUp()
+    let stationaryConfirmation = app.buttons["exercise.confirm-stationary"]
+    scrollTo(stationaryConfirmation)
+    XCTAssertTrue(stationaryConfirmation.isHittable)
+    stationaryConfirmation.tap()
+
+    let confirmStationary = app.buttons["Confirm treadmill is stationary"]
+    XCTAssertTrue(confirmStationary.waitForExistence(timeout: 2))
+    app.swipeUp()
+    scrollTo(confirmStationary)
+    confirmStationary.tap()
+
+    XCTAssertTrue(app.staticTexts["Workout interrupted"].waitForExistence(timeout: 2))
+    XCTAssertTrue(
+      app.buttons["exercise.confirm-stationary"].waitForNonExistence(timeout: 2)
+    )
+    XCTAssertFalse(app.buttons["exercise.end"].exists)
+  }
+
   func testAccessibilityDynamicTypePreservesVoiceOverOrderAndLargeControls() {
     launch(
       scenario: "running",

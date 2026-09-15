@@ -225,6 +225,40 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     )
   }
 
+  func testTerminalStationaryAcknowledgementPreservesInterruptionAndUpdatesHistory() throws {
+    let h = try Harness.running(stepDuration: 20)
+    let interruption = h.send(
+      .appBecameInactive(epoch: h.epoch, reason: "Synthetic app continuity loss")
+    )
+    guard case .interrupted(let reason) = interruption.state.execution else {
+      return XCTFail("Expected interruption")
+    }
+    let interruptedSummary = try XCTUnwrap(h.orchestrator.lastPersistedSummary)
+    XCTAssertEqual(interruptedSummary.physicalStopConfirmation, .unconfirmed)
+
+    let acknowledgement = h.send(
+      .humanConfirmsStationary(
+        epoch: h.epoch,
+        note: "Synthetic direct observation"
+      ),
+      monotonic: h.orchestrator.state.lastEventTime.seconds + 3
+    )
+
+    XCTAssertEqual(acknowledgement.reducerDisposition, .accepted)
+    XCTAssertEqual(h.orchestrator.state.execution, .interrupted(reason))
+    XCTAssertFalse(h.orchestrator.state.motionPossible)
+    XCTAssertTrue(acknowledgement.transportEffects.isEmpty)
+    let updated = try XCTUnwrap(h.orchestrator.lastPersistedSummary)
+    XCTAssertEqual(updated.outcome, interruptedSummary.outcome)
+    XCTAssertEqual(updated.activityTimeline, interruptedSummary.activityTimeline)
+    XCTAssertEqual(updated.distance, interruptedSummary.distance)
+    XCTAssertEqual(updated.healthExport, interruptedSummary.healthExport)
+    XCTAssertEqual(
+      updated.physicalStopConfirmation,
+      .humanConfirmed(at: Date(timeIntervalSince1970: 1_000 + h.clock.read().monotonic.seconds))
+    )
+  }
+
   func testLaterMotionExpiresHumanStationaryEvidenceBeforeInterruptionAndCompletion() throws {
     let interrupted = try Harness.running(stepDuration: 20)
     let interruptedSampleAt = interrupted.orchestrator.state.lastEventTime.seconds
