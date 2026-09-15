@@ -32,6 +32,7 @@
 		AA0000000000000000001018 /* PlansPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002018 /* PlansPresentationTests.swift */; };
 		AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000002019 /* PlansUITestSupport.swift */; };
 		AA000000000000000000101A /* PlansFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000201A /* PlansFlowUITests.swift */; };
+		AA000000000000000000101B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000201B /* PrivacyInfo.xcprivacy */; };
 		AB0000000000000000001001 /* PacePromptEvaluationApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002001 /* PacePromptEvaluationApp.swift */; };
 		AB0000000000000000001002 /* EvaluationReadinessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002002 /* EvaluationReadinessView.swift */; };
 		AB0000000000000000001003 /* EvaluationLaunchReadiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000002003 /* EvaluationLaunchReadiness.swift */; };
@@ -173,6 +174,7 @@
 		C90000000000000000002004 /* WorkoutExercisePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExercisePresentationTests.swift; sourceTree = "<group>"; };
 		C90000000000000000002005 /* WorkoutExerciseFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExerciseFlowUITests.swift; sourceTree = "<group>"; };
 		AA000000000000000000200F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA000000000000000000201B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA0000000000000000002011 /* FTMSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FTMSParserTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002012 /* TreadmillPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreadmillPresentationTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000002013 /* WorkoutPlanValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlanValidatorTests.swift; sourceTree = "<group>"; };
@@ -307,6 +309,7 @@
 			isa = PBXGroup;
 			children = (
 				AA000000000000000000200F /* Assets.xcassets */,
+				AA000000000000000000201B /* PrivacyInfo.xcprivacy */,
 				AA0000000000000000002001 /* PacePromptApp.swift */,
 				D30000000000000000002003 /* PacePrompt.entitlements */,
 				AA0000000000000000002002 /* RootTabView.swift */,
@@ -672,6 +675,7 @@
 			files = (
 				AD0000000000000000000007 /* ImportResources */,
 				AA000000000000000000100F /* Assets.xcassets in Resources */,
+				AA000000000000000000101B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
