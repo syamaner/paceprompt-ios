@@ -50,9 +50,9 @@ struct HomeView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
             Text(
-                "This version cannot start, stop or control the treadmill. "
-                    + "It reads capability and prepares plans only — the physical console "
-                    + "and safety key remain authoritative."
+                "PacePrompt adjusts speed and incline only during a reviewed workout. "
+                    + "It never starts, stops or pauses the treadmill — use the physical "
+                    + "console and safety key."
             )
             .font(.footnote)
             .foregroundStyle(.secondary)
@@ -71,8 +71,9 @@ struct HomeView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Treadmill safety")
         .accessibilityValue(
-            "PacePrompt cannot start, stop or control the treadmill. "
-                + "Use the physical console and safety key."
+            "PacePrompt adjusts speed and incline only during a reviewed workout. "
+                + "It never starts, stops or pauses the treadmill. Use the physical console "
+                + "and safety key."
         )
         .accessibilityIdentifier("home.safety")
     }
