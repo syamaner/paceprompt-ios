@@ -1,6 +1,6 @@
 # FR30z physical-console execution profile
 
-Status: accepted MVP profile from GitHub issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57), prepared from the sanitised [11 September 2026 characterisation](../docs/validation/fr30z-console-target-characterisation-2026-09-11.md) and bound to the production composition root by issue [#61](https://github.com/syamaner/paceprompt-ios/issues/61). The ordinary app remains locked; this document and the software binding do not authorise an executable Control Point write or physical treadmill session.
+Status: accepted MVP profile from GitHub issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57), prepared from the sanitised [11 September 2026 characterisation](../docs/validation/fr30z-console-target-characterisation-2026-09-11.md), bound to the production composition root by issue [#61](https://github.com/syamaner/paceprompt-ios/issues/61), and physically accepted by issue [#62](https://github.com/syamaner/paceprompt-ios/issues/62). This is the current FR30z production-control baseline: ordinary product integration may use its Request Control and target procedures. Physical treadmill operation still requires an operator-directed session, and any new opcode, automation or equipment profile requires separate authority.
 
 ## Protocol authority
 
