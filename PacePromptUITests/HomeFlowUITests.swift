@@ -61,6 +61,31 @@ final class HomeFlowUITests: XCTestCase {
         XCTAssertTrue((status("treadmill").value as? String)?.hasPrefix("Scanning.") == true)
     }
 
+    func testProductionScopeCopyMatchesAcceptedWorkoutAndHealthBoundaries() {
+        launch(scenario: "idle")
+
+        XCTAssertEqual(
+            app.descendants(matching: .any)["home.safety"].value as? String,
+            "PacePrompt adjusts speed and incline only during a reviewed workout. "
+                + "It never starts, stops or pauses the treadmill. Use the physical console "
+                + "and safety key."
+        )
+
+        app.buttons["Settings"].tap()
+        let privacy = app.descendants(matching: .any)["settings.privacy"]
+        XCTAssertTrue(privacy.waitForExistence(timeout: 2))
+        XCTAssertTrue(privacy.label.contains("No analytics or Health reads are used."))
+        app.swipeUp()
+        XCTAssertEqual(
+            app.descendants(matching: .any)["settings.current-slice"].value as? String,
+            "Saved plans, workouts and Health export"
+        )
+        XCTAssertEqual(
+            app.descendants(matching: .any)["settings.ftms-control"].value as? String,
+            "Reviewed speed and incline only"
+        )
+    }
+
     private func launch(scenario: String) {
         app = XCUIApplication()
         app.launchArguments = ["--paceprompt-home-ui-testing"]
