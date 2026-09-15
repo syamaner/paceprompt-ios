@@ -26,9 +26,18 @@ echo "  revision: $(git rev-parse HEAD)"
 echo "  destination: $simulator_destination"
 echo "  evidence: $validation_root"
 
-test "$(xcodebuild -version | sed -n '1p')" = "Xcode 26.6"
-test "$(xcodebuild -version | sed -n '2p')" = "Build version 17F113"
-test "$(xcrun --sdk iphonesimulator --show-sdk-version)" = "26.5"
+xcode_version=$(xcodebuild -version | sed -n '1p')
+xcode_build=$(xcodebuild -version | sed -n '2p')
+simulator_sdk=$(xcrun --sdk iphonesimulator --show-sdk-version)
+toolchain_identity="$xcode_version|$xcode_build|$simulator_sdk"
+case "$toolchain_identity" in
+  "Xcode 26.6|Build version 17F113|26.5" \
+  | "Xcode 27.0|Build version 27A266a|27.0") ;;
+  *)
+    echo "Unsupported Xcode and Simulator SDK combination: $toolchain_identity" >&2
+    exit 1
+    ;;
+esac
 
 control_write_sites=$(rg -n '\.writeValue\(' PacePrompt --glob '*.swift' || true)
 if [[ $(printf '%s\n' "$control_write_sites" | sed '/^$/d' | wc -l | tr -d ' ') -ne 1 ]] \

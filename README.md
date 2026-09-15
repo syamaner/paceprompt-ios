@@ -75,10 +75,10 @@ Do not commit personal device captures or signing identifiers. Synthetic fixture
 
 ## Build and test
 
-Requirements used for this slice:
+Supported validation toolchains:
 
-- Xcode 26.6 (build 17F113)
-- iPhoneOS and iPhoneSimulator SDK 26.5
+- Xcode 26.6 (build 17F113) with iPhoneOS and iPhoneSimulator SDK 26.5
+- Xcode 27.0 (build 27A266a) with iPhoneOS and iPhoneSimulator SDK 27.0
 - iOS 17 minimum deployment target for the production app
 - iOS 26 minimum deployment target for the developer-only Foundation Models evaluation app
 - `uv` with Python 3.13 support for the offline host-evaluation tests
@@ -158,11 +158,12 @@ are equivalent.
 The Actions **Run workflow** control retains the complete hosted production unit/UI
 suite, Release simulator build, static analysis, deterministic corpus checks,
 developer-only evaluation tests and informational Codecov upload on the standard
-macOS 26 runner with Xcode 26.6. Use that manual path whenever hosted confirmation
-is warranted and restore its pull-request/main triggers when the high-throughput
-period ends. All Xcode builds are unsigned, and evaluation gates use only checked-in
-synthetic fixtures; neither local nor hosted validation has a provider credential or
-makes a model-provider call.
+macOS 26 runner with Xcode 26.6. The local gate also accepts the explicitly pinned
+Xcode 27.0 toolchain. Use that manual path whenever hosted confirmation is warranted
+and restore its pull-request/main triggers when the high-throughput period ends. All
+Xcode builds are unsigned, and evaluation gates use only checked-in synthetic
+fixtures; neither local nor hosted validation has a provider credential or makes a
+model-provider call.
 
 The coverage artifact is exported from the production `PacePrompt.app` binary only.
 Test targets, evaluation and design/documentation files, and DEBUG-only UI-test
