@@ -5,38 +5,42 @@ import XCTest
 
 @MainActor
 final class ProductionWorkoutExecutionBindingTests: XCTestCase {
-  func testProductionDefaultRemainsPassiveWithoutSeparateProofAuthority() {
-    let h = Harness(authorized: false)
+  func testExactProductionProfileEnablesControlReadinessWithoutProofAuthority() {
+    let h = Harness()
     h.publishExactProfile()
 
-    XCTAssertNotNil(h.binding.proofConnectionCandidate)
+    XCTAssertEqual(h.link.enableIndicationsCount, 1)
     XCTAssertFalse(h.binding.canExposeArming)
-    XCTAssertEqual(h.link.enableIndicationsCount, 0)
     XCTAssertTrue(h.link.writes.isEmpty)
-    XCTAssertNil(h.binding.currentCapability)
+    h.link.send(.indicationsEnabled)
+    XCTAssertTrue(h.binding.canExposeArming)
+    XCTAssertNotNil(h.binding.currentCapability)
   }
 
-  func testMismatchedPeripheralCannotEnableControlOrExposeArming() {
-    let h = Harness(authorized: true)
-    h.client.connectedPeripheralIdentifier = UUID(
+  func testExplicitlySelectedConnectionIdentityBecomesTheAttemptProfileIdentity() {
+    let h = Harness()
+    let selectedID = UUID(
       uuidString: "00000000-0000-0000-0000-000000000999"
     )!
+    h.client.connectedPeripheralIdentifier = selectedID
     h.publishExactProfile()
+    h.link.send(.indicationsEnabled)
 
-    XCTAssertFalse(h.binding.canExposeArming)
-    XCTAssertEqual(h.link.enableIndicationsCount, 0)
+    XCTAssertTrue(h.binding.canExposeArming)
+    XCTAssertEqual(h.binding.executionProfile?.peripheralIdentity, selectedID.uuidString.lowercased())
+    XCTAssertEqual(h.link.enableIndicationsCount, 1)
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
   func testMismatchedCapabilityBytesOrControlPointPropertiesRemainPassive() {
-    let bytes = Harness(authorized: true)
+    let bytes = Harness()
     bytes.publishExactProfile(
       featureData: Data([0x0C, 0x16, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00])
     )
     XCTAssertEqual(bytes.link.enableIndicationsCount, 0)
     XCTAssertFalse(bytes.binding.canExposeArming)
 
-    let properties = Harness(authorized: true)
+    let properties = Harness()
     let withoutIndicate = Harness.characteristics.map { info in
       info.uuid == FTMSUUID.fitnessMachineControlPoint
         ? .init(uuid: info.uuid, properties: ["Write"])
@@ -47,11 +51,11 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertFalse(properties.binding.canExposeArming)
   }
 
-  func testExpiredProofAuthorityInvalidatesTheEstablishedControlLink() {
-    let h = Harness(authorized: true)
+  func testChangedConnectedIdentityInvalidatesTheEstablishedControlLink() {
+    let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
 
-    h.authority.activeAuthorization = nil
+    h.client.connectedPeripheralName = "Different synthetic treadmill"
     h.binding.tick()
 
     XCTAssertFalse(h.binding.canExposeArming)
@@ -60,8 +64,8 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
-  func testExactAuthorisedProfileRequiresControlIndicationButNotAStationaryPacket() {
-    let h = Harness(authorized: true)
+  func testExactCurrentProfileRequiresControlIndicationButNotAStationaryPacket() {
+    let h = Harness()
     h.publishExactProfile()
 
     XCTAssertEqual(h.link.enableIndicationsCount, 1)
@@ -88,17 +92,11 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
   }
 
   func testEndToEndPhysicalStartThenRequestControlSequencesOnlySpeedAndInclination() throws {
-    let h = Harness(authorized: true)
+    let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
     XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
 
-    let readiness = WorkoutOperatorReadiness(
-      deckClear: true,
-      consoleImmediatelyReachable: true,
-      safetyKeyImmediatelyReachable: true,
-      physicallyStationary: true
-    )
-    XCTAssertNotNil(h.binding.beginWorkout(readiness: readiness))
+    XCTAssertNotNil(h.binding.beginWorkout())
     XCTAssertTrue(h.link.writes.isEmpty)
     XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
 
@@ -134,19 +132,10 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
   }
 
   func testPhysicalStartRampBelowMinimumTargetPermitsRequestControl() throws {
-    let h = Harness(authorized: true)
+    let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
     XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
-    XCTAssertNotNil(
-      h.binding.beginWorkout(
-        readiness: .init(
-          deckClear: true,
-          consoleImmediatelyReachable: true,
-          safetyKeyImmediatelyReachable: true,
-          physicallyStationary: true
-        )
-      )
-    )
+    XCTAssertNotNil(h.binding.beginWorkout())
 
     h.publishTelemetry(speedRaw: 10)
 
@@ -155,7 +144,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
   }
 
   func testProtocolScaledTelemetryCanonicalizesFloatingTailBeforeTargetObservation() throws {
-    let h = Harness(authorized: true)
+    let h = Harness()
     h.reachRunning()
     let epoch = try XCTUnwrap(h.binding.epoch)
 
@@ -183,17 +172,10 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
   }
 
   func testForegroundLossInvalidatesAndSuppressesFurtherProceduresWithoutReconnect() throws {
-    let h = Harness(authorized: true)
+    let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
     XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
-    _ = h.binding.beginWorkout(
-      readiness: .init(
-        deckClear: true,
-        consoleImmediatelyReachable: true,
-        safetyKeyImmediatelyReachable: true,
-        physicallyStationary: true
-      )
-    )
+    _ = h.binding.beginWorkout()
     XCTAssertTrue(h.link.writes.isEmpty)
 
     h.binding.setApplicationActivity(.inactive)
@@ -201,8 +183,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       return XCTFail("Foreground loss must truthfully interrupt the attempt")
     }
     XCTAssertEqual(h.link.invalidateCount, 1)
-    XCTAssertEqual(h.authority.invalidationCount, 1)
-    XCTAssertNil(h.authority.activeAuthorization)
     XCTAssertTrue(h.link.writes.isEmpty)
 
     h.binding.setApplicationActivity(.active)
@@ -210,22 +190,16 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
-  func testExplicitReconnectCanPrepareAnotherAuthorisedSequence() {
-    let h = Harness(authorized: true)
+  func testExplicitReconnectCanPrepareAnotherSequence() {
+    let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
     XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
 
     h.binding.receive(.connection(.disconnected(message: "Synthetic explicit disconnect")))
-    XCTAssertNil(h.authority.activeAuthorization)
     guard case .interrupted = h.binding.orchestrator.state.execution else {
       return XCTFail("The first sequence must terminate before another connection")
     }
 
-    h.authority.activeAuthorization = .init(
-      sessionID: UUID(),
-      peripheralIdentifier: Harness.peripheralID,
-      equipmentIdentity: Harness.equipment
-    )
     h.makeReadyWithFreshStationaryTelemetry()
 
     XCTAssertTrue(h.binding.canExposeArming)
@@ -234,49 +208,88 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
-  #if PACEPROMPT_ISSUE62_PROOF
-    func testIssue62AuthorityCanCreateANewSessionAfterExplicitInvalidation() throws {
-      let firstSessionID = UUID()
-      let secondSessionID = UUID()
-      var sessionIDs = [firstSessionID, secondSessionID]
-      let authority = Issue62WorkoutProofSessionAuthority(
-        nextSessionID: { sessionIDs.removeFirst() }
-      )
-      let candidate = WorkoutProofConnectionCandidate(
-        peripheralIdentifier: UUID(),
-        equipmentIdentity: "Synthetic FR30z"
-      )
+  func testNormalSessionCoordinatorUsesSelectedPlanWithoutProofConfirmations() throws {
+    let h = Harness()
+    h.makeReadyWithFreshStationaryTelemetry()
+    let planID = UUID(uuidString: "00000000-0000-0000-0000-000000000107")!
+    let record = SavedPlanRecord(
+      id: planID,
+      createdAt: Date(timeIntervalSince1970: 100),
+      modifiedAt: Date(timeIntervalSince1970: 200),
+      plan: h.plan.plan
+    )
+    let coordinator = WorkoutSessionCoordinator(binding: h.binding)
 
-      XCTAssertTrue(authority.canAuthorize)
-      XCTAssertTrue(authority.authorize(candidate))
-      XCTAssertEqual(authority.activeAuthorization?.sessionID, firstSessionID)
-      XCTAssertFalse(authority.canAuthorize)
+    coordinator.begin(record)
+    coordinator.limits = .init(
+      maximumSpeed: "10.0",
+      maximumInclination: "6",
+      maximumStepSpeedChange: "3.0"
+    )
+    coordinator.prepareWorkout()
 
-      authority.invalidateAuthorization()
-      XCTAssertNil(authority.activeAuthorization)
-      XCTAssertTrue(authority.canAuthorize)
-      XCTAssertTrue(authority.authorize(candidate))
-      XCTAssertEqual(authority.activeAuthorization?.sessionID, secondSessionID)
-    }
+    XCTAssertEqual(coordinator.stage, .preflight)
+    let preflight = try XCTUnwrap(coordinator.preflightPresentation)
+    XCTAssertTrue(preflight.canBeginWorkout)
+    XCTAssertTrue(h.link.writes.isEmpty)
 
-    func testIssue62ReportUsesSanitisedTerminalCodes() {
-      XCTAssertEqual(
-        Issue62WorkoutProofCoordinator.phaseDescription(
-          .failed(.contradictoryEvidence("Synthetic detail must not appear"))
-        ),
-        "failed (evidence-contradictory)"
-      )
-      XCTAssertEqual(
-        Issue62WorkoutProofCoordinator.phaseDescription(
-          .interrupted(.connectionLost("Synthetic identity must not appear"))
-        ),
-        "interrupted (connection-lost)"
-      )
-    }
-  #endif
+    coordinator.handlePreflight(.beginWorkout)
+
+    XCTAssertEqual(coordinator.stage, .exercise)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(h.binding.orchestrator.frozenAttempt?.sourcePlanID, planID)
+    XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.schemaVersion, 2)
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testNormalSessionCoordinatorCanCancelPreparedWorkoutAndPrepareAgain() {
+    let h = Harness()
+    h.makeReadyWithFreshStationaryTelemetry()
+    let record = SavedPlanRecord(
+      id: UUID(uuidString: "00000000-0000-0000-0000-000000000108")!,
+      createdAt: Date(timeIntervalSince1970: 100),
+      modifiedAt: Date(timeIntervalSince1970: 200),
+      plan: h.plan.plan
+    )
+    let coordinator = WorkoutSessionCoordinator(binding: h.binding)
+
+    coordinator.begin(record)
+    coordinator.limits = .init(
+      maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3"
+    )
+    coordinator.prepareWorkout()
+    coordinator.cancelBeforeExercise()
+
+    XCTAssertEqual(coordinator.stage, .inactive)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .idle)
+    XCTAssertNil(h.binding.orchestrator.frozenAttempt)
+    XCTAssertNil(h.binding.orchestrator.lastPersistedSummary)
+    XCTAssertTrue(h.link.writes.isEmpty)
+
+    coordinator.begin(record)
+    coordinator.limits = .init(
+      maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3"
+    )
+    coordinator.prepareWorkout()
+    XCTAssertEqual(coordinator.stage, .preflight)
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testSessionLimitDraftParsesExactLocaleDecimalWithoutInventingDefaults() {
+    XCTAssertNil(WorkoutSessionLimitDraft().ceilings())
+    let parsed = WorkoutSessionLimitDraft(
+      maximumSpeed: "0,70",
+      maximumInclination: "1",
+      maximumStepSpeedChange: "0,10"
+    ).ceilings(locale: Locale(identifier: "de_DE"))
+
+    XCTAssertEqual(parsed?.maximumSpeed.value, Decimal(string: "0.70"))
+    XCTAssertEqual(parsed?.maximumInclination.value, 1)
+    XCTAssertEqual(parsed?.maximumStepSpeedChange.value, Decimal(string: "0.10"))
+  }
 
   func testAcceptedPhysicalResumeRestoresEffectiveSpeedThenInclination() throws {
-    let h = Harness(authorized: true)
+    let h = Harness()
     h.reachRunning()
     h.publishTelemetry(speedRaw: 0)
     guard case .paused = h.binding.orchestrator.state.execution else {
@@ -314,12 +327,11 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(h.binding.orchestrator.state.execution, .runningSegment)
   }
 
-  func testEveryTransmissionRechecksProofEpochForegroundProfileProcedureAndFreshness() throws {
-    let h = Harness(authorized: true)
+  func testEveryTransmissionRechecksEpochForegroundProfileProcedureAndFreshness() throws {
+    let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
     let capability = try XCTUnwrap(h.binding.currentCapability)
     let profile = try XCTUnwrap(h.binding.executionProfile)
-    let authorization = try XCTUnwrap(h.authority.activeAuthorization)
     let epoch = try XCTUnwrap(h.binding.epoch)
     let procedureID = ProcedureID(epoch: epoch, sequence: 41)
     let record = WorkoutProcedureRecord(
@@ -340,8 +352,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     )
 
     let valid = ProductionTransmissionContext(
-      authorization: authorization,
-      frozenAuthorizationSessionID: authorization.sessionID,
       epoch: epoch,
       foreground: true,
       capability: capability,
@@ -351,10 +361,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       latestTelemetryAt: h.clock.read().monotonic,
       now: h.clock.read().monotonic
     )
-    var noAuthority = valid
-    noAuthority.authorization = nil
-    var changedSession = valid
-    changedSession.frozenAuthorizationSessionID = UUID()
     var wrongEpoch = valid
     wrongEpoch.epoch = .init(rawValue: epoch.rawValue + 1)
     var background = valid
@@ -370,8 +376,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     var staleTelemetry = valid
     staleTelemetry.latestTelemetryAt = h.clock.read().monotonic.advanced(by: -2.001)
     let cases: [(String, ProductionTransmissionContext)] = [
-      ("proof authority", noAuthority),
-      ("proof session identity", changedSession),
       ("connection epoch", wrongEpoch),
       ("foreground", background),
       ("capability", noCapability),
@@ -427,7 +431,6 @@ extension ProductionWorkoutExecutionBindingTests {
     static let equipment = "Synthetic FR30z"
 
     let client = BindingClient()
-    let authority: BindingAuthority
     let link = BindingControlPointLink()
     let clock = BindingClock()
     let scheduler = BindingScheduler()
@@ -440,19 +443,10 @@ extension ProductionWorkoutExecutionBindingTests {
       maximumStepSpeedChange: .init(value: 3, unit: .kilometresPerHour)
     )
 
-    init(authorized: Bool) {
+    init() {
       client.connectedPeripheralIdentifier = Self.peripheralID
       client.connectedPeripheralName = Self.equipment
       client.controlPointLink = link
-      authority = BindingAuthority(
-        authorization: authorized
-          ? .init(
-            sessionID: UUID(uuidString: "00000000-0000-0000-0000-000000000062")!,
-            peripheralIdentifier: Self.peripheralID,
-            equipmentIdentity: Self.equipment
-          )
-          : nil
-      )
       let capabilities = Self.capabilities
       let rawPlan = WorkoutPlan(
         schemaVersion: WorkoutPlanSchema.currentVersion,
@@ -471,7 +465,6 @@ extension ProductionWorkoutExecutionBindingTests {
       )
       binding = ProductionWorkoutExecutionBinding(
         client: client,
-        authority: authority,
         controlTransport: rawTransport,
         history: history,
         clock: clock,
@@ -524,14 +517,7 @@ extension ProductionWorkoutExecutionBindingTests {
     func reachRunning() {
       makeReadyWithFreshStationaryTelemetry()
       XCTAssertNotNil(binding.arm(plan: plan, ceilings: ceilings, sourcePlanID: nil))
-      _ = binding.beginWorkout(
-        readiness: .init(
-          deckClear: true,
-          consoleImmediatelyReachable: true,
-          safetyKeyImmediatelyReachable: true,
-          physicallyStationary: true
-        )
-      )
+      _ = binding.beginWorkout()
       publishTelemetry(speedRaw: 50)
       link.send(.writeAccepted)
       link.send(.indication(Data([0x80, 0x00, 0x01])))
@@ -609,19 +595,6 @@ private final class BindingClient: FTMSClientProtocol {
   func stopScan() {}
   func connect(to identifier: UUID) {}
   func disconnect() {}
-}
-
-@MainActor
-private final class BindingAuthority: WorkoutProofSessionAuthorizing {
-  var activeAuthorization: WorkoutProofSessionAuthorization?
-  private(set) var invalidationCount = 0
-  init(authorization: WorkoutProofSessionAuthorization?) {
-    activeAuthorization = authorization
-  }
-  func invalidateAuthorization() {
-    if activeAuthorization != nil { invalidationCount += 1 }
-    activeAuthorization = nil
-  }
 }
 
 @MainActor

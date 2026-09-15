@@ -18,20 +18,10 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertEqual(FR30zExecutionProfile.targetObservationInterval, 30)
   }
 
-  func testBeginWaitsForPhysicalStartWithoutAProcedureAndRequiresReadiness() throws {
+  func testBeginWaitsForPhysicalStartWithoutAProcedure() throws {
     let h = Harness()
     let state = try h.preflightState()
-    let missing = WorkoutOperatorReadiness(
-      deckClear: true,
-      consoleImmediatelyReachable: false,
-      safetyKeyImmediatelyReachable: true,
-      physicallyStationary: true
-    )
-    let rejected = h.send(state, .beginWorkout(epoch: h.epoch, readiness: missing))
-    XCTAssertEqual(rejected.disposition, .rejected(.operatorReadinessMissing))
-    XCTAssertEqual(rejected.state, state)
-
-    let accepted = h.accept(h.send(state, .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
+    let accepted = h.accept(h.send(state, .beginWorkout(epoch: h.epoch)))
     XCTAssertEqual(accepted.state.execution, .waitingForPhysicalStart)
     XCTAssertEqual(accepted.state.controlPermission, .notHeld)
     XCTAssertEqual(accepted.state.procedure, .idle)
@@ -40,10 +30,26 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertTrue(accepted.effects.isEmpty)
   }
 
+  func testCancelPreflightClearsPreparedWorkoutWithoutProcedureOrHistoryState() throws {
+    let h = Harness()
+    let state = try h.preflightState()
+
+    let cancelled = h.accept(h.send(state, .cancelPreflight(epoch: h.epoch)))
+
+    XCTAssertEqual(cancelled.state.execution, .idle)
+    XCTAssertNil(cancelled.state.armedWorkout)
+    XCTAssertNil(cancelled.state.currentSegment)
+    XCTAssertNil(cancelled.state.targetSequence)
+    XCTAssertNil(cancelled.state.lastConfirmedTarget)
+    XCTAssertEqual(cancelled.state.controlPermission, .notHeld)
+    XCTAssertEqual(cancelled.state.procedure, .idle)
+    XCTAssertTrue(cancelled.effects.isEmpty)
+  }
+
   func testIntentSubmissionATTAndFTMSAcknowledgementRemainDistinct() throws {
     let h = Harness()
     var t = h.accept(
-      h.send(try h.preflightState(), .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
+      h.send(try h.preflightState(), .beginWorkout(epoch: h.epoch)))
     XCTAssertTrue(t.effects.isEmpty)
     t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
     let record = try XCTUnwrap(t.record)
@@ -65,7 +71,7 @@ final class WorkoutExecutionReducerTests: XCTestCase {
   func testEarlyFTMSAcknowledgementRemainsProvisionalUntilATT() throws {
     let h = Harness()
     var t = h.accept(
-      h.send(try h.preflightState(), .beginWorkout(epoch: h.epoch, readiness: h.readiness)))
+      h.send(try h.preflightState(), .beginWorkout(epoch: h.epoch)))
     t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("0.5", "0"))))
     let record = try XCTUnwrap(t.record)
     t = h.accept(h.send(t.state, .intentSubmitted(epoch: h.epoch, procedureID: record.id)))
@@ -828,7 +834,7 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     var completed = duplicateHarness.accept(
       duplicateHarness.send(
         try duplicateHarness.preflightState(),
-        .beginWorkout(epoch: duplicateHarness.epoch, readiness: duplicateHarness.readiness)))
+        .beginWorkout(epoch: duplicateHarness.epoch)))
     completed = duplicateHarness.accept(
       duplicateHarness.send(
         completed.state,
@@ -873,12 +879,6 @@ extension WorkoutExecutionReducerTests {
     let ceilings: WorkoutSessionCeilings
     let profile: FR30zExecutionProfile
     let plan: WorkoutPlanValidator.ValidatedPlan
-    let readiness = WorkoutOperatorReadiness(
-      deckClear: true,
-      consoleImmediatelyReachable: true,
-      safetyKeyImmediatelyReachable: true,
-      physicallyStationary: true
-    )
     private(set) var now: TimeInterval = 10
 
     init(epochValue: UInt64 = 1, stepDuration: Int = 5, repeatedTargets: Bool = false) {
@@ -969,7 +969,7 @@ extension WorkoutExecutionReducerTests {
     }
 
     func waitingState() throws -> WorkoutExecutionState {
-      accept(send(try preflightState(), .beginWorkout(epoch: epoch, readiness: readiness))).state
+      accept(send(try preflightState(), .beginWorkout(epoch: epoch))).state
     }
 
     func initialSpeedTransition() throws -> WorkoutExecutionTransition {

@@ -30,6 +30,9 @@ final class TreadmillSetupViewModel: ObservableObject {
     private var lastTreadmillNotificationMonotonic: TimeInterval?
     private var nextDiagnosticID: UInt64 = 0
     private var nextCaptureMarkerID: UInt64 = 0
+    #if DEBUG
+    var activateUITestScenario: (() -> Void)?
+    #endif
 
     init(
         client: (any FTMSClientProtocol)? = nil,
@@ -44,7 +47,7 @@ final class TreadmillSetupViewModel: ObservableObject {
         let resolvedClient = client ?? FTMSClient()
         self.client = resolvedClient
         self.executionBinding = executionBinding
-            ?? (client == nil ? ProductionWorkoutExecutionBinding(client: resolvedClient) : nil)
+            ?? ProductionWorkoutExecutionBinding(client: resolvedClient)
         self.now = now
         self.monotonicNow = monotonicNow
         self.diagnosticLimit = diagnosticLimit
@@ -179,7 +182,7 @@ final class TreadmillSetupViewModel: ObservableObject {
             "Application state at report generation: \(applicationActivity.title)",
             "Policy state: measurement only; no freshness window or target-observation deadline has been adopted",
             "Evidence boundary: packet silence and the last sample are not proof of current treadmill state or a stop",
-            "Command boundary: this diagnostic screen cannot issue a Control Point procedure; ordinary production execution remains proof-session locked",
+            "Command boundary: this diagnostic screen cannot issue a Control Point procedure; workout execution is a separate user-invoked product flow",
             "",
             "Discovered FTMS devices",
         ]
@@ -374,6 +377,14 @@ final class TreadmillSetupViewModel: ObservableObject {
         appendCaptureMarker(.applicationActivity(activity))
         executionBinding?.setApplicationActivity(activity)
     }
+
+    #if DEBUG
+    func activateUITestScenarioIfNeeded() {
+        let activation = activateUITestScenario
+        activateUITestScenario = nil
+        activation?()
+    }
+    #endif
 
     func subscription(for uuid: String) -> FTMSSubscriptionState {
         subscriptions.first(where: { $0.uuid == uuid })?.state

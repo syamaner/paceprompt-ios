@@ -447,9 +447,7 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     let initial = Harness()
     try initial.prepare()
     initial.history.failure = .writeFailed(.stagingWrite)
-    let begin = initial.send(
-      .beginWorkout(epoch: initial.epoch, readiness: initial.readiness)
-    )
+    let begin = initial.send(.beginWorkout(epoch: initial.epoch))
     XCTAssertEqual(begin.historyCheckpoint, .failed(.writeFailed(.stagingWrite)))
     XCTAssertEqual(initial.orchestrator.state.execution, .preflight)
     XCTAssertTrue(initial.transport.effects.isEmpty)
@@ -543,12 +541,6 @@ extension WorkoutExecutionOrchestratorTests {
     let ceilings: WorkoutSessionCeilings
     let profile: FR30zExecutionProfile
     let plan: WorkoutPlanValidator.ValidatedPlan
-    let readiness = WorkoutOperatorReadiness(
-      deckClear: true,
-      consoleImmediatelyReachable: true,
-      safetyKeyImmediatelyReachable: true,
-      physicallyStationary: true
-    )
     let orchestrator: WorkoutExecutionOrchestrator
 
     init(stepDuration: Int = 5) {
@@ -642,7 +634,7 @@ extension WorkoutExecutionOrchestratorTests {
     }
 
     func begin() throws {
-      let result = send(.beginWorkout(epoch: epoch, readiness: readiness))
+      let result = send(.beginWorkout(epoch: epoch))
       assertAccepted(result)
       XCTAssertTrue(result.reducerEffects.isEmpty)
       XCTAssertTrue(result.transportEffects.isEmpty)

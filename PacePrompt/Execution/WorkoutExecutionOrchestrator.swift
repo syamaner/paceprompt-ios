@@ -166,6 +166,15 @@ final class WorkoutExecutionOrchestrator {
   }
 
   @discardableResult
+  func cancelPreflight(epoch: ConnectionEpoch) -> WorkoutOrchestrationResult {
+    let result = process(.cancelPreflight(epoch: epoch), preparedInputs: nil)
+    if result.reducerDisposition == .accepted {
+      resetAttemptContext()
+    }
+    return result
+  }
+
+  @discardableResult
   func cancelAttempt(epoch: ConnectionEpoch) -> WorkoutOrchestrationResult {
     process(
       .appBecameInactive(epoch: epoch, reason: "User cancelled synthetic attempt"),

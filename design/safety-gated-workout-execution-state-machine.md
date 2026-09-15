@@ -270,7 +270,7 @@ The bounded delivery sequence is:
 2. Completed: #58 — Preflight and waiting-for-physical-Start UI using synthetic state.
 3. Completed: #59 — synthetic orchestration, target overrides and incremental history.
 4. Completed: #60 — portrait/landscape Exercise UI using synthetic orchestration.
-5. Completed: #61 — production binding for Request Control, speed and inclination only, locked without separate proof authority.
-6. Remaining: #62 — separately authorise one narrow physical-console workout proof.
+5. Completed: #61 — production binding for Request Control, speed and inclination only.
+6. Current product integration: #107 — saved-plan preparation, preflight and exercise flow without proof-only authorization or arming ceremony; physical behaviour still requires signed-iPhone observation.
 
 No implementation slice inherits physical-session authority from this document.

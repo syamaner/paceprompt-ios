@@ -96,18 +96,6 @@ struct FR30zExecutionProfile: Equatable {
   }
 }
 
-struct WorkoutOperatorReadiness: Equatable {
-  let deckClear: Bool
-  let consoleImmediatelyReachable: Bool
-  let safetyKeyImmediatelyReachable: Bool
-  let physicallyStationary: Bool
-
-  var isConfirmed: Bool {
-    deckClear && consoleImmediatelyReachable && safetyKeyImmediatelyReachable
-      && physicallyStationary
-  }
-}
-
 struct WorkoutTarget: Equatable {
   let speed: WorkoutSpeed
   let inclination: WorkoutInclination
@@ -396,7 +384,8 @@ enum WorkoutExecutionEvent: Equatable {
   case arm(
     plan: WorkoutPlanValidator.ValidatedPlan, ceilings: WorkoutSessionCeilings,
     profile: FR30zExecutionProfile)
-  case beginWorkout(epoch: ConnectionEpoch, readiness: WorkoutOperatorReadiness)
+  case cancelPreflight(epoch: ConnectionEpoch)
+  case beginWorkout(epoch: ConnectionEpoch)
   case intentSubmitted(epoch: ConnectionEpoch, procedureID: ProcedureID)
   case intentSubmissionRejected(epoch: ConnectionEpoch, procedureID: ProcedureID, reason: String)
   case attAccepted(epoch: ConnectionEpoch, procedureID: ProcedureID)
@@ -442,7 +431,6 @@ enum WorkoutGuardRejection: Equatable {
   case incompleteCapabilityEvidence
   case invalidPlanOrCeilings
   case incompleteOrMismatchedProfile
-  case operatorReadinessMissing
   case controlNotHeld
   case procedureBusy
   case invalidAdjustment
@@ -534,17 +522,29 @@ struct WorkoutExecutionReducer {
       state.observedMachine = .unknown
       state.execution = .preflight
 
-    case .beginWorkout(_, let readiness):
+    case .cancelPreflight:
+      guard case .preflight = state.execution,
+        case .notHeld = state.controlPermission,
+        case .idle = state.procedure
+      else { return rejected(original, .wrongState) }
+      state.armedWorkout = nil
+      state.currentSegment = nil
+      state.targetSequence = nil
+      state.lastConfirmedTarget = nil
+      state.telemetry = .unavailable("No active workout")
+      state.observedMachine = .unknown
+      state.execution = .idle
+
+    case .beginWorkout:
       guard case .preflight = state.execution,
         case .ready(_, let capability) = state.connection,
         case .notHeld = state.controlPermission,
         case .idle = state.procedure,
         state.isForegroundActive,
-        readiness.isConfirmed,
         let armed = state.armedWorkout,
         armed.capability == capability,
         armed.profile.matches(capability)
-      else { return rejected(original, beginRejection(state, readiness: readiness)) }
+      else { return rejected(original, beginRejection(state)) }
       state.currentSegment = .init(
         stepIndex: 0,
         accumulatedActiveSeconds: 0,
@@ -747,7 +747,8 @@ extension WorkoutExecutionReducer {
     switch event {
     case .userStartsConnection, .arm:
       nil
-    case .connectionBecomesReady(let epoch, _), .beginWorkout(let epoch, _),
+    case .connectionBecomesReady(let epoch, _), .cancelPreflight(let epoch),
+      .beginWorkout(let epoch),
       .intentSubmitted(let epoch, _), .intentSubmissionRejected(let epoch, _, _),
       .attAccepted(let epoch, _), .attRejected(let epoch, _, _),
       .protocolAcknowledged(let epoch, _), .protocolRejected(let epoch, _, _),
@@ -872,11 +873,8 @@ extension WorkoutExecutionReducer {
       && isAligned(value.value, minimum: range.minimum.value, increment: range.increment.value)
   }
 
-  fileprivate func beginRejection(
-    _ state: WorkoutExecutionState, readiness: WorkoutOperatorReadiness
-  ) -> WorkoutGuardRejection {
+  fileprivate func beginRejection(_ state: WorkoutExecutionState) -> WorkoutGuardRejection {
     guard state.isForegroundActive else { return .wrongState }
-    guard readiness.isConfirmed else { return .operatorReadinessMissing }
     guard case .idle = state.procedure else { return .procedureBusy }
     guard case .ready = state.connection else { return .connectionNotReady }
     return .wrongState
