@@ -56,7 +56,7 @@ def verify() -> None:
 
     assert entitlements == {"com.apple.developer.healthkit": True}
     assert project.count("CODE_SIGN_ENTITLEMENTS = PacePrompt/PacePrompt.entitlements;") == 2
-    assert project.count("PRODUCT_BUNDLE_IDENTIFIER = com.sertanyamaner.PacePrompt;") == 2
+    assert project.count("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PacePrompt;") == 2
     assert project.count("TARGETED_DEVICE_FAMILY = 1;") >= 2
     assert "INFOPLIST_KEY_NSHealthShareUsageDescription" not in project
     assert project.count("INFOPLIST_KEY_NSHealthUpdateUsageDescription") == 2
