@@ -22,6 +22,7 @@ These documentation links inform the contract but do not replace signed-iPhone v
 
 1. Apple Health saving is a deliberate post-workout action. PacePrompt performs no automatic or background save.
 2. PacePrompt requests write access only for the workout type and walking/running distance. It requests no HealthKit read access.
+   App Store Connect's static validation of the signed release requires an `NSHealthShareUsageDescription` Info.plist string in addition to `NSHealthUpdateUsageDescription`. Its truthful no-read wording is metadata only; the HealthKit authorization request still passes an empty read set and must not request read access.
 3. The local execution summary and its versioned prescribed-versus-executed timeline remain authoritative. HealthKit receives one useful workout plus a flattened interval mirror, not the complete local record.
 4. `indoorWalking` maps to HealthKit walking with indoor location; `indoorRunning` maps to running with indoor location.
 5. PacePrompt exports only a terminal, eligible local attempt. HealthKit success or failure never changes the local workout outcome.

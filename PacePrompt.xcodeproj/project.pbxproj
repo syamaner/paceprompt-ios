@@ -984,6 +984,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = PacePrompt;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1017,6 +1018,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = PacePrompt;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
