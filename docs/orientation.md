@@ -35,7 +35,7 @@ Each item requires its own current contract. A later item does not leak into an 
 - Minimum deployment target: iOS 17
 - Appearance: follow the system light/dark setting
 - Project form: standard checked-in Xcode project with no third-party generator
-- Bundle identifier: `com.otherweather.PacePrompt`
+- Bundle identifier: `com.otherweather.PromptPace`
 - Personal Apple development-team identifier: local and ignored
 - Physical acceptance equipment: iPhone and FR30z with its fitness Bluetooth dongle are available
 

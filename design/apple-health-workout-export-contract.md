@@ -22,6 +22,7 @@ These documentation links inform the contract but do not replace signed-iPhone v
 
 1. Apple Health saving is a deliberate post-workout action. PacePrompt performs no automatic or background save.
 2. PacePrompt requests write access only for the workout type and walking/running distance. It requests no HealthKit read access.
+   App Store Connect's static validation of the signed release requires an `NSHealthShareUsageDescription` Info.plist string in addition to `NSHealthUpdateUsageDescription`. Its truthful no-read wording is metadata only; the HealthKit authorization request still passes an empty read set and must not request read access.
 3. The local execution summary and its versioned prescribed-versus-executed timeline remain authoritative. HealthKit receives one useful workout plus a flattened interval mirror, not the complete local record.
 4. `indoorWalking` maps to HealthKit walking with indoor location; `indoorRunning` maps to running with indoor location.
 5. PacePrompt exports only a terminal, eligible local attempt. HealthKit success or failure never changes the local workout outcome.
@@ -273,7 +274,7 @@ The preview must disclose that the export contains prescribed and executed speed
 
 For an eligible version-2 summary, the later HealthKit implementation creates one non-overlapping `HKWorkoutActivity` for each closed executed interval. Every activity uses the containing workout's walking or running activity and indoor location.
 
-The metadata namespace is the production bundle identifier prefix `com.otherweather.PacePrompt`. Each activity uses only these flattened keys:
+The metadata namespace is the production bundle identifier prefix `com.otherweather.PromptPace`. Each activity uses only these flattened keys:
 
 | Metadata key suffix | HealthKit value | Meaning |
 | --- | --- | --- |
@@ -293,7 +294,7 @@ The metadata namespace is the production bundle identifier prefix `com.otherweat
 | `observationProvenance` | `NSString` | `fr30zTreadmillDataCurrentEpoch` when observed. |
 | `intervalEndReason` | `NSString` | Stable reason that closed the interval. |
 
-The full keys are the prefix, a full stop, and the suffix, for example `com.otherweather.PacePrompt.segmentIndex`.
+The full keys are the prefix, a full stop, and the suffix, for example `com.otherweather.PromptPace.segmentIndex`.
 
 Every mirrored interval has its required observed-value, `observedAt` and provenance keys. Effective targets are never copied into observed fields. A record that cannot satisfy this invariant is not eligible for Health export rather than producing a partial interval mirror.
 
@@ -347,7 +348,7 @@ The version-2 summary's `healthExport` value has these states:
 
 The export value stores no raw HealthKit error, Health data, plan prose, treadmill identifier or diagnostics. A save-state mutation replaces only `healthExport`; it never rewrites the local workout outcome, timeline, distance or stop evidence.
 
-The workout sync identifier is `com.otherweather.PacePrompt.workout.<lowercase-summary-uuid>`. The optional distance sample uses `com.otherweather.PacePrompt.distance.<lowercase-summary-uuid>`. Both carry the same positive integer sync version.
+The workout sync identifier is `com.otherweather.PromptPace.workout.<lowercase-summary-uuid>`. The optional distance sample uses `com.otherweather.PromptPace.distance.<lowercase-summary-uuid>`. Both carry the same positive integer sync version.
 
 The payload for one sync version is immutable. A retry after a definite pre-save failure may reuse it. A changed payload, an attempt to add newly authorized distance, or a retry after ambiguous completion uses the next sync version so HealthKit can replace any lower-version objects with the same identifiers. Numeric sync version is never inferred from timestamps.
 

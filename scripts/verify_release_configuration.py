@@ -56,11 +56,23 @@ def verify() -> None:
 
     assert entitlements == {"com.apple.developer.healthkit": True}
     assert project.count("CODE_SIGN_ENTITLEMENTS = PacePrompt/PacePrompt.entitlements;") == 2
-    assert project.count("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PacePrompt;") == 2
+    assert project.count("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;") == 2
     assert project.count("TARGETED_DEVICE_FAMILY = 1;") >= 2
-    assert "INFOPLIST_KEY_NSHealthShareUsageDescription" not in project
+    health_share_purpose = (
+        "PacePrompt does not read Apple Health data. It only asks to save a completed "
+        "workout and optional distance when you choose Save to Apple Health."
+    )
+    assert project.count(
+        f'INFOPLIST_KEY_NSHealthShareUsageDescription = "{health_share_purpose}";'
+    ) == 2
     assert project.count("INFOPLIST_KEY_NSHealthUpdateUsageDescription") == 2
-    assert project.count("INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription") == 2
+    bluetooth_purpose = (
+        "PacePrompt uses Bluetooth to connect to your treadmill and request speed "
+        "and inclination targets during a workout you begin at its physical console."
+    )
+    assert project.count(
+        f'INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "{bluetooth_purpose}";'
+    ) == 2
 
     release_blocks = re.findall(
         r"AA000000000000000000A10[12] /\* (?:Debug|Release) \*/ = \{.*?\n\t\t\};",

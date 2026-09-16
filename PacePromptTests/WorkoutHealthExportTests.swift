@@ -14,11 +14,11 @@ final class WorkoutHealthExportTests: XCTestCase {
 
     XCTAssertEqual(
       payload.workoutSyncIdentifier,
-      "com.otherweather.PacePrompt.workout.00000000-0000-0000-0000-000000000064"
+      "com.otherweather.PromptPace.workout.00000000-0000-0000-0000-000000000064"
     )
     XCTAssertEqual(
       payload.distanceSyncIdentifier,
-      "com.otherweather.PacePrompt.distance.00000000-0000-0000-0000-000000000064"
+      "com.otherweather.PromptPace.distance.00000000-0000-0000-0000-000000000064"
     )
     XCTAssertEqual(payload.distanceMetres, decimal("12.50"))
     XCTAssertEqual(payload.intervals.count, 2)
@@ -614,7 +614,7 @@ final class WorkoutHealthExportTests: XCTestCase {
   private func decimal(_ value: String) -> Decimal {
     Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))!
   }
-  private func key(_ suffix: String) -> String { "com.otherweather.PacePrompt.\(suffix)" }
+  private func key(_ suffix: String) -> String { "com.otherweather.PromptPace.\(suffix)" }
   private func uuid(_ suffix: Int) -> UUID {
     UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", suffix))!
   }
