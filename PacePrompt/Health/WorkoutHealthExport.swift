@@ -36,11 +36,11 @@ struct WorkoutHealthExportPayload: Equatable {
   let syncVersion: Int
 
   var workoutSyncIdentifier: String {
-    "com.otherweather.PacePrompt.workout.\(summaryID.uuidString.lowercased())"
+    "com.otherweather.PromptPace.workout.\(summaryID.uuidString.lowercased())"
   }
 
   var distanceSyncIdentifier: String {
-    "com.otherweather.PacePrompt.distance.\(summaryID.uuidString.lowercased())"
+    "com.otherweather.PromptPace.distance.\(summaryID.uuidString.lowercased())"
   }
 
   func withoutDistance() -> Self {
@@ -63,7 +63,7 @@ enum WorkoutHealthExportEligibility: Equatable {
 }
 
 enum WorkoutHealthPayloadFactory {
-  static let namespace = "com.otherweather.PacePrompt"
+  static let namespace = "com.otherweather.PromptPace"
   static let timelineSchemaVersion = 1
 
   static func make(
