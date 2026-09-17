@@ -2,12 +2,14 @@
 """Fail-closed, credential-free checks for a TestFlight release tag."""
 
 import argparse
+import hashlib
 import json
 import os
 import plistlib
 import re
 import subprocess
 import sys
+import tempfile
 import urllib.request
 from pathlib import Path
 
@@ -135,7 +137,17 @@ def metadata(info: dict, version: str, build: str) -> None:
             fail(f"Unexpected or missing {key}")
 
 
-def artifact(app: Path, tag: str, team: str) -> None:
+def verify_signing_leaf(app: Path, certificate_sha1: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="paceprompt-signature-") as temporary:
+        prefix = str(Path(temporary) / "certificate")
+        subprocess.run(["codesign", "-d", "--extract-certificates", prefix, str(app)],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        leaf = Path(f"{prefix}0").read_bytes()
+        if hashlib.sha1(leaf).hexdigest().upper() != certificate_sha1:
+            fail("Signed app certificate differs from approved CI identity")
+
+
+def artifact(app: Path, tag: str, team: str, certificate_sha1: str) -> None:
     version, build = check_tag(tag, PROJECT.read_text())
     metadata(plist(app / "Info.plist"), version, build)
     privacy = plist(app / "PrivacyInfo.xcprivacy")
@@ -160,13 +172,22 @@ def artifact(app: Path, tag: str, team: str) -> None:
     if not profile_path.is_file():
         fail("Distribution provisioning profile is missing")
     profile = plistlib.loads(subprocess.check_output(["security", "cms", "-D", "-i", str(profile_path)], stderr=subprocess.DEVNULL))
-    if team not in profile.get("TeamIdentifier", []):
+    if profile.get("TeamIdentifier") != [team]:
         fail("Distribution profile belongs to another team")
     if profile.get("Entitlements", {}).get("application-identifier") != f"{team}.{BUNDLE_ID}":
         fail("Distribution profile app identifier differs")
     if profile.get("Entitlements", {}).get("get-task-allow") is not False:
         fail("Distribution profile permits debugging")
+    if profile.get("Entitlements", {}).get("com.apple.developer.healthkit") is not True:
+        fail("Distribution profile lacks HealthKit entitlement")
+    if "ProvisionedDevices" in profile or "ProvisionsAllDevices" in profile:
+        fail("Distribution profile allows non-App Store distribution")
+    certificates = profile.get("DeveloperCertificates")
+    if not isinstance(certificates, list) or len(certificates) != 1 or \
+            hashlib.sha1(certificates[0]).hexdigest().upper() != certificate_sha1:
+        fail("Embedded profile certificate differs from approved CI identity")
     subprocess.run(["codesign", "--verify", "--strict", "--deep", str(app)], check=True)
+    verify_signing_leaf(app, certificate_sha1)
     print(f"PASS: signed artifact {BUNDLE_ID} {version} ({build}), team {team}")
 
 
@@ -180,12 +201,13 @@ def main() -> None:
     art.add_argument("--app", type=Path, required=True)
     art.add_argument("--tag", required=True)
     art.add_argument("--team", required=True)
+    art.add_argument("--certificate-sha1", required=True)
     args = parser.parse_args()
     try:
         if args.command == "source":
             source(args.tag, args.sha)
         else:
-            artifact(args.app, args.tag, args.team)
+            artifact(args.app, args.tag, args.team, args.certificate_sha1)
     except (ValueError, KeyError, subprocess.CalledProcessError, OSError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         sys.exit(1)

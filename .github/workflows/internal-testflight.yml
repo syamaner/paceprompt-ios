@@ -72,47 +72,83 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_API_KEY_P8_B64: ${{ secrets.ASC_API_KEY_P8_B64 }}
+          DIST_P12_B64: ${{ secrets.DIST_P12_B64 }}
+          DIST_P12_PASSWORD: ${{ secrets.DIST_P12_PASSWORD }}
+          DIST_PROFILE_B64: ${{ secrets.DIST_PROFILE_B64 }}
         run: |
           set -euo pipefail
           set +x
           umask 077
           test -n "$ASC_KEY_ID" && test -n "$ASC_ISSUER_ID" && test -n "$ASC_API_KEY_P8_B64"
+          test -n "$DIST_P12_B64" && test -n "$DIST_P12_PASSWORD" && test -n "$DIST_PROFILE_B64"
           [[ "$ASC_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]
           [[ "$ASC_KEY_ID" =~ ^[A-Z0-9]{10}$ ]]
           work="$RUNNER_TEMP/testflight"
           key_dir="$HOME/.appstoreconnect/private_keys"
-          mkdir -p "$work" "$key_dir"
+          profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$work" "$key_dir" "$profile_dir"
           key_path="$key_dir/AuthKey_${ASC_KEY_ID}.p8"
-          trap 'rm -f "$key_path"; rm -rf "$work"' EXIT
+          keychain="$work/distribution.keychain-db"
+          profile_path=''
+          cleanup() {
+            if [ -n "$profile_path" ]; then rm -f "$profile_path"; fi
+            security delete-keychain "$keychain" >/dev/null 2>&1 || true
+            rm -f "$key_path"
+            rm -rf "$work"
+          }
+          trap cleanup EXIT
           printf '%s' "$ASC_API_KEY_P8_B64" | base64 -D > "$key_path"
           unset ASC_API_KEY_P8_B64
           export ASC_KEY_PATH="$key_path"
-          auth_args=(-authenticationKeyPath "$key_path" -authenticationKeyID "$ASC_KEY_ID"
-                     -authenticationKeyIssuerID "$ASC_ISSUER_ID")
           version="${RELEASE_TAG#testflight/}"
           build="${version##*-b}"
           version="${version%-b*}"
           python3 -B scripts/testflight_api.py preflight --version "$version" --build "$build"
+          printf '%s' "$DIST_P12_B64" | base64 -D > "$work/distribution.p12"
+          printf '%s' "$DIST_PROFILE_B64" | base64 -D > "$work/distribution.mobileprovision"
+          unset DIST_P12_B64 DIST_PROFILE_B64
+          keychain_password="$(openssl rand -hex 32)"
+          security create-keychain -p "$keychain_password" "$keychain" >/dev/null
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$work/distribution.p12" -k "$keychain" -f pkcs12 \
+            -P "$DIST_P12_PASSWORD" -T /usr/bin/codesign >/dev/null
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$keychain_password" "$keychain" >/dev/null
+          openssl pkcs12 -in "$work/distribution.p12" -clcerts -nokeys \
+            -passin env:DIST_P12_PASSWORD -out "$work/distribution.pem" 2>/dev/null
+          unset DIST_P12_PASSWORD keychain_password
+          openssl x509 -in "$work/distribution.pem" -checkend 0 -noout >/dev/null
+          openssl x509 -in "$work/distribution.pem" -outform DER -out "$work/distribution.der"
+          security list-keychains -d user -s "$keychain"
+          python3 -B scripts/testflight_signing.py \
+            --profile "$work/distribution.mobileprovision" \
+            --certificate "$work/distribution.der" --keychain "$keychain" \
+            --team "$ASC_TEAM_ID" --output "$work/signing.json"
+          profile_uuid="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["uuid"])' "$work/signing.json")"
+          certificate_sha1="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["certificate_sha1"])' "$work/signing.json")"
+          profile_path="$profile_dir/$profile_uuid.mobileprovision"
+          cp "$work/distribution.mobileprovision" "$profile_path"
           xcodebuild -quiet -project PacePrompt.xcodeproj -scheme PacePrompt \
             -configuration Release -destination 'generic/platform=iOS' \
             -archivePath "$work/PromptPace.xcarchive" \
-            -allowProvisioningUpdates \
-            "${auth_args[@]}" \
-            DEVELOPMENT_TEAM="$ASC_TEAM_ID" CODE_SIGN_STYLE=Automatic archive
-          python3 - "$work/export-options.plist" "$ASC_TEAM_ID" <<'PY'
+            DEVELOPMENT_TEAM="$ASC_TEAM_ID" CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY='Apple Distribution' \
+            PROVISIONING_PROFILE_SPECIFIER="$profile_uuid" archive
+          python3 - "$work/export-options.plist" "$ASC_TEAM_ID" "$profile_uuid" "$certificate_sha1" <<'PY'
           import plistlib, sys
           with open(sys.argv[1], 'wb') as output:
               plistlib.dump({
                   'method': 'app-store-connect', 'destination': 'export',
-                  'signingStyle': 'automatic', 'teamID': sys.argv[2],
+                  'signingStyle': 'manual', 'teamID': sys.argv[2],
+                  'provisioningProfiles': {'com.otherweather.PromptPace': sys.argv[3]},
+                  'signingCertificate': sys.argv[4],
                   'manageAppVersionAndBuildNumber': False,
                   'testFlightInternalTestingOnly': True,
               }, output)
           PY
           xcodebuild -quiet -exportArchive -archivePath "$work/PromptPace.xcarchive" \
-            -exportPath "$work/export" -exportOptionsPlist "$work/export-options.plist" \
-            -allowProvisioningUpdates \
-            "${auth_args[@]}"
+            -exportPath "$work/export" -exportOptionsPlist "$work/export-options.plist"
           ipa="$work/export/PacePrompt.ipa"
           test -f "$ipa"
           mkdir "$work/payload"
@@ -120,7 +156,8 @@ jobs:
           app="$work/payload/Payload/PacePrompt.app"
           test -d "$app"
           python3 -B scripts/testflight_guard.py artifact --app "$app" \
-            --tag "$RELEASE_TAG" --team "$ASC_TEAM_ID"
+            --tag "$RELEASE_TAG" --team "$ASC_TEAM_ID" \
+            --certificate-sha1 "$certificate_sha1"
           digest="$(shasum -a 256 "$ipa" | awk '{print $1}')"
           printf 'Source SHA: %s\nTag: %s\nBundle: com.otherweather.PromptPace\nVersion/build: %s (%s)\nIPA SHA-256: %s\n' \
             "$RELEASE_SHA" "$RELEASE_TAG" "$version" "$build" "$digest" >> "$GITHUB_STEP_SUMMARY"

@@ -27,8 +27,10 @@ GitHub Actions.
   settings update.
 - The environment variable `EXPORT_COMPLIANCE_TAG` must equal the exact tag
   after the operator has made that build's export-compliance judgement. It is
-  empty until then. For 1.0 (2), the operator judged the app's encryption exempt
-  on 17 September 2026. Both production configurations now set
+  empty until then. For 1.0 (2), the operator judged the app's encryption
+  exempt on 17 September 2026. Reconfirm that decision for the replacement
+  1.0 (3) before setting `EXPORT_COMPLIANCE_TAG` to `testflight/1.0-b3`.
+  Both production configurations set
   `ITSAppUsesNonExemptEncryption=NO`; the release checks the signed app's
   `Info.plist` contains Boolean false. This records the operator's decision,
   not an independent legal determination.
@@ -36,17 +38,17 @@ GitHub Actions.
 Before creating the tag, retain the complete local gate and independent review
 for the final executable/build-input tree; merge the reviewed PR; wait for fast
 `main` CI to pass. Do not tag an unreviewed change or reuse a version/build.
-The first candidate is `testflight/1.0-b2`; 1.0 (1) already exists in App Store
-Connect.
+Version 1.0 (1) already exists in App Store Connect. The immutable
+`testflight/1.0-b2` run failed at cloud-signing export before upload. Read-only
+Apple inspection confirmed no 1.0 (2) build. Do not rerun or move that tag.
+The authorised replacement candidate is `testflight/1.0-b3` after a fresh
+gate, independent review, merge and environment approval.
 
 ## Apple access
 
-Xcode's command-line automatic signing requires a key issuer ID; Apple's
-individual keys have none and cannot use provisioning API endpoints. This
-workflow therefore requires the operator's separate security approval for a
-dedicated App Manager team API key. Apple lists this role for uploading builds
-and assigning a group to a build. Apple applies a team
-key to **all apps** at that role, so it cannot be limited to PacePrompt alone.
+The workflow uses the approved App Manager team API key for App Store Connect
+preflight, upload and internal-group assignment. Apple applies a team key to
+**all apps** at that role, so it cannot be limited to PacePrompt alone.
 Store `ASC_KEY_ID`, `ASC_ISSUER_ID` and the base64-encoded `.p8` as
 **environment secrets**; the latter is named `ASC_API_KEY_P8_B64`. Store
 `ASC_TEAM_ID`, `ASC_INTERNAL_GROUP_ID` for the existing sole-tester group, and
@@ -57,17 +59,35 @@ an Actions log. The workflow
 writes it to a restricted temporary file and removes it on exit. It creates
 no IPA, archive, signing or credential artifact.
 
-The workflow attempts Apple-managed automatic signing. If Xcode requires a
-distribution certificate/profile or a role broader than approved, stop and agree
-that arrangement with the operator before provisioning it. Do not silently
-switch signing methods.
+The first run proved Apple-managed cloud signing unavailable to this key:
+`exportArchive Cloud signing permission error` and no distribution profile.
+The operator approved a dedicated CI Apple Distribution certificate and an
+App Store Connect provisioning profile for `com.otherweather.PromptPace`.
+Create the certificate on the operator's Mac from a local Keychain Access CSR,
+install it into Keychain Access, and export its certificate and private key as
+a password-protected `.p12`. Create an iOS **App Store Connect** profile for
+the explicit app ID with that certificate and HealthKit capability. The
+Account Holder or Admin role is required for these Apple assets.
+
+Store `DIST_P12_B64` (single-line base64 of the `.p12`),
+`DIST_P12_PASSWORD`, and `DIST_PROFILE_B64` (single-line base64 of the
+`.mobileprovision`) only as `internal-testflight` **environment secrets**.
+Never paste private key or password material into chat, a PR, Git, or logs.
+The job decodes them under `RUNNER_TEMP`, imports the identity into a temporary
+keychain and installs the profile only after environment approval. Before the
+archive it checks the imported Apple Distribution certificate against the
+profile's sole certificate, exact team, app ID, iOS platform, HealthKit,
+`get-task-allow=false`, expiry and lack of ad hoc/enterprise device lists.
+It then archives and exports with manual signing and checks that the exported
+app's actual signing certificate matches the approved CI identity. The keychain, profile and
+temporary files are removed at job exit. If any match fails, there is no upload.
 
 ## Workflow and evidence
 
 The unprivileged job checks the tag and source without Apple secrets. After
 environment approval, the macOS job rechecks them, pins Xcode 26.6
 (`17F113`), checks the export-compliance tag and Apple account/group/build
-identity, and archives Release. Export uses `app-store-connect`,
+identity, imports and verifies the approved manual signing assets, and archives Release. Export uses `app-store-connect`,
 `manageAppVersionAndBuildNumber=false` and
 `testFlightInternalTestingOnly=true`. Before the single upload attempt, the
 workflow checks the IPA's version/build, bundle ID, purpose strings, privacy
