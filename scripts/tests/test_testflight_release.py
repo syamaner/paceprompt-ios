@@ -2,6 +2,8 @@
 
 import importlib.util
 import base64
+import datetime as dt
+import hashlib
 import json
 import os
 import tempfile
@@ -22,44 +24,99 @@ def module(name: str):
 
 guard = module("testflight_guard")
 api = module("testflight_api")
+signing = module("testflight_signing")
 PROJECT = (ROOT / "PacePrompt.xcodeproj/project.pbxproj").read_text()
 
 
 class ReleaseGuardTests(unittest.TestCase):
+    def test_exported_signer_must_match_approved_ci_identity(self):
+        approved = b"synthetic approved certificate"
+        mismatched = b"different team-certificate leaf"
+        fingerprint = hashlib.sha1(approved).hexdigest().upper()
+        with tempfile.TemporaryDirectory() as temporary:
+            app = Path(temporary) / "PacePrompt.app"
+            app.mkdir()
+
+            def extract(command, **_kwargs):
+                Path(command[3] + "0").write_bytes(mismatched)
+
+            with patch.object(guard.subprocess, "run", side_effect=extract) as invoked:
+                with self.assertRaisesRegex(ValueError, "Signed app certificate differs"):
+                    guard.verify_signing_leaf(app, fingerprint)
+                self.assertEqual(invoked.call_args.args[0][0:3],
+                                 ["codesign", "-d", "--extract-certificates"])
+
+    def test_manual_signing_profile_accepts_only_matching_app_store_identity(self):
+        team = "ABCDEFGHIJ"
+        certificate = b"synthetic DER certificate"
+        fingerprint = hashlib.sha1(certificate).hexdigest().upper()
+        identities = f'  1) {fingerprint} "Apple Distribution: CI ({team})"'
+        profile = {
+            "TeamIdentifier": [team], "ApplicationIdentifierPrefix": [team],
+            "Platform": ["iOS"], "UUID": "12345678-1234-1234-1234-123456789abc",
+            "Name": "PacePrompt CI App Store",
+            "ExpirationDate": dt.datetime(2030, 1, 1),
+            "DeveloperCertificates": [certificate],
+            "Entitlements": {
+                "application-identifier": f"{team}.com.otherweather.PromptPace",
+                "com.apple.developer.team-identifier": team,
+                "com.apple.developer.healthkit": True,
+                "get-task-allow": False,
+            },
+        }
+        now = dt.datetime(2026, 9, 17, tzinfo=dt.timezone.utc)
+        self.assertEqual(signing.validate(profile, certificate, identities, team, now)["certificate_sha1"], fingerprint)
+        invalid = [
+            {**profile, "TeamIdentifier": ["WRONGTEAM0"]},
+            {**profile, "Platform": ["macOS"]},
+            {**profile, "ProvisionedDevices": ["device"]},
+            {**profile, "ProvisionsAllDevices": True},
+            {**profile, "ExpirationDate": dt.datetime(2020, 1, 1)},
+            {**profile, "DeveloperCertificates": [b"different"]},
+            {**profile, "Entitlements": {**profile["Entitlements"], "application-identifier": "other.app"}},
+            {**profile, "Entitlements": {**profile["Entitlements"], "com.apple.developer.healthkit": False}},
+            {**profile, "Entitlements": {**profile["Entitlements"], "get-task-allow": True}},
+        ]
+        for changed in invalid:
+            with self.subTest(changed=changed), self.assertRaises(ValueError):
+                signing.validate(changed, certificate, identities, team, now)
+        with self.assertRaisesRegex(ValueError, "identity"):
+            signing.validate(profile, certificate, "0 valid identities found", team, now)
+
     def test_current_source_matches_fresh_tag(self):
-        self.assertEqual(guard.check_tag("testflight/1.0-b2", PROJECT), ("1.0", "2"))
+        self.assertEqual(guard.check_tag("testflight/1.0-b3", PROJECT), ("1.0", "3"))
 
     def test_rejects_wrong_tag_or_build(self):
-        for tag in ("testflight/1.0-b1", "testflight/1.1-b2", "testflight/1.0-b02",
-                    "testflight/1.0-b0", "testflight/1.0-b2/extra", "release/1.0-b2"):
+        for tag in ("testflight/1.0-b2", "testflight/1.1-b3", "testflight/1.0-b03",
+                    "testflight/1.0-b0", "testflight/1.0-b3/extra", "release/1.0-b3"):
             with self.subTest(tag=tag), self.assertRaises(ValueError):
                 guard.check_tag(tag, PROJECT)
 
     def test_rejects_release_debug_mismatch_and_bundle_change(self):
         with self.assertRaises(ValueError):
-            guard.check_tag("testflight/1.0-b2", PROJECT.replace("CURRENT_PROJECT_VERSION = 2;", "CURRENT_PROJECT_VERSION = 3;", 1))
+            guard.check_tag("testflight/1.0-b3", PROJECT.replace("CURRENT_PROJECT_VERSION = 3;", "CURRENT_PROJECT_VERSION = 2;", 1))
         with self.assertRaises(ValueError):
-            guard.check_tag("testflight/1.0-b2", PROJECT.replace("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;", "PRODUCT_BUNDLE_IDENTIFIER = other.app;", 1))
+            guard.check_tag("testflight/1.0-b3", PROJECT.replace("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;", "PRODUCT_BUNDLE_IDENTIFIER = other.app;", 1))
 
     def test_rejects_missing_purpose_and_changed_version(self):
         info = {
             "CFBundleIdentifier": guard.BUNDLE_ID,
             "CFBundleShortVersionString": "1.0",
-            "CFBundleVersion": "2",
+            "CFBundleVersion": "3",
             "ITSAppUsesNonExemptEncryption": False,
             "NSBluetoothAlwaysUsageDescription": "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.",
             "NSHealthShareUsageDescription": "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.",
             "NSHealthUpdateUsageDescription": "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.",
         }
-        guard.metadata(info, "1.0", "2")
+        guard.metadata(info, "1.0", "3")
         for invalid in ("NO", 0, True):
             with self.subTest(encryption=invalid), self.assertRaises(ValueError):
-                guard.metadata({**info, "ITSAppUsesNonExemptEncryption": invalid}, "1.0", "2")
+                guard.metadata({**info, "ITSAppUsesNonExemptEncryption": invalid}, "1.0", "3")
         for key in info:
             changed = dict(info)
             del changed[key]
             with self.subTest(key=key), self.assertRaises(ValueError):
-                guard.metadata(changed, "1.0", "2")
+                guard.metadata(changed, "1.0", "3")
 
     def test_der_signature_conversion(self):
         r = b"\x01" * 32
@@ -85,7 +142,7 @@ class ReleaseGuardTests(unittest.TestCase):
         with patch.object(api, "app_and_group", return_value=("app-1", "group-1")), \
              patch.object(api, "matching_builds", return_value=[{"id": "existing"}]):
             with self.assertRaisesRegex(ValueError, "already exists"):
-                api.preflight("1.0", "2")
+                api.preflight("1.0", "3")
 
     def test_internal_group_rejects_changed_tester(self):
         answers = [
@@ -105,7 +162,7 @@ class ReleaseGuardTests(unittest.TestCase):
              patch.object(api, "matching_builds", return_value=[build]), \
              patch.object(api, "request", return_value={"data": {"attributes": {"internalBuildState": "MISSING_EXPORT_COMPLIANCE"}}}) as request:
             with self.assertRaisesRegex(ValueError, "compliance"):
-                api.processed("1.0", "2")
+                api.processed("1.0", "3")
             self.assertEqual(request.call_count, 1)
 
     def test_processed_build_assigns_only_selected_internal_group(self):
@@ -118,7 +175,7 @@ class ReleaseGuardTests(unittest.TestCase):
         with patch.object(api, "app_and_group", return_value=("app-1", "group-1")), \
              patch.object(api, "matching_builds", return_value=[build]), \
              patch.object(api, "request", side_effect=responses) as request:
-            api.processed("1.0", "2")
+            api.processed("1.0", "3")
             self.assertEqual(request.call_args_list[1].args[1], "POST")
             self.assertEqual(request.call_args_list[1].args[2],
                              {"data": [{"type": "betaGroups", "id": "group-1"}]})
@@ -127,11 +184,14 @@ class ReleaseGuardTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/internal-testflight.yml").read_text()
         source_job = workflow.split("  release:", 1)[0]
         self.assertNotIn("secrets.ASC_", source_job)
+        self.assertNotIn("secrets.DIST_", source_job)
         self.assertNotIn("altool", source_job)
         self.assertNotIn("upload-artifact", workflow)
         self.assertIn("testFlightInternalTestingOnly': True", workflow)
         self.assertIn("manageAppVersionAndBuildNumber': False", workflow)
         self.assertIn('test "$GITHUB_RUN_ATTEMPT" = 1', workflow)
+        self.assertIn("'signingStyle': 'manual'", workflow)
+        self.assertNotIn("-allowProvisioningUpdates", workflow)
 
     def test_source_rejects_missing_exact_head_review(self):
         sha = "a" * 40
@@ -145,7 +205,7 @@ class ReleaseGuardTests(unittest.TestCase):
             if args[0] == "rev-parse":
                 return sha
             if args[0] == "ls-remote":
-                return f"{sha}\trefs/tags/testflight/1.0-b2"
+                return f"{sha}\trefs/tags/testflight/1.0-b3"
             if args[0] == "fetch":
                 return ""
             if args[0] == "rev-list" and "--first-parent" in args:
@@ -159,7 +219,7 @@ class ReleaseGuardTests(unittest.TestCase):
                 "base": {"ref": "main"}, "head": {"sha": "c" * 40}}
         with patch.object(guard, "git", side_effect=fake_git), patch.object(guard, "api", return_value=[pull]):
             with self.assertRaisesRegex(ValueError, "attestation"):
-                guard.source("testflight/1.0-b2", sha)
+                guard.source("testflight/1.0-b3", sha)
 
 
 if __name__ == "__main__":
