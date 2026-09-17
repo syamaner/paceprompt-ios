@@ -34,6 +34,9 @@ jobs:
       - name: Verify local-validation entry point
         run: bash -n scripts/validate_local.sh
 
+      - name: Check internal TestFlight release guards without credentials
+        run: python3 -B -m unittest discover -s scripts/tests -v
+
       - name: Verify production import resources
         run: python3 -B scripts/verify_import_resources.py
 

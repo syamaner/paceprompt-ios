@@ -1,0 +1,132 @@
+name: Internal TestFlight
+
+on:
+  push:
+    tags:
+      - 'testflight/*'
+
+concurrency:
+  group: internal-testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  source:
+    name: Verify protected release source
+    if: github.event.created == true && github.event.deleted == false && github.event.forced == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify tag, main merge commit, source version and exact-SHA CI
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          python3 -B scripts/testflight_guard.py source --tag "$RELEASE_TAG" --sha "$RELEASE_SHA"
+
+  release:
+    name: Sign and upload internal-only build
+    needs: source
+    runs-on: macos-26
+    timeout-minutes: 120
+    environment: internal-testflight
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_SHA: ${{ github.sha }}
+      ASC_TEAM_ID: ${{ vars.ASC_TEAM_ID }}
+      ASC_INTERNAL_GROUP_ID: ${{ vars.ASC_INTERNAL_GROUP_ID }}
+      ASC_INTERNAL_TESTER_ID: ${{ vars.ASC_INTERNAL_TESTER_ID }}
+      EXPORT_COMPLIANCE_TAG: ${{ vars.EXPORT_COMPLIANCE_TAG }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify approval, source and pinned toolchain
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$EXPORT_COMPLIANCE_TAG" = "$RELEASE_TAG"
+          test "$(xcodebuild -version | sed -n '1p')" = 'Xcode 26.6'
+          test "$(xcodebuild -version | sed -n '2p')" = 'Build version 17F113'
+          xcodebuild -help 2>&1 | grep -F 'testFlightInternalTestingOnly' >/dev/null
+          python3 -B scripts/testflight_guard.py source --tag "$RELEASE_TAG" --sha "$RELEASE_SHA"
+          python3 -B scripts/verify_release_configuration.py
+      - name: Archive, verify, upload once and confirm sole-tester availability
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8_B64: ${{ secrets.ASC_API_KEY_P8_B64 }}
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+          test -n "$ASC_KEY_ID" && test -n "$ASC_ISSUER_ID" && test -n "$ASC_API_KEY_P8_B64"
+          [[ "$ASC_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]
+          [[ "$ASC_KEY_ID" =~ ^[A-Z0-9]{10}$ ]]
+          work="$RUNNER_TEMP/testflight"
+          key_dir="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$work" "$key_dir"
+          key_path="$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+          trap 'rm -f "$key_path"; rm -rf "$work"' EXIT
+          printf '%s' "$ASC_API_KEY_P8_B64" | base64 -D > "$key_path"
+          unset ASC_API_KEY_P8_B64
+          export ASC_KEY_PATH="$key_path"
+          auth_args=(-authenticationKeyPath "$key_path" -authenticationKeyID "$ASC_KEY_ID"
+                     -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          version="${RELEASE_TAG#testflight/}"
+          build="${version##*-b}"
+          version="${version%-b*}"
+          python3 -B scripts/testflight_api.py preflight --version "$version" --build "$build"
+          xcodebuild -quiet -project PacePrompt.xcodeproj -scheme PacePrompt \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$work/PromptPace.xcarchive" \
+            -allowProvisioningUpdates \
+            "${auth_args[@]}" \
+            DEVELOPMENT_TEAM="$ASC_TEAM_ID" CODE_SIGN_STYLE=Automatic archive
+          python3 - "$work/export-options.plist" "$ASC_TEAM_ID" <<'PY'
+          import plistlib, sys
+          with open(sys.argv[1], 'wb') as output:
+              plistlib.dump({
+                  'method': 'app-store-connect', 'destination': 'export',
+                  'signingStyle': 'automatic', 'teamID': sys.argv[2],
+                  'manageAppVersionAndBuildNumber': False,
+                  'testFlightInternalTestingOnly': True,
+              }, output)
+          PY
+          xcodebuild -quiet -exportArchive -archivePath "$work/PromptPace.xcarchive" \
+            -exportPath "$work/export" -exportOptionsPlist "$work/export-options.plist" \
+            -allowProvisioningUpdates \
+            "${auth_args[@]}"
+          ipa="$work/export/PacePrompt.ipa"
+          test -f "$ipa"
+          mkdir "$work/payload"
+          ditto -x -k "$ipa" "$work/payload"
+          app="$work/payload/Payload/PacePrompt.app"
+          test -d "$app"
+          python3 -B scripts/testflight_guard.py artifact --app "$app" \
+            --tag "$RELEASE_TAG" --team "$ASC_TEAM_ID"
+          digest="$(shasum -a 256 "$ipa" | awk '{print $1}')"
+          printf 'Source SHA: %s\nTag: %s\nBundle: com.otherweather.PromptPace\nVersion/build: %s (%s)\nIPA SHA-256: %s\n' \
+            "$RELEASE_SHA" "$RELEASE_TAG" "$version" "$build" "$digest" >> "$GITHUB_STEP_SUMMARY"
+          # One upload attempt. A failure is ambiguous until App Store Connect is inspected.
+          xcrun altool --upload-app -f "$ipa" -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+          printf 'Upload command: accepted; awaiting Apple processing.\n' >> "$GITHUB_STEP_SUMMARY"
+          python3 -B scripts/testflight_api.py processed --version "$version" --build "$build"
+          printf 'Apple processing: valid. Existing internal group: assigned and observable.\n' >> "$GITHUB_STEP_SUMMARY"
