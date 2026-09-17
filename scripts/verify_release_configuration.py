@@ -57,6 +57,7 @@ def verify() -> None:
     assert entitlements == {"com.apple.developer.healthkit": True}
     assert project.count("CODE_SIGN_ENTITLEMENTS = PacePrompt/PacePrompt.entitlements;") == 2
     assert project.count("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;") == 2
+    assert project.count("INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;") == 2
     assert project.count("TARGETED_DEVICE_FAMILY = 1;") >= 2
     health_share_purpose = (
         "PacePrompt does not read Apple Health data. It only asks to save a completed "

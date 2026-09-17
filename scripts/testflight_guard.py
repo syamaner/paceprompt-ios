@@ -122,12 +122,16 @@ def metadata(info: dict, version: str, build: str) -> None:
         "CFBundleIdentifier": BUNDLE_ID,
         "CFBundleShortVersionString": version,
         "CFBundleVersion": build,
+        "ITSAppUsesNonExemptEncryption": False,
         "NSBluetoothAlwaysUsageDescription": "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.",
         "NSHealthShareUsageDescription": "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.",
         "NSHealthUpdateUsageDescription": "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.",
     }
     for key, value in expected.items():
-        if info.get(key) != value:
+        if key == "ITSAppUsesNonExemptEncryption":
+            if info.get(key) is not False:
+                fail(f"Unexpected or missing {key}")
+        elif info.get(key) != value:
             fail(f"Unexpected or missing {key}")
 
 

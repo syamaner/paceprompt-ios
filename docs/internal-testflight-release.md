@@ -27,8 +27,11 @@ GitHub Actions.
   settings update.
 - The environment variable `EXPORT_COMPLIANCE_TAG` must equal the exact tag
   after the operator has made that build's export-compliance judgement. It is
-  empty until then. The workflow does not make the legal determination or add
-  an encryption declaration by inference.
+  empty until then. For 1.0 (2), the operator judged the app's encryption exempt
+  on 17 September 2026. Both production configurations now set
+  `ITSAppUsesNonExemptEncryption=NO`; the release checks the signed app's
+  `Info.plist` contains Boolean false. This records the operator's decision,
+  not an independent legal determination.
 
 Before creating the tag, retain the complete local gate and independent review
 for the final executable/build-input tree; merge the reviewed PR; wait for fast
@@ -41,7 +44,8 @@ Connect.
 Xcode's command-line automatic signing requires a key issuer ID; Apple's
 individual keys have none and cannot use provisioning API endpoints. This
 workflow therefore requires the operator's separate security approval for a
-dedicated team API key with the narrowest workable role. Apple applies a team
+dedicated App Manager team API key. Apple lists this role for uploading builds
+and assigning a group to a build. Apple applies a team
 key to **all apps** at that role, so it cannot be limited to PacePrompt alone.
 Store `ASC_KEY_ID`, `ASC_ISSUER_ID` and the base64-encoded `.p8` as
 **environment secrets**; the latter is named `ASC_API_KEY_P8_B64`. Store

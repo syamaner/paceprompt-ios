@@ -46,11 +46,15 @@ class ReleaseGuardTests(unittest.TestCase):
             "CFBundleIdentifier": guard.BUNDLE_ID,
             "CFBundleShortVersionString": "1.0",
             "CFBundleVersion": "2",
+            "ITSAppUsesNonExemptEncryption": False,
             "NSBluetoothAlwaysUsageDescription": "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.",
             "NSHealthShareUsageDescription": "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.",
             "NSHealthUpdateUsageDescription": "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.",
         }
         guard.metadata(info, "1.0", "2")
+        for invalid in ("NO", 0, True):
+            with self.subTest(encryption=invalid), self.assertRaises(ValueError):
+                guard.metadata({**info, "ITSAppUsesNonExemptEncryption": invalid}, "1.0", "2")
         for key in info:
             changed = dict(info)
             del changed[key]
