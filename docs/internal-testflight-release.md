@@ -47,8 +47,14 @@ preflight, then failed while preparing manual signing assets, before archive
 or upload. Read-only Apple inspection confirmed no 1.0 (3) build. Do not
 rerun or move either tag. A further candidate needs a fresh build number,
 reviewed merge, complete gate and environment approval.
-The operator authorised `testflight/1.0-b4` as the next internal-only
-candidate after the signing repair passes those gates.
+The authorised `testflight/1.0-b4` reached a signed Release archive and
+internal-only App Store export, then the artifact guard rejected its
+entitlements output as an invalid plist before the upload command. Read-only
+Apple inspection confirmed no 1.0 (4) build. Do not rerun or move that tag.
+A new candidate requires a new build number and the same review, gate, merge
+and per-release approval.
+The operator authorised `testflight/1.0-b5` as one fresh internal-only
+candidate after the signed-entitlements parser repair passes those gates.
 
 ## Apple access
 
@@ -87,7 +93,9 @@ profile's sole certificate, exact team, app ID, iOS platform, HealthKit,
 The profile's embedded certificate fingerprint is matched directly to the
 valid identity in the temporary keychain; no second PKCS#12 decoder is used.
 It then archives and exports with manual signing and checks that the exported
-app's actual signing certificate matches the approved CI identity. The keychain, profile and
+app's actual signing certificate matches the approved CI identity. The signed
+entitlements are requested from `codesign` as a property list and checked for
+HealthKit, team, app ID and `get-task-allow=false` before upload. The keychain, profile and
 temporary files are removed at job exit. If any match fails, there is no upload.
 
 ## Workflow and evidence

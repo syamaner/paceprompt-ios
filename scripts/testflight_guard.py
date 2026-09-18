@@ -147,6 +147,19 @@ def verify_signing_leaf(app: Path, certificate_sha1: str) -> None:
             fail("Signed app certificate differs from approved CI identity")
 
 
+def signed_entitlements(app: Path) -> dict:
+    # macOS 26 emits a human-readable [Dict] for "-"; ":-" emits a plist.
+    raw = subprocess.check_output(["codesign", "-d", "--entitlements", ":-", str(app)],
+                                  stderr=subprocess.DEVNULL)
+    try:
+        result = plistlib.loads(raw)
+    except plistlib.InvalidFileException:
+        fail("Signed entitlements are not a property list")
+    if not isinstance(result, dict):
+        fail("Signed entitlements are not a dictionary")
+    return result
+
+
 def artifact(app: Path, tag: str, team: str, certificate_sha1: str) -> None:
     version, build = check_tag(tag, PROJECT.read_text())
     metadata(plist(app / "Info.plist"), version, build)
@@ -158,8 +171,7 @@ def artifact(app: Path, tag: str, team: str, certificate_sha1: str) -> None:
         fail("Distribution signature identity or team differs")
     if "Authority=Apple Distribution:" not in signing:
         fail("App is not Apple Distribution signed")
-    entitlements = subprocess.check_output(["codesign", "-d", "--entitlements", "-", str(app)], stderr=subprocess.DEVNULL)
-    signed = plistlib.loads(entitlements)
+    signed = signed_entitlements(app)
     if signed.get("com.apple.developer.healthkit") is not True:
         fail("Signed app lacks HealthKit entitlement")
     if signed.get("get-task-allow") is not False:

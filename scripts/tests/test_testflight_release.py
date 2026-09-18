@@ -1,4 +1,4 @@
-"""Synthetic release-policy checks; no signing, secrets or uploads."""
+"""Synthetic release-policy checks; only a temporary ad hoc signature on macOS."""
 
 import importlib.util
 import base64
@@ -6,6 +6,9 @@ import datetime as dt
 import hashlib
 import json
 import os
+import plistlib
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,6 +32,33 @@ PROJECT = (ROOT / "PacePrompt.xcodeproj/project.pbxproj").read_text()
 
 
 class ReleaseGuardTests(unittest.TestCase):
+    def test_signed_entitlements_reject_human_readable_codesign_output(self):
+        with patch.object(guard.subprocess, "check_output", return_value=b"[Dict]\n"):
+            with self.assertRaisesRegex(ValueError, "not a property list"):
+                guard.signed_entitlements(Path("Synthetic.app"))
+
+    @unittest.skipUnless(sys.platform == "darwin", "requires macOS codesign")
+    def test_signed_entitlements_are_parsed_as_plist_on_macos(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            app = Path(temporary) / "Synthetic.app"
+            executable = app / "Contents/MacOS/Synthetic"
+            executable.parent.mkdir(parents=True)
+            executable.write_bytes(Path("/bin/echo").read_bytes())
+            (app / "Contents/Info.plist").write_bytes(plistlib.dumps({
+                "CFBundleIdentifier": "test.paceprompt.synthetic",
+                "CFBundleExecutable": "Synthetic",
+                "CFBundlePackageType": "APPL",
+            }))
+            entitlements = Path(temporary) / "entitlements.plist"
+            entitlements.write_bytes(plistlib.dumps({
+                "com.apple.developer.healthkit": True, "get-task-allow": False,
+            }))
+            subprocess.run(["codesign", "-s", "-", "--force", "--entitlements",
+                            str(entitlements), str(app)], check=True, capture_output=True)
+            self.assertEqual(guard.signed_entitlements(app), {
+                "com.apple.developer.healthkit": True, "get-task-allow": False,
+            })
+
     def test_exported_signer_must_match_approved_ci_identity(self):
         approved = b"synthetic approved certificate"
         mismatched = b"different team-certificate leaf"
@@ -84,39 +114,39 @@ class ReleaseGuardTests(unittest.TestCase):
             signing.validate(profile, "0 valid identities found", team, now)
 
     def test_current_source_matches_fresh_tag(self):
-        self.assertEqual(guard.check_tag("testflight/1.0-b4", PROJECT), ("1.0", "4"))
+        self.assertEqual(guard.check_tag("testflight/1.0-b5", PROJECT), ("1.0", "5"))
 
     def test_rejects_wrong_tag_or_build(self):
-        for tag in ("testflight/1.0-b3", "testflight/1.1-b4", "testflight/1.0-b04",
-                    "testflight/1.0-b0", "testflight/1.0-b4/extra", "release/1.0-b4"):
+        for tag in ("testflight/1.0-b4", "testflight/1.1-b5", "testflight/1.0-b05",
+                    "testflight/1.0-b0", "testflight/1.0-b5/extra", "release/1.0-b5"):
             with self.subTest(tag=tag), self.assertRaises(ValueError):
                 guard.check_tag(tag, PROJECT)
 
     def test_rejects_release_debug_mismatch_and_bundle_change(self):
         with self.assertRaises(ValueError):
-            guard.check_tag("testflight/1.0-b4", PROJECT.replace("CURRENT_PROJECT_VERSION = 4;", "CURRENT_PROJECT_VERSION = 3;", 1))
+            guard.check_tag("testflight/1.0-b5", PROJECT.replace("CURRENT_PROJECT_VERSION = 5;", "CURRENT_PROJECT_VERSION = 4;", 1))
         with self.assertRaises(ValueError):
-            guard.check_tag("testflight/1.0-b4", PROJECT.replace("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;", "PRODUCT_BUNDLE_IDENTIFIER = other.app;", 1))
+            guard.check_tag("testflight/1.0-b5", PROJECT.replace("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;", "PRODUCT_BUNDLE_IDENTIFIER = other.app;", 1))
 
     def test_rejects_missing_purpose_and_changed_version(self):
         info = {
             "CFBundleIdentifier": guard.BUNDLE_ID,
             "CFBundleShortVersionString": "1.0",
-            "CFBundleVersion": "4",
+            "CFBundleVersion": "5",
             "ITSAppUsesNonExemptEncryption": False,
             "NSBluetoothAlwaysUsageDescription": "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.",
             "NSHealthShareUsageDescription": "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.",
             "NSHealthUpdateUsageDescription": "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.",
         }
-        guard.metadata(info, "1.0", "4")
+        guard.metadata(info, "1.0", "5")
         for invalid in ("NO", 0, True):
             with self.subTest(encryption=invalid), self.assertRaises(ValueError):
-                guard.metadata({**info, "ITSAppUsesNonExemptEncryption": invalid}, "1.0", "4")
+                guard.metadata({**info, "ITSAppUsesNonExemptEncryption": invalid}, "1.0", "5")
         for key in info:
             changed = dict(info)
             del changed[key]
             with self.subTest(key=key), self.assertRaises(ValueError):
-                guard.metadata(changed, "1.0", "4")
+                guard.metadata(changed, "1.0", "5")
 
     def test_der_signature_conversion(self):
         r = b"\x01" * 32
@@ -142,7 +172,7 @@ class ReleaseGuardTests(unittest.TestCase):
         with patch.object(api, "app_and_group", return_value=("app-1", "group-1")), \
              patch.object(api, "matching_builds", return_value=[{"id": "existing"}]):
             with self.assertRaisesRegex(ValueError, "already exists"):
-                api.preflight("1.0", "4")
+                api.preflight("1.0", "5")
 
     def test_internal_group_rejects_changed_tester(self):
         answers = [
@@ -162,7 +192,7 @@ class ReleaseGuardTests(unittest.TestCase):
              patch.object(api, "matching_builds", return_value=[build]), \
              patch.object(api, "request", return_value={"data": {"attributes": {"internalBuildState": "MISSING_EXPORT_COMPLIANCE"}}}) as request:
             with self.assertRaisesRegex(ValueError, "compliance"):
-                api.processed("1.0", "4")
+                api.processed("1.0", "5")
             self.assertEqual(request.call_count, 1)
 
     def test_processed_build_assigns_only_selected_internal_group(self):
@@ -175,7 +205,7 @@ class ReleaseGuardTests(unittest.TestCase):
         with patch.object(api, "app_and_group", return_value=("app-1", "group-1")), \
              patch.object(api, "matching_builds", return_value=[build]), \
              patch.object(api, "request", side_effect=responses) as request:
-            api.processed("1.0", "4")
+            api.processed("1.0", "5")
             self.assertEqual(request.call_args_list[1].args[1], "POST")
             self.assertEqual(request.call_args_list[1].args[2],
                              {"data": [{"type": "betaGroups", "id": "group-1"}]})
@@ -205,7 +235,7 @@ class ReleaseGuardTests(unittest.TestCase):
             if args[0] == "rev-parse":
                 return sha
             if args[0] == "ls-remote":
-                return f"{sha}\trefs/tags/testflight/1.0-b4"
+                return f"{sha}\trefs/tags/testflight/1.0-b5"
             if args[0] == "fetch":
                 return ""
             if args[0] == "rev-list" and "--first-parent" in args:
@@ -219,7 +249,7 @@ class ReleaseGuardTests(unittest.TestCase):
                 "base": {"ref": "main"}, "head": {"sha": "c" * 40}}
         with patch.object(guard, "git", side_effect=fake_git), patch.object(guard, "api", return_value=[pull]):
             with self.assertRaisesRegex(ValueError, "attestation"):
-                guard.source("testflight/1.0-b4", sha)
+                guard.source("testflight/1.0-b5", sha)
 
 
 if __name__ == "__main__":
