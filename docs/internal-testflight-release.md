@@ -26,10 +26,11 @@ GitHub Actions.
   sole required reviewer. Changing this policy needs a deliberate repository
   settings update.
 - The environment variable `EXPORT_COMPLIANCE_TAG` must equal the exact tag
-  after the operator has made that build's export-compliance judgement. It is
-  empty until then. For 1.0 (2), the operator judged the app's encryption
-  exempt on 17 September 2026. Reconfirm that decision for the replacement
-  1.0 (3) before setting `EXPORT_COMPLIANCE_TAG` to `testflight/1.0-b3`.
+  after the operator has made the export-compliance judgement. The operator
+  confirmed on 18 September 2026 that this app uses no non-exempt encryption
+  and that the judgement remains in force while its encryption behaviour is
+  unchanged. Set the variable for each authorised fresh tag; change the
+  declaration if the app's encryption behaviour changes.
   Both production configurations set
   `ITSAppUsesNonExemptEncryption=NO`; the release checks the signed app's
   `Info.plist` contains Boolean false. This records the operator's decision,
@@ -41,8 +42,13 @@ for the final executable/build-input tree; merge the reviewed PR; wait for fast
 Version 1.0 (1) already exists in App Store Connect. The immutable
 `testflight/1.0-b2` run failed at cloud-signing export before upload. Read-only
 Apple inspection confirmed no 1.0 (2) build. Do not rerun or move that tag.
-The authorised replacement candidate is `testflight/1.0-b3` after a fresh
-gate, independent review, merge and environment approval.
+The authorised replacement `testflight/1.0-b3` passed source and Apple
+preflight, then failed while preparing manual signing assets, before archive
+or upload. Read-only Apple inspection confirmed no 1.0 (3) build. Do not
+rerun or move either tag. A further candidate needs a fresh build number,
+reviewed merge, complete gate and environment approval.
+The operator authorised `testflight/1.0-b4` as the next internal-only
+candidate after the signing repair passes those gates.
 
 ## Apple access
 
@@ -78,6 +84,8 @@ keychain and installs the profile only after environment approval. Before the
 archive it checks the imported Apple Distribution certificate against the
 profile's sole certificate, exact team, app ID, iOS platform, HealthKit,
 `get-task-allow=false`, expiry and lack of ad hoc/enterprise device lists.
+The profile's embedded certificate fingerprint is matched directly to the
+valid identity in the temporary keychain; no second PKCS#12 decoder is used.
 It then archives and exports with manual signing and checks that the exported
 app's actual signing certificate matches the approved CI identity. The keychain, profile and
 temporary files are removed at job exit. If any match fails, there is no upload.
