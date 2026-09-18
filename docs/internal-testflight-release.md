@@ -61,9 +61,10 @@ guard and Apple's uploader reported no errors. Apple then reported one valid
 internal-only 1.0 (6) build in internal testing, and the existing sole-tester
 group's build list included it. The workflow nevertheless failed on a final
 build-to-groups read that returned 403 for the approved API key. Do not rerun
-or move the tag or upload the same build again. Repair the read-back path and
-retain the Apple and tester evidence separately; the tester must confirm
-TestFlight visibility.
+or move the tag or upload the same build again. PR #127 changed the read-back
+to the group's build list; the authorised tester subsequently confirmed that
+the TestFlight update works. A fresh release check must use a higher unused
+build number, its own reviewed merge and tag, and a new environment approval.
 
 ## Apple access
 
