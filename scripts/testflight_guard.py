@@ -140,9 +140,15 @@ def metadata(info: dict, version: str, build: str) -> None:
 def verify_signing_leaf(app: Path, certificate_sha1: str) -> None:
     with tempfile.TemporaryDirectory(prefix="paceprompt-signature-") as temporary:
         prefix = str(Path(temporary) / "certificate")
-        subprocess.run(["codesign", "-d", "--extract-certificates", prefix, str(app)],
-                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        leaf = Path(f"{prefix}0").read_bytes()
+        try:
+            subprocess.run(["codesign", "-d", f"--extract-certificates={prefix}", str(app)],
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            fail("Signed app certificate extraction failed")
+        leaf_path = Path(f"{prefix}0")
+        if not leaf_path.is_file():
+            fail("Signed app certificate was not extracted")
+        leaf = leaf_path.read_bytes()
         if hashlib.sha1(leaf).hexdigest().upper() != certificate_sha1:
             fail("Signed app certificate differs from approved CI identity")
 
