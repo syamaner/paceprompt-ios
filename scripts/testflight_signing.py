@@ -14,7 +14,7 @@ from pathlib import Path
 BUNDLE_ID = "com.otherweather.PromptPace"
 
 
-def validate(profile: dict, certificate: bytes, identities: str, team: str,
+def validate(profile: dict, identities: str, team: str,
              now: dt.datetime | None = None) -> dict[str, str]:
     if profile.get("TeamIdentifier") != [team]:
         raise ValueError("Distribution profile team differs")
@@ -40,9 +40,10 @@ def validate(profile: dict, certificate: bytes, identities: str, team: str,
     if expiration.replace(tzinfo=expiration.tzinfo or dt.timezone.utc) <= current:
         raise ValueError("Distribution profile has expired")
     certificates = profile.get("DeveloperCertificates")
-    if not isinstance(certificates, list) or len(certificates) != 1 or certificates[0] != certificate:
-        raise ValueError("Distribution profile certificate differs from imported identity")
-    fingerprint = hashlib.sha1(certificate).hexdigest().upper()
+    if not isinstance(certificates, list) or len(certificates) != 1 or \
+            not isinstance(certificates[0], bytes) or not certificates[0]:
+        raise ValueError("Distribution profile must contain one signing certificate")
+    fingerprint = hashlib.sha1(certificates[0]).hexdigest().upper()
     escaped_team = re.escape(team)
     identity = re.compile(rf"^\s*\d+\) {fingerprint} \"Apple Distribution: [^\"\n]+ \({escaped_team}\)\"$", re.MULTILINE)
     if len(identity.findall(identities)) != 1:
@@ -59,7 +60,6 @@ def validate(profile: dict, certificate: bytes, identities: str, team: str,
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", type=Path, required=True)
-    parser.add_argument("--certificate", type=Path, required=True)
     parser.add_argument("--keychain", type=Path, required=True)
     parser.add_argument("--team", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -69,11 +69,10 @@ def main() -> None:
             raise ValueError("Invalid team identifier")
         profile = plistlib.loads(subprocess.check_output(
             ["security", "cms", "-D", "-i", str(args.profile)], stderr=subprocess.DEVNULL))
-        certificate = args.certificate.read_bytes()
         identities = subprocess.check_output(
             ["security", "find-identity", "-v", "-p", "codesigning", str(args.keychain)],
             text=True, stderr=subprocess.DEVNULL)
-        result = validate(profile, certificate, identities, args.team)
+        result = validate(profile, identities, args.team)
         args.output.write_text(json.dumps(result))
         args.output.chmod(0o600)
         print("PASS: CI certificate and App Store profile match app, team and HealthKit capability")
