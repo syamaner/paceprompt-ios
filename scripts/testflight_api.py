@@ -157,9 +157,15 @@ def processed(version: str, build: str) -> None:
         "POST",
         {"data": [{"type": "betaGroups", "id": group_id}]},
     )
-    assigned = request(f"/builds/{selected['id']}/betaGroups?limit=200")
-    if group_id not in {item["id"] for item in assigned["data"]}:
-        raise ValueError("Group assignment was not observable")
+    for attempt in range(12):
+        assigned = request(f"/betaGroups/{group_id}/builds?limit=200")
+        if assigned.get("links", {}).get("next"):
+            raise ValueError("Group build lookup is paginated; cannot prove assignment")
+        if selected["id"] in {item["id"] for item in assigned["data"]}:
+            break
+        if attempt == 11:
+            raise ValueError("Group assignment was not observable after read-only polling")
+        time.sleep(10)
     print(f"PASS: processed build {selected['id']} is internal-only and assigned to sole-tester group {group_id}")
 
 

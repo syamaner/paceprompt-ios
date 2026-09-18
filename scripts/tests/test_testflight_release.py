@@ -214,7 +214,7 @@ class ReleaseGuardTests(unittest.TestCase):
         responses = [
             {"data": {"attributes": {"internalBuildState": "READY_FOR_BETA_TESTING"}}},
             {},
-            {"data": [{"id": "group-1"}]},
+            {"data": [{"id": "build-1"}]},
         ]
         with patch.object(api, "app_and_group", return_value=("app-1", "group-1")), \
              patch.object(api, "matching_builds", return_value=[build]), \
@@ -223,6 +223,50 @@ class ReleaseGuardTests(unittest.TestCase):
             self.assertEqual(request.call_args_list[1].args[1], "POST")
             self.assertEqual(request.call_args_list[1].args[2],
                              {"data": [{"type": "betaGroups", "id": "group-1"}]})
+            self.assertEqual(request.call_args_list[2].args[0],
+                             "/betaGroups/group-1/builds?limit=200")
+
+    def test_processed_build_requires_observable_unpaginated_group_assignment(self):
+        build = {"id": "build-1", "attributes": {"processingState": "VALID", "buildAudienceType": "INTERNAL_ONLY"}}
+        detail = {"data": {"attributes": {"internalBuildState": "IN_BETA_TESTING"}}}
+        for listing, expected_reads in (({"data": [{"id": "other-build"}]}, 12),
+                                        ({"data": [{"id": "build-1"}], "links": {"next": "another-page"}}, 1)):
+            def response(path, method="GET", body=None):
+                if path.endswith("/buildBetaDetail"):
+                    return detail
+                if method == "POST":
+                    return {}
+                if path == "/betaGroups/group-1/builds?limit=200":
+                    return listing
+                raise AssertionError(path)
+            with self.subTest(listing=listing), \
+                 patch.object(api, "app_and_group", return_value=("app-1", "group-1")), \
+                 patch.object(api, "matching_builds", return_value=[build]), \
+                 patch.object(api, "request", side_effect=response) as request, \
+                 patch.object(api.time, "sleep") as sleep:
+                with self.assertRaises(ValueError):
+                    api.processed("1.0", "6")
+                self.assertEqual(sum(call.args[1] == "POST" for call in request.call_args_list
+                                     if len(call.args) > 1), 1)
+                self.assertEqual(sum(call.args[0] == "/betaGroups/group-1/builds?limit=200"
+                                     for call in request.call_args_list), expected_reads)
+                self.assertEqual(sleep.call_count, expected_reads - 1)
+
+    def test_processed_build_waits_for_group_readback_without_reassigning(self):
+        build = {"id": "build-1", "attributes": {"processingState": "VALID", "buildAudienceType": "INTERNAL_ONLY"}}
+        responses = [
+            {"data": {"attributes": {"internalBuildState": "IN_BETA_TESTING"}}},
+            {},
+            {"data": []},
+            {"data": [{"id": "build-1"}]},
+        ]
+        with patch.object(api, "app_and_group", return_value=("app-1", "group-1")), \
+             patch.object(api, "matching_builds", return_value=[build]), \
+             patch.object(api, "request", side_effect=responses) as request, \
+             patch.object(api.time, "sleep") as sleep:
+            api.processed("1.0", "6")
+            self.assertEqual(request.call_count, 4)
+            self.assertEqual(sleep.call_count, 1)
 
     def test_dry_run_has_no_apple_secrets_or_upload(self):
         workflow = (ROOT / ".github/workflows/internal-testflight.yml").read_text()

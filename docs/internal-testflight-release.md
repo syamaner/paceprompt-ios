@@ -56,9 +56,14 @@ and per-release approval.
 The authorised `testflight/1.0-b5` passed the signed-entitlements checks,
 then failed while extracting the exported app's signing certificate before
 upload. Read-only Apple inspection confirmed no 1.0 (5) build. Do not rerun
-or move that tag. The operator authorised `testflight/1.0-b6` as one fresh
-internal-only candidate after the certificate-extraction repair passes a
-complete gate, independent review, merge and environment approval.
+or move that tag. The authorised `testflight/1.0-b6` passed the certificate
+guard and Apple's uploader reported no errors. Apple then reported one valid
+internal-only 1.0 (6) build in internal testing, and the existing sole-tester
+group's build list included it. The workflow nevertheless failed on a final
+build-to-groups read that returned 403 for the approved API key. Do not rerun
+or move the tag or upload the same build again. Repair the read-back path and
+retain the Apple and tester evidence separately; the tester must confirm
+TestFlight visibility.
 
 ## Apple access
 
@@ -120,7 +125,10 @@ retaining the IPA.
 
 After an accepted upload, the workflow waits for Apple processing and checks
 that the resulting build is `INTERNAL_ONLY` and ready for internal testing.
-It then adds only the existing sole-tester group and reads back the assignment.
+It then adds only the existing sole-tester group and reads back the assignment
+through that group's build list. This read-only check polls for up to two
+minutes and rejects a missing build or paginated result; it does not repeat the
+assignment request or upload.
 An upload failure or processing timeout is ambiguous: inspect App Store
 Connect before any manual retry or new tag. A missing-compliance state requires
 the operator's decision in App Store Connect; no API retry is automatic.
