@@ -53,8 +53,12 @@ entitlements output as an invalid plist before the upload command. Read-only
 Apple inspection confirmed no 1.0 (4) build. Do not rerun or move that tag.
 A new candidate requires a new build number and the same review, gate, merge
 and per-release approval.
-The operator authorised `testflight/1.0-b5` as one fresh internal-only
-candidate after the signed-entitlements parser repair passes those gates.
+The authorised `testflight/1.0-b5` passed the signed-entitlements checks,
+then failed while extracting the exported app's signing certificate before
+upload. Read-only Apple inspection confirmed no 1.0 (5) build. Do not rerun
+or move that tag. The operator authorised `testflight/1.0-b6` as one fresh
+internal-only candidate after the certificate-extraction repair passes a
+complete gate, independent review, merge and environment approval.
 
 ## Apple access
 
@@ -97,6 +101,9 @@ app's actual signing certificate matches the approved CI identity. The signed
 entitlements are requested from `codesign` as a property list and checked for
 HealthKit, team, app ID and `get-task-allow=false` before upload. The keychain, profile and
 temporary files are removed at job exit. If any match fails, there is no upload.
+The signing certificate is extracted with a single `--extract-certificates=<prefix>`
+argument; the guard fails if the leaf is missing or differs from the approved
+profile identity.
 
 ## Workflow and evidence
 
