@@ -1,5 +1,12 @@
 # Internal TestFlight release
 
+Operator procedures are split into the
+[TestFlight runbook index](testflight/README.md),
+[one-time setup](testflight/setup.md),
+[routine release](testflight/release.md), and
+[failure recovery](testflight/troubleshooting.md). This document retains the
+implementation contract, security boundaries and historical evidence.
+
 Issue #120 adds a separate tag-triggered release route for the existing
 `com.otherweather.PromptPace` app. It does not submit to App Review, create an
 external tester group, publish the app or run the complete simulator suite in
@@ -65,6 +72,12 @@ or move the tag or upload the same build again. PR #127 changed the read-back
 to the group's build list; the authorised tester subsequently confirmed that
 the TestFlight update works. A fresh release check must use a higher unused
 build number, its own reviewed merge and tag, and a new environment approval.
+The later protected `testflight/1.0-b7` follow-up targeted reviewed main merge
+`c66a70ae36eb206234de52599515be77ea6a9861` and completed green. The workflow
+verified the signed 1.0 (7) artifact, uploaded it once, observed valid
+internal-only Apple processing and read the assignment back from the unchanged
+sole-tester group. Tester UI visibility and installation remain separate
+claims.
 
 ## Apple access
 
