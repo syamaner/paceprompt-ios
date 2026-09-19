@@ -171,6 +171,22 @@ support are excluded. Codecov's project and patch reports are intentionally
 informational while the repository establishes a baseline; no coverage percentage
 is an acceptance threshold.
 
+## Internal TestFlight operations
+
+Internal TestFlight releases run only when an administrator pushes a protected
+`testflight/<marketing-version>-b<build>` tag. Ordinary pull requests and
+merges to `main` do not sign or upload an app. Every tagged release also
+requires approval of the protected `internal-testflight` GitHub environment.
+
+Use the [internal TestFlight runbooks](docs/testflight/README.md) for:
+
+- [Apple certificate, profile, API key and GitHub environment setup](docs/testflight/setup.md);
+- [version/build preparation, review, merge, tagging and release](docs/testflight/release.md); and
+- [failure classification and no-retry recovery](docs/testflight/troubleshooting.md).
+
+The [release implementation reference](docs/internal-testflight-release.md)
+documents the workflow's guards, credential boundaries and historical evidence.
+
 ## Physical FR30z evidence
 
 Physical characterisation is complete for the first product profile. Raw reports remain local because they contain a CoreBluetooth peripheral identifier. The checked-in sanitised records preserve capability, Request Control, target, telemetry and human-observation evidence without granting another physical session.
