@@ -320,10 +320,16 @@ enum WorkoutInterruption: Equatable {
   case telemetryStreamTimedOut
   case stationaryEvidenceExpired
   case connectionLost(String)
-  case foregroundLost(String)
+  case userCancelledAttempt
   case controlPermissionLost(String)
   case profileChanged
   case resumeGuardsFailed
+}
+
+enum WorkoutApplicationLifecycle: Equatable {
+  case active
+  case inactive
+  case background
 }
 
 enum WorkoutExecutionFailure: Equatable {
@@ -374,6 +380,7 @@ struct WorkoutExecutionState: Equatable {
   var completedActiveSeconds: TimeInterval = 0
   var motionPossible = false
   var isForegroundActive = true
+  var applicationLifecycle: WorkoutApplicationLifecycle = .active
   var nextProcedureSequence: UInt64 = 1
   var lastEventTime = MonotonicInstant(seconds: 0)
 }
@@ -413,7 +420,8 @@ enum WorkoutExecutionEvent: Equatable {
   case connectionLost(epoch: ConnectionEpoch, reason: String)
   case capabilityChanged(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
   case controlPermissionLost(epoch: ConnectionEpoch, reason: String)
-  case appBecameInactive(epoch: ConnectionEpoch, reason: String)
+  case applicationLifecycleChanged(epoch: ConnectionEpoch, WorkoutApplicationLifecycle)
+  case userCancelsAttempt(epoch: ConnectionEpoch)
 }
 
 enum WorkoutExecutionEffect: Equatable {
@@ -644,19 +652,25 @@ struct WorkoutExecutionReducer {
     case .tick:
       disposition = consumeTick(at: now, state: &state, effects: &effects)
     case .setSpeedOverride(_, let target):
+      guard state.isForegroundActive else { return rejected(original, .wrongState) }
       disposition = setOverride(
         speed: target, inclination: nil, at: now, state: &state, effects: &effects)
     case .setInclinationOverride(_, let target):
+      guard state.isForegroundActive else { return rejected(original, .wrongState) }
       disposition = setOverride(
         speed: nil, inclination: target, at: now, state: &state, effects: &effects)
     case .returnToPlan:
+      guard state.isForegroundActive else { return rejected(original, .wrongState) }
       disposition = returnToPlan(at: now, state: &state, effects: &effects)
     case .humanConfirmsStationary(_, let note):
+      guard state.isForegroundActive else { return rejected(original, .wrongState) }
       disposition = consumeHumanStationary(note: note, at: now, state: &state, effects: &effects)
     case .humanObservesMotion(_, let note):
+      guard state.isForegroundActive else { return rejected(original, .wrongState) }
       disposition = consumeHumanMotion(note: note, at: now, state: &state, effects: &effects)
 
     case .userEndsWorkout:
+      guard state.isForegroundActive else { return rejected(original, .wrongState) }
       guard case .idle = state.procedure else { return rejected(original, .procedureBusy) }
       guard let context = endContext(state, at: now) else {
         return rejected(original, .endNotAvailable)
@@ -707,9 +721,14 @@ struct WorkoutExecutionReducer {
       disposition = interrupt(.profileChanged, state: &state, effects: &effects)
     case .controlPermissionLost(_, let reason):
       disposition = interrupt(.controlPermissionLost(reason), state: &state, effects: &effects)
-    case .appBecameInactive(_, let reason):
-      state.isForegroundActive = false
-      disposition = interrupt(.foregroundLost(reason), state: &state, effects: &effects)
+    case .applicationLifecycleChanged(_, let lifecycle):
+      state.applicationLifecycle = lifecycle
+      state.isForegroundActive = lifecycle == .active
+      if lifecycle == .active {
+        disposition = reconcileForeground(at: now, state: &state, effects: &effects)
+      }
+    case .userCancelsAttempt:
+      disposition = interrupt(.userCancelledAttempt, state: &state, effects: &effects)
     }
 
     if case .rejected(let reason) = disposition {
@@ -778,7 +797,8 @@ extension WorkoutExecutionReducer {
       .localEndingSucceeded(let epoch), .localEndingFailed(let epoch, _),
       .localHistoryPersistenceFailed(let epoch, _, _),
       .connectionLost(let epoch, _), .capabilityChanged(let epoch, _),
-      .controlPermissionLost(let epoch, _), .appBecameInactive(let epoch, _):
+      .controlPermissionLost(let epoch, _), .applicationLifecycleChanged(let epoch, _),
+      .userCancelsAttempt(let epoch):
       epoch
     }
   }
@@ -972,14 +992,14 @@ extension WorkoutExecutionReducer {
   fileprivate func advanceTargetSequence(
     at now: MonotonicInstant,
     state: inout WorkoutExecutionState,
-    effects: inout [WorkoutExecutionEffect]
+    effects: inout [WorkoutExecutionEffect],
+    allowBackgroundTelemetryTransition: Bool = false
   ) -> WorkoutReductionDisposition {
     guard var sequence = state.targetSequence,
       let target = effectiveTarget(state),
       case .idle = state.procedure,
       case .ready(let epoch, let capability) = state.connection,
       case .held(epoch, _) = state.controlPermission,
-      state.isForegroundActive,
       let armed = state.armedWorkout,
       armed.capability == capability,
       armed.profile.matches(capability)
@@ -995,6 +1015,13 @@ extension WorkoutExecutionReducer {
     }
 
     if let intent {
+      let backgroundTransitionIsAllowed =
+        allowBackgroundTelemetryTransition
+        && sequence.purpose == .plannedTransition
+        && state.applicationLifecycle != .active
+      guard state.isForegroundActive || backgroundTransitionIsAllowed else {
+        return .accepted
+      }
       sequence.observationDeadline = nil
       state.targetSequence = sequence
       let record = makeProcedure(
@@ -1034,7 +1061,8 @@ extension WorkoutExecutionReducer {
     forceBothAxes: Bool,
     at now: MonotonicInstant,
     state: inout WorkoutExecutionState,
-    effects: inout [WorkoutExecutionEffect]
+    effects: inout [WorkoutExecutionEffect],
+    allowBackgroundTelemetryTransition: Bool = false
   ) -> WorkoutReductionDisposition {
     guard let segment = state.currentSegment else { return .rejected(.noCurrentSegment) }
     state.targetSequence = .init(
@@ -1049,7 +1077,12 @@ extension WorkoutExecutionReducer {
       observationDeadline: nil
     )
     state.execution = purpose == .resumeRestoration ? .restoringTargets : .applyingTargets(purpose)
-    return advanceTargetSequence(at: now, state: &state, effects: &effects)
+    return advanceTargetSequence(
+      at: now,
+      state: &state,
+      effects: &effects,
+      allowBackgroundTelemetryTransition: allowBackgroundTelemetryTransition
+    )
   }
 
   fileprivate func completeTargetObservation(
@@ -1207,15 +1240,54 @@ extension WorkoutExecutionReducer {
     case .checkingTreadmill(let checking):
       return resolveCheckingWithMoving(
         checking, sample: sample, at: now, state: &state, effects: &effects)
-    case .applyingTargets, .restoringTargets:
+    case .applyingTargets(let purpose):
+      if targetObservationIsSatisfied(sample, state: state) {
+        completeTargetObservation(sample, at: now, state: &state)
+      } else if case .idle = state.procedure, purpose == .plannedTransition {
+        return advanceTargetSequence(
+          at: now,
+          state: &state,
+          effects: &effects,
+          allowBackgroundTelemetryTransition: true
+        )
+      }
+    case .restoringTargets:
       if targetObservationIsSatisfied(sample, state: state) {
         completeTargetObservation(sample, at: now, state: &state)
       }
     case .runningSegment:
       if let target = effectiveTarget(state), sampleMatches(sample, target: target),
-        let segment = state.currentSegment
+        var segment = state.currentSegment
       {
+        if let previousEvidenceAt = segment.activeStartedAt {
+          let evidenceGap = now.seconds - previousEvidenceAt.seconds
+          if evidenceGap > FR30zExecutionProfile.telemetryFreshnessInterval {
+            let freshnessBoundary = previousEvidenceAt.advanced(
+              by: FR30zExecutionProfile.telemetryFreshnessInterval
+            )
+            freezeSegment(at: freshnessBoundary, state: &state)
+            state.execution = .checkingTreadmill(
+              .init(origin: .runningSegment, freshnessBoundary: freshnessBoundary)
+            )
+            return resolveCheckingWithMoving(
+              .init(origin: .runningSegment, freshnessBoundary: freshnessBoundary),
+              sample: sample,
+              at: now,
+              state: &state,
+              effects: &effects
+            )
+          }
+          segment.accumulatedActiveSeconds += max(0, evidenceGap)
+        }
+        segment.activeStartedAt = now
+        state.currentSegment = segment
         state.observedMachine = .targetReported(stepIndex: segment.stepIndex, sample: sample)
+        return progressRunningSegment(
+          at: now,
+          state: &state,
+          effects: &effects,
+          allowBackgroundTelemetryTransition: true
+        )
       }
     case .readyToEnd:
       state.execution = .awaitingPhysicalStopForCompletion
@@ -1249,7 +1321,12 @@ extension WorkoutExecutionReducer {
         return .accepted
       }
       if case .idle = state.procedure {
-        return advanceTargetSequence(at: now, state: &state, effects: &effects)
+        return advanceTargetSequence(
+          at: now,
+          state: &state,
+          effects: &effects,
+          allowBackgroundTelemetryTransition: true
+        )
       }
     case .restoringTargets:
       state.execution = .restoringTargets
@@ -1308,16 +1385,116 @@ extension WorkoutExecutionReducer {
       state.execution = .checkingTreadmill(checking)
       return .accepted
     }
-    if case .runningSegment = state.execution {
-      return progressRunningSegment(at: now, state: &state, effects: &effects)
-    }
     return .accepted
+  }
+
+  fileprivate func reconcileForeground(
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState,
+    effects: inout [WorkoutExecutionEffect]
+  ) -> WorkoutReductionDisposition {
+    switch state.execution {
+    case .idle, .preflight, .finished, .interrupted, .failed:
+      return .accepted
+    default:
+      break
+    }
+
+    guard case .ready(let epoch, let capability) = state.connection,
+      let armed = state.armedWorkout,
+      armed.capability == capability,
+      armed.profile.matches(capability)
+    else {
+      return interrupt(.resumeGuardsFailed, state: &state, effects: &effects)
+    }
+
+    switch state.execution {
+    case .acquiringControl:
+      guard case .requesting(let procedureID) = state.controlPermission,
+        procedureID.epoch == epoch
+      else { return interrupt(.resumeGuardsFailed, state: &state, effects: &effects) }
+    case .waitingForPhysicalStart:
+      switch state.controlPermission {
+      case .notHeld: break
+      case .held(let heldEpoch, _) where heldEpoch == epoch: break
+      default: return interrupt(.resumeGuardsFailed, state: &state, effects: &effects)
+      }
+    case .applyingTargets, .runningSegment, .checkingTreadmill, .paused,
+      .restoringTargets, .awaitingPhysicalStopForCompletion, .readyToEnd, .ending:
+      guard case .held(let heldEpoch, _) = state.controlPermission, heldEpoch == epoch else {
+        return interrupt(.resumeGuardsFailed, state: &state, effects: &effects)
+      }
+    case .idle, .preflight, .finished, .interrupted, .failed:
+      break
+    }
+
+    let tickDisposition = consumeTick(at: now, state: &state, effects: &effects)
+    guard tickDisposition == .accepted else { return tickDisposition }
+
+    switch state.telemetry {
+    case .malformed(let reason):
+      return fail(.malformedTelemetry(reason), state: &state, effects: &effects)
+    case .contradictory(let reason):
+      return fail(.contradictoryEvidence(reason), state: &state, effects: &effects)
+    case .unavailable, .stale:
+      if attemptNeedsTelemetry(state.execution),
+        !isWaitingWithoutControl(state),
+        !isChecking(state.execution)
+      {
+        let freshnessBoundary: MonotonicInstant
+        if let startedAt = state.currentSegment?.activeStartedAt {
+          freshnessBoundary = min(
+            now,
+            startedAt.advanced(by: FR30zExecutionProfile.telemetryFreshnessInterval)
+          )
+        } else {
+          freshnessBoundary = now
+        }
+        freezeSegment(at: freshnessBoundary, state: &state)
+        state.observedMachine = .unknown
+        state.execution = .checkingTreadmill(
+          .init(
+            origin: checkingOrigin(state.execution),
+            freshnessBoundary: freshnessBoundary
+          )
+        )
+      }
+    case .fresh:
+      break
+    }
+
+    if case .idle = state.procedure,
+      state.targetSequence != nil,
+      isActivelyApplyingTargets(state.execution)
+    {
+      return advanceTargetSequence(at: now, state: &state, effects: &effects)
+    }
+
+    guard case .checkingTreadmill(let checking) = state.execution,
+      let sample = freshSample(state, at: now)
+    else { return .accepted }
+    if sample.speed.value == 0 {
+      return consumeReportedStationary(sample, at: now, state: &state)
+    }
+    return resolveCheckingWithMoving(
+      checking,
+      sample: sample,
+      at: now,
+      state: &state,
+      effects: &effects
+    )
+  }
+
+  fileprivate func isChecking(_ phase: WorkoutExecutionPhase) -> Bool {
+    if case .checkingTreadmill = phase { return true }
+    return false
   }
 
   fileprivate func progressRunningSegment(
     at now: MonotonicInstant,
     state: inout WorkoutExecutionState,
-    effects: inout [WorkoutExecutionEffect]
+    effects: inout [WorkoutExecutionEffect],
+    allowBackgroundTelemetryTransition: Bool = false
   ) -> WorkoutReductionDisposition {
     guard var segment = state.currentSegment,
       let startedAt = segment.activeStartedAt,
@@ -1348,7 +1525,8 @@ extension WorkoutExecutionReducer {
       forceBothAxes: false,
       at: now,
       state: &state,
-      effects: &effects
+      effects: &effects,
+      allowBackgroundTelemetryTransition: allowBackgroundTelemetryTransition
     )
   }
 
@@ -1488,7 +1666,7 @@ extension WorkoutExecutionReducer {
     _ evidence: WorkoutStationaryEvidence, at now: MonotonicInstant,
     state: inout WorkoutExecutionState
   ) {
-    freezeSegment(at: now, state: &state)
+    freezeSegmentAtEvidenceBoundary(at: now, state: &state)
     if var sequence = state.targetSequence {
       sequence.observationDeadline = nil
       state.targetSequence = state.procedure.unresolvedRecord == nil ? nil : sequence
@@ -1504,6 +1682,20 @@ extension WorkoutExecutionReducer {
     segment.accumulatedActiveSeconds += max(0, boundary.seconds - startedAt.seconds)
     segment.activeStartedAt = nil
     state.currentSegment = segment
+  }
+
+  fileprivate func freezeSegmentAtEvidenceBoundary(
+    at now: MonotonicInstant,
+    state: inout WorkoutExecutionState
+  ) {
+    guard let startedAt = state.currentSegment?.activeStartedAt else { return }
+    freezeSegment(
+      at: min(
+        now,
+        startedAt.advanced(by: FR30zExecutionProfile.telemetryFreshnessInterval)
+      ),
+      state: &state
+    )
   }
 
   fileprivate func timeOutProcedure(
@@ -1581,7 +1773,7 @@ extension WorkoutExecutionReducer {
     state: inout WorkoutExecutionState,
     effects: inout [WorkoutExecutionEffect]
   ) -> WorkoutReductionDisposition {
-    freezeSegment(at: state.lastEventTime, state: &state)
+    freezeSegmentAtEvidenceBoundary(at: state.lastEventTime, state: &state)
     invalidateOutstandingProcedure(state: &state)
     state.controlPermission = .invalidated("Execution failed")
     state.targetSequence = nil
@@ -1597,7 +1789,7 @@ extension WorkoutExecutionReducer {
     state: inout WorkoutExecutionState,
     effects: inout [WorkoutExecutionEffect]
   ) -> WorkoutReductionDisposition {
-    freezeSegment(at: state.lastEventTime, state: &state)
+    freezeSegmentAtEvidenceBoundary(at: state.lastEventTime, state: &state)
     invalidateOutstandingProcedure(state: &state)
     state.controlPermission = .invalidated("Execution interrupted")
     state.targetSequence = nil

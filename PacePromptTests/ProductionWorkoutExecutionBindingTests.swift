@@ -171,23 +171,120 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(sample.speed.value, Decimal(7) / 10)
   }
 
-  func testForegroundLossInvalidatesAndSuppressesFurtherProceduresWithoutReconnect() throws {
+  func testInactiveBackgroundAndScreenLockLifecyclePreserveSameAttemptAndLink() throws {
     let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
     XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
     _ = h.binding.beginWorkout()
+    let attemptID = h.binding.orchestrator.frozenAttempt?.attemptID
     XCTAssertTrue(h.link.writes.isEmpty)
 
     h.binding.setApplicationActivity(.inactive)
-    guard case .interrupted(.foregroundLost) = h.binding.orchestrator.state.execution else {
-      return XCTFail("Foreground loss must truthfully interrupt the attempt")
-    }
-    XCTAssertEqual(h.link.invalidateCount, 1)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
+    h.binding.setApplicationActivity(.background)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(h.link.invalidateCount, 0)
     XCTAssertTrue(h.link.writes.isEmpty)
 
     h.binding.setApplicationActivity(.active)
-    XCTAssertEqual(h.link.enableIndicationsCount, 1, "The binding must not reconnect or resume")
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(h.binding.orchestrator.frozenAttempt?.attemptID, attemptID)
+    XCTAssertEqual(h.link.enableIndicationsCount, 1, "Lifecycle changes must not recreate the link")
     XCTAssertTrue(h.link.writes.isEmpty)
+
+    h.binding.setProtectedDataAvailable(false)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
+    h.binding.setProtectedDataAvailable(true)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(h.binding.orchestrator.frozenAttempt?.attemptID, attemptID)
+    XCTAssertEqual(h.link.invalidateCount, 0)
+  }
+
+  func testFreshBackgroundTelemetryContinuesOneAttemptWithoutInteractiveControl() {
+    let h = Harness()
+    h.reachRunning()
+    let attemptID = h.binding.orchestrator.frozenAttempt?.attemptID
+    let writeCount = h.link.writes.count
+
+    h.binding.setApplicationActivity(.background)
+    h.clock.advance(by: 1)
+    h.publishTelemetry(speedRaw: 500)
+
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .runningSegment)
+    XCTAssertEqual(h.binding.orchestrator.frozenAttempt?.attemptID, attemptID)
+    XCTAssertEqual(h.binding.orchestrator.state.currentSegment?.accumulatedActiveSeconds, 1)
+    XCTAssertEqual(h.link.writes.count, writeCount)
+    XCTAssertFalse(h.binding.canExposeArming)
+
+    h.binding.setApplicationActivity(.active)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .runningSegment)
+  }
+
+  func testBackgroundBoundaryUsesFreshTelemetryForOnePlannedWriteAtATime() {
+    let h = Harness()
+    h.reachRunning()
+    h.binding.setApplicationActivity(.background)
+    let initialWriteCount = h.link.writes.count
+
+    for _ in 1...60 {
+      h.clock.advance(by: 1)
+      h.publishTelemetry(speedRaw: 500)
+    }
+
+    XCTAssertEqual(h.binding.orchestrator.state.currentSegment?.stepIndex, 1)
+    XCTAssertEqual(h.link.writes.count, initialWriteCount + 1)
+    XCTAssertEqual(h.link.writes.last?.first, 0x02)
+
+    h.link.send(.writeAccepted)
+    h.link.send(.indication(Data([0x80, 0x02, 0x01])))
+    XCTAssertEqual(
+      h.link.writes.count,
+      initialWriteCount + 1,
+      "An acknowledgement wake must not submit the next planned axis"
+    )
+
+    h.clock.advance(by: 0.5)
+    h.publishTelemetry(speedRaw: 500)
+    XCTAssertEqual(h.link.writes.count, initialWriteCount + 2)
+    XCTAssertEqual(h.link.writes.last?.first, 0x03)
+  }
+
+  func testStaleBackgroundGapFreezesProgressAndForegroundReconcilesToChecking() {
+    let h = Harness()
+    h.reachRunning()
+    let writeCount = h.link.writes.count
+
+    h.binding.setApplicationActivity(.background)
+    h.clock.advance(by: 5)
+    h.binding.setApplicationActivity(.active)
+
+    guard case .checkingTreadmill = h.binding.orchestrator.state.execution else {
+      return XCTFail("Foreground return with stale telemetry must reconcile to Checking treadmill")
+    }
+    XCTAssertEqual(h.binding.orchestrator.state.currentSegment?.accumulatedActiveSeconds, 2)
+    XCTAssertEqual(h.link.writes.count, writeCount)
+
+    h.publishTelemetry(speedRaw: 500)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .runningSegment)
+    XCTAssertEqual(h.binding.orchestrator.state.currentSegment?.accumulatedActiveSeconds, 2)
+    XCTAssertEqual(h.link.writes.count, writeCount)
+  }
+
+  func testEpochReplacementWhileBackgroundedEndsAttemptWithoutAutomaticRecovery() {
+    let h = Harness()
+    h.reachRunning()
+    let oldEpoch = h.binding.epoch
+    let writeCount = h.link.writes.count
+    h.binding.setApplicationActivity(.background)
+
+    h.binding.receive(.connection(.connecting(name: Harness.equipment)))
+
+    XCTAssertNotEqual(h.binding.epoch, oldEpoch)
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .idle)
+    XCTAssertNil(h.binding.orchestrator.frozenAttempt)
+    XCTAssertNil(h.lifecycleCheckpoints.checkpoint)
+    XCTAssertEqual(h.link.writes.count, writeCount)
+    XCTAssertFalse(h.binding.canExposeArming)
   }
 
   func testExplicitReconnectCanPrepareAnotherSequence() {
@@ -420,6 +517,27 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     ceilingAdapter.contextProvider = { ceilingContext }
     ceilingAdapter.perform(.submit(targetRecord))
     XCTAssertTrue(ceilingRaw.submissions.isEmpty, "Frozen ceilings must be rechecked")
+
+    let permittedTarget = WorkoutProcedureRecord(
+      id: targetID,
+      intent: .setTargetSpeed(.init(value: 7, unit: .kilometresPerHour)),
+      stepIndex: 1,
+      createdAt: h.clock.read().monotonic
+    )
+    let backgroundRaw = BindingRawTransport(epoch: epoch, permissionHeld: true)
+    let backgroundAdapter = ProductionWorkoutTargetControlTransport(transport: backgroundRaw)
+    var backgroundTelemetryContext = valid
+    backgroundTelemetryContext.foreground = false
+    backgroundTelemetryContext.backgroundTelemetryWake = true
+    backgroundTelemetryContext.targetSequencePurpose = .plannedTransition
+    backgroundTelemetryContext.expectedProcedureID = targetID
+    backgroundAdapter.contextProvider = { backgroundTelemetryContext }
+    backgroundAdapter.perform(.submit(permittedTarget))
+    XCTAssertEqual(
+      backgroundRaw.submissions,
+      [.setTargetSpeed(kilometresPerHour: 7)],
+      "Only a fresh background telemetry wake may carry one planned target"
+    )
   }
 }
 
@@ -435,6 +553,7 @@ extension ProductionWorkoutExecutionBindingTests {
     let clock = BindingClock()
     let scheduler = BindingScheduler()
     let history = BindingHistory()
+    let lifecycleCheckpoints = BindingLifecycleCheckpoints()
     let binding: ProductionWorkoutExecutionBinding
     let plan: WorkoutPlanValidator.ValidatedPlan
     let ceilings = WorkoutSessionCeilings(
@@ -467,6 +586,7 @@ extension ProductionWorkoutExecutionBindingTests {
         client: client,
         controlTransport: rawTransport,
         history: history,
+        lifecycleCheckpoints: lifecycleCheckpoints,
         clock: clock,
         attemptIDs: BindingAttemptIDs(),
         automaticTicks: false
@@ -650,6 +770,13 @@ private final class BindingHistory: WorkoutHistoryRepositoryProtocol {
       summaries.append(summary)
     }
   }
+}
+
+private final class BindingLifecycleCheckpoints: WorkoutLifecycleCheckpointRepositoryProtocol {
+  var checkpoint: WorkoutLifecycleCheckpoint?
+  func load() throws -> WorkoutLifecycleCheckpoint? { checkpoint }
+  func save(_ checkpoint: WorkoutLifecycleCheckpoint) throws { self.checkpoint = checkpoint }
+  func remove() throws { checkpoint = nil }
 }
 
 @MainActor

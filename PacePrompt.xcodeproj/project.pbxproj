@@ -68,6 +68,7 @@
 		AE0000000000000000000002 /* SavedPlanExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0000000000000000001002 /* SavedPlanExportTests.swift */; };
 		AF0000000000000000000001 /* WorkoutExecutionSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001001 /* WorkoutExecutionSummary.swift */; };
 		AF0000000000000000000002 /* WorkoutHistoryRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001002 /* WorkoutHistoryRepository.swift */; };
+		AF0000000000000000000004 /* WorkoutLifecycleCheckpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001004 /* WorkoutLifecycleCheckpoint.swift */; };
 		AF0000000000000000000003 /* WorkoutHistoryRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */; };
 		B40000000000000000001001 /* HomePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002001 /* HomePresentation.swift */; };
 		B40000000000000000001002 /* HomeUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000002002 /* HomeUITestSupport.swift */; };
@@ -227,6 +228,7 @@
 		AE0000000000000000001002 /* SavedPlanExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlanExportTests.swift; sourceTree = "<group>"; };
 		AF0000000000000000001001 /* WorkoutExecutionSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutExecutionSummary.swift; sourceTree = "<group>"; };
 		AF0000000000000000001002 /* WorkoutHistoryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryRepository.swift; sourceTree = "<group>"; };
+		AF0000000000000000001004 /* WorkoutLifecycleCheckpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLifecycleCheckpoint.swift; sourceTree = "<group>"; };
 		AF0000000000000000001003 /* WorkoutHistoryRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryRepositoryTests.swift; sourceTree = "<group>"; };
 		B40000000000000000002001 /* HomePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePresentation.swift; sourceTree = "<group>"; };
 		B40000000000000000002002 /* HomeUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeUITestSupport.swift; sourceTree = "<group>"; };
@@ -344,6 +346,7 @@
 			children = (
 				AF0000000000000000001001 /* WorkoutExecutionSummary.swift */,
 				AF0000000000000000001002 /* WorkoutHistoryRepository.swift */,
+				AF0000000000000000001004 /* WorkoutLifecycleCheckpoint.swift */,
 				D40000000000000000002001 /* WorkoutHistoryExport.swift */,
 			);
 			path = History;
@@ -763,6 +766,7 @@
 				AE0000000000000000000001 /* SavedPlanExport.swift in Sources */,
 				AF0000000000000000000001 /* WorkoutExecutionSummary.swift in Sources */,
 				AF0000000000000000000002 /* WorkoutHistoryRepository.swift in Sources */,
+				AF0000000000000000000004 /* WorkoutLifecycleCheckpoint.swift in Sources */,
 				D40000000000000000001001 /* WorkoutHistoryExport.swift in Sources */,
 				B60000000000000000001001 /* WorkoutExecutionReducer.swift in Sources */,
 				B70000000000000000001001 /* WorkoutExecutionOrchestrator.swift in Sources */,
@@ -981,6 +985,7 @@
 				CURRENT_PROJECT_VERSION = 7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PacePrompt/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PacePrompt;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -1016,6 +1021,7 @@
 				CURRENT_PROJECT_VERSION = 7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PacePrompt/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PacePrompt;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";

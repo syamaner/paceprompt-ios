@@ -378,6 +378,10 @@ final class TreadmillSetupViewModel: ObservableObject {
         executionBinding?.setApplicationActivity(activity)
     }
 
+    func setProtectedDataAvailable(_ available: Bool) {
+        executionBinding?.setProtectedDataAvailable(available)
+    }
+
     #if DEBUG
     func activateUITestScenarioIfNeeded() {
         let activation = activateUITestScenario

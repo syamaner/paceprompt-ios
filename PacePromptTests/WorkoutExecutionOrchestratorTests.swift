@@ -180,7 +180,7 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     XCTAssertNil(h.orchestrator.state.currentSegment?.activeStartedAt)
     h.send(.telemetry(epoch: h.epoch, h.sample("5.5", "1", distance: "10")))
     XCTAssertEqual(h.orchestrator.state.execution, .runningSegment)
-    XCTAssertEqual(h.orchestrator.state.currentSegment?.accumulatedActiveSeconds, 3)
+    XCTAssertEqual(h.orchestrator.state.currentSegment?.accumulatedActiveSeconds, 2)
   }
 
   func testInflightAdjustmentDoesNotCompeteAndInvalidIncrementEmitsNothing() throws {
@@ -228,7 +228,7 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
   func testTerminalStationaryAcknowledgementPreservesInterruptionAndUpdatesHistory() throws {
     let h = try Harness.running(stepDuration: 20)
     let interruption = h.send(
-      .appBecameInactive(epoch: h.epoch, reason: "Synthetic app continuity loss")
+      .userCancelsAttempt(epoch: h.epoch)
     )
     guard case .interrupted(let reason) = interruption.state.execution else {
       return XCTFail("Expected interruption")
@@ -377,8 +377,8 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     let intervalSeconds = intervals.reduce(0.0) {
       $0 + $1.endedAt.timeIntervalSince($1.startedAt)
     }
-    let measuredIntervalSeconds = Int(floor(intervalSeconds + 0.000_000_001))
-    XCTAssertEqual(measuredIntervalSeconds, 39)
+    let measuredIntervalSeconds = Int(floor(intervalSeconds + 0.000_001))
+    XCTAssertEqual(measuredIntervalSeconds, 40)
     XCTAssertEqual(summary.activeDuration, .measured(seconds: measuredIntervalSeconds))
   }
 
@@ -474,7 +474,7 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
         h.send(.controlPermissionLost(epoch: h.epoch, reason: "synthetic control loss"))
       },
       { h in
-        h.send(.appBecameInactive(epoch: h.epoch, reason: "synthetic interruption"))
+        h.send(.userCancelsAttempt(epoch: h.epoch))
       },
       { h in h.orchestrator.cancelAttempt(epoch: h.epoch) },
     ]
@@ -582,7 +582,7 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     XCTAssertEqual(recovered.count, 1)
     XCTAssertEqual(
       recovered[0].outcome,
-      .interrupted(reason: .init(rawValue: "app-continuity-lost"))
+      .interrupted(reason: .init(rawValue: "app-process-ended"))
     )
     XCTAssertEqual(recovered[0].activeDuration, inProgress.activeDuration)
     XCTAssertEqual(recovered[0].distance, inProgress.distance)
@@ -591,6 +591,125 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     XCTAssertEqual(h.history.records[1], completed)
     XCTAssertTrue(h.transport.effects.isEmpty)
     XCTAssertEqual(h.orchestrator.state.execution, .idle)
+  }
+
+  func testLifecycleCheckpointPreservesAttemptProgressOverrideIntentAndNeverResumes() throws {
+    let h = try Harness.running(stepDuration: 20)
+    let started = try XCTUnwrap(h.orchestrator.state.currentSegment?.activeStartedAt)
+    h.send(
+      .telemetry(epoch: h.epoch, h.sample("5", "0")),
+      monotonic: started.seconds + 1
+    )
+    h.send(.setSpeedOverride(epoch: h.epoch, h.speed("5.5")))
+
+    let checkpoint = try XCTUnwrap(h.lifecycleCheckpoints.checkpoint)
+    let attemptID = try XCTUnwrap(h.orchestrator.frozenAttempt?.attemptID)
+    XCTAssertEqual(checkpoint.historySummaryID, attemptID)
+    XCTAssertEqual(checkpoint.currentStepIndex, 0)
+    XCTAssertEqual(checkpoint.completedStepCount, 0)
+    XCTAssertEqual(checkpoint.evidenceBackedActiveSeconds, 1.1, accuracy: 0.000_001)
+    XCTAssertEqual(checkpoint.speedOverrideKilometresPerHour, h.decimal("5.5"))
+    XCTAssertNil(checkpoint.inclinationOverridePercent)
+    XCTAssertEqual(checkpoint.effectiveTargetSpeedKilometresPerHour, h.decimal("5.5"))
+    XCTAssertEqual(checkpoint.lastConfirmedTargetSpeedKilometresPerHour, h.decimal("5"))
+    XCTAssertEqual(checkpoint.pendingTargetIntent, .setTargetSpeed(h.decimal("5.5")))
+    XCTAssertEqual(checkpoint.pendingProcedureID, 4)
+
+    let encodedCheckpoint = try JSONEncoder().encode(checkpoint)
+    XCTAssertEqual(
+      try JSONDecoder().decode(WorkoutLifecycleCheckpoint.self, from: encodedCheckpoint),
+      checkpoint
+    )
+
+    let recoveryTransport = RecordingTargetTransport()
+    let recovery = WorkoutExecutionOrchestrator(
+      transport: recoveryTransport,
+      history: h.history,
+      lifecycleCheckpoints: h.lifecycleCheckpoints,
+      clock: h.clock,
+      attemptIDs: FixedAttemptIDSource(ids: [h.uuid(90)])
+    )
+    let result = recovery.recoverInterruptedHistory()
+    guard case .recovered(let recovered) = result else {
+      return XCTFail("Expected process-death recovery")
+    }
+    XCTAssertEqual(
+      recovered.single?.outcome,
+      .interrupted(reason: .init(rawValue: "app-process-ended-with-checkpoint"))
+    )
+    XCTAssertTrue(recoveryTransport.effects.isEmpty)
+    XCTAssertEqual(recovery.state.execution, .idle)
+    XCTAssertNil(h.lifecycleCheckpoints.checkpoint)
+  }
+
+  func testBackgroundCheckpointDoesNotCountAnUnobservedSuspensionGap() throws {
+    let h = try Harness.running(stepDuration: 20)
+    let started = try XCTUnwrap(h.orchestrator.state.currentSegment?.activeStartedAt)
+    h.send(
+      .telemetry(epoch: h.epoch, h.sample("5", "0")),
+      monotonic: started.seconds + 1
+    )
+
+    let background = h.send(
+      .applicationLifecycleChanged(epoch: h.epoch, .background),
+      monotonic: started.seconds + 60
+    )
+
+    guard case .recorded(let summary) = background.historyCheckpoint else {
+      return XCTFail("Expected a lifecycle history checkpoint")
+    }
+    XCTAssertEqual(summary.activeDuration, .measured(seconds: 3))
+    XCTAssertEqual(summary.progress.activeSecondsInCurrentStep, 3)
+    XCTAssertEqual(
+      try XCTUnwrap(h.lifecycleCheckpoints.checkpoint).evidenceBackedActiveSeconds,
+      3,
+      accuracy: 0.000_001
+    )
+
+    let interrupted = h.send(
+      .connectionLost(epoch: h.epoch, reason: "Synthetic background disconnect"),
+      monotonic: started.seconds + 61
+    )
+    guard case .recorded(let finalSummary) = interrupted.historyCheckpoint else {
+      return XCTFail("Expected an interruption history checkpoint")
+    }
+    XCTAssertEqual(finalSummary.activeDuration, .measured(seconds: 3))
+    guard case .recorded(_, _, _, let intervals) = finalSummary.activityTimeline else {
+      return XCTFail("Expected the evidence-bounded interval to close")
+    }
+    XCTAssertEqual(
+      intervals.reduce(0) { $0 + $1.endedAt.timeIntervalSince($1.startedAt) },
+      3,
+      accuracy: 0.000_001
+    )
+  }
+
+  func testFreshTelemetryAfterLongGapSplitsRecordedExecutionIntervals() throws {
+    let h = try Harness.running(stepDuration: 20)
+    let started = try XCTUnwrap(h.orchestrator.state.currentSegment?.activeStartedAt)
+
+    h.send(
+      .telemetry(epoch: h.epoch, h.sample("5", "0")),
+      monotonic: started.seconds + 10
+    )
+    let paused = h.send(
+      .telemetry(epoch: h.epoch, h.sample("0", "0")),
+      monotonic: started.seconds + 11
+    )
+
+    guard case .recorded(let summary) = paused.historyCheckpoint else {
+      return XCTFail("Expected a pause history checkpoint")
+    }
+    XCTAssertEqual(summary.activeDuration, .measured(seconds: 3))
+    guard case .recorded(_, _, _, let intervals) = summary.activityTimeline else {
+      return XCTFail("Expected split execution intervals")
+    }
+    XCTAssertEqual(intervals.count, 2)
+    XCTAssertEqual(
+      intervals.reduce(0) { $0 + $1.endedAt.timeIntervalSince($1.startedAt) },
+      3,
+      accuracy: 0.000_001
+    )
   }
 }
 
@@ -601,6 +720,7 @@ extension WorkoutExecutionOrchestratorTests {
     let clock = TestClock()
     let transport = RecordingTargetTransport()
     let history = RecordingHistoryRepository()
+    let lifecycleCheckpoints = RecordingLifecycleCheckpointRepository()
     let attemptIDs: FixedAttemptIDSource
     let capability: FR30zCapabilitySnapshot
     let ceilings: WorkoutSessionCeilings
@@ -657,6 +777,7 @@ extension WorkoutExecutionOrchestratorTests {
       orchestrator = .init(
         transport: transport,
         history: history,
+        lifecycleCheckpoints: lifecycleCheckpoints,
         clock: clock,
         attemptIDs: attemptIDs
       )
@@ -730,19 +851,22 @@ extension WorkoutExecutionOrchestratorTests {
     }
 
     func finishCurrentStep() throws {
-      let segment = try XCTUnwrap(orchestrator.state.currentSegment)
+      var segment = try XCTUnwrap(orchestrator.state.currentSegment)
       let startedAt = try XCTUnwrap(segment.activeStartedAt).seconds
       let duration = TimeInterval(plan.plan.steps[segment.stepIndex].duration.value)
       let target = try XCTUnwrap(orchestrator.targetEvidence.effective)
-      assertAccepted(
-        send(
-          .telemetry(epoch: epoch, sample(target.speed, target.inclination)),
-          monotonic: startedAt + duration - 0.1
+      var elapsed: TimeInterval = 1
+      while elapsed <= duration {
+        assertAccepted(
+          send(
+            .telemetry(epoch: epoch, sample(target.speed, target.inclination)),
+            monotonic: startedAt + elapsed
+          )
         )
-      )
-      assertAccepted(
-        send(.tick(epoch: epoch), monotonic: startedAt + duration)
-      )
+        elapsed += 1
+      }
+      segment = try XCTUnwrap(orchestrator.state.currentSegment)
+      XCTAssertNil(segment.activeStartedAt)
     }
 
     @discardableResult
@@ -903,4 +1027,30 @@ private final class RecordingHistoryRepository: WorkoutHistoryRepositoryProtocol
       records.append(summary)
     }
   }
+}
+
+private final class RecordingLifecycleCheckpointRepository:
+  WorkoutLifecycleCheckpointRepositoryProtocol
+{
+  var checkpoint: WorkoutLifecycleCheckpoint?
+  var failure: Error?
+
+  func load() throws -> WorkoutLifecycleCheckpoint? {
+    if let failure { throw failure }
+    return checkpoint
+  }
+
+  func save(_ checkpoint: WorkoutLifecycleCheckpoint) throws {
+    if let failure { throw failure }
+    self.checkpoint = checkpoint
+  }
+
+  func remove() throws {
+    if let failure { throw failure }
+    checkpoint = nil
+  }
+}
+
+private extension Collection {
+  var single: Element? { count == 1 ? first : nil }
 }

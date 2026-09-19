@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "PacePrompt.xcodeproj/project.pbxproj"
 MANIFEST = ROOT / "PacePrompt/PrivacyInfo.xcprivacy"
 ENTITLEMENTS = ROOT / "PacePrompt/PacePrompt.entitlements"
+INFO_PLIST = ROOT / "PacePrompt/Info.plist"
 SCHEME = ROOT / "PacePrompt.xcodeproj/xcshareddata/xcschemes/PacePrompt.xcscheme"
 APP_ICON = ROOT / "PacePrompt/Assets.xcassets/AppIcon.appiconset/Contents.json"
 
@@ -20,6 +21,7 @@ def verify() -> None:
     project = PROJECT.read_text()
     manifest = plistlib.loads(MANIFEST.read_bytes())
     entitlements = plistlib.loads(ENTITLEMENTS.read_bytes())
+    info_plist = plistlib.loads(INFO_PLIST.read_bytes())
     scheme = ET.parse(SCHEME).getroot()
     icon = json.loads(APP_ICON.read_text())
 
@@ -74,6 +76,9 @@ def verify() -> None:
     assert project.count(
         f'INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "{bluetooth_purpose}";'
     ) == 2
+    assert info_plist == {"UIBackgroundModes": ["bluetooth-central"]}
+    assert project.count("INFOPLIST_FILE = PacePrompt/Info.plist;") == 2
+    assert "bluetooth-peripheral" not in project and b"bluetooth-peripheral" not in INFO_PLIST.read_bytes()
 
     release_blocks = re.findall(
         r"AA000000000000000000A10[12] /\* (?:Debug|Release) \*/ = \{.*?\n\t\t\};",
@@ -108,7 +113,7 @@ def verify() -> None:
     assert (APP_ICON.parent / images[0]["filename"]).is_file()
 
     print(
-        "PASS: production release metadata, archive scheme, HealthKit entitlement, "
+        "PASS: production release metadata, bluetooth-central background mode, archive scheme, HealthKit entitlement, "
         f"privacy manifest and app icon (version {marketing_version} build {build_version})"
     )
 

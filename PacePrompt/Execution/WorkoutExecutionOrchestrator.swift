@@ -113,6 +113,7 @@ final class WorkoutExecutionOrchestrator {
   private let reducer: WorkoutExecutionReducer
   private let transport: any WorkoutTargetControlTransport
   private let history: any WorkoutHistoryRepositoryProtocol
+  private let lifecycleCheckpoints: any WorkoutLifecycleCheckpointRepositoryProtocol
   private let clock: any WorkoutOrchestrationClock
   private let attemptIDs: any WorkoutAttemptIDSource
 
@@ -137,12 +138,14 @@ final class WorkoutExecutionOrchestrator {
     reducer: WorkoutExecutionReducer = .init(),
     transport: any WorkoutTargetControlTransport,
     history: any WorkoutHistoryRepositoryProtocol,
+    lifecycleCheckpoints: any WorkoutLifecycleCheckpointRepositoryProtocol = WorkoutLifecycleCheckpointRepository(),
     clock: any WorkoutOrchestrationClock,
     attemptIDs: any WorkoutAttemptIDSource
   ) {
     self.reducer = reducer
     self.transport = transport
     self.history = history
+    self.lifecycleCheckpoints = lifecycleCheckpoints
     self.clock = clock
     self.attemptIDs = attemptIDs
   }
@@ -176,10 +179,7 @@ final class WorkoutExecutionOrchestrator {
 
   @discardableResult
   func cancelAttempt(epoch: ConnectionEpoch) -> WorkoutOrchestrationResult {
-    process(
-      .appBecameInactive(epoch: epoch, reason: "User cancelled synthetic attempt"),
-      preparedInputs: nil
-    )
+    process(.userCancelsAttempt(epoch: epoch), preparedInputs: nil)
   }
 
   var targetEvidence: WorkoutOrchestrationTargetEvidence {
@@ -203,6 +203,7 @@ final class WorkoutExecutionOrchestrator {
 
   @discardableResult
   func recoverInterruptedHistory() -> WorkoutHistoryRecoveryResult {
+    let lifecycleCheckpoint = try? lifecycleCheckpoints.load()
     let status = history.list()
     let summaries: [WorkoutExecutionSummary]
     switch status.canonical {
@@ -219,6 +220,9 @@ final class WorkoutExecutionOrchestrator {
     let reading = clock.read()
     var recovered: [WorkoutExecutionSummary] = []
     for summary in summaries where summary.outcome == .inProgress {
+      let recoveryCode = lifecycleCheckpoint?.historySummaryID == summary.id
+        ? "app-process-ended-with-checkpoint"
+        : "app-process-ended"
       let updated = WorkoutExecutionSummary(
         id: summary.id,
         schemaVersion: summary.schemaVersion,
@@ -226,7 +230,7 @@ final class WorkoutExecutionOrchestrator {
         planSnapshot: summary.planSnapshot,
         attemptedAt: summary.attemptedAt,
         lastUpdatedAt: max(summary.lastUpdatedAt, reading.wallClock),
-        outcome: .interrupted(reason: .init(rawValue: "app-continuity-lost")),
+        outcome: .interrupted(reason: .init(rawValue: recoveryCode)),
         activeDuration: summary.activeDuration,
         distance: summary.distance,
         progress: summary.progress,
@@ -247,6 +251,7 @@ final class WorkoutExecutionOrchestrator {
         )
       }
     }
+    try? lifecycleCheckpoints.remove()
     return recovered.isEmpty ? .nothingToRecover : .recovered(recovered)
   }
 
@@ -316,6 +321,18 @@ final class WorkoutExecutionOrchestrator {
       state = transition.state
       lastPersistedSummary = summary
       lastCheckpointTrigger = checkpointTrigger(for: summary, state: transition.state)
+      do {
+        try lifecycleCheckpoints.save(
+          makeLifecycleCheckpoint(from: transition.state, updatedAt: reading.wallClock)
+        )
+      } catch {
+        return failForHistoryWrite(
+          from: transition,
+          original: original,
+          reading: reading,
+          failure: .unexpectedRepositoryFailure
+        )
+      }
       let transportEffects = performTransportEffects(transition.effects)
       return .init(
         state: state,
@@ -371,6 +388,22 @@ final class WorkoutExecutionOrchestrator {
     }
 
     state = transition.state
+    do {
+      if isTerminal(state.execution) {
+        try lifecycleCheckpoints.remove()
+      } else if frozenAttempt != nil, attemptNeedsLifecycleCheckpoint(state.execution) {
+        try lifecycleCheckpoints.save(
+          makeLifecycleCheckpoint(from: state, updatedAt: reading.wallClock)
+        )
+      }
+    } catch {
+      return failForHistoryWrite(
+        from: transition,
+        original: original,
+        reading: reading,
+        failure: .unexpectedRepositoryFailure
+      )
+    }
     let transportEffects = performTransportEffects(transition.effects)
     if isTerminal(state.execution),
       let procedureID = forwardedProcedureID(original),
@@ -428,6 +461,7 @@ final class WorkoutExecutionOrchestrator {
       state = completed.state
       lastPersistedSummary = summary
       lastCheckpointTrigger = checkpointTrigger(for: summary, state: completed.state)
+      try? lifecycleCheckpoints.remove()
       return .init(
         state: state,
         reducerDisposition: completed.disposition,
@@ -583,6 +617,25 @@ final class WorkoutExecutionOrchestrator {
     guard frozenAttempt != nil else { return }
 
     if case .runningSegment = original.execution,
+       case .telemetry = event,
+       isRunning(transition.state.execution),
+       let previousEvidenceAt = original.currentSegment?.activeStartedAt,
+       let resumedAt = transition.state.currentSegment?.activeStartedAt,
+       resumedAt.seconds - previousEvidenceAt.seconds
+        > FR30zExecutionProfile.telemetryFreshnessInterval,
+       let open = openExecutedInterval {
+      let boundary = previousEvidenceAt.advanced(
+        by: FR30zExecutionProfile.telemetryFreshnessInterval
+      )
+      closeExecutedInterval(
+        open,
+        at: wallClock(for: boundary, reading: reading),
+        reason: .paused
+      )
+      openExecutedInterval = nil
+    }
+
+    if case .runningSegment = original.execution,
        !isRunning(transition.state.execution),
        let open = openExecutedInterval {
       let end = intervalEnd(
@@ -678,6 +731,14 @@ final class WorkoutExecutionOrchestrator {
        let step = frozenAttempt?.plan.plan.steps[safe: segment.stepIndex] {
       let remaining = max(0, TimeInterval(step.duration.value) - segment.accumulatedActiveSeconds)
       let instant = activeStart.advanced(by: remaining)
+      return wallClock(for: instant, reading: reading)
+    }
+    if case .runningSegment = original.execution,
+       let activeStart = original.currentSegment?.activeStartedAt {
+      let instant = min(
+        reading.monotonic,
+        activeStart.advanced(by: FR30zExecutionProfile.telemetryFreshnessInterval)
+      )
       return wallClock(for: instant, reading: reading)
     }
     return reading.wallClock
@@ -813,8 +874,7 @@ final class WorkoutExecutionOrchestrator {
     case .telemetryStreamTimedOut: "telemetry-stream-timed-out"
     case .stationaryEvidenceExpired: "stationary-evidence-expired"
     case .connectionLost: "connection-lost"
-    case .foregroundLost(let detail):
-      detail == "User cancelled synthetic attempt" ? "attempt-cancelled" : "app-continuity-lost"
+    case .userCancelledAttempt: "attempt-cancelled"
     case .controlPermissionLost: "control-permission-lost"
     case .profileChanged: "profile-changed"
     case .resumeGuardsFailed: "resume-guards-failed"
@@ -853,14 +913,14 @@ final class WorkoutExecutionOrchestrator {
       let executedSeconds = intervals.reduce(0.0) {
         $0 + $1.endedAt.timeIntervalSince($1.startedAt)
       }
-      return max(0, Int(floor(executedSeconds + 0.000_000_001)))
+      return max(0, Int(floor(executedSeconds + 0.000_001)))
     }
 
     var total = state.completedActiveSeconds
     if let segment = state.currentSegment {
       total += segment.accumulatedActiveSeconds
       if let startedAt = segment.activeStartedAt {
-        total += max(0, state.lastEventTime.seconds - startedAt.seconds)
+        total += pendingEvidenceSeconds(from: startedAt, state: state)
       }
       if segment.accumulatedActiveSeconds > 0,
         state.completedActiveSeconds >= segment.accumulatedActiveSeconds,
@@ -885,7 +945,7 @@ final class WorkoutExecutionOrchestrator {
     }
     var active = segment.accumulatedActiveSeconds
     if let startedAt = segment.activeStartedAt {
-      active += max(0, state.lastEventTime.seconds - startedAt.seconds)
+      active += pendingEvidenceSeconds(from: startedAt, state: state)
     }
     return .init(
       completedStepCount: segment.stepIndex,
@@ -900,6 +960,16 @@ final class WorkoutExecutionOrchestrator {
       $0 + TimeInterval($1.duration.value)
     }
     return state.completedActiveSeconds + 0.000_000_001 >= plannedSeconds
+  }
+
+  private func pendingEvidenceSeconds(
+    from startedAt: MonotonicInstant,
+    state: WorkoutExecutionState
+  ) -> TimeInterval {
+    min(
+      max(0, state.lastEventTime.seconds - startedAt.seconds),
+      FR30zExecutionProfile.telemetryFreshnessInterval
+    )
   }
 
   private func stopConfirmation(
@@ -993,6 +1063,100 @@ final class WorkoutExecutionOrchestrator {
     switch phase {
     case .finished, .interrupted, .failed: true
     default: false
+    }
+  }
+
+  private func attemptNeedsLifecycleCheckpoint(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .acquiringControl, .waitingForPhysicalStart, .applyingTargets, .runningSegment,
+      .checkingTreadmill, .paused, .restoringTargets, .awaitingPhysicalStopForCompletion,
+      .readyToEnd, .ending:
+      true
+    case .idle, .preflight, .finished, .interrupted, .failed:
+      false
+    }
+  }
+
+  private func makeLifecycleCheckpoint(
+    from state: WorkoutExecutionState,
+    updatedAt: Date
+  ) -> WorkoutLifecycleCheckpoint {
+    let attempt = frozenAttempt!
+    let segment = state.currentSegment!
+    let step = attempt.plan.plan.steps[segment.stepIndex]
+    let effective = WorkoutTarget(
+      speed: segment.speedOverride ?? step.targetSpeed,
+      inclination: segment.inclinationOverride ?? step.targetInclination
+    )
+    let pending = state.procedure.unresolvedRecord
+    return .init(
+      schemaVersion: WorkoutLifecycleCheckpoint.currentSchemaVersion,
+      historySummaryID: attempt.attemptID,
+      sourcePlanID: attempt.sourcePlanID,
+      recordedAt: max(attempt.attemptedAt, updatedAt),
+      peripheralIdentity: attempt.capability.peripheralIdentity,
+      equipmentIdentity: attempt.capability.equipmentIdentity,
+      connectionEpoch: state.connection.epoch?.rawValue ?? pending?.id.epoch.rawValue ?? 0,
+      executionProfileIdentity: attempt.executionProfileIdentity,
+      phase: lifecycleCheckpointPhase(state.execution),
+      currentStepIndex: segment.stepIndex,
+      completedStepCount: activePlanIsComplete(state)
+        ? attempt.plan.plan.steps.count
+        : segment.stepIndex,
+      evidenceBackedActiveSeconds: evidenceBackedTotalSeconds(state),
+      speedOverrideKilometresPerHour: segment.speedOverride?.value,
+      inclinationOverridePercent: segment.inclinationOverride?.value,
+      effectiveTargetSpeedKilometresPerHour: effective.speed.value,
+      effectiveTargetInclinationPercent: effective.inclination.value,
+      lastConfirmedTargetSpeedKilometresPerHour: state.lastConfirmedTarget?.speed.value,
+      lastConfirmedTargetInclinationPercent: state.lastConfirmedTarget?.inclination.value,
+      pendingProcedureID: pending?.id.sequence,
+      pendingTargetIntent: pending.map { lifecycleTargetIntent($0.intent) }
+    )
+  }
+
+  private func evidenceBackedTotalSeconds(_ state: WorkoutExecutionState) -> TimeInterval {
+    var total = state.completedActiveSeconds
+    guard let segment = state.currentSegment else { return total }
+    total += segment.accumulatedActiveSeconds
+    if let startedAt = segment.activeStartedAt {
+      total += pendingEvidenceSeconds(from: startedAt, state: state)
+    }
+    if segment.accumulatedActiveSeconds > 0,
+      state.completedActiveSeconds >= segment.accumulatedActiveSeconds,
+      activePlanIsComplete(state)
+    {
+      total -= segment.accumulatedActiveSeconds
+    }
+    return total
+  }
+
+  private func lifecycleCheckpointPhase(
+    _ phase: WorkoutExecutionPhase
+  ) -> WorkoutLifecycleCheckpointPhase {
+    switch phase {
+    case .acquiringControl: .acquiringControl
+    case .waitingForPhysicalStart: .waitingForPhysicalStart
+    case .applyingTargets: .applyingTargets
+    case .runningSegment: .running
+    case .checkingTreadmill: .checkingTreadmill
+    case .paused: .paused
+    case .restoringTargets: .restoringTargets
+    case .awaitingPhysicalStopForCompletion: .awaitingPhysicalStop
+    case .readyToEnd: .readyToEnd
+    case .ending: .ending
+    case .idle, .preflight, .finished, .interrupted, .failed:
+      preconditionFailure("Terminal or pre-attempt state has no lifecycle checkpoint")
+    }
+  }
+
+  private func lifecycleTargetIntent(
+    _ intent: WorkoutControlPointIntent
+  ) -> WorkoutLifecycleTargetIntent {
+    switch intent {
+    case .requestControl: .requestControl
+    case .setTargetSpeed(let speed): .setTargetSpeed(speed.value)
+    case .setTargetInclination(let inclination): .setTargetInclination(inclination.value)
     }
   }
 
