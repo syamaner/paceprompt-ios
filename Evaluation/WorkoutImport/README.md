@@ -12,8 +12,9 @@ provider run, enters production code, persists a workout or controls a treadmill
 
 | Area | Source-control boundary |
 | --- | --- |
-| `Contracts/` | Tracked versioned provider-neutral proposal and normalized result JSON Schemas. |
-| `Corpus/v1/` | Tracked reviewed synthetic prompts, semantic expectations, manifest metadata and corpus hash. |
+| `Contracts/` | Tracked versioned provider-neutral proposal and normalized result JSON Schemas, plus the developer-only v2 acceptance-case schema. |
+| `Corpus/v1/` | Sealed accepted synthetic prompts, semantic expectations, manifest metadata and corpus hash. |
+| `Corpus/v2/` | Reviewer-authored issue #130 acceptance cases, semantic review, manifest metadata and corpus hash; not a provider-run authorisation. |
 | `Scoring/` | Tracked standard-library-only schema validation, canonical mapping, local validation and scoring. |
 | `Tests/` | Tracked synthetic results, deliberately failing fixtures and deterministic tests. |
 | `Summaries/` | Tracked only after an aggregate has been explicitly reviewed under the rules in its README. |
@@ -134,6 +135,52 @@ HealthKit, watchOS or treadmill operation.
 
 All current evidence is static/fixture evidence. It establishes only contract,
 corpus, schema and deterministic scorer behaviour.
+
+## Issue #130 acceptance corpus v2
+
+`Corpus/v2` is the first evaluation-first acceptance revision for ordinary
+workout language. It is deliberately separate from the accepted v1 corpus and
+from every model-visible system prompt. Its 28 reviewer-authored cases contain
+17 proposal expectations and 11 fail-closed expectations. The three required
+Easy Hills forms are the only declared equivalent semantic group.
+
+The revision freezes these edge decisions before any provider run:
+
+- at least three otherwise complete ordered steps infer `warmUp`, `interval`
+  and `coolDown` by first, middle and last position;
+- explicit recovery language overrides the middle-position `interval` default;
+- one or two unlabelled steps clarify with
+  `insufficientStepsForKindInference` at `steps.kind` rather than guessing;
+- finite repeated sections expand in stated order and multiplicity;
+- mixed explicit and implicit kinds apply the same positional policy only to
+  unlabelled steps;
+- `degree`, `degrees` and `°`, attached or separated by whitespace, preserve
+  their exact numeric value and normalise to inclination percent;
+- `kmph`, `kph`, `km/h` and written kilometre-per-hour forms normalise to
+  kilometres per hour; and
+- missing values, missing numeric values, contradictions, unsupported
+  activities, unsafe requests and medical requests remain fail closed.
+
+Run its zero-network verifier from the repository root:
+
+```sh
+python3 -B Evaluation/WorkoutImport/Acceptance/verify_v2.py \
+  --root Evaluation/WorkoutImport
+```
+
+The verifier checks the new case schema, expected canonical mapping, manifest
+hashes, uniqueness, stable ordering, required coverage, declared semantic
+equivalence, separation from reviewed prompt examples and local-validator
+expectations. It also pins byte hashes for the sealed v1 corpus, v1 schemas and
+v1 deterministic scorer. The evaluation XCTest independently passes every v2
+proposal fixture through the production `WorkoutPlanValidator` source compiled
+into the developer-only target.
+
+The manifest remains `awaiting-operator-ratification-before-provider-run`.
+Ratification must separately freeze every model, route, prompt/schema version,
+generation setting, repetition count, run order, timeout/cancellation policy,
+scoring gate and spending limit before any provider call. This corpus must not
+be copied into a system prompt or treated as production-correction evidence.
 
 ## Developer-only targets and execution boundary
 

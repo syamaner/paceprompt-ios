@@ -11,6 +11,76 @@ final class WorkoutImportEvaluationTests: XCTestCase {
         XCTAssertEqual(Set(corpus.cases.map(\.locale)), ["en-GB", "en-US"])
     }
 
+    func testIssue130AcceptanceCorpusCanonicalMappingsPassLocalWorkoutPlanValidator() throws {
+        let decoder = JSONDecoder()
+        let manifest = try decoder.decode(
+            AcceptanceManifestV2.self,
+            from: Data(contentsOf: try acceptanceResourceURL(name: "manifest"))
+        )
+        let cases = try decoder.decode(
+            [AcceptanceCaseV2].self,
+            from: Data(contentsOf: try acceptanceResourceURL(name: "cases"))
+        )
+        XCTAssertEqual(manifest.corpusVersion, "workout-import-acceptance-corpus/v2")
+        XCTAssertEqual(manifest.corpusRevision, "issue-130-reviewer-acceptance/r1")
+        XCTAssertEqual(
+            manifest.corpusHash,
+            "4b63c34203b8f6d0cf063f40bd73eb2aacb1cfd07a254bdfecbe0a70d6046739"
+        )
+        XCTAssertEqual(cases.count, 28)
+        let capabilities = try XCTUnwrap(manifest.capabilityProfiles["standardTreadmillV1"])
+        var proposalCount = 0
+
+        for item in cases {
+            guard item.expected.outcome == "proposal" else {
+                XCTAssertNil(item.expected.canonicalProposal, item.id)
+                continue
+            }
+            proposalCount += 1
+            let canonical = try XCTUnwrap(item.expected.canonicalProposal, item.id)
+            let proposal = WorkoutProposalV1(
+                contractVersion: WorkoutImportEvaluationContract.proposalContractVersion,
+                suggestedName: canonical.suggestedName,
+                activity: canonical.activity,
+                steps: canonical.steps.enumerated().map { index, step in
+                    WorkoutProposalStepV1(
+                        kind: step.kind,
+                        label: "Step \(index + 1)",
+                        duration: .init(value: Decimal(step.durationSeconds), unit: "seconds"),
+                        targetSpeed: .init(
+                            value: step.speedKilometresPerHour,
+                            unit: "kilometresPerHour"
+                        ),
+                        targetInclination: .init(
+                            value: step.inclinationPercent,
+                            unit: "percent"
+                        )
+                    )
+                }
+            )
+            let pipeline = WorkoutProposalLocalPipeline.process(
+                .proposal(proposal), capabilities: capabilities
+            )
+            XCTAssertEqual(pipeline.classification, .mappedAndValidated, item.id)
+            XCTAssertEqual(item.expected.localValidatorOutcome, "valid", item.id)
+            XCTAssertEqual(item.expected.localValidatorIssueCodes, [], item.id)
+
+            guard case let .success(plan) = WorkoutProposalCanonicalMapper.map(proposal) else {
+                return XCTFail("\(item.id) failed canonical mapping")
+            }
+            XCTAssertEqual(plan.suggestedName, canonical.suggestedName, item.id)
+            XCTAssertEqual(plan.activity.rawValue, canonical.activity, item.id)
+            XCTAssertEqual(plan.steps.count, canonical.steps.count, item.id)
+            for (actual, expected) in zip(plan.steps, canonical.steps) {
+                XCTAssertEqual(actual.kind.rawValue, expected.kind, item.id)
+                XCTAssertEqual(actual.duration.value, expected.durationSeconds, item.id)
+                XCTAssertEqual(actual.targetSpeed.value, expected.speedKilometresPerHour, item.id)
+                XCTAssertEqual(actual.targetInclination.value, expected.inclinationPercent, item.id)
+            }
+        }
+        XCTAssertEqual(proposalCount, 17)
+    }
+
     func testParserPreservesAllSixNormalizedOutcomes() throws {
         let proposal = try XCTUnwrap(proposalData())
         XCTAssertEqual(outcomeType(GeneratorOutputParser.parse(proposal)), "proposal")
@@ -355,6 +425,20 @@ final class WorkoutImportEvaluationTests: XCTestCase {
 
     private var testBundle: Bundle { Bundle(for: WorkoutImportEvaluationTests.self) }
 
+    private func acceptanceResourceURL(name: String) throws -> URL {
+        if let url = testBundle.url(
+            forResource: name,
+            withExtension: "json",
+            subdirectory: "Corpus/v2"
+        ) {
+            return url
+        }
+        if let corpus = testBundle.url(forResource: "Corpus", withExtension: nil) {
+            return corpus.appendingPathComponent("v2/\(name).json")
+        }
+        throw EvaluationCorpusError.missingResource("Corpus/v2/\(name).json")
+    }
+
     private func runConfiguration() -> EvaluationRunConfiguration {
         EvaluationRunConfiguration(
             runID: "fixture-run",
@@ -452,6 +536,38 @@ final class WorkoutImportEvaluationTests: XCTestCase {
         }
     }
 
+}
+
+private struct AcceptanceManifestV2: Decodable {
+    let corpusVersion: String
+    let corpusRevision: String
+    let corpusHash: String
+    let capabilityProfiles: [String: WorkoutImportCapabilities]
+}
+
+private struct AcceptanceCaseV2: Decodable {
+    let id: String
+    let expected: AcceptanceExpectedV2
+}
+
+private struct AcceptanceExpectedV2: Decodable {
+    let outcome: String
+    let canonicalProposal: AcceptanceCanonicalProposalV2?
+    let localValidatorOutcome: String?
+    let localValidatorIssueCodes: [String]?
+}
+
+private struct AcceptanceCanonicalProposalV2: Decodable {
+    let suggestedName: String
+    let activity: String
+    let steps: [AcceptanceCanonicalStepV2]
+}
+
+private struct AcceptanceCanonicalStepV2: Decodable {
+    let kind: String
+    let durationSeconds: Int
+    let speedKilometresPerHour: Decimal
+    let inclinationPercent: Decimal
 }
 
 private final class FakeProvider: @unchecked Sendable, WorkoutProposalProvider {
