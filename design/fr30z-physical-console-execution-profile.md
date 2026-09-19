@@ -22,7 +22,7 @@ The physical treadmill console owns belt motion:
 
 PacePrompt owns the workout and targets:
 
-- **Begin workout** creates the foreground app attempt and waits for physical Start without sending a procedure;
+- **Begin workout** creates the foreground app attempt and waits for physical Start without sending a procedure; once begun, ordinary inactive/background/lock lifecycle changes preserve the same attempt while its evidence remains valid;
 - the first fresh non-zero movement report permits Request Control, whose acknowledgement then permits the initial target sequence while telemetry remains fresh;
 - validated plan segments supply speed and inclination targets;
 - the user may override either target for the current segment;
@@ -71,9 +71,9 @@ The production profile may arm only when every current-connection condition belo
    - `0x2AD4`: `32 00 D0 07 0A 00` (0.50–20.00 km/h, 0.10 km/h increment);
    - `0x2AD5`: `00 00 96 00 0A 00` (0.0–15.0%, 1.0% increment).
 5. The `0x2ACD` subscription and `0x2AD9` indication subscription are confirmed for this connection. Outcomes for `0x2AD3` and `0x2ADA` are recorded but their notifications are not required for progress.
-6. The app is foreground-active, one connection epoch is current, and no failure or delivery uncertainty has invalidated it.
+6. The app is foreground-active for arming, one connection epoch is current, and no failure or delivery uncertainty has invalidated it.
 
-Any identity, characteristic, property, byte, range, increment, subscription, epoch or foreground mismatch blocks arming. The profile does not claim support for another FR30z, dongle or firmware revision.
+Any identity, characteristic, property, byte, range, increment, subscription, epoch or foreground mismatch blocks arming. After the attempt begins, background continuity is limited to that same process, selected peripheral, live connection, epoch, held permission, matched profile, resolved subscriptions and frozen ceilings. The profile does not claim support for another FR30z, dongle or firmware revision.
 
 Confirmed `0x2ACD` subscription is required for preparation, but receipt of a packet is not. The characterised FR30z may remain silent while stationary. Before Begin, a current malformed, contradictory or non-zero packet blocks progress. Begin is the user's deliberate intent to start the app attempt; it emits no procedure and waits for fresh physical-Start movement.
 
@@ -125,10 +125,12 @@ FTMS encodes the relevant speed and inclination fields as scaled integers. After
 - A sample is fresh for **2.0 seconds** from its monotonic receipt time.
 - When a required sample becomes older than 2.0 seconds, freeze active workout and segment timing at `sample.receivedAt + 2.0 seconds`, suppress plan transitions and enter **Checking treadmill**.
 - Checking continues while required telemetry is absent. Silence is a signal to freeze and ask the operator what the physical console shows; it is never stationary evidence and never emits a procedure.
+- Active duration advances only from accepted current-epoch moving telemetry. At most 2.0 seconds after the last matching sample may be counted; a longer unobserved gap is excluded. Timers and wall-clock time do not prove progress.
+- A fresh background Treadmill Data wake may execute exactly one due planned boundary through the ordinary target-only acknowledgement and later-observation path. It cannot replay missed steps. Preflight, arming, overrides, resume restoration and other interactive controls remain foreground-only.
 - A fresh zero-speed sample received during checking establishes the telemetry-based pause condition.
 - A fresh non-zero sample received during checking, with no other adverse evidence, returns to the preceding target-observation or running state. The uncertain gap is excluded from active duration.
 - The operator may deliberately confirm that the treadmill is physically stationary at any time while checking. That separately recorded human evidence establishes pause or ending eligibility without inventing a zero-speed packet.
-- Explicit telemetry unavailability, malformed or contradictory evidence, connection/control/profile loss, app deactivation and procedure or target-observation deadlines retain their fail-closed outcomes. Silence alone has no terminal deadline.
+- Explicit telemetry unavailability, malformed or contradictory evidence, connection/control/profile loss and procedure or target-observation deadlines retain their fail-closed outcomes. Lifecycle deactivation alone is non-terminal; process termination remains terminal. Silence alone has no terminal deadline.
 
 The 2.0-second freshness window is conservative product policy derived from normal observed delivery near 0.5 seconds. It is not a Bluetooth guarantee.
 
@@ -205,7 +207,7 @@ End workout is also available from an ordinary accepted pause. Ending while tele
 
 ## Failure and interruption rules
 
-Any ATT error, negative/unknown/malformed/mismatched/duplicate/late FTMS response, procedure timeout, target-observation timeout, explicit control loss, capability/profile mismatch, app deactivation, disconnect or contradictory human/telemetry evidence:
+Any ATT error, negative/unknown/malformed/mismatched/duplicate/late FTMS response, procedure timeout, target-observation timeout, explicit control loss, capability/profile mismatch, process termination, disconnect or contradictory human/telemetry evidence:
 
 - freezes timers and plan progression;
 - invalidates control assumptions;
@@ -214,7 +216,9 @@ Any ATT error, negative/unknown/malformed/mismatched/duplicate/late FTMS respons
 - instructs the operator to use the physical console and safety key;
 - requires a new user-created attempt and connection epoch for any later workout.
 
-An ordinary in-foreground console Stop/Start cycle is not a failure when the same connection remains current, checking resolves within the telemetry policy and no adverse evidence appears.
+An ordinary console Stop/Start cycle is not a failure when the same connection remains current, checking resolves within the telemetry policy and no adverse evidence appears. Inactive, background, screen lock and unlock are likewise non-terminal lifecycle context. On foreground return, controls remain disabled until the link, epoch, permission, profile/capabilities, subscriptions, pending procedure and telemetry freshness reconcile.
+
+The app declares only the `bluetooth-central` background mode. It does not opt into CoreBluetooth state restoration. If the process terminates, the bounded local lifecycle checkpoint can classify the matching history record as interrupted, but it never authorises reconnection or resumption.
 
 ## Evidence claims
 

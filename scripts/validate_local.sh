@@ -47,11 +47,16 @@ if [[ $(printf '%s\n' "$control_write_sites" | sed '/^$/d' | wc -l | tr -d ' ') 
   exit 1
 fi
 
-if rg -n 'case (start|stop)$|case \.(start|stop)|submit\(\.(start|stop)' \
+if rg -n 'case (start|stop|pause)$|case \.(start|stop|pause)|submit\(\.(start|stop|pause)' \
   PacePrompt/Bluetooth/FTMSControlPointCodec.swift \
   PacePrompt/Bluetooth/FTMSControlPointTransport.swift \
   PacePrompt/Execution/ProductionWorkoutExecutionBinding.swift; then
   echo "Production unexpectedly contains an FTMS Start or Stop command route" >&2
+  exit 1
+fi
+
+if rg -n 'CBCentralManagerOptionRestoreIdentifierKey|willRestoreState' PacePrompt --glob '*.swift'; then
+  echo "Production must not opt into CoreBluetooth state restoration" >&2
   exit 1
 fi
 
@@ -100,6 +105,7 @@ assert_target_only_binary() {
 
 debug_binary="$production_derived_data/Build/Products/Debug-iphonesimulator/PacePrompt.app/PacePrompt"
 assert_target_only_binary "Debug" "$debug_binary"
+python3 -B scripts/verify_built_info_plist.py "$(dirname "$debug_binary")/Info.plist"
 
 xcodebuild \
   -project PacePrompt.xcodeproj \
@@ -112,6 +118,7 @@ xcodebuild \
 
 release_binary="$release_derived_data/Build/Products/Release-iphonesimulator/PacePrompt.app/PacePrompt"
 assert_target_only_binary "Release" "$release_binary"
+python3 -B scripts/verify_built_info_plist.py "$(dirname "$release_binary")/Info.plist"
 
 xcodebuild \
   -project PacePrompt.xcodeproj \

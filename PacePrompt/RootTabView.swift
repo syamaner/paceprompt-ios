@@ -106,7 +106,9 @@ struct RootTabView: View {
             if phase != .active { credential.protectedDataLost() }
         }
         .onAppear {
-            importer.setProtectedDataAvailable(UIApplication.shared.isProtectedDataAvailable)
+            let protectedDataAvailable = UIApplication.shared.isProtectedDataAvailable
+            importer.setProtectedDataAvailable(protectedDataAvailable)
+            treadmill.setProtectedDataAvailable(protectedDataAvailable)
             treadmill.setApplicationActivity(captureActivity(for: scenePhase))
             #if DEBUG
             treadmill.activateUITestScenarioIfNeeded()
@@ -114,10 +116,12 @@ struct RootTabView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataWillBecomeUnavailableNotification)) { _ in
             importer.setProtectedDataAvailable(false)
+            treadmill.setProtectedDataAvailable(false)
             credential.protectedDataLost()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataDidBecomeAvailableNotification)) { _ in
             importer.setProtectedDataAvailable(true)
+            treadmill.setProtectedDataAvailable(true)
         }
     }
 

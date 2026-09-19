@@ -17,6 +17,8 @@ struct SystemWorkoutAttemptIDSource: WorkoutAttemptIDSource {
 struct ProductionTransmissionContext {
   var epoch: ConnectionEpoch?
   var foreground: Bool
+  var backgroundTelemetryWake: Bool = false
+  var targetSequencePurpose: WorkoutTargetSequencePurpose?
   var capability: FR30zCapabilitySnapshot?
   var profile: FR30zExecutionProfile?
   var frozenAttempt: FrozenWorkoutAttemptInputs?
@@ -96,7 +98,14 @@ final class ProductionWorkoutTargetControlTransport: WorkoutTargetControlTranspo
     context: ProductionTransmissionContext?
   ) -> String? {
     guard let context else { return "Production execution context is unavailable" }
-    guard context.foreground else { return "The app is not active in the foreground" }
+    if !context.foreground {
+      guard context.backgroundTelemetryWake,
+        context.targetSequencePurpose == .plannedTransition
+      else { return "Background transmission requires a fresh planned-transition telemetry wake" }
+      if case .requestControl = record.intent {
+        return "Request Control is foreground only"
+      }
+    }
     guard let epoch = context.epoch, epoch == record.id.epoch else {
       return "The connection epoch changed before transmission"
     }
@@ -242,6 +251,7 @@ final class ProductionWorkoutExecutionBinding {
 
   private(set) var orchestrator: WorkoutExecutionOrchestrator
   private(set) var applicationActivity: FTMSApplicationActivity = .unknown
+  private(set) var protectedDataAvailable = true
   private(set) var epoch: ConnectionEpoch?
 
   private var nextEpoch: UInt64 = 1
@@ -256,12 +266,14 @@ final class ProductionWorkoutExecutionBinding {
   private var lastPublishedCapability: FR30zCapabilitySnapshot?
   private var tickTimer: Timer?
   private var controlSuppressedUntilNewConnection = false
+  private var handlingBackgroundTelemetryWake = false
   private let automaticTicks: Bool
 
   init(
     client: any FTMSClientProtocol,
     controlTransport: (any FitnessMachineControlTransport)? = nil,
     history: any WorkoutHistoryRepositoryProtocol = WorkoutHistoryRepository(),
+    lifecycleCheckpoints: any WorkoutLifecycleCheckpointRepositoryProtocol = WorkoutLifecycleCheckpointRepository(),
     clock: any WorkoutOrchestrationClock = SystemWorkoutOrchestrationClock(),
     attemptIDs: any WorkoutAttemptIDSource = SystemWorkoutAttemptIDSource(),
     automaticTicks: Bool = true
@@ -277,6 +289,7 @@ final class ProductionWorkoutExecutionBinding {
     orchestrator = WorkoutExecutionOrchestrator(
       transport: targetTransport,
       history: history,
+      lifecycleCheckpoints: lifecycleCheckpoints,
       clock: clock,
       attemptIDs: attemptIDs
     )
@@ -305,7 +318,8 @@ final class ProductionWorkoutExecutionBinding {
     guard let capability = currentCapability,
       let profile = executionProfile,
       profile.matches(capability),
-      applicationActivity == .active
+      applicationActivity == .active,
+      protectedDataAvailable
     else { return false }
     return true
   }
@@ -345,19 +359,41 @@ final class ProductionWorkoutExecutionBinding {
   func setApplicationActivity(_ activity: FTMSApplicationActivity) {
     guard applicationActivity != activity else { return }
     applicationActivity = activity
-    guard activity == .active else {
-      stopTicks()
-      controlSuppressedUntilNewConnection = true
-      if let epoch {
-        _ = apply(
-          .appBecameInactive(epoch: epoch, reason: "Application left the foreground")
-        )
-      }
-      controlTransport.disconnect()
-      establishedLinkIdentity = nil
+    guard let epoch else {
+      if activity == .active { refreshCapability() }
       return
     }
-    refreshCapability()
+    switch activity {
+    case .active:
+      if protectedDataAvailable {
+        refreshCapability()
+        _ = apply(.applicationLifecycleChanged(epoch: epoch, .active))
+        startTicks()
+      } else {
+        stopTicks()
+        _ = apply(.applicationLifecycleChanged(epoch: epoch, .inactive))
+      }
+    case .inactive:
+      stopTicks()
+      _ = apply(.applicationLifecycleChanged(epoch: epoch, .inactive))
+    case .background, .unknown:
+      stopTicks()
+      _ = apply(.applicationLifecycleChanged(epoch: epoch, .background))
+    }
+  }
+
+  func setProtectedDataAvailable(_ available: Bool) {
+    guard protectedDataAvailable != available else { return }
+    protectedDataAvailable = available
+    guard applicationActivity == .active, let epoch else { return }
+    if available {
+      refreshCapability()
+      _ = apply(.applicationLifecycleChanged(epoch: epoch, .active))
+      startTicks()
+    } else {
+      stopTicks()
+      _ = apply(.applicationLifecycleChanged(epoch: epoch, .inactive))
+    }
   }
 
   func receive(_ event: FTMSClientEvent) {
@@ -388,7 +424,7 @@ final class ProductionWorkoutExecutionBinding {
   }
 
   func tick() {
-    guard applicationActivity == .active, let epoch else { return }
+    guard applicationActivity == .active, protectedDataAvailable, let epoch else { return }
     refreshCapability()
     _ = apply(.tick(epoch: epoch))
   }
@@ -410,6 +446,11 @@ final class ProductionWorkoutExecutionBinding {
   private func consumeConnection(_ state: TreadmillConnectionState) {
     switch state {
     case .connecting:
+      if let currentEpoch = epoch, attemptIsActive(orchestrator.state.execution) {
+        _ = apply(
+          .connectionLost(epoch: currentEpoch, reason: "Connection epoch was replaced")
+        )
+      }
       isConnected = false
       controlSuppressedUntilNewConnection = true
       resetConnectionEvidence()
@@ -462,6 +503,9 @@ final class ProductionWorkoutExecutionBinding {
         latestTelemetryInput = input
         refreshCapability()
         if let epoch, lastPublishedCapability != nil {
+          handlingBackgroundTelemetryWake =
+            applicationActivity != .active || !protectedDataAvailable
+          defer { handlingBackgroundTelemetryWake = false }
           _ = apply(.telemetry(epoch: epoch, input))
         }
       } catch {
@@ -493,14 +537,15 @@ final class ProductionWorkoutExecutionBinding {
   }
 
   private func refreshCapability() {
-    guard applicationActivity == .active,
-      isConnected
+    guard isConnected
     else {
       suppressControlAssumptionsIfEstablished()
       return
     }
 
-    establishControlPointIfEligible()
+    if applicationActivity == .active, protectedDataAvailable {
+      establishControlPointIfEligible()
+    }
     guard let capability = currentCapability, let epoch else {
       if lastPublishedCapability != nil
         || (establishedLinkIdentity != nil && !preliminaryProfileMatches)
@@ -710,7 +755,9 @@ final class ProductionWorkoutExecutionBinding {
   private func transmissionContext() -> ProductionTransmissionContext {
     .init(
       epoch: epoch,
-      foreground: applicationActivity == .active,
+      foreground: applicationActivity == .active && protectedDataAvailable,
+      backgroundTelemetryWake: handlingBackgroundTelemetryWake,
+      targetSequencePurpose: orchestrator.state.targetSequence?.purpose,
       capability: currentCapability,
       profile: executionProfile,
       frozenAttempt: orchestrator.frozenAttempt,
@@ -733,6 +780,17 @@ final class ProductionWorkoutExecutionBinding {
       break
     }
     return result
+  }
+
+  private func attemptIsActive(_ phase: WorkoutExecutionPhase) -> Bool {
+    switch phase {
+    case .acquiringControl, .waitingForPhysicalStart, .applyingTargets, .runningSegment,
+      .checkingTreadmill, .paused, .restoringTargets, .awaitingPhysicalStopForCompletion,
+      .readyToEnd, .ending:
+      true
+    case .idle, .preflight, .finished, .interrupted, .failed:
+      false
+    }
   }
 
   private func startTicks() {

@@ -1,6 +1,6 @@
 # Safety-gated workout execution state machine
 
-Status: product design originally delivered by GitHub issue [#4](https://github.com/syamaner/paceprompt-ios/issues/4), revised by issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57) for the accepted physical-console FR30z workflow. The accepted executable #49 reducer remains a historical implementation snapshot; issue [#81](https://github.com/syamaner/paceprompt-ios/issues/81) owns its pure successor. Together with the accepted FR30z profile, this defines current production execution semantics rather than a future unauthorised capability. It does not by itself direct a physical treadmill session or permit behaviour beyond that profile.
+Status: product design originally delivered by GitHub issue [#4](https://github.com/syamaner/paceprompt-ios/issues/4), revised by issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57) for the accepted physical-console FR30z workflow and by issue [#131](https://github.com/syamaner/paceprompt-ios/issues/131) for same-process background continuity. The accepted executable #49 reducer remains a historical implementation snapshot; issue [#81](https://github.com/syamaner/paceprompt-ios/issues/81) owns its pure successor. Together with the accepted FR30z profile, this defines current production execution semantics rather than a future unauthorised capability. It does not by itself direct a physical treadmill session or permit behaviour beyond that profile.
 
 ## Current authority
 
@@ -29,6 +29,9 @@ The profile supersedes the old product assumptions that PacePrompt would send St
 11. A physical resume restores the last effective speed then inclination and resumes timing only after later joint target observation.
 12. Failure, interruption or uncertainty emits no automatic retry, reconnect, control reacquisition or compensating command.
 13. Simulator/software evidence is never physical FR30z evidence.
+14. Inactive, background, screen lock and unlock are lifecycle context, not evidence that the connection or workout ended.
+15. Elapsed progress comes only from current-epoch moving telemetry within the 2.0-second freshness window; timer delivery and elapsed wall time are never execution authority.
+16. Background execution can submit only the one planned transition reached while processing a fresh current-epoch Treadmill Data notification. Interactive control remains foreground-only.
 
 ## Independent state dimensions
 
@@ -45,6 +48,16 @@ The reducer stores a product of independent state rather than one overloaded run
 | `lost(previousEpoch, reason)` | The link ended; every previous value is historical. |
 
 No automatic reconnect state exists. An event from an old epoch cannot mutate current state.
+
+### Application lifecycle
+
+| State | Meaning |
+| --- | --- |
+| `active` | Foreground reconciliation passed; interactive controls may additionally use their ordinary execution guards. |
+| `inactive` | A transient presentation or protected-data transition. It preserves the same attempt and link but disables interactive actions. |
+| `background` | The same process and link may consume CoreBluetooth events. Only a fresh Treadmill Data wake can authorise one due planned transition. |
+
+Continuity additionally requires the same selected peripheral, live connection, connection epoch, held control permission, matched FR30z profile, resolved subscriptions and frozen session ceilings. A lifecycle transition does not manufacture any of those facts. Foreground return reconciles them, the pending procedure and telemetry freshness before controls become available.
 
 ### Control permission
 
@@ -82,7 +95,7 @@ Only `idle` permits another procedure. A terminal procedure record must be consu
 
 Advertised supported ranges constrain target-setting. A complete non-negative speed report below the advertised minimum target remains valid physical-start ramp evidence; it does not become a requested target. Negative speed or a report above the accepted maximum remains contradictory.
 
-After movement has been observed or control is held, staleness freezes active time at the freshness boundary and enters `checkingTreadmill`. Checking remains command-free while telemetry is absent. Fresh telemetry may resolve the uncertainty, or the operator may separately confirm the treadmill stationary; silence alone never establishes stop and no longer terminates the attempt on a timer. Before control, `waitingForPhysicalStart` may remain unknown through stationary-report expiry or packet silence because it cannot emit a procedure until a fresh non-zero report arrives.
+After movement has been observed or control is held, staleness freezes active time at the freshness boundary and enters `checkingTreadmill`. The reducer may count at most the 2.0-second freshness interval after the last accepted matching sample. A longer gap is excluded. Checking remains command-free while telemetry is absent. Fresh telemetry may resume accumulation from that sample, or the operator may separately confirm the treadmill stationary; silence alone never establishes stop and no longer terminates the attempt on a timer. Before control, `waitingForPhysicalStart` may remain unknown through stationary-report expiry or packet silence because it cannot emit a procedure until a fresh non-zero report arrives.
 
 ### Observed machine
 
@@ -176,11 +189,13 @@ A different fresh value before confirmation is ramp evidence and leaves the targ
 
 ### Planned transitions
 
-When an active segment duration finishes:
+The segment duration is evaluated only while processing accepted moving telemetry. Timer callbacks and a later foreground timestamp cannot finish a segment. When evidence-backed active duration finishes:
 
 - freeze its active duration;
 - if another segment exists, clear current-segment overrides and apply the next segment's planned targets;
 - if it was final, enter `awaitingPhysicalStopForCompletion`, emit no treadmill Stop and instruct the operator to press physical Stop.
+
+While backgrounded, the fresh telemetry callback that reaches one boundary may submit that one transition through the existing target-only path if every connection, epoch, permission, capability, subscription, ceiling, freshness and one-procedure guard still passes immediately before the write. An acknowledgement callback may settle the current axis but cannot submit the next axis while backgrounded; another fresh telemetry notification is required. Missed execution opportunities delay progress. Multiple missed steps and wall-clock catch-up sequences do not exist.
 
 ### Manual override
 
@@ -210,7 +225,7 @@ The UI tells the operator to wait for **Paused** before pressing physical Start 
 
 ### Physical resume and restoration
 
-From `paused`, a fresh current-epoch non-zero report means the treadmill reported physical resume. If connection, control, profile, capability, foreground and procedure guards remain valid:
+From `paused`, a fresh current-epoch non-zero report means the treadmill reported physical resume. Resume restoration remains an interactive foreground-only path. If connection, control, profile, capability, foreground and procedure guards remain valid:
 
 - preserve the same segment, accumulated active duration and overrides;
 - enter `restoringTargets`;
@@ -235,7 +250,8 @@ The first matching rule wins:
 | Event | State/effect |
 | --- | --- |
 | Bluetooth loss, powered-off state or transport failure | `interrupted`; connection/control/telemetry invalidated; no reconnect or write. |
-| App resigns active, backgrounds, terminates or loses continuity | `interrupted`; timers freeze; no background command or later automatic resume. |
+| App resigns active, backgrounds, locks or unlocks | Preserve the same attempt and link; disable interactive actions; reconcile on foreground return. |
+| Process termination, crash or device restart | Persisted `inProgress` attempt becomes interrupted on relaunch; no scan, reconnect, Request Control, target restoration, retry or resume. |
 | Capability/profile/ceiling mismatch | Invalidate arming or interrupt active attempt; no in-place adaptation. |
 | ATT error, negative/malformed/mismatched/duplicate response or correlation failure | Fail procedure, invalidate control, interrupt, no retry. |
 | FTMS indication timeout | `timedOutUnknown`; require a new user-created attempt/link for later work. |
@@ -246,6 +262,12 @@ The first matching rule wins:
 | Missing `0x2AD3` or `0x2ADA` notification | No permissive or state-preserving effect. |
 
 Late evidence may be retained against its original epoch/procedure but cannot reopen an interrupted or ended attempt.
+
+## Durable lifecycle checkpoint
+
+Beginning an attempt, accepted execution changes and lifecycle changes write a bounded local checkpoint containing the history identity, selected peripheral/profile identity, connection epoch, phase, step, evidence-backed active duration, accepted overrides, effective and last-confirmed targets, and any pending procedure identity and intent. It contains no raw telemetry, diagnostics or credentials.
+
+The checkpoint is crash-classification evidence only. A newly launched process may use it to mark the matching `inProgress` history record interrupted. It must not reconstruct an executable reducer state, opt into CoreBluetooth restoration, scan, reconnect, request control, retry, restore a target or resume a workout.
 
 ## Evidence projection
 
