@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paceprompt.local/schemas/workout-import-acceptance-case-v3.schema.json",
+  "title": "PacePrompt reviewer-authored workout-import acceptance case v3",
+  "type": "object",
+  "required": [
+    "caseContractVersion",
+    "id",
+    "category",
+    "locale",
+    "prompt",
+    "capabilityProfile",
+    "scenarioFamily",
+    "coverageTags",
+    "expected"
+  ],
+  "properties": {
+    "caseContractVersion": {
+      "const": "workout-import-acceptance-case/v3"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "WI-V3-A[0-9]{3}"
+    },
+    "category": {
+      "enum": [
+        "ordinaryLanguage",
+        "unitAlias",
+        "kindInference",
+        "edgeBoundary",
+        "failClosed"
+      ]
+    },
+    "locale": {
+      "enum": [
+        "en-GB"
+      ]
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capabilityProfile": {
+      "const": "standardTreadmillV1"
+    },
+    "scenarioFamily": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coverageTags": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "expected": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/proposalExpectation"
+        },
+        {
+          "$ref": "#/$defs/nonProposalExpectation"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "canonicalStep": {
+      "type": "object",
+      "required": [
+        "kind",
+        "durationSeconds",
+        "speedKilometresPerHour",
+        "inclinationPercent"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "warmUp",
+            "interval",
+            "recovery",
+            "coolDown"
+          ]
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "speedKilometresPerHour": {
+          "type": "number"
+        },
+        "inclinationPercent": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "canonicalProposal": {
+      "type": "object",
+      "required": [
+        "activity",
+        "steps"
+      ],
+      "properties": {
+        "activity": {
+          "enum": [
+            "indoorWalking",
+            "indoorRunning"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/canonicalStep"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "suggestedNameExpectation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "nonEmpty"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "mode",
+            "value"
+          ],
+          "properties": {
+            "mode": {
+              "const": "exact"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "normalisation": {
+      "type": "object",
+      "required": [
+        "sourceText",
+        "targetPath",
+        "canonicalUnit",
+        "canonicalValue"
+      ],
+      "properties": {
+        "sourceText": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetPath": {
+          "type": "string",
+          "pattern": "steps\\[[0-9]+\\]\\.(speedKilometresPerHour|inclinationPercent)"
+        },
+        "canonicalUnit": {
+          "enum": [
+            "kilometresPerHour",
+            "percent"
+          ]
+        },
+        "canonicalValue": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "proposalExpectation": {
+      "type": "object",
+      "required": [
+        "outcome",
+        "suggestedNameExpectation",
+        "canonicalProposal",
+        "normalisations",
+        "localValidatorOutcome",
+        "localValidatorIssueCodes"
+      ],
+      "properties": {
+        "outcome": {
+          "const": "proposal"
+        },
+        "suggestedNameExpectation": {
+          "$ref": "#/$defs/suggestedNameExpectation"
+        },
+        "canonicalProposal": {
+          "$ref": "#/$defs/canonicalProposal"
+        },
+        "normalisations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/normalisation"
+          }
+        },
+        "localValidatorOutcome": {
+          "enum": [
+            "valid",
+            "invalid",
+            "capabilityUnknown",
+            "targetUnsupported",
+            "invalidCapabilityRange"
+          ]
+        },
+        "localValidatorIssueCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "nonProposalExpectation": {
+      "type": "object",
+      "required": [
+        "outcome",
+        "reasonCategory",
+        "affectedPaths"
+      ],
+      "properties": {
+        "outcome": {
+          "enum": [
+            "clarificationRequired",
+            "unsupportedRequest",
+            "refusal"
+          ]
+        },
+        "reasonCategory": {
+          "enum": [
+            "missingRequiredField",
+            "ambiguousRequiredField",
+            "contradictoryRequest",
+            "outOfDomain",
+            "unsupportedActivity",
+            "unsupportedTarget",
+            "unsupportedUnit",
+            "unsupportedOperation",
+            "knownCapabilityUnsupported",
+            "excessiveComplexity",
+            "promptInjection",
+            "unsafeRequest",
+            "medicalRequest"
+          ]
+        },
+        "affectedPaths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "activity",
+              "steps",
+              "steps.repetitions",
+              "steps.kind",
+              "steps.duration",
+              "steps.duration.value",
+              "steps.duration.unit",
+              "steps.targetSpeed",
+              "steps.targetSpeed.value",
+              "steps.targetSpeed.unit",
+              "steps.targetInclination",
+              "steps.targetInclination.value",
+              "steps.targetInclination.unit",
+              "capabilities.speed",
+              "capabilities.inclination"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

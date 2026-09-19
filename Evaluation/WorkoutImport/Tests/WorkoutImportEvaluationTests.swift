@@ -81,6 +81,88 @@ final class WorkoutImportEvaluationTests: XCTestCase {
         XCTAssertEqual(proposalCount, 17)
     }
 
+    func testIssue130ExpandedAcceptanceCorpusFreezesCanonicalMappingAndValidatorOutcomes() throws {
+        let decoder = JSONDecoder()
+        let manifest = try decoder.decode(
+            AcceptanceManifestV2.self,
+            from: Data(contentsOf: try acceptanceResourceURL(name: "manifest", version: "v3"))
+        )
+        let cases = try decoder.decode(
+            [AcceptanceCaseV3].self,
+            from: Data(contentsOf: try acceptanceResourceURL(name: "cases", version: "v3"))
+        )
+        XCTAssertEqual(manifest.corpusVersion, "workout-import-acceptance-corpus/v3")
+        XCTAssertEqual(manifest.corpusRevision, "issue-130-reviewer-acceptance/r2")
+        XCTAssertEqual(
+            manifest.corpusHash,
+            "204c6814cb62523426ed8871d77159f39a4daf4dc495ece7fcc70627e6d22864"
+        )
+        XCTAssertEqual(cases.count, 30)
+        let capabilities = try XCTUnwrap(manifest.capabilityProfiles["standardTreadmillV1"])
+        var proposalCount = 0
+
+        for item in cases {
+            guard item.expected.outcome == "proposal" else {
+                XCTAssertNil(item.expected.canonicalProposal, item.id)
+                continue
+            }
+            proposalCount += 1
+            let canonical = try XCTUnwrap(item.expected.canonicalProposal, item.id)
+            let nameExpectation = try XCTUnwrap(item.expected.suggestedNameExpectation, item.id)
+            let suggestedName = nameExpectation.value ?? "Acceptance Fixture"
+            let proposal = WorkoutProposalV1(
+                contractVersion: WorkoutImportEvaluationContract.proposalContractVersion,
+                suggestedName: suggestedName,
+                activity: canonical.activity,
+                steps: canonical.steps.enumerated().map { index, step in
+                    WorkoutProposalStepV1(
+                        kind: step.kind,
+                        label: "Step \(index + 1)",
+                        duration: .init(value: Decimal(step.durationSeconds), unit: "seconds"),
+                        targetSpeed: .init(
+                            value: step.speedKilometresPerHour,
+                            unit: "kilometresPerHour"
+                        ),
+                        targetInclination: .init(
+                            value: step.inclinationPercent,
+                            unit: "percent"
+                        )
+                    )
+                }
+            )
+            let pipeline = WorkoutProposalLocalPipeline.process(
+                .proposal(proposal), capabilities: capabilities
+            )
+            let expectedClassification: ProposalPipelineClassification =
+                item.expected.localValidatorOutcome == "valid"
+                ? .mappedAndValidated : .invalidLocalPlan
+            XCTAssertEqual(pipeline.classification, expectedClassification, item.id)
+            XCTAssertEqual(
+                Set(pipeline.validationIssues.map(\.code.rawValue)).sorted(),
+                item.expected.localValidatorIssueCodes ?? [],
+                item.id
+            )
+
+            guard case let .success(plan) = WorkoutProposalCanonicalMapper.map(proposal) else {
+                return XCTFail("\(item.id) failed canonical mapping")
+            }
+            if nameExpectation.mode == "exact" {
+                XCTAssertEqual(plan.suggestedName, nameExpectation.value, item.id)
+            } else {
+                XCTAssertFalse(plan.suggestedName.isEmpty, item.id)
+            }
+            XCTAssertEqual(plan.activity.rawValue, canonical.activity, item.id)
+            XCTAssertEqual(plan.steps.count, canonical.steps.count, item.id)
+            for (actual, expected) in zip(plan.steps, canonical.steps) {
+                XCTAssertEqual(actual.kind.rawValue, expected.kind, item.id)
+                XCTAssertEqual(actual.duration.value, expected.durationSeconds, item.id)
+                XCTAssertEqual(actual.targetSpeed.value, expected.speedKilometresPerHour, item.id)
+                XCTAssertEqual(actual.targetInclination.value, expected.inclinationPercent, item.id)
+            }
+        }
+        XCTAssertEqual(proposalCount, 19)
+    }
+
     func testParserPreservesAllSixNormalizedOutcomes() throws {
         let proposal = try XCTUnwrap(proposalData())
         XCTAssertEqual(outcomeType(GeneratorOutputParser.parse(proposal)), "proposal")
@@ -425,18 +507,18 @@ final class WorkoutImportEvaluationTests: XCTestCase {
 
     private var testBundle: Bundle { Bundle(for: WorkoutImportEvaluationTests.self) }
 
-    private func acceptanceResourceURL(name: String) throws -> URL {
+    private func acceptanceResourceURL(name: String, version: String = "v2") throws -> URL {
         if let url = testBundle.url(
             forResource: name,
             withExtension: "json",
-            subdirectory: "Corpus/v2"
+            subdirectory: "Corpus/\(version)"
         ) {
             return url
         }
         if let corpus = testBundle.url(forResource: "Corpus", withExtension: nil) {
-            return corpus.appendingPathComponent("v2/\(name).json")
+            return corpus.appendingPathComponent("\(version)/\(name).json")
         }
-        throw EvaluationCorpusError.missingResource("Corpus/v2/\(name).json")
+        throw EvaluationCorpusError.missingResource("Corpus/\(version)/\(name).json")
     }
 
     private func runConfiguration() -> EvaluationRunConfiguration {
@@ -568,6 +650,29 @@ private struct AcceptanceCanonicalStepV2: Decodable {
     let durationSeconds: Int
     let speedKilometresPerHour: Decimal
     let inclinationPercent: Decimal
+}
+
+private struct AcceptanceCaseV3: Decodable {
+    let id: String
+    let expected: AcceptanceExpectedV3
+}
+
+private struct AcceptanceExpectedV3: Decodable {
+    let outcome: String
+    let suggestedNameExpectation: AcceptanceSuggestedNameExpectationV3?
+    let canonicalProposal: AcceptanceCanonicalProposalV3?
+    let localValidatorOutcome: String?
+    let localValidatorIssueCodes: [String]?
+}
+
+private struct AcceptanceSuggestedNameExpectationV3: Decodable {
+    let mode: String
+    let value: String?
+}
+
+private struct AcceptanceCanonicalProposalV3: Decodable {
+    let activity: String
+    let steps: [AcceptanceCanonicalStepV2]
 }
 
 private final class FakeProvider: @unchecked Sendable, WorkoutProposalProvider {

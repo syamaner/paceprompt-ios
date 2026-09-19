@@ -1,0 +1,115 @@
+{
+  "manifestVersion": 3,
+  "corpusVersion": "workout-import-acceptance-corpus/v3",
+  "corpusRevision": "issue-130-reviewer-acceptance/r2",
+  "caseContractVersion": "workout-import-acceptance-case/v3",
+  "proposalContractVersion": "workout-proposal/v1",
+  "resultContractVersion": "workout-import-result/v1",
+  "scorerVersion": "workout-import-scorer/v1",
+  "authoring": {
+    "source": "reviewer-authored",
+    "purpose": "held-out-acceptance",
+    "promptExampleReuse": "prohibited",
+    "ratificationStatus": "awaiting-operator-ratification-before-provider-run"
+  },
+  "supportedLocales": [
+    "en-GB"
+  ],
+  "capabilityProfiles": {
+    "standardTreadmillV1": {
+      "speed": {
+        "state": "supported",
+        "minimum": 0.5,
+        "maximum": 20,
+        "increment": 0.1
+      },
+      "inclination": {
+        "state": "supported",
+        "minimum": 0,
+        "maximum": 15,
+        "increment": 0.5
+      }
+    }
+  },
+  "requiredCoverageTags": [
+    "contradictoryValues",
+    "decimalIncline",
+    "degreePlural",
+    "degreeSingular",
+    "degreeSymbol",
+    "easyHillsExact",
+    "easyHillsFragment",
+    "easyHillsMultiSentence",
+    "explicitKind",
+    "explicitRecoveryOverride",
+    "implicitFirstKind",
+    "implicitLastKind",
+    "implicitMiddleKind",
+    "medicalRequest",
+    "minimalPunctuation",
+    "missingDuration",
+    "missingInclination",
+    "missingNumericValue",
+    "missingSpeed",
+    "mixedExplicitImplicitKinds",
+    "oneStepBoundary",
+    "repeatedSection",
+    "spacingAttached",
+    "spacingSeparated",
+    "speedKmSlashH",
+    "speedKmph",
+    "speedKph",
+    "speedWrittenKilometresPerHour",
+    "twoStepBoundary",
+    "unambiguousTypo",
+    "unsafeRequest",
+    "unsupportedActivity"
+  ],
+  "caseCount": 30,
+  "categoryCounts": {
+    "edgeBoundary": 5,
+    "failClosed": 9,
+    "kindInference": 3,
+    "ordinaryLanguage": 4,
+    "unitAlias": 9
+  },
+  "localeCounts": {
+    "en-GB": 30
+  },
+  "caseIndex": [
+    {"id": "WI-V3-A001", "category": "ordinaryLanguage"},
+    {"id": "WI-V3-A002", "category": "ordinaryLanguage"},
+    {"id": "WI-V3-A003", "category": "ordinaryLanguage"},
+    {"id": "WI-V3-A004", "category": "unitAlias"},
+    {"id": "WI-V3-A005", "category": "unitAlias"},
+    {"id": "WI-V3-A006", "category": "unitAlias"},
+    {"id": "WI-V3-A007", "category": "unitAlias"},
+    {"id": "WI-V3-A008", "category": "unitAlias"},
+    {"id": "WI-V3-A009", "category": "unitAlias"},
+    {"id": "WI-V3-A010", "category": "unitAlias"},
+    {"id": "WI-V3-A011", "category": "unitAlias"},
+    {"id": "WI-V3-A012", "category": "unitAlias"},
+    {"id": "WI-V3-A013", "category": "kindInference"},
+    {"id": "WI-V3-A014", "category": "kindInference"},
+    {"id": "WI-V3-A015", "category": "kindInference"},
+    {"id": "WI-V3-A016", "category": "ordinaryLanguage"},
+    {"id": "WI-V3-A017", "category": "edgeBoundary"},
+    {"id": "WI-V3-A018", "category": "edgeBoundary"},
+    {"id": "WI-V3-A019", "category": "edgeBoundary"},
+    {"id": "WI-V3-A020", "category": "failClosed"},
+    {"id": "WI-V3-A021", "category": "failClosed"},
+    {"id": "WI-V3-A022", "category": "failClosed"},
+    {"id": "WI-V3-A023", "category": "failClosed"},
+    {"id": "WI-V3-A024", "category": "failClosed"},
+    {"id": "WI-V3-A025", "category": "failClosed"},
+    {"id": "WI-V3-A026", "category": "failClosed"},
+    {"id": "WI-V3-A027", "category": "failClosed"},
+    {"id": "WI-V3-A028", "category": "failClosed"},
+    {"id": "WI-V3-A029", "category": "edgeBoundary"},
+    {"id": "WI-V3-A030", "category": "edgeBoundary"}
+  ],
+  "casesSha256": "a5ad4b380e849347296dc4c69770a715eedf4a2d394ee7f582b98bebbd47ae81",
+  "semanticReviewSha256": "d70bee791c5ec50babc000af1e83316483083c5940b02c80b01c005d4ad42d7d",
+  "hashContract": "workout-import-acceptance-corpus-hash/v3",
+  "corpusHash": "204c6814cb62523426ed8871d77159f39a4daf4dc495ece7fcc70627e6d22864"
+}
