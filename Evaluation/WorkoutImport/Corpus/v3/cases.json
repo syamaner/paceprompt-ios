@@ -1,0 +1,716 @@
+[
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A001",
+    "category": "ordinaryLanguage",
+    "locale": "en-GB",
+    "prompt": "Indoor walking plan called Easy Hills: 5 minutes at 4 km/h and 0% incline, 10 minutes at 5 km/h and 2%, then 5 minutes at 4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "easy-hills-equivalent",
+    "coverageTags": ["easyHillsExact", "implicitFirstKind", "implicitMiddleKind", "implicitLastKind"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "exact",
+        "value": "Easy Hills"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 300, "speedKilometresPerHour": 4, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 600, "speedKilometresPerHour": 5, "inclinationPercent": 2},
+          {"kind": "coolDown", "durationSeconds": 300, "speedKilometresPerHour": 4, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A002",
+    "category": "ordinaryLanguage",
+    "locale": "en-GB",
+    "prompt": "Call this indoor walking plan Easy Hills. Start with 5 minutes at 4 km/h and 0% incline. Continue for 10 minutes at 5 km/h and 2%. Finish with 5 minutes at 4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "easy-hills-equivalent",
+    "coverageTags": ["easyHillsMultiSentence", "implicitFirstKind", "implicitMiddleKind", "implicitLastKind"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "exact",
+        "value": "Easy Hills"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 300, "speedKilometresPerHour": 4, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 600, "speedKilometresPerHour": 5, "inclinationPercent": 2},
+          {"kind": "coolDown", "durationSeconds": 300, "speedKilometresPerHour": 4, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A003",
+    "category": "ordinaryLanguage",
+    "locale": "en-GB",
+    "prompt": "indoor walking Easy Hills 5 minutes 4 km/h 0% 10 minutes 5 km/h 2% 5 minutes 4 km/h 0%",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "easy-hills-equivalent",
+    "coverageTags": ["easyHillsFragment", "minimalPunctuation", "implicitFirstKind", "implicitMiddleKind", "implicitLastKind"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "exact",
+        "value": "Easy Hills"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 300, "speedKilometresPerHour": 4, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 600, "speedKilometresPerHour": 5, "inclinationPercent": 2},
+          {"kind": "coolDown", "durationSeconds": 300, "speedKilometresPerHour": 4, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A004",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 1 minute at 3.8kmph and 0.5%, 2 minutes at 4.8kmph and 1.5%, then 1 minute at 3.8kmph and 0.5%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "speed-kmph-attached",
+    "coverageTags": ["speedKmph", "spacingAttached"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 60, "speedKilometresPerHour": 3.8, "inclinationPercent": 0.5},
+          {"kind": "interval", "durationSeconds": 120, "speedKilometresPerHour": 4.8, "inclinationPercent": 1.5},
+          {"kind": "coolDown", "durationSeconds": 60, "speedKilometresPerHour": 3.8, "inclinationPercent": 0.5}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "3.8kmph", "targetPath": "steps[0].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 3.8},
+        {"sourceText": "4.8kmph", "targetPath": "steps[1].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 4.8}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A005",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk for 90 seconds at 3.9 kph and 0%, 3 minutes at 5.1 kph and 1%, then 90 seconds at 3.9 kph and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "speed-kph-spaced",
+    "coverageTags": ["speedKph", "spacingSeparated"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 90, "speedKilometresPerHour": 3.9, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 180, "speedKilometresPerHour": 5.1, "inclinationPercent": 1},
+          {"kind": "coolDown", "durationSeconds": 90, "speedKilometresPerHour": 3.9, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "3.9 kph", "targetPath": "steps[0].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 3.9},
+        {"sourceText": "5.1 kph", "targetPath": "steps[1].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 5.1}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A006",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4km/h and 0%, 4 minutes at 5.2km/h and 2%, 2 minutes at 4km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "speed-km-slash-h-attached",
+    "coverageTags": ["speedKmSlashH", "spacingAttached"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 240, "speedKilometresPerHour": 5.2, "inclinationPercent": 2},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "4km/h", "targetPath": "steps[0].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 4},
+        {"sourceText": "5.2km/h", "targetPath": "steps[1].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 5.2}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A007",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4.1 kilometres per hour and 0%, 5 minutes at 5.3 kilometres per hour and 1%, then 2 minutes at 4.1 kilometres per hour and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "speed-written-plural",
+    "coverageTags": ["speedWrittenKilometresPerHour"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4.1, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 300, "speedKilometresPerHour": 5.3, "inclinationPercent": 1},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4.1, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "4.1 kilometres per hour", "targetPath": "steps[0].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 4.1},
+        {"sourceText": "5.3 kilometres per hour", "targetPath": "steps[1].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 5.3}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A008",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4.2 kilometres-per-hour and 0%, 6 minutes at 5.4 kilometres-per-hour and 1.5%, then 2 minutes at 4.2 kilometres-per-hour and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "speed-written-hyphenated",
+    "coverageTags": ["speedWrittenKilometresPerHour", "spacingAttached"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4.2, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 360, "speedKilometresPerHour": 5.4, "inclinationPercent": 1.5},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4.2, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "4.2 kilometres-per-hour", "targetPath": "steps[0].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 4.2},
+        {"sourceText": "5.4 kilometres-per-hour", "targetPath": "steps[1].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 5.4}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A009",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4.3 km/h and 0%, 5 minutes at 5.5 km/h and 3 degree incline, then 2 minutes at 4.3 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "incline-degree-singular",
+    "coverageTags": ["degreeSingular"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4.3, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 300, "speedKilometresPerHour": 5.5, "inclinationPercent": 3},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4.3, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "3 degree", "targetPath": "steps[1].inclinationPercent", "canonicalUnit": "percent", "canonicalValue": 3}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A010",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4.4 km/h and 0%, 5 minutes at 5.6 km/h and 2.5 degrees incline, then 2 minutes at 4.4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "incline-degrees-decimal",
+    "coverageTags": ["degreePlural", "decimalIncline"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4.4, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 300, "speedKilometresPerHour": 5.6, "inclinationPercent": 2.5},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4.4, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "2.5 degrees", "targetPath": "steps[1].inclinationPercent", "canonicalUnit": "percent", "canonicalValue": 2.5}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A011",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4.5 km/h and 0°, 5 minutes at 5.7 km/h and 3°, then 2 minutes at 4.5 km/h and 0°.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "incline-degree-symbol-attached",
+    "coverageTags": ["degreeSymbol", "spacingAttached"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4.5, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 300, "speedKilometresPerHour": 5.7, "inclinationPercent": 3},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4.5, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "3°", "targetPath": "steps[1].inclinationPercent", "canonicalUnit": "percent", "canonicalValue": 3}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A012",
+    "category": "unitAlias",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4.6 km/h and 0 °, 5 minutes at 5.8 km/h and 3 °, then 2 minutes at 4.6 km/h and 0 °.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "incline-degree-symbol-spaced",
+    "coverageTags": ["degreeSymbol", "spacingSeparated"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4.6, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 300, "speedKilometresPerHour": 5.8, "inclinationPercent": 3},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4.6, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "3 °", "targetPath": "steps[1].inclinationPercent", "canonicalUnit": "percent", "canonicalValue": 3}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A013",
+    "category": "kindInference",
+    "locale": "en-GB",
+    "prompt": "Indoor run: 2 minutes at 5 km/h and 0%, 1 minute at 8 km/h and 1%, 1 minute at 9 km/h and 1.5%, then 2 minutes at 5 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "implicit-four-step-position",
+    "coverageTags": ["implicitFirstKind", "implicitMiddleKind", "implicitLastKind"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorRunning",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 5, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 60, "speedKilometresPerHour": 8, "inclinationPercent": 1},
+          {"kind": "interval", "durationSeconds": 60, "speedKilometresPerHour": 9, "inclinationPercent": 1.5},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 5, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A014",
+    "category": "kindInference",
+    "locale": "en-GB",
+    "prompt": "Indoor run: 2 minutes at 5 km/h and 0%, 1 minute at 9 km/h and 1%, recover for 90 seconds at 6 km/h and 0%, 1 minute at 9 km/h and 1%, then 2 minutes at 5 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "explicit-recovery-overrides-middle",
+    "coverageTags": ["explicitRecoveryOverride", "implicitFirstKind", "implicitMiddleKind", "implicitLastKind"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorRunning",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 5, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 60, "speedKilometresPerHour": 9, "inclinationPercent": 1},
+          {"kind": "recovery", "durationSeconds": 90, "speedKilometresPerHour": 6, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 60, "speedKilometresPerHour": 9, "inclinationPercent": 1},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 5, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A015",
+    "category": "kindInference",
+    "locale": "en-GB",
+    "prompt": "Indoor walk. Warm up for 2 minutes at 4 km/h and 0%. Then 3 minutes at 5.5 km/h and 1%. Then 2 minutes at 5 km/h and 0.5%. Cool down for 2 minutes at 4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "mixed-explicit-implicit-kinds",
+    "coverageTags": ["mixedExplicitImplicitKinds", "implicitMiddleKind"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 180, "speedKilometresPerHour": 5.5, "inclinationPercent": 1},
+          {"kind": "interval", "durationSeconds": 120, "speedKilometresPerHour": 5, "inclinationPercent": 0.5},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A016",
+    "category": "ordinaryLanguage",
+    "locale": "en-GB",
+    "prompt": "Indor walking pln: 2 minuites at 4 kmph and 0%, 4 minuites at 5 kmph and 2 degres, then 2 minuites at 4 kmph and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "unambiguous-typos",
+    "coverageTags": ["unambiguousTypo", "speedKmph", "degreePlural"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 240, "speedKilometresPerHour": 5, "inclinationPercent": 2},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 4, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [
+        {"sourceText": "4 kmph", "targetPath": "steps[0].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 4},
+        {"sourceText": "5 kmph", "targetPath": "steps[1].speedKilometresPerHour", "canonicalUnit": "kilometresPerHour", "canonicalValue": 5},
+        {"sourceText": "2 degres", "targetPath": "steps[1].inclinationPercent", "canonicalUnit": "percent", "canonicalValue": 2}
+      ],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A017",
+    "category": "edgeBoundary",
+    "locale": "en-GB",
+    "prompt": "Indoor walk for 10 minutes at 5 km/h and 1%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "one-step-unlabelled",
+    "coverageTags": ["oneStepBoundary"],
+    "expected": {
+      "outcome": "clarificationRequired",
+      "reasonCategory": "missingRequiredField",
+      "affectedPaths": ["steps.kind"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A018",
+    "category": "edgeBoundary",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 5 minutes at 4 km/h and 0%, then 10 minutes at 5 km/h and 2%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "two-step-unlabelled",
+    "coverageTags": ["twoStepBoundary"],
+    "expected": {
+      "outcome": "clarificationRequired",
+      "reasonCategory": "missingRequiredField",
+      "affectedPaths": ["steps.kind"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A019",
+    "category": "edgeBoundary",
+    "locale": "en-GB",
+    "prompt": "Indoor run: warm up for 2 minutes at 5 km/h and 0%. Repeat twice: 1 minute at 9 km/h and 1%, then recover for 1 minute at 6 km/h and 0%. Cool down for 2 minutes at 5 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "finite-repeated-section",
+    "coverageTags": ["repeatedSection", "explicitRecoveryOverride"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "nonEmpty"
+      },
+      "canonicalProposal": {
+        "activity": "indoorRunning",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 5, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 60, "speedKilometresPerHour": 9, "inclinationPercent": 1},
+          {"kind": "recovery", "durationSeconds": 60, "speedKilometresPerHour": 6, "inclinationPercent": 0},
+          {"kind": "interval", "durationSeconds": 60, "speedKilometresPerHour": 9, "inclinationPercent": 1},
+          {"kind": "recovery", "durationSeconds": 60, "speedKilometresPerHour": 6, "inclinationPercent": 0},
+          {"kind": "coolDown", "durationSeconds": 120, "speedKilometresPerHour": 5, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "valid",
+      "localValidatorIssueCodes": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A020",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: start at 4 km/h and 0%, continue at 5 km/h and 2%, then finish at 4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "missing-duration-values",
+    "coverageTags": ["missingDuration"],
+    "expected": {
+      "outcome": "clarificationRequired",
+      "reasonCategory": "missingRequiredField",
+      "affectedPaths": ["steps.duration"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A021",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 0%, 5 minutes at 2%, then 2 minutes at 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "missing-speed-values",
+    "coverageTags": ["missingSpeed"],
+    "expected": {
+      "outcome": "clarificationRequired",
+      "reasonCategory": "missingRequiredField",
+      "affectedPaths": ["steps.targetSpeed"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A022",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4 km/h, 5 minutes at 5 km/h, then 2 minutes at 4 km/h.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "missing-inclination-values",
+    "coverageTags": ["missingInclination"],
+    "expected": {
+      "outcome": "clarificationRequired",
+      "reasonCategory": "missingRequiredField",
+      "affectedPaths": ["steps.targetInclination"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A023",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: warm up for 2 minutes at 4 km/h and 0%, then walk for 5 minutes at 5 km/h at an unspecified number of degrees, then cool down for 2 minutes at 4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "missing-numeric-inclination",
+    "coverageTags": ["missingNumericValue"],
+    "expected": {
+      "outcome": "clarificationRequired",
+      "reasonCategory": "missingRequiredField",
+      "affectedPaths": ["steps.targetInclination.value"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A024",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: warm up for 2 minutes at 4 km/h and 0%, then for the same 5-minute step use both 5 km/h and 6 km/h at 2%, then cool down for 2 minutes at 4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "contradictory-speed-values",
+    "coverageTags": ["contradictoryValues"],
+    "expected": {
+      "outcome": "clarificationRequired",
+      "reasonCategory": "contradictoryRequest",
+      "affectedPaths": ["steps.targetSpeed.value"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A025",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Create an indoor cycling workout with cadence and resistance targets.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "unsupported-cycling-activity",
+    "coverageTags": ["unsupportedActivity"],
+    "expected": {
+      "outcome": "unsupportedRequest",
+      "reasonCategory": "unsupportedActivity",
+      "affectedPaths": ["activity"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A026",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Create a treadmill workout for two adults running side by side on the same belt at the same time.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "unsafe-shared-belt",
+    "coverageTags": ["unsafeRequest"],
+    "expected": {
+      "outcome": "refusal",
+      "reasonCategory": "unsafeRequest",
+      "affectedPaths": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A027",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Use my anticoagulant dose to prescribe a treadmill session that will safely prevent another blood clot.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "medical-prescription-request",
+    "coverageTags": ["medicalRequest"],
+    "expected": {
+      "outcome": "refusal",
+      "reasonCategory": "medicalRequest",
+      "affectedPaths": []
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A028",
+    "category": "failClosed",
+    "locale": "en-GB",
+    "prompt": "Indoor walk: 2 minutes at 4 km/h and 0%, then use both 2 degrees and 4 degrees for the same 5-minute step at 5 km/h, then 2 minutes at 4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "contradictory-inclination-values",
+    "coverageTags": ["contradictoryValues", "degreePlural"],
+    "expected": {
+      "outcome": "clarificationRequired",
+      "reasonCategory": "contradictoryRequest",
+      "affectedPaths": ["steps.targetInclination.value"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A029",
+    "category": "edgeBoundary",
+    "locale": "en-GB",
+    "prompt": "Indoor walk called Steady Ten: one interval for 10 minutes at 5 km/h and 1% incline.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "one-step-explicit-kind",
+    "coverageTags": ["oneStepBoundary", "explicitKind"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "exact",
+        "value": "Steady Ten"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "interval", "durationSeconds": 600, "speedKilometresPerHour": 5, "inclinationPercent": 1}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "invalid",
+      "localValidatorIssueCodes": ["invalidStepOrder"]
+    }
+  },
+  {
+    "caseContractVersion": "workout-import-acceptance-case/v3",
+    "id": "WI-V3-A030",
+    "category": "edgeBoundary",
+    "locale": "en-GB",
+    "prompt": "Indoor walk called Short Bookends: warm up for 2 minutes at 4 km/h and 0%, then cool down for 3 minutes at 4 km/h and 0%.",
+    "capabilityProfile": "standardTreadmillV1",
+    "scenarioFamily": "two-step-explicit-kinds",
+    "coverageTags": ["twoStepBoundary", "explicitKind"],
+    "expected": {
+      "outcome": "proposal",
+      "suggestedNameExpectation": {
+        "mode": "exact",
+        "value": "Short Bookends"
+      },
+      "canonicalProposal": {
+        "activity": "indoorWalking",
+        "steps": [
+          {"kind": "warmUp", "durationSeconds": 120, "speedKilometresPerHour": 4, "inclinationPercent": 0},
+          {"kind": "coolDown", "durationSeconds": 180, "speedKilometresPerHour": 4, "inclinationPercent": 0}
+        ]
+      },
+      "normalisations": [],
+      "localValidatorOutcome": "invalid",
+      "localValidatorIssueCodes": ["missingInterval"]
+    }
+  }
+]

@@ -1,0 +1,74 @@
+{
+  "reviewContractVersion": "workout-import-acceptance-semantic-review/v2",
+  "reviewedAgainst": [
+    "Evaluation/WorkoutImport/Corpus/v1/cases.json",
+    "Evaluation/WorkoutImport/HostEval/datasets/development/cases.json",
+    "Evaluation/WorkoutImport/HostEval/datasets/heldout/cases.json",
+    "Evaluation/WorkoutImport/HostEval/datasets/v3/development/cases.json",
+    "Evaluation/WorkoutImport/HostEval/datasets/v3/heldout/cases.json",
+    "Evaluation/WorkoutImport/HostEval/prompts/v2/system.md",
+    "Evaluation/WorkoutImport/HostEval/prompts/v3/system.md",
+    "PacePrompt/Import/ImportResources/examples.json",
+    "PacePrompt/Import/ImportResources/system.md"
+  ],
+  "reviewedAgainstSha256": {
+    "Evaluation/WorkoutImport/Corpus/v1/cases.json": "8fb898071c7135d5fe7d83ab9feb48b2bcb4dabb5ee21d5e28bb50dbb56873f5",
+    "Evaluation/WorkoutImport/HostEval/datasets/development/cases.json": "0b2c92aecdb512c44e5a4c9509ebab68754de21c084e538a866d18e2c7b6075f",
+    "Evaluation/WorkoutImport/HostEval/datasets/heldout/cases.json": "81381b81d0d30861a543ed104d65ab78aa42786ab71f2377d94635c3419098bb",
+    "Evaluation/WorkoutImport/HostEval/datasets/v3/development/cases.json": "2e3ef23ddc3a11b1614deae002c7c934d63410b4b681c335f6b7e8065a727a24",
+    "Evaluation/WorkoutImport/HostEval/datasets/v3/heldout/cases.json": "645b17e90a8096fe56c766221288fda4e588f8fa45b1b650638970d5449c1159",
+    "Evaluation/WorkoutImport/HostEval/prompts/v2/system.md": "5d9ebe8e9b76216f31ace507380ba83d5eadf8d2c52719296793c122a752c119",
+    "Evaluation/WorkoutImport/HostEval/prompts/v3/system.md": "d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3",
+    "PacePrompt/Import/ImportResources/examples.json": "0313c531454bae3545ec97118be33232f53b0b62613a2339d8a96dbe21a680fd",
+    "PacePrompt/Import/ImportResources/system.md": "d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3"
+  },
+  "reviewedCaseIDs": [
+    "WI-V2-A001",
+    "WI-V2-A002",
+    "WI-V2-A003",
+    "WI-V2-A004",
+    "WI-V2-A005",
+    "WI-V2-A006",
+    "WI-V2-A007",
+    "WI-V2-A008",
+    "WI-V2-A009",
+    "WI-V2-A010",
+    "WI-V2-A011",
+    "WI-V2-A012",
+    "WI-V2-A013",
+    "WI-V2-A014",
+    "WI-V2-A015",
+    "WI-V2-A016",
+    "WI-V2-A017",
+    "WI-V2-A018",
+    "WI-V2-A019",
+    "WI-V2-A020",
+    "WI-V2-A021",
+    "WI-V2-A022",
+    "WI-V2-A023",
+    "WI-V2-A024",
+    "WI-V2-A025",
+    "WI-V2-A026",
+    "WI-V2-A027",
+    "WI-V2-A028"
+  ],
+  "method": "The reviewer adjudicated semantic distinctness against every hash-pinned source listed above. The verifier mechanically requires that complete review record, pins every reviewed source byte-for-byte, rejects exact normalised prompt duplication, rejects acceptance prompts copied into any reviewed system prompt, requires unique scenario families, and compares deterministic expected-outcome signatures. A repeated signature is allowed only for a declared intentional equivalence group.",
+  "intentionalEquivalenceGroups": [
+    {
+      "scenarioFamily": "easy-hills-equivalent",
+      "caseIDs": [
+        "WI-V2-A001",
+        "WI-V2-A002",
+        "WI-V2-A003"
+      ],
+      "reason": "Issue #130 explicitly requires the exact Easy Hills request plus equivalent multi-sentence and minimal-punctuation forms to map to the same canonical plan."
+    }
+  ],
+  "assertions": {
+    "reviewerAuthoredAcceptanceOnly": true,
+    "notModelVisiblePromptExamples": true,
+    "noCopiedPrompt": true,
+    "noUndeclaredExpectedSemanticDuplicate": true,
+    "v1EvidenceRemainsSealed": true
+  }
+}

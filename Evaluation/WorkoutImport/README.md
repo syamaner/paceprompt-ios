@@ -12,8 +12,10 @@ provider run, enters production code, persists a workout or controls a treadmill
 
 | Area | Source-control boundary |
 | --- | --- |
-| `Contracts/` | Tracked versioned provider-neutral proposal and normalized result JSON Schemas. |
-| `Corpus/v1/` | Tracked reviewed synthetic prompts, semantic expectations, manifest metadata and corpus hash. |
+| `Contracts/` | Tracked versioned provider-neutral proposal and normalized result JSON Schemas, plus developer-only versioned acceptance-case schemas. |
+| `Corpus/v1/` | Sealed accepted synthetic prompts, semantic expectations, manifest metadata and corpus hash. |
+| `Corpus/v2/` | Reviewer-authored issue #130 acceptance cases, semantic review, manifest metadata and corpus hash; not a provider-run authorisation. |
+| `Corpus/v3/` | Issue #130 acceptance revision r2, preserving v2 while correcting answer contracts and expanding explicit short-plan boundaries; not a provider-run authorisation. |
 | `Scoring/` | Tracked standard-library-only schema validation, canonical mapping, local validation and scoring. |
 | `Tests/` | Tracked synthetic results, deliberately failing fixtures and deterministic tests. |
 | `Summaries/` | Tracked only after an aggregate has been explicitly reviewed under the rules in its README. |
@@ -134,6 +136,98 @@ HealthKit, watchOS or treadmill operation.
 
 All current evidence is static/fixture evidence. It establishes only contract,
 corpus, schema and deterministic scorer behaviour.
+
+## Issue #130 acceptance corpus v2
+
+`Corpus/v2` is the first evaluation-first acceptance revision for ordinary
+workout language. It is deliberately separate from the accepted v1 corpus and
+from every model-visible system prompt. Its 28 reviewer-authored cases contain
+17 proposal expectations and 11 fail-closed expectations. The three required
+Easy Hills forms are the only declared equivalent semantic group.
+
+The revision freezes these edge decisions before any provider run:
+
+- at least three otherwise complete ordered steps infer `warmUp`, `interval`
+  and `coolDown` by first, middle and last position;
+- explicit recovery language overrides the middle-position `interval` default;
+- one or two unlabelled steps clarify with
+  `insufficientStepsForKindInference` at `steps.kind` rather than guessing;
+- finite repeated sections expand in stated order and multiplicity;
+- mixed explicit and implicit kinds apply the same positional policy only to
+  unlabelled steps;
+- `degree`, `degrees` and `°`, attached or separated by whitespace, preserve
+  their exact numeric value and normalise to inclination percent;
+- `kmph`, `kph`, `km/h` and written kilometre-per-hour forms normalise to
+  kilometres per hour; and
+- missing values, missing numeric values, contradictions, unsupported
+  activities, unsafe requests and medical requests remain fail closed.
+
+Run its zero-network verifier from the repository root:
+
+```sh
+python3 -B Evaluation/WorkoutImport/Acceptance/verify_v2.py \
+  --root Evaluation/WorkoutImport
+```
+
+The verifier checks the new case schema, expected canonical mapping, manifest
+hashes, uniqueness, stable ordering, required coverage, declared semantic
+equivalence, separation from reviewed prompt examples and local-validator
+expectations. It also pins byte hashes for the sealed v1 corpus, v1 schemas and
+v1 deterministic scorer. The evaluation XCTest independently passes every v2
+proposal fixture through the production `WorkoutPlanValidator` source compiled
+into the developer-only target.
+
+The manifest remains `awaiting-operator-ratification-before-provider-run`.
+Ratification must separately freeze every model, route, prompt/schema version,
+generation setting, repetition count, run order, timeout/cancellation policy,
+scoring gate and spending limit before any provider call. This corpus must not
+be copied into a system prompt or treated as production-correction evidence.
+
+Corpus v2 revision r1 is sealed historical evidence. A contract audit after
+its commit found that several fail-closed answers used reason categories and
+indexed paths that the production parser cannot accept, and that generated
+names for unnamed requests were unnecessarily exact. It must not be selected
+for a provider run; revision r2 supersedes it without rewriting it.
+
+## Issue #130 acceptance corpus v3, revision r2
+
+`Corpus/v3` contains 30 reviewer-authored cases: 19 proposal expectations and
+11 fail-closed expectations. It preserves every v1 and v2 evidence asset
+byte-for-byte and is identified by revision
+`issue-130-reviewer-acceptance/r2` and corpus hash
+`204c6814cb62523426ed8871d77159f39a4daf4dc495ece7fcc70627e6d22864`.
+
+Revision r2 freezes the following additional or corrected decisions:
+
+- a name explicitly supplied by the user is exact; an unnamed request only
+  requires a non-empty generated name;
+- unlabelled one-step and two-step requests clarify with the production
+  `missingRequiredField` category at `steps.kind`;
+- explicitly labelled one-step and two-step requests may produce canonical
+  proposals, but the existing local validator rejects the one-step interval
+  with `invalidStepOrder` and the two-step warm-up/cool-down plan with
+  `missingInterval`;
+- a wholly absent speed or inclination uses the unindexed value-object parent
+  path, while a missing numeric value with a stated unit uses the `.value`
+  leaf; and
+- contradictions use the corresponding unindexed production semantic path.
+
+All earlier ordinary-language, unit-alias, degree-value preservation,
+positional kind inference, explicit-recovery precedence, repeat expansion,
+mixed-kind, typo and fail-closed coverage remains present. Run both sealed and
+current acceptance checks with:
+
+```sh
+python3 -B Evaluation/WorkoutImport/Acceptance/verify_v2.py \
+  --root Evaluation/WorkoutImport
+
+python3 -B Evaluation/WorkoutImport/Acceptance/verify_v3.py \
+  --root Evaluation/WorkoutImport
+```
+
+Revision r2 remains `awaiting-operator-ratification-before-provider-run`.
+It does not select a model, route, prompt, generation setting, repetition
+count, run order, timeout, scoring gate or spending limit.
 
 ## Developer-only targets and execution boundary
 

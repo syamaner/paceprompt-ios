@@ -11,6 +11,16 @@ Both use JSON Schema Draft 2020-12 vocabulary, strict required fields and
 `additionalProperties: false`. Schema references are resolved only from the
 checked-in contract registry. No network schema lookup occurs.
 
+`workout-import-acceptance-case-v2.schema.json` is a developer-only schema for
+the reviewer-authored issue #130 acceptance corpus. It does not replace or
+revise either v1 interchange contract and is not a production output schema.
+
+`workout-import-acceptance-case-v3.schema.json` defines revision r2 without
+changing the sealed v2 schema. It separates canonical activity/step mapping
+from suggested-name expectations: user-supplied names are exact, while
+requests without a name require only a non-empty generated name. It remains a
+developer-only evidence schema, not a production output schema.
+
 Changing a contract requires a new versioned file, explicit compatibility
 decision, corpus fixtures and hash. An absent or unknown version is never
 treated as the current version.
