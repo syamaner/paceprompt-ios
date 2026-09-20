@@ -330,6 +330,70 @@ latency over the OpenRouter route, and never selects a provider. Evidence is
 mechanically accepted only after the run-directory integrity audit passes;
 provider selection remains a separate human decision and may remain unset.
 
+## Issue #130 prompt-arm acceptance gate
+
+The issue #130 profile compares the byte-identical production v3 prompt with
+one developer-only `issue130-r1` prompt candidate. Both arms use the same
+`openai/gpt-5.6-sol` canonical revision, OpenAI endpoint, eleven production
+examples, v2.3 transport schema, reasoning-disabled generation controls and
+unchanged v1 deterministic scorer. The candidate is not bundled into the app
+and this profile cannot change the production prompt or route.
+
+The held-out authority is acceptance corpus revision
+`issue-130-reviewer-acceptance/r2`, hash
+`204c6814cb62523426ed8871d77159f39a4daf4dc495ece7fcc70627e6d22864`.
+Its 30 cases run three times against each prompt arm in a deterministic,
+balanced serial queue: 180 scored calls plus one transport warm-up per arm.
+User-supplied names are checked exactly; unnamed requests require a non-empty
+name. All remaining semantic, mapping and local-validator checks use the
+unchanged scorer.
+
+Verify and enumerate without network access or a credential:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue130
+uv run --frozen paceprompt-host-eval enumerate-issue130
+```
+
+Gate preparation reads only the public OpenRouter catalogue and exercises the
+complete request locally against a mock transport. It does not read
+`OPENROUTER_API_KEY`, make a provider inference call or set a spending limit:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue130-gate \
+  --run-id <new-run-id>
+```
+
+The resulting ignored `operator-gate.json` reports the conservative worst-case
+cost for all 182 calls and stops in
+`awaitingSeparateOperatorSpendingLimitRatification`. Only after the operator
+ratifies an exact USD ceiling at or above that sealed preflight may the gate be
+sealed:
+
+```sh
+uv run --frozen paceprompt-host-eval seal-issue130-gate \
+  --run-id <prepared-run-id> --spending-limit-usd <exact-ratified-limit>
+```
+
+Sealing prints a run-specific authorization phrase but makes no provider call.
+Live execution remains inert without `--live`, that exact phrase, the same
+exact spending limit, unchanged artefacts and canonical queue, and current
+catalogue prices that still fit the limit. Those checks finish before
+`OPENROUTER_API_KEY` is read from the unshared process environment:
+
+```sh
+uv run --frozen paceprompt-host-eval run-issue130 \
+  --run-id <sealed-run-id> --live \
+  --authorization <exact-run-phrase> \
+  --spending-limit-usd <exact-ratified-limit>
+```
+
+The run is non-resumable, uses one serial worker with a two-second inter-call
+gap, has no retries or fallback, and preserves incomplete and infrastructure
+outcomes as failures. Neither a high score nor a candidate pass selects a
+prompt, changes production or closes issue #130; those remain separate human
+decisions.
+
 ## Direct curl compatibility probe
 
 The separately versioned v2.6 diagnostic bypasses Inspect's live transport while

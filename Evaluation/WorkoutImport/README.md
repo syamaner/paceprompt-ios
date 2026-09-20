@@ -229,6 +229,14 @@ Revision r2 remains `awaiting-operator-ratification-before-provider-run`.
 It does not select a model, route, prompt, generation setting, repetition
 count, run order, timeout, scoring gate or spending limit.
 
+The operator subsequently ratified the developer-only issue #130 gate profile:
+the unchanged production prompt versus one held-out-safe candidate, both using
+the selected production Sol revision and route, unchanged examples/schema/
+scorer, three repetitions, balanced serial order, no retries and the existing
+strict safety boundaries. `HostEval/run-policy-issue130-r1.json` freezes those
+choices. Gate preparation remains zero-spend and deliberately leaves the USD
+limit unset until the public-catalogue preflight is separately ratified.
+
 ## Developer-only targets and execution boundary
 
 `PacePromptEvaluation` requires iOS 26 because its Apple adapter imports the
