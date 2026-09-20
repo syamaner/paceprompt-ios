@@ -237,6 +237,18 @@ strict safety boundaries. `HostEval/run-policy-issue130-r1.json` freezes those
 choices. Gate preparation remains zero-spend and deliberately leaves the USD
 limit unset until the public-catalogue preflight is separately ratified.
 
+The completed r1 comparison remains immutable evidence. Its two residual
+candidate behaviours are corrected only in developer-only prompt revision
+`HostEval/prompts/issue130-r2/system.md`: explicit conflicting numeric values
+in the same or equivalent unit for one field and scope cannot fall through to
+`ambiguousRequiredField`, and missing non-kind values do not suppress otherwise
+available positional kind inference or add `steps.kind` to the clarification
+paths. The r2 prompt hash is
+`5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007`.
+No run policy references r2, so this correction alone authorises no provider
+call, route, generation profile, repetition count, spending or production
+change.
+
 ## Developer-only targets and execution boundary
 
 `PacePromptEvaluation` requires iOS 26 because its Apple adapter imports the

@@ -394,6 +394,19 @@ outcomes as failures. Neither a high score nor a candidate pass selects a
 prompt, changes production or closes issue #130; those remain separate human
 decisions.
 
+The completed `issue130-r1` run is sealed evidence and its prompt remains
+byte-identical at SHA-256
+`4b70d5563b52d195b25c77250b18599416b13bfc0a86ab9f435a74d7514bcf71`.
+The developer-only `prompts/issue130-r2/system.md` revision corrects the two
+observed semantic boundaries without changing that historical asset: different
+explicit numeric values in the same or equivalent unit for the same field and
+scope are always contradictions, and a missing non-kind value cannot add
+`steps.kind` when the ordered plan has enough materialised steps for positional
+kind inference. Revision r2 has
+SHA-256 `5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007`.
+It is deliberately absent from `run-policy-issue130-r1.json`; a new run policy,
+queue, provider call or spending authority requires a separate operator gate.
+
 ## Direct curl compatibility probe
 
 The separately versioned v2.6 diagnostic bypasses Inspect's live transport while

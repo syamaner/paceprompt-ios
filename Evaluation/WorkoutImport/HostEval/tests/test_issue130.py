@@ -12,7 +12,10 @@ import unittest
 from unittest.mock import patch
 
 from paceprompt_eval.issue130 import (
+    CASES,
+    HOST_EVAL_ROOT,
     MODELS,
+    POLICY,
     SEALED,
     aggregate,
     cost_preflight,
@@ -51,6 +54,38 @@ def fake_catalogue(url: str) -> bytes:
 
 
 class Issue130GateTests(unittest.TestCase):
+    def test_r2_candidate_preserves_sealed_r1_and_strengthens_observed_boundaries(self) -> None:
+        r1 = HOST_EVAL_ROOT / "prompts" / "issue130-r1" / "system.md"
+        r2 = HOST_EVAL_ROOT / "prompts" / "issue130-r2" / "system.md"
+        r2_text = r2.read_text(encoding="utf-8")
+        compact_r2 = " ".join(r2_text.split())
+
+        self.assertEqual(sha256_file(r1), SEALED["candidatePrompt"])
+        self.assertEqual(
+            sha256_file(r2),
+            "5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007",
+        )
+        self.assertIn(
+            "Two or more different explicit numeric values assigned to the same semantic field",
+            compact_r2,
+        )
+        self.assertIn(
+            "A missing non-kind field does not make an inferable step kind missing and must not add `steps.kind` to `affectedPaths`",
+            compact_r2,
+        )
+        self.assertIn(
+            "They are never `ambiguousRequiredField`.",
+            compact_r2,
+        )
+        for case in json.loads(CASES.read_text(encoding="utf-8")):
+            self.assertNotIn(case["prompt"], r2_text)
+
+        policy = json.loads(POLICY.read_text(encoding="utf-8"))
+        self.assertEqual(
+            [arm["id"] for arm in policy["promptArms"]],
+            ["production-v3", "issue130-r1"],
+        )
+
     def test_profile_verifies_and_queue_is_balanced(self) -> None:
         report = verify()
         self.assertEqual(report["status"], "valid", report["errors"])
