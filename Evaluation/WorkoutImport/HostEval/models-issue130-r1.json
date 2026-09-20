@@ -1,0 +1,21 @@
+{
+  "modelSetVersion": "paceprompt-host-eval-models/issue130-r1",
+  "catalogueRatifiedAt": "2026-09-20",
+  "catalogueURL": "https://openrouter.ai/api/v1/models",
+  "comparisonProfile": "same-model-same-route-prompt-arm-isolation",
+  "models": [
+    {
+      "requestedModelID": "openai/gpt-5.6-sol",
+      "canonicalRevision": "openai/gpt-5.6-sol-20260709",
+      "providerEndpoint": "openai",
+      "quantization": null,
+      "role": "currentProductionReference",
+      "temperature": null,
+      "topP": null,
+      "reasoning": {"enabled": false, "effort": "none", "exclude": false},
+      "transportRegistry": "strategyRegistryV29",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    }
+  ]
+}

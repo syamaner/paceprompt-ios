@@ -34,6 +34,8 @@ final class WorkoutImportTests: XCTestCase {
 
         let messages = try XCTUnwrap(body["messages"] as? [[String: String]])
         XCTAssertEqual(messages.count, 24)
+        XCTAssertEqual(messages.first?["content"], resources.system)
+        XCTAssertTrue(resources.system.hasPrefix("# PacePrompt workout import prompt issue130-r2 candidate"))
         XCTAssertEqual(messages.last?["content"], snapshot.userMessage)
         for message in resources.examples where message["role"] == "assistant" {
             _ = try WorkoutImportContract.parseModelOutput(Data(message["content"]!.utf8))

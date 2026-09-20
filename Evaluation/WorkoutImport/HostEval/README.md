@@ -330,6 +330,149 @@ latency over the OpenRouter route, and never selects a provider. Evidence is
 mechanically accepted only after the run-directory integrity audit passes;
 provider selection remains a separate human decision and may remain unset.
 
+## Issue #130 prompt-arm acceptance gate
+
+The issue #130 profile compares the byte-identical production v3 prompt with
+one developer-only `issue130-r1` prompt candidate. Both arms use the same
+`openai/gpt-5.6-sol` canonical revision, OpenAI endpoint, eleven production
+examples, v2.3 transport schema, reasoning-disabled generation controls and
+unchanged v1 deterministic scorer. The candidate is not bundled into the app
+and this profile cannot change the production prompt or route.
+
+The held-out authority is acceptance corpus revision
+`issue-130-reviewer-acceptance/r2`, hash
+`204c6814cb62523426ed8871d77159f39a4daf4dc495ece7fcc70627e6d22864`.
+Its 30 cases run three times against each prompt arm in a deterministic,
+balanced serial queue: 180 scored calls plus one transport warm-up per arm.
+User-supplied names are checked exactly; unnamed requests require a non-empty
+name. All remaining semantic, mapping and local-validator checks use the
+unchanged scorer.
+
+Verify and enumerate without network access or a credential:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue130
+uv run --frozen paceprompt-host-eval enumerate-issue130
+```
+
+Gate preparation reads only the public OpenRouter catalogue and exercises the
+complete request locally against a mock transport. It does not read
+`OPENROUTER_API_KEY`, make a provider inference call or set a spending limit:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue130-gate \
+  --run-id <new-run-id>
+```
+
+The resulting ignored `operator-gate.json` reports the conservative worst-case
+cost for all 182 calls and stops in
+`awaitingSeparateOperatorSpendingLimitRatification`. Only after the operator
+ratifies an exact USD ceiling at or above that sealed preflight may the gate be
+sealed:
+
+```sh
+uv run --frozen paceprompt-host-eval seal-issue130-gate \
+  --run-id <prepared-run-id> --spending-limit-usd <exact-ratified-limit>
+```
+
+Sealing prints a run-specific authorization phrase but makes no provider call.
+Live execution remains inert without `--live`, that exact phrase, the same
+exact spending limit, unchanged artefacts and canonical queue, and current
+catalogue prices that still fit the limit. Those checks finish before
+`OPENROUTER_API_KEY` is read from the unshared process environment:
+
+```sh
+uv run --frozen paceprompt-host-eval run-issue130 \
+  --run-id <sealed-run-id> --live \
+  --authorization <exact-run-phrase> \
+  --spending-limit-usd <exact-ratified-limit>
+```
+
+The run is non-resumable, uses one serial worker with a two-second inter-call
+gap, has no retries or fallback, and preserves incomplete and infrastructure
+outcomes as failures. Neither a high score nor a candidate pass selects a
+prompt, changes production or closes issue #130; those remain separate human
+decisions.
+
+The completed `issue130-r1` run is sealed evidence and its prompt remains
+byte-identical at SHA-256
+`4b70d5563b52d195b25c77250b18599416b13bfc0a86ab9f435a74d7514bcf71`.
+The developer-only `prompts/issue130-r2/system.md` revision corrects the two
+observed semantic boundaries without changing that historical asset: different
+explicit numeric values in the same or equivalent unit for the same field and
+scope are always contradictions, and a missing non-kind value cannot add
+`steps.kind` when the ordered plan has enough materialised steps for positional
+kind inference. Revision r2 has
+SHA-256 `5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007`.
+It is deliberately absent from `run-policy-issue130-r1.json`; a new run policy,
+queue, provider call or spending authority requires a separate operator gate.
+
+`run-policy-issue130-r2-proposal.json` now records one exact recommended
+comparison profile for separate ratification. It changes only the candidate arm
+from `issue130-r1` to `issue130-r2`; the model, canonical route, schemas,
+examples, generation controls, three repetitions, deterministic balanced order,
+serial pacing, timeouts, no-retry policy, scorer and hard gates are identical to
+the sealed r1 profile. The proposed run ID is
+`issue130-prompt-gate-r2-20260920-01`, with 180 scored attempts and two warm-ups
+in queue `8939a0960ca0a7a01afff8d3335eebf3bc52989e90d8582150b627bc26024ccc`.
+
+The proposed USD ceiling is `24.102774`. This is an offline worst-case
+recalculation using the sealed r1 catalogue rates (`0.000002` input and
+`0.00001` output per token), the complete r2 payload bytes, 8,192 reserved
+completion tokens per attempt and the existing 4,096-byte framing allowance.
+It is not current-price proof. Future gate preparation must refresh the public
+catalogue without reading a credential and stop if the current worst case exceeds
+the ratified limit.
+
+The operator ratified the exact proposal hash and recommended ceiling in
+`issue130-r2-ratification.json`, SHA-256
+`158436be3f130bf0c94289e37a1ae7b760da8998fe26ccde1c7af205fc05b910`.
+That authority permits public-catalogue gate preparation and zero-spend sealing
+only. It explicitly excludes credential access, provider inference, evaluation
+spend, production change and live-run authorization.
+
+Verify, enumerate, prepare and seal that exact r2 gate with:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue130-r2
+uv run --frozen paceprompt-host-eval enumerate-issue130-r2
+uv run --frozen paceprompt-host-eval prepare-issue130-r2-gate \
+  --run-id issue130-prompt-gate-r2-20260920-01
+uv run --frozen paceprompt-host-eval seal-issue130-r2-gate \
+  --run-id issue130-prompt-gate-r2-20260920-01
+```
+
+Sealing generates a new run-specific phrase without reading a credential or
+calling the model. The live entry point remains inert unless the operator later
+supplies `--live`, that exact generated phrase and the ratified ceiling:
+
+```sh
+uv run --frozen paceprompt-host-eval run-issue130-r2 \
+  --run-id issue130-prompt-gate-r2-20260920-01 --live \
+  --authorization <exact-r2-run-phrase> \
+  --spending-limit-usd 24.102774
+```
+
+The first r2 run instance terminated fail-closed after both warm-ups returned
+`401 User not found`; it made no scored request and recorded no spend. The
+immutable recovery proposal `issue130-r2-retry1-proposal.json` binds that
+terminal evidence and reuses the exact comparison profile, model, prompt,
+queue and recommended ceiling under run ID
+`issue130-prompt-gate-r2-20260920-02`. Its only operational correction requires
+the launcher to unset any ambient `OPENROUTER_API_KEY` before loading the
+operator-designated checkout-root `.env`, so an inherited key cannot override
+that file. The proposal permits public-catalogue preparation only; sealing,
+credential access, inference and spend still require separate exact
+ratification.
+
+Verify and prepare the replacement zero-spend gate with:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue130-r2-retry
+uv run --frozen paceprompt-host-eval prepare-issue130-r2-retry-gate \
+  --run-id issue130-prompt-gate-r2-20260920-02
+```
+
 ## Direct curl compatibility probe
 
 The separately versioned v2.6 diagnostic bypasses Inspect's live transport while

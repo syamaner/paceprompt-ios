@@ -1,0 +1,124 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-run-policy/issue130-r2-proposal",
+  "ratificationStatus": "awaiting-separate-operator-ratification",
+  "purpose": "issue-130-production-versus-r2-candidate-prompt-acceptance",
+  "proposedRunID": "issue130-prompt-gate-r2-20260920-01",
+  "framework": {"name": "inspect-ai", "version": "0.3.263", "python": ">=3.13,<3.14"},
+  "artifacts": {
+    "productionPromptSha256": "d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3",
+    "candidatePromptSha256": "5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007",
+    "examplesSha256": "0313c531454bae3545ec97118be33232f53b0b62613a2339d8a96dbe21a680fd",
+    "acceptanceCasesSha256": "a5ad4b380e849347296dc4c69770a715eedf4a2d394ee7f582b98bebbd47ae81",
+    "acceptanceManifestSha256": "d1ea8bf50bc9f851410fd89642ab225784c92d286eaf6304af324324d48a937c",
+    "acceptanceSemanticReviewSha256": "d70bee791c5ec50babc000af1e83316483083c5940b02c80b01c005d4ad42d7d",
+    "acceptanceCorpusHash": "204c6814cb62523426ed8871d77159f39a4daf4dc495ece7fcc70627e6d22864",
+    "modelOutputSchemaSha256": "8bcf9f0f34eb5521cc5573089bdeeac4f40258f8cb547638556563e7470417b9",
+    "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0",
+    "v1ScorerSha256": "45fe2dd6dd063ad2292e79fcf2bd520881bbeb374ea90571c7937f3d7be0bba1",
+    "schemaValidationSha256": "8c64365a6c7b85d0b68fd351c89966e6a5d8a316f34dd76ff3c5d28fffbd571a",
+    "modelsSha256": "cb03f348250aee339035f0082f73c846c015add8eecf77048b77fe5a3da86145",
+    "sealedR1RunPolicySha256": "596ce69e7f583c48789b88db7c9a023e91105b0d6d9409a373c3bb62d1319f96"
+  },
+  "promptArms": [
+    {"id": "production-v3", "role": "unchangedProductionBaseline", "promptTemplateVersion": "workout-import-prompt/v3"},
+    {"id": "issue130-r2", "role": "developerOnlyCandidate", "promptTemplateVersion": "workout-import-prompt/issue130-r2"}
+  ],
+  "dataset": {
+    "corpusVersion": "workout-import-acceptance-corpus/v3",
+    "corpusRevision": "issue-130-reviewer-acceptance/r2",
+    "caseCount": 30,
+    "locale": "en-GB",
+    "reviewStatus": "operator-ratified-before-provider-run"
+  },
+  "generation": {
+    "completionCount": 1,
+    "maxOutputTokens": 8192,
+    "temperature": null,
+    "topP": null,
+    "reasoning": {"enabled": false, "effort": "none"},
+    "strictStructuredOutput": true,
+    "hostSemanticSchema": "workout-import-model-output/v2",
+    "providerTransport": "workout-import-provider-transport/v2.3"
+  },
+  "routing": {
+    "requestedModelID": "openai/gpt-5.6-sol",
+    "canonicalRevision": "openai/gpt-5.6-sol-20260709",
+    "providerEndpoint": "openai",
+    "allowFallbacks": false,
+    "requireParameters": true,
+    "dataCollection": "deny",
+    "zdr": null,
+    "returnedIdentityMustMatchCanonicalRoute": true
+  },
+  "execution": {
+    "requestedRepetitions": 3,
+    "promptArmOrder": ["production-v3", "issue130-r2"],
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "orderSeedBase": 13020260920,
+    "orderRule": "shuffle-cases-per-repetition-then-alternate-prompt-arm-first-position",
+    "warmupsPerPromptArm": 1,
+    "warmupCaseID": "WI-V3-D020",
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "overallRunTimeoutSeconds": null,
+    "cancelFlushSeconds": 15,
+    "resumable": false,
+    "cache": false,
+    "cachePrompt": false
+  },
+  "queue": {
+    "queueContractVersion": "paceprompt-host-eval-queue/issue130-r2-proposal",
+    "scoredAttempts": 180,
+    "warmupAttempts": 2,
+    "totalProviderCallLimit": 182,
+    "queueSha256": "8939a0960ca0a7a01afff8d3335eebf3bc52989e90d8582150b627bc26024ccc"
+  },
+  "spending": {
+    "currency": "USD",
+    "hardLimit": null,
+    "hardLimitStatus": "recommended-not-ratified",
+    "recommendedHardLimit": "24.102774",
+    "recommendationBasis": {
+      "method": "serialized-request-byte-upper-bound-plus-4096-framing-bytes",
+      "sourceRunID": "issue130-prompt-gate-20260920-05",
+      "sourceCatalogueSnapshotSha256": "61beb5957c105cbd7c09652963a3aa3d1c6dd5bad6afda293e0893384f8da332",
+      "sourceRawEndpointSha256": "8b955b979fdced76f369b6995c6c3f78b9c2d2d712179134ec38abda7d74a18c",
+      "inputPricePerToken": "0.000002",
+      "outputPricePerToken": "0.00001",
+      "productionPromptWorstCaseUSD": "11.857830",
+      "candidatePromptWorstCaseUSD": "12.244944",
+      "totalWorstCaseUSD": "24.102774",
+      "status": "offline-recalculation-from-sealed-r1-catalogue-evidence-not-current-price-proof"
+    },
+    "preflightCompletionTokensPerAttempt": 8192,
+    "preflightInputMethod": "serialized-request-byte-upper-bound-plus-4096-framing-bytes",
+    "runtimeReservationCompletionTokensPerAttempt": 8192,
+    "futureGatePreparation": "refresh-public-catalogue-without-credential-and-stop-if-worst-case-exceeds-ratified-limit",
+    "runtimeLimitBehaviour": "notStartedSpendingLimitReached"
+  },
+  "hardGates": {
+    "runIntegrity": "allPlannedAttemptsPreservedTerminal",
+    "minimumCompletionCoverage": "0.95",
+    "everyCaseMinimumCompleted": 1,
+    "strictSchemaAndSemanticValidity": "1.00",
+    "safetyRefusalExactness": "1.00",
+    "failClosedOutcomeReasonAndPaths": "1.00",
+    "authorityBoundaryPreservation": "1.00"
+  },
+  "scoring": {
+    "scorerVersion": "workout-import-scorer/v1",
+    "suggestedNameRule": "exact-when-user-supplied-otherwise-non-empty",
+    "unchangedScorer": true,
+    "automaticPromptSelection": false,
+    "productionChange": "requires-separate-human-decision"
+  },
+  "authorization": {
+    "providerRunAuthorized": false,
+    "credentialReadAuthorized": false,
+    "authorizationPhrase": null,
+    "nextGate": "separate-operator-ratification-of-this-exact-profile-hash-and-recommended-hard-limit"
+  }
+}

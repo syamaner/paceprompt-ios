@@ -1,0 +1,20 @@
+{
+  "ratificationContractVersion": "paceprompt-host-eval-profile-ratification/issue130-r2-v1",
+  "ratifiedProfileSha256": "f9992e4d59732e73aa5d0c48166abb9f234826263624980fdfd017993d921092",
+  "ratifiedModelSetSha256": "cb03f348250aee339035f0082f73c846c015add8eecf77048b77fe5a3da86145",
+  "ratifiedCandidatePromptSha256": "5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007",
+  "ratifiedQueueSha256": "8939a0960ca0a7a01afff8d3335eebf3bc52989e90d8582150b627bc26024ccc",
+  "ratifiedRunID": "issue130-prompt-gate-r2-20260920-01",
+  "ratifiedSpendingLimitUSD": "24.102774",
+  "ratifiedAt": "2026-09-20",
+  "authority": {
+    "zeroSpendGatePreparation": true,
+    "gateSealing": true,
+    "publicCatalogueRefresh": true,
+    "credentialRead": false,
+    "providerInference": false,
+    "evaluationSpend": false,
+    "productionChange": false,
+    "liveRunAuthorizationPhrase": null
+  }
+}

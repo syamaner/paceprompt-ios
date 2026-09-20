@@ -229,6 +229,44 @@ Revision r2 remains `awaiting-operator-ratification-before-provider-run`.
 It does not select a model, route, prompt, generation setting, repetition
 count, run order, timeout, scoring gate or spending limit.
 
+The operator subsequently ratified the developer-only issue #130 gate profile:
+the unchanged production prompt versus one held-out-safe candidate, both using
+the selected production Sol revision and route, unchanged examples/schema/
+scorer, three repetitions, balanced serial order, no retries and the existing
+strict safety boundaries. `HostEval/run-policy-issue130-r1.json` freezes those
+choices. Gate preparation remains zero-spend and deliberately leaves the USD
+limit unset until the public-catalogue preflight is separately ratified.
+
+The completed r1 comparison remains immutable evidence. Its two residual
+candidate behaviours are corrected only in developer-only prompt revision
+`HostEval/prompts/issue130-r2/system.md`: explicit conflicting numeric values
+in the same or equivalent unit for one field and scope cannot fall through to
+`ambiguousRequiredField`, and missing non-kind values do not suppress otherwise
+available positional kind inference or add `steps.kind` to the clarification
+paths. The r2 prompt hash is
+`5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007`.
+The separately versioned `HostEval/run-policy-issue130-r2-proposal.json` now
+defines one exact recommended comparison profile without altering or enabling
+the sealed r1 runner. It keeps the r1 model, route, schema, generation, ordering,
+timeout, scorer and hard-gate choices, changes only the candidate arm to r2, and
+freezes proposed queue hash
+`8939a0960ca0a7a01afff8d3335eebf3bc52989e90d8582150b627bc26024ccc`.
+Its proposed `24.102774` USD ceiling is an offline recalculation from the sealed
+r1 catalogue prices rather than current-price evidence. The operator ratified
+the exact proposal hash and ceiling in
+`HostEval/issue130-r2-ratification.json`. That bounded authority enables only a
+fresh public-catalogue preflight and zero-spend gate sealing. Credential access,
+provider inference, evaluation spend, live execution, prompt selection and
+production change remain explicitly unauthorised until the generated
+run-specific phrase is separately approved.
+
+The authentication-failed first r2 run is retained as immutable terminal
+evidence. `HostEval/issue130-r2-retry1-proposal.json` defines a replacement run
+instance without changing the comparison profile or queue. It also freezes the
+credential-precedence correction: clear any inherited `OPENROUTER_API_KEY`
+before loading the operator-designated checkout-root `.env`. The replacement
+proposal itself authorises only zero-spend public-catalogue gate preparation.
+
 ## Developer-only targets and execution boundary
 
 `PacePromptEvaluation` requires iOS 26 because its Apple adapter imports the
