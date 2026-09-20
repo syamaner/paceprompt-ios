@@ -26,7 +26,7 @@ struct ImportResources {
                   SHA256.hash(data: data).map({ String(format: "%02x", $0) }).joined() == hash else { throw ImportFailure.resources }
             return data
         }
-        let prompt = try read("system.md", hash: "d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3")
+        let prompt = try read("system-issue130-r2.md", hash: "5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007")
         let examples = try read("examples.json", hash: "0313c531454bae3545ec97118be33232f53b0b62613a2339d8a96dbe21a680fd")
         let schema = try read("transport.json", hash: "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0")
         guard let text = String(data: prompt, encoding: .utf8),

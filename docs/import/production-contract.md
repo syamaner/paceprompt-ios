@@ -97,7 +97,9 @@ authoritative. Local capability unknown blocks preview and save.
 
 ## Resource provenance
 
-Production owns only system.md, transport.json and 22 ordered example messages.
+Production selects `system-issue130-r2.md`, retains the former `system.md` as
+the byte-identical historical v3 baseline, and owns `transport.json` plus 22
+ordered example messages.
 The production app has no Evaluation runtime dependency. The examples are the
 model-visible projection of eleven development examples in the v3 manifest order,
 using the evaluated nested sentinel projection. No IDs, labels, rationales, held-out
@@ -105,11 +107,13 @@ cases, loaders, scorer or evidence are bundled.
 
 | Resource | SHA-256 |
 | --- | --- |
-| system.md | d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3 |
+| system-issue130-r2.md | 5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007 |
+| system.md (historical v3 baseline) | d58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3 |
 | transport.json | d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0 |
 | examples.json | 0313c531454bae3545ec97118be33232f53b0b62613a2339d8a96dbe21a680fd |
 
-Source paths: Evaluation/WorkoutImport/HostEval/prompts/v3/system.md,
+Source paths: Evaluation/WorkoutImport/HostEval/prompts/issue130-r2/system.md,
+Evaluation/WorkoutImport/HostEval/prompts/v3/system.md,
 schemas/v2.3/workout-import-provider-transport-v2.3.schema.json,
 datasets/v3/development/{cases,manifest}.json, and the reviewed projection in
 paceprompt_eval/{v3,scorer_adapter}.py. Verification is development-only.

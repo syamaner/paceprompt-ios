@@ -11,6 +11,7 @@ SOURCE = ROOT / 'Evaluation/WorkoutImport/HostEval'
 RESOURCES = ROOT / 'PacePrompt/Import/ImportResources'
 HASHES = {
     'system.md': 'd58800efc4b0e01994a1a5be1a1d644ce52dbb6bb7c12655745dc78b6e355fd3',
+    'system-issue130-r2.md': '5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007',
     'transport.json': 'd4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0',
     'examples.json': '0313c531454bae3545ec97118be33232f53b0b62613a2339d8a96dbe21a680fd',
 }
@@ -19,6 +20,7 @@ def verify():
     for name, expected in HASHES.items():
         assert hashlib.sha256((RESOURCES / name).read_bytes()).hexdigest() == expected, name
     assert (RESOURCES / 'system.md').read_bytes() == (SOURCE / 'prompts/v3/system.md').read_bytes()
+    assert (RESOURCES / 'system-issue130-r2.md').read_bytes() == (SOURCE / 'prompts/issue130-r2/system.md').read_bytes()
     assert (RESOURCES / 'transport.json').read_bytes() == (SOURCE / 'schemas/v2.3/workout-import-provider-transport-v2.3.schema.json').read_bytes()
     cases = {c['id']: c for c in json.loads((SOURCE / 'datasets/v3/development/cases.json').read_text())}
     manifest = json.loads((SOURCE / 'datasets/v3/development/manifest.json').read_text())
@@ -42,7 +44,7 @@ def verify():
     assert messages == json.loads((RESOURCES / 'examples.json').read_text())
     fixture = json.loads((ROOT / 'docs/import/outbound-request.json').read_text())
     assert fixture['messages'][1:-1] == messages
-    assert fixture['messages'][0] == {'role': 'system', 'content': (RESOURCES / 'system.md').read_text()}
+    assert fixture['messages'][0] == {'role': 'system', 'content': (RESOURCES / 'system-issue130-r2.md').read_text()}
     assert fixture['response_format']['json_schema']['schema'] == json.loads((RESOURCES / 'transport.json').read_text())
     for file in (ROOT / 'PacePrompt').rglob('*.swift'):
         text = file.read_text()
