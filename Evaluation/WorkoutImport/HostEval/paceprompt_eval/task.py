@@ -3083,6 +3083,21 @@ def main(argv: list[str] | None = None) -> int:
     run_issue130.add_argument("--live", action="store_true")
     run_issue130.add_argument("--authorization")
     run_issue130.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue130-r2")
+    subparsers.add_parser("enumerate-issue130-r2")
+    prepare_issue130_r2 = subparsers.add_parser("prepare-issue130-r2-gate")
+    prepare_issue130_r2.add_argument("--run-id", required=True)
+    seal_issue130_r2 = subparsers.add_parser("seal-issue130-r2-gate")
+    seal_issue130_r2.add_argument("--run-id", required=True)
+    run_issue130_r2 = subparsers.add_parser("run-issue130-r2")
+    run_issue130_r2.add_argument("--run-id", required=True)
+    run_issue130_r2.add_argument("--live", action="store_true")
+    run_issue130_r2.add_argument("--authorization")
+    run_issue130_r2.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue130-r2-retry")
+    subparsers.add_parser("enumerate-issue130-r2-retry")
+    prepare_issue130_r2_retry = subparsers.add_parser("prepare-issue130-r2-retry-gate")
+    prepare_issue130_r2_retry.add_argument("--run-id", required=True)
     subparsers.add_parser("verify-open-weight-v4")
     subparsers.add_parser("enumerate-open-weight-v4")
     prepare_open_weight_v4 = subparsers.add_parser("prepare-open-weight-v4-gate")
@@ -3266,6 +3281,58 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         )
+        return 0
+    if args.command == "verify-issue130-r2":
+        from .issue130 import verify_r2
+
+        report = verify_r2()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-issue130-r2":
+        from .issue130 import queue_document_r2
+
+        print_json(queue_document_r2())
+        return 0
+    if args.command == "prepare-issue130-r2-gate":
+        from .issue130 import prepare_gate_r2
+
+        print_json(asyncio.run(prepare_gate_r2(args.run_id)))
+        return 0
+    if args.command == "seal-issue130-r2-gate":
+        from .issue130 import seal_gate_r2
+
+        print_json(seal_gate_r2(args.run_id))
+        return 0
+    if args.command == "run-issue130-r2":
+        if not args.live:
+            raise SystemExit("live issue #130 r2 execution requires --live")
+        from .issue130 import run_live_r2
+
+        print_json(
+            asyncio.run(
+                run_live_r2(
+                    run_id=args.run_id,
+                    authorization=args.authorization or "",
+                    spending_limit_usd=args.spending_limit_usd or "",
+                )
+            )
+        )
+        return 0
+    if args.command == "verify-issue130-r2-retry":
+        from .issue130 import verify_r2_retry
+
+        report = verify_r2_retry()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-issue130-r2-retry":
+        from .issue130 import queue_document_r2_retry
+
+        print_json(queue_document_r2_retry())
+        return 0
+    if args.command == "prepare-issue130-r2-retry-gate":
+        from .issue130 import prepare_gate_r2_retry
+
+        print_json(asyncio.run(prepare_gate_r2_retry(args.run_id)))
         return 0
     if args.command == "verify-open-weight-v4":
         from .v4 import verify as verify_open_weight_v4

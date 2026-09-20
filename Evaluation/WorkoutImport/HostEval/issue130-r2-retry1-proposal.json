@@ -1,0 +1,36 @@
+{
+  "runInstanceContractVersion": "paceprompt-host-eval-run-instance/issue130-r2-retry1",
+  "status": "proposed-for-separate-live-ratification",
+  "purpose": "replace-only-the-authentication-failed-non-resumable-run-instance",
+  "baseComparisonProfileSha256": "f9992e4d59732e73aa5d0c48166abb9f234826263624980fdfd017993d921092",
+  "baseModelSetSha256": "cb03f348250aee339035f0082f73c846c015add8eecf77048b77fe5a3da86145",
+  "baseCandidatePromptSha256": "5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007",
+  "baseQueueSha256": "8939a0960ca0a7a01afff8d3335eebf3bc52989e90d8582150b627bc26024ccc",
+  "priorTerminalRun": {
+    "runID": "issue130-prompt-gate-r2-20260920-01",
+    "liveStateSha256": "dd096f473009958c5d148b3c9b664cc42cc6c1d5712a593cf87504faa5379309",
+    "aggregateReportSha256": "a36b8526a472a22da305c688d3bc2817e9f1a651801d00a50045fb01d75a9222",
+    "evidenceIntegrityAuditSha256": "44fe527cc85122fda92cf280d15a6ee5fba4659eea8c81b9d83373961d3e4a55",
+    "terminalReason": "authenticationFailure",
+    "providerRequests": 2,
+    "scoredRequests": 0,
+    "recordedSpendUSD": "0"
+  },
+  "proposedRunID": "issue130-prompt-gate-r2-20260920-02",
+  "recommendedHardLimitUSD": "24.102774",
+  "credentialLoading": {
+    "source": "operator-designated-checkout-root-dotenv",
+    "ambientOpenRouterApiKey": "must-be-unset-before-dotenv-load",
+    "persistCredential": false
+  },
+  "authority": {
+    "zeroSpendGatePreparation": true,
+    "publicCatalogueRefresh": true,
+    "gateSealing": false,
+    "credentialRead": false,
+    "providerInference": false,
+    "evaluationSpend": false,
+    "liveRun": false
+  },
+  "nextGate": "ratify-this-exact-run-instance-hash-and-hard-limit-before-sealing-or-live-execution"
+}

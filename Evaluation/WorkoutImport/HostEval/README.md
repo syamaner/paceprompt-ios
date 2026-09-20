@@ -407,6 +407,72 @@ SHA-256 `5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007`.
 It is deliberately absent from `run-policy-issue130-r1.json`; a new run policy,
 queue, provider call or spending authority requires a separate operator gate.
 
+`run-policy-issue130-r2-proposal.json` now records one exact recommended
+comparison profile for separate ratification. It changes only the candidate arm
+from `issue130-r1` to `issue130-r2`; the model, canonical route, schemas,
+examples, generation controls, three repetitions, deterministic balanced order,
+serial pacing, timeouts, no-retry policy, scorer and hard gates are identical to
+the sealed r1 profile. The proposed run ID is
+`issue130-prompt-gate-r2-20260920-01`, with 180 scored attempts and two warm-ups
+in queue `8939a0960ca0a7a01afff8d3335eebf3bc52989e90d8582150b627bc26024ccc`.
+
+The proposed USD ceiling is `24.102774`. This is an offline worst-case
+recalculation using the sealed r1 catalogue rates (`0.000002` input and
+`0.00001` output per token), the complete r2 payload bytes, 8,192 reserved
+completion tokens per attempt and the existing 4,096-byte framing allowance.
+It is not current-price proof. Future gate preparation must refresh the public
+catalogue without reading a credential and stop if the current worst case exceeds
+the ratified limit.
+
+The operator ratified the exact proposal hash and recommended ceiling in
+`issue130-r2-ratification.json`, SHA-256
+`158436be3f130bf0c94289e37a1ae7b760da8998fe26ccde1c7af205fc05b910`.
+That authority permits public-catalogue gate preparation and zero-spend sealing
+only. It explicitly excludes credential access, provider inference, evaluation
+spend, production change and live-run authorization.
+
+Verify, enumerate, prepare and seal that exact r2 gate with:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue130-r2
+uv run --frozen paceprompt-host-eval enumerate-issue130-r2
+uv run --frozen paceprompt-host-eval prepare-issue130-r2-gate \
+  --run-id issue130-prompt-gate-r2-20260920-01
+uv run --frozen paceprompt-host-eval seal-issue130-r2-gate \
+  --run-id issue130-prompt-gate-r2-20260920-01
+```
+
+Sealing generates a new run-specific phrase without reading a credential or
+calling the model. The live entry point remains inert unless the operator later
+supplies `--live`, that exact generated phrase and the ratified ceiling:
+
+```sh
+uv run --frozen paceprompt-host-eval run-issue130-r2 \
+  --run-id issue130-prompt-gate-r2-20260920-01 --live \
+  --authorization <exact-r2-run-phrase> \
+  --spending-limit-usd 24.102774
+```
+
+The first r2 run instance terminated fail-closed after both warm-ups returned
+`401 User not found`; it made no scored request and recorded no spend. The
+immutable recovery proposal `issue130-r2-retry1-proposal.json` binds that
+terminal evidence and reuses the exact comparison profile, model, prompt,
+queue and recommended ceiling under run ID
+`issue130-prompt-gate-r2-20260920-02`. Its only operational correction requires
+the launcher to unset any ambient `OPENROUTER_API_KEY` before loading the
+operator-designated checkout-root `.env`, so an inherited key cannot override
+that file. The proposal permits public-catalogue preparation only; sealing,
+credential access, inference and spend still require separate exact
+ratification.
+
+Verify and prepare the replacement zero-spend gate with:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue130-r2-retry
+uv run --frozen paceprompt-host-eval prepare-issue130-r2-retry-gate \
+  --run-id issue130-prompt-gate-r2-20260920-02
+```
+
 ## Direct curl compatibility probe
 
 The separately versioned v2.6 diagnostic bypasses Inspect's live transport while

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections import Counter, defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import json
 import os
@@ -75,6 +76,97 @@ ASSET_PATHS = {
     "models": MODELS,
     "runPolicy": POLICY,
 }
+
+R2_POLICY = HOST_EVAL_ROOT / "run-policy-issue130-r2-proposal.json"
+R2_MODELS = HOST_EVAL_ROOT / "models-issue130-r2-proposal.json"
+R2_CANDIDATE_PROMPT = HOST_EVAL_ROOT / "prompts" / "issue130-r2" / "system.md"
+R2_RATIFICATION = HOST_EVAL_ROOT / "issue130-r2-ratification.json"
+R2_RETRY_PROPOSAL = HOST_EVAL_ROOT / "issue130-r2-retry1-proposal.json"
+R2_PROMPT_PATHS = {"production-v3": PRODUCTION_PROMPT, "issue130-r2": R2_CANDIDATE_PROMPT}
+R2_SEALED = {
+    **SEALED,
+    "candidatePrompt": "5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007",
+    "models": "cb03f348250aee339035f0082f73c846c015add8eecf77048b77fe5a3da86145",
+    "runPolicy": "f9992e4d59732e73aa5d0c48166abb9f234826263624980fdfd017993d921092",
+    "ratification": "158436be3f130bf0c94289e37a1ae7b760da8998fe26ccde1c7af205fc05b910",
+}
+R2_ASSET_PATHS = {
+    **ASSET_PATHS,
+    "candidatePrompt": R2_CANDIDATE_PROMPT,
+    "models": R2_MODELS,
+    "runPolicy": R2_POLICY,
+    "ratification": R2_RATIFICATION,
+}
+R2_RETRY_SEALED = {
+    **R2_SEALED,
+    "runInstanceProposal": "068c58a389946665745038857c2d59580f66ff9791b9f673ac05cf73ca944302",
+}
+R2_RETRY_ASSET_PATHS = {
+    **R2_ASSET_PATHS,
+    "runInstanceProposal": R2_RETRY_PROPOSAL,
+}
+
+
+@dataclass(frozen=True)
+class Issue130Profile:
+    policy: Path
+    models: Path
+    prompt_paths: dict[str, Path]
+    sealed: dict[str, str]
+    asset_paths: dict[str, Path]
+    candidate_arm: str
+    queue_contract_version: str
+    gate_contract_version: str
+    audit_contract_version: str
+    prompt_template_version: str
+    authorization_prefix: str
+    ratification: Path | None = None
+    run_instance: Path | None = None
+    exact_run_id: str | None = None
+
+
+R1_PROFILE = Issue130Profile(
+    policy=POLICY,
+    models=MODELS,
+    prompt_paths=PROMPT_PATHS,
+    sealed=SEALED,
+    asset_paths=ASSET_PATHS,
+    candidate_arm="issue130-r1",
+    queue_contract_version="paceprompt-host-eval-queue/issue130-r1",
+    gate_contract_version="paceprompt-host-eval-operator-gate/issue130-r1",
+    audit_contract_version="paceprompt-host-eval-evidence-integrity/issue130-r1",
+    prompt_template_version="workout-import-prompt/issue130-comparison-r1",
+    authorization_prefix="AUTHORIZE_PACEPROMPT_ISSUE130_",
+)
+R2_PROFILE = Issue130Profile(
+    policy=R2_POLICY,
+    models=R2_MODELS,
+    prompt_paths=R2_PROMPT_PATHS,
+    sealed=R2_SEALED,
+    asset_paths=R2_ASSET_PATHS,
+    candidate_arm="issue130-r2",
+    queue_contract_version="paceprompt-host-eval-queue/issue130-r2",
+    gate_contract_version="paceprompt-host-eval-operator-gate/issue130-r2",
+    audit_contract_version="paceprompt-host-eval-evidence-integrity/issue130-r2",
+    prompt_template_version="workout-import-prompt/issue130-comparison-r2",
+    authorization_prefix="AUTHORIZE_PACEPROMPT_ISSUE130_R2_",
+    ratification=R2_RATIFICATION,
+)
+R2_RETRY_PROFILE = Issue130Profile(
+    policy=R2_POLICY,
+    models=R2_MODELS,
+    prompt_paths=R2_PROMPT_PATHS,
+    sealed=R2_RETRY_SEALED,
+    asset_paths=R2_RETRY_ASSET_PATHS,
+    candidate_arm="issue130-r2",
+    queue_contract_version="paceprompt-host-eval-queue/issue130-r2",
+    gate_contract_version="paceprompt-host-eval-operator-gate/issue130-r2-retry1",
+    audit_contract_version="paceprompt-host-eval-evidence-integrity/issue130-r2-retry1",
+    prompt_template_version="workout-import-prompt/issue130-comparison-r2",
+    authorization_prefix="AUTHORIZE_PACEPROMPT_ISSUE130_R2_RETRY1_",
+    run_instance=R2_RETRY_PROPOSAL,
+    exact_run_id="issue130-prompt-gate-r2-20260920-02",
+)
 
 
 def load_cases() -> list[dict[str, Any]]:
@@ -156,12 +248,17 @@ def user_message(case: dict[str, Any]) -> str:
     return f"Locale: {case['locale']}\nCapabilities: {capabilities}\nWorkout request:\n{case['prompt']}"
 
 
-def model_messages(case: dict[str, Any], strategy: Any) -> list[ChatMessage]:
+def model_messages(
+    case: dict[str, Any],
+    strategy: Any,
+    *,
+    profile: Issue130Profile = R1_PROFILE,
+) -> list[ChatMessage]:
     arm = case.get("_promptArm")
-    if arm not in PROMPT_PATHS:
+    if arm not in profile.prompt_paths:
         raise ValueError("prompt arm is missing or unknown")
     messages: list[ChatMessage] = [
-        ChatMessageSystem(content=PROMPT_PATHS[arm].read_text(encoding="utf-8"))
+        ChatMessageSystem(content=profile.prompt_paths[arm].read_text(encoding="utf-8"))
     ]
     for message in strict_json_load(EXAMPLES):
         if message["role"] == "user":
@@ -174,8 +271,8 @@ def model_messages(case: dict[str, Any], strategy: Any) -> list[ChatMessage]:
     return messages
 
 
-def queue_document() -> dict[str, Any]:
-    policy = strict_json_load(POLICY)
+def queue_document(*, profile: Issue130Profile = R1_PROFILE) -> dict[str, Any]:
+    policy = strict_json_load(profile.policy)
     cases = projected_cases()
     arms = policy["execution"]["promptArmOrder"]
     entries: list[dict[str, Any]] = []
@@ -198,19 +295,23 @@ def queue_document() -> dict[str, Any]:
         "promptArms": policy["promptArms"],
         "entries": entries,
     }
-    return {"queueContractVersion": "paceprompt-host-eval-queue/issue130-r1", **material, "queueSha256": canonical_hash(material)}
+    return {
+        "queueContractVersion": profile.queue_contract_version,
+        **material,
+        "queueSha256": canonical_hash(material),
+    }
 
 
-def verify() -> dict[str, Any]:
+def verify(*, profile: Issue130Profile = R1_PROFILE) -> dict[str, Any]:
     errors: list[str] = []
     acceptance = verify_acceptance(WORKOUT_IMPORT_ROOT)
     if acceptance["status"] != "valid" or acceptance["corpusHash"] != "204c6814cb62523426ed8871d77159f39a4daf4dc495ece7fcc70627e6d22864":
         errors.append("acceptance corpus r2 verification failed")
-    actual = {name: sha256_file(path) for name, path in ASSET_PATHS.items()}
-    for name, expected in SEALED.items():
+    actual = {name: sha256_file(path) for name, path in profile.asset_paths.items()}
+    for name, expected in profile.sealed.items():
         if actual.get(name) != expected:
             errors.append(f"sealed {name} hash changed")
-    policy = strict_json_load(POLICY)
+    policy = strict_json_load(profile.policy)
     policy_map = {
         "productionPromptSha256": "productionPrompt", "candidatePromptSha256": "candidatePrompt",
         "examplesSha256": "examples", "acceptanceCasesSha256": "acceptanceCases",
@@ -219,11 +320,11 @@ def verify() -> dict[str, Any]:
         "v1ScorerSha256": "v1Scorer", "schemaValidationSha256": "schemaValidation", "modelsSha256": "models",
     }
     for field, asset in policy_map.items():
-        if policy["artifacts"].get(field) != SEALED[asset]:
+        if policy["artifacts"].get(field) != profile.sealed[asset]:
             errors.append(f"policy {field} differs from sealed hash")
     if policy["spending"]["hardLimit"] is not None:
         errors.append("preparation policy must not preselect a spending limit")
-    specs = load_model_specs(MODELS)
+    specs = load_model_specs(profile.models)
     if len(specs) != 1:
         errors.append("issue #130 profile must contain exactly one model")
     else:
@@ -244,15 +345,91 @@ def verify() -> dict[str, Any]:
         if strategy is not None:
             for problem in transport_validator.iter_errors(strategy.project_output(output)):
                 errors.append(f"{case['id']} transport oracle invalid: {problem.message}")
-    candidate_text = CANDIDATE_PROMPT.read_text(encoding="utf-8").casefold()
+    candidate_text = profile.prompt_paths[profile.candidate_arm].read_text(encoding="utf-8").casefold()
     for case in load_cases():
         if case["prompt"].casefold() in candidate_text:
             errors.append(f"candidate prompt contains held-out case {case['id']}")
-    queue = queue_document()
+    queue = queue_document(profile=profile)
     arm_counts = Counter(item["promptArm"] for item in queue["entries"])
-    if len(queue["entries"]) != 180 or arm_counts != {"production-v3": 90, "issue130-r1": 90}:
+    expected_counts = {arm: 90 for arm in profile.prompt_paths}
+    if len(queue["entries"]) != 180 or arm_counts != expected_counts:
         errors.append("queue must contain 90 scored attempts per prompt arm")
-    actual["runPolicy"] = sha256_file(POLICY)
+    if profile.ratification is not None:
+        ratification = strict_json_load(profile.ratification)
+        authority = ratification.get("authority", {})
+        if ratification.get("ratifiedProfileSha256") != profile.sealed["runPolicy"]:
+            errors.append("r2 ratification does not bind the exact profile proposal")
+        if ratification.get("ratifiedModelSetSha256") != profile.sealed["models"]:
+            errors.append("r2 ratification does not bind the exact model proposal")
+        if ratification.get("ratifiedCandidatePromptSha256") != profile.sealed["candidatePrompt"]:
+            errors.append("r2 ratification does not bind the exact candidate prompt")
+        if ratification.get("ratifiedQueueSha256") != queue["queueSha256"]:
+            errors.append("r2 ratification does not bind the exact queue")
+        if ratification.get("ratifiedRunID") != policy.get("proposedRunID"):
+            errors.append("r2 ratification does not bind the proposed run ID")
+        if ratification.get("ratifiedSpendingLimitUSD") != policy["spending"].get("recommendedHardLimit"):
+            errors.append("r2 ratification does not bind the recommended spending limit")
+        expected_authority = {
+            "zeroSpendGatePreparation": True,
+            "gateSealing": True,
+            "publicCatalogueRefresh": True,
+            "credentialRead": False,
+            "providerInference": False,
+            "evaluationSpend": False,
+            "productionChange": False,
+            "liveRunAuthorizationPhrase": None,
+        }
+        if authority != expected_authority:
+            errors.append("r2 ratification authority differs from the zero-spend boundary")
+    if profile.run_instance is not None:
+        instance = strict_json_load(profile.run_instance)
+        prior = instance.get("priorTerminalRun", {})
+        expected_authority = {
+            "zeroSpendGatePreparation": True,
+            "publicCatalogueRefresh": True,
+            "gateSealing": False,
+            "credentialRead": False,
+            "providerInference": False,
+            "evaluationSpend": False,
+            "liveRun": False,
+        }
+        expected_prior_hashes = {
+            "liveStateSha256": "dd096f473009958c5d148b3c9b664cc42cc6c1d5712a593cf87504faa5379309",
+            "aggregateReportSha256": "a36b8526a472a22da305c688d3bc2817e9f1a651801d00a50045fb01d75a9222",
+            "evidenceIntegrityAuditSha256": "44fe527cc85122fda92cf280d15a6ee5fba4659eea8c81b9d83373961d3e4a55",
+        }
+        if instance.get("baseComparisonProfileSha256") != R2_SEALED["runPolicy"]:
+            errors.append("retry instance does not bind the exact r2 comparison profile")
+        if instance.get("baseModelSetSha256") != R2_SEALED["models"]:
+            errors.append("retry instance does not bind the exact r2 model set")
+        if instance.get("baseCandidatePromptSha256") != R2_SEALED["candidatePrompt"]:
+            errors.append("retry instance does not bind the exact r2 candidate prompt")
+        if instance.get("baseQueueSha256") != queue["queueSha256"]:
+            errors.append("retry instance does not bind the exact r2 queue")
+        if instance.get("proposedRunID") != profile.exact_run_id:
+            errors.append("retry instance run ID differs from the profile")
+        if instance.get("recommendedHardLimitUSD") != policy["spending"].get("recommendedHardLimit"):
+            errors.append("retry instance spending recommendation differs from the base profile")
+        if instance.get("authority") != expected_authority:
+            errors.append("retry instance authority differs from the zero-spend boundary")
+        if instance.get("credentialLoading") != {
+            "source": "operator-designated-checkout-root-dotenv",
+            "ambientOpenRouterApiKey": "must-be-unset-before-dotenv-load",
+            "persistCredential": False,
+        }:
+            errors.append("retry instance credential loading contract changed")
+        if (
+            prior.get("runID") != "issue130-prompt-gate-r2-20260920-01"
+            or prior.get("terminalReason") != "authenticationFailure"
+            or prior.get("providerRequests") != 2
+            or prior.get("scoredRequests") != 0
+            or prior.get("recordedSpendUSD") != "0"
+        ):
+            errors.append("retry instance does not describe the exact terminal predecessor")
+        for field, expected in expected_prior_hashes.items():
+            if prior.get(field) != expected:
+                errors.append(f"retry instance predecessor {field} changed")
+    actual["runPolicy"] = sha256_file(profile.policy)
     actual["hostEvalSourceTree"] = host_source_tree_hash()
     return {
         "status": "valid" if not errors else "invalid", "errors": errors,
@@ -260,6 +437,14 @@ def verify() -> dict[str, Any]:
         "scoredAttempts": len(queue["entries"]), "warmups": 2, "totalProviderCalls": 182,
         "queueSha256": queue["queueSha256"], "artifactHashes": actual,
     }
+
+
+def verify_r2() -> dict[str, Any]:
+    return verify(profile=R2_PROFILE)
+
+
+def verify_r2_retry() -> dict[str, Any]:
+    return verify(profile=R2_RETRY_PROFILE)
 
 
 def _price(selected: dict[str, Any]) -> dict[str, float]:
@@ -298,19 +483,22 @@ async def _mock_payloads(
     selected: dict[str, Any],
     *,
     directory_name: str = "mock-payloads",
+    profile: Issue130Profile = R1_PROFILE,
 ) -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
-    spec = load_model_specs(MODELS)[0]
+    spec = load_model_specs(profile.models)[0]
     strategy = strategy_for(spec)
     warmup = next(item for item in strict_json_load(DEVELOPMENT_CASES) if item["id"] == "WI-V3-D020")
     hashes: dict[str, str] = {}
     bodies: dict[str, dict[str, Any]] = {}
     mock_dir = run_dir / directory_name
     mock_dir.mkdir()
-    for arm in PROMPT_PATHS:
+    for arm in profile.prompt_paths:
         case = deepcopy(warmup)
         case["_promptArm"] = arm
         payload = await capture_wire_payload(
-            spec, strategy.schema(), model_messages(case, strategy),
+            spec,
+            strategy.schema(),
+            model_messages(case, strategy, profile=profile),
             max_price_per_million=_price(selected), schema_name=strategy.schema_name,
             mock_response=strategy.project_output(warmup["expected"]["modelOutput"]),
         )
@@ -322,20 +510,26 @@ async def _mock_payloads(
     return hashes, bodies
 
 
-def cost_preflight(selected: dict[str, Any], bodies: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    policy = strict_json_load(POLICY)
+def cost_preflight(
+    selected: dict[str, Any],
+    bodies: dict[str, dict[str, Any]],
+    *,
+    profile: Issue130Profile = R1_PROFILE,
+) -> dict[str, Any]:
+    policy = strict_json_load(profile.policy)
     cases = {case["id"]: case for case in projected_cases()}
-    queue = queue_document()["entries"]
-    per_arm = {arm: Decimal("0") for arm in PROMPT_PATHS}
+    queue = queue_document(profile=profile)["entries"]
+    per_arm = {arm: Decimal("0") for arm in profile.prompt_paths}
     for entry in queue:
         body = _replace_user(bodies[entry["promptArm"]], user_message(cases[entry["caseID"]]))
         per_arm[entry["promptArm"]] += _worst_cost(body, selected)
     warmup = next(item for item in strict_json_load(DEVELOPMENT_CASES) if item["id"] == policy["execution"]["warmupCaseID"])
-    for arm in PROMPT_PATHS:
+    for arm in profile.prompt_paths:
         per_arm[arm] += _worst_cost(_replace_user(bodies[arm], user_message(warmup)), selected)
     total = sum(per_arm.values(), Decimal("0"))
     return {
-        "method": policy["spending"]["preflightInputMethod"], "callCount": 182,
+        "method": policy["spending"]["preflightInputMethod"],
+        "callCount": len(queue) + len(profile.prompt_paths),
         "worstCaseUSD": format(total, "f"),
         "perPromptArmWorstCaseUSD": {arm: format(value, "f") for arm, value in per_arm.items()},
         "hardLimitUSD": None, "admitted": False,
@@ -343,20 +537,30 @@ def cost_preflight(selected: dict[str, Any], bodies: dict[str, dict[str, Any]]) 
     }
 
 
-async def prepare_gate(run_id: str, *, fetch: Callable[[str], bytes] | None = None) -> dict[str, Any]:
-    verification = verify()
+async def prepare_gate(
+    run_id: str,
+    *,
+    fetch: Callable[[str], bytes] | None = None,
+    profile: Issue130Profile = R1_PROFILE,
+) -> dict[str, Any]:
+    verification = verify(profile=profile)
     if verification["status"] != "valid":
         raise RuntimeError(f"issue #130 verification failed: {verification['errors']}")
+    policy = strict_json_load(profile.policy)
+    if profile.exact_run_id is not None and run_id != profile.exact_run_id:
+        raise RuntimeError("issue #130 run ID differs from the exact run instance")
+    if profile.exact_run_id is None and profile.ratification is not None and run_id != policy.get("proposedRunID"):
+        raise RuntimeError("r2 gate run ID differs from the exact ratified profile")
     run_dir = safe_run_dir(run_id, create=True)
-    specs = load_model_specs(MODELS)
+    specs = load_model_specs(profile.models)
     catalogue = snapshot_catalogue(run_dir / "catalogue", specs, **({"fetch": fetch} if fetch else {}))
     selected = catalogue["selected"][0]
-    mock_hashes, bodies = await _mock_payloads(run_dir, selected)
-    queue = queue_document()
+    mock_hashes, bodies = await _mock_payloads(run_dir, selected, profile=profile)
+    queue = queue_document(profile=profile)
     write_json(run_dir / "planned-queue.json", queue)
-    preflight = cost_preflight(selected, bodies)
+    preflight = cost_preflight(selected, bodies, profile=profile)
     gate = {
-        "gateContractVersion": "paceprompt-host-eval-operator-gate/issue130-r1",
+        "gateContractVersion": profile.gate_contract_version,
         "runID": run_id, "status": "awaitingSeparateOperatorSpendingLimitRatification",
         "providerCalls": 0, "credentialRead": False, "spendUSD": "0.00",
         "authorizationPhrase": None, "ratifiedSpendingLimitUSD": None,
@@ -365,18 +569,26 @@ async def prepare_gate(run_id: str, *, fetch: Callable[[str], bytes] | None = No
         "selectedEndpoints": catalogue["selected"],
         "catalogueSnapshotSha256": sha256_file(run_dir / "catalogue" / "selected.json"),
         "mockPayloadHashes": mock_hashes, "costPreflight": preflight,
-        "models": strict_json_load(MODELS), "runPolicy": strict_json_load(POLICY),
+        "models": strict_json_load(profile.models),
+        "runPolicy": policy,
+        "profileRatification": strict_json_load(profile.ratification) if profile.ratification else None,
+        "runInstanceProposal": strict_json_load(profile.run_instance) if profile.run_instance else None,
     }
     write_json(run_dir / "operator-gate.json", gate)
     return gate
 
 
-def _gate_payload_bodies(run_dir: Path, gate: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _gate_payload_bodies(
+    run_dir: Path,
+    gate: dict[str, Any],
+    *,
+    profile: Issue130Profile = R1_PROFILE,
+) -> dict[str, dict[str, Any]]:
     bodies: dict[str, dict[str, Any]] = {}
-    spec = load_model_specs(MODELS)[0]
+    spec = load_model_specs(profile.models)[0]
     strategy = strategy_for(spec)
     warmup = next(item for item in strict_json_load(DEVELOPMENT_CASES) if item["id"] == "WI-V3-D020")
-    for arm in PROMPT_PATHS:
+    for arm in profile.prompt_paths:
         path = run_dir / "mock-payloads" / f"{arm}.json"
         if sha256_file(path) != gate.get("mockPayloadHashes", {}).get(arm):
             raise RuntimeError(f"sealed mock payload changed for {arm}")
@@ -392,7 +604,7 @@ def _gate_payload_bodies(run_dir: Path, gate: dict[str, Any]) -> dict[str, dict[
         case["_promptArm"] = arm
         expected_messages = [
             {"role": message.role, "content": message.content}
-            for message in model_messages(case, strategy)
+            for message in model_messages(case, strategy, profile=profile)
         ]
         if payload["body"].get("messages") != expected_messages:
             raise RuntimeError(f"sealed mock payload messages changed for {arm}")
@@ -405,15 +617,16 @@ def _validate_gate_integrity(
     gate: dict[str, Any],
     *,
     expected_status: str,
+    profile: Issue130Profile = R1_PROFILE,
 ) -> None:
-    if gate.get("gateContractVersion") != "paceprompt-host-eval-operator-gate/issue130-r1":
+    if gate.get("gateContractVersion") != profile.gate_contract_version:
         raise RuntimeError("gate contract is not the ratified issue #130 revision")
     if gate.get("status") != expected_status:
         raise RuntimeError(f"gate is not {expected_status}")
-    verification = verify()
+    verification = verify(profile=profile)
     if verification["status"] != "valid" or verification["artifactHashes"] != gate.get("artifactHashes"):
         raise RuntimeError("issue #130 evaluation assets differ from the sealed gate")
-    canonical_queue = queue_document()
+    canonical_queue = queue_document(profile=profile)
     planned_path = run_dir / "planned-queue.json"
     planned_queue = strict_json_load(planned_path)
     if planned_queue != canonical_queue:
@@ -430,12 +643,19 @@ def _validate_gate_integrity(
         or gate.get("selectedEndpoints") != catalogue.get("selected")
     ):
         raise RuntimeError("prepared catalogue snapshot differs from the gate")
-    if gate.get("models") != strict_json_load(MODELS) or gate.get("runPolicy") != strict_json_load(POLICY):
+    expected_ratification = strict_json_load(profile.ratification) if profile.ratification else None
+    expected_run_instance = strict_json_load(profile.run_instance) if profile.run_instance else None
+    if (
+        gate.get("models") != strict_json_load(profile.models)
+        or gate.get("runPolicy") != strict_json_load(profile.policy)
+        or gate.get("profileRatification") != expected_ratification
+        or gate.get("runInstanceProposal") != expected_run_instance
+    ):
         raise RuntimeError("embedded model or run policy differs from the ratified profile")
     if gate.get("providerCalls") != 0 or gate.get("credentialRead") is not False or gate.get("spendUSD") != "0.00":
         raise RuntimeError("prepared gate does not preserve the zero-spend boundary")
-    bodies = _gate_payload_bodies(run_dir, gate)
-    current_preflight = cost_preflight(gate["selectedEndpoints"][0], bodies)
+    bodies = _gate_payload_bodies(run_dir, gate, profile=profile)
+    current_preflight = cost_preflight(gate["selectedEndpoints"][0], bodies, profile=profile)
     if expected_status == "awaitingSeparateOperatorSpendingLimitRatification":
         if (
             gate.get("authorizationPhrase") is not None
@@ -464,13 +684,19 @@ def _validate_gate_integrity(
         raise RuntimeError("sealed spending gate differs from its canonical preflight")
 
 
-def seal_gate(run_id: str, spending_limit_usd: str) -> dict[str, Any]:
+def seal_gate(
+    run_id: str,
+    spending_limit_usd: str,
+    *,
+    profile: Issue130Profile = R1_PROFILE,
+) -> dict[str, Any]:
     run_dir = safe_run_dir(run_id, create=False)
     gate = strict_json_load(run_dir / "operator-gate.json")
     _validate_gate_integrity(
         run_dir,
         gate,
         expected_status="awaitingSeparateOperatorSpendingLimitRatification",
+        profile=profile,
     )
     limit = Decimal(spending_limit_usd)
     worst = Decimal(gate["costPreflight"]["worstCaseUSD"])
@@ -484,7 +710,7 @@ def seal_gate(run_id: str, spending_limit_usd: str) -> dict[str, Any]:
     sealed["costPreflight"]["status"] = "admittedBySeparatelyRatifiedLimit"
     material = deepcopy(sealed)
     material["authorizationPhrase"] = None
-    sealed["authorizationPhrase"] = "AUTHORIZE_PACEPROMPT_ISSUE130_" + canonical_hash(material)[:16].upper()
+    sealed["authorizationPhrase"] = profile.authorization_prefix + canonical_hash(material)[:16].upper()
     write_json(run_dir / "operator-gate.json", sealed)
     return sealed
 
@@ -503,6 +729,15 @@ def _name_pass(case: dict[str, Any], document: dict[str, Any]) -> bool:
 
 
 class Issue130LiveRun(LiveRun):
+    def __init__(
+        self,
+        *args: Any,
+        issue130_profile: Issue130Profile = R1_PROFILE,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.issue130_profile = issue130_profile
+
     async def call(self, **kwargs: Any) -> dict[str, Any]:
         case = kwargs["case"]
         summary = await super().call(**kwargs)
@@ -522,7 +757,7 @@ class Issue130LiveRun(LiveRun):
         spec = next(iter(self.specs.values()))
         admitted: set[str] = set()
         await self.save_state("runningWarmups")
-        for arm in PROMPT_PATHS:
+        for arm in self.issue130_profile.prompt_paths:
             warmup = deepcopy(self.warmup)
             warmup["_promptArm"] = arm
             result = await self.call(attempt_id=f"warmup-{arm}", kind="warmup", case=warmup, spec=spec, repetition=0)
@@ -554,7 +789,12 @@ class Issue130LiveRun(LiveRun):
                     self._not_started(entry, "operatorCancelled")
             await self.save_state("cancelledNonResumable")
             raise
-        report = aggregate(self.attempts, list(case_by_id.values()), strict_json_load(POLICY))
+        report = aggregate(
+            self.attempts,
+            list(case_by_id.values()),
+            strict_json_load(self.issue130_profile.policy),
+            profile=self.issue130_profile,
+        )
         write_json(self.run_dir / "aggregate-report.json", report)
         audit = self._evidence_integrity()
         write_json(self.run_dir / "evidence-integrity-audit.json", audit)
@@ -605,16 +845,22 @@ class Issue130LiveRun(LiveRun):
                 if path.is_file() and secret in path.read_bytes():
                     errors.append(f"credential leaked into {path.relative_to(self.run_dir)}")
         return {
-            "auditContractVersion": "paceprompt-host-eval-evidence-integrity/issue130-r1",
+            "auditContractVersion": self.issue130_profile.audit_contract_version,
             "passed": not errors, "errors": errors,
             "providerDecision": "requiresSeparateHumanDecision",
         }
 
 
-def aggregate(attempts: list[dict[str, Any]], cases: list[dict[str, Any]], policy: dict[str, Any]) -> dict[str, Any]:
+def aggregate(
+    attempts: list[dict[str, Any]],
+    cases: list[dict[str, Any]],
+    policy: dict[str, Any],
+    *,
+    profile: Issue130Profile = R1_PROFILE,
+) -> dict[str, Any]:
     by_id = {case["id"]: case for case in cases}
     reports: dict[str, Any] = {}
-    for arm in PROMPT_PATHS:
+    for arm in profile.prompt_paths:
         items = [item for item in attempts if item.get("kind") == "scored" and item.get("promptArm") == arm]
         complete = [item for item in items if item.get("hostClassification") == "modelQuality"]
         categories: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -646,7 +892,7 @@ def aggregate(attempts: list[dict[str, Any]], cases: list[dict[str, Any]], polic
             "observedCostUSD": format(sum((Decimal(str(item["reportedCostUSD"])) for item in items if item.get("reportedCostUSD") is not None), Decimal("0")), "f"),
         }
     return {
-        "reportContractVersion": "paceprompt-host-eval-report/issue130-r1",
+        "reportContractVersion": f"paceprompt-host-eval-report/{profile.candidate_arm}",
         "comparisonProfile": "same model and route; prompt arm is the only intended variable",
         "promptArms": reports, "automaticPromptSelection": None,
         "productionChange": "requiresSeparateHumanDecision",
@@ -657,31 +903,39 @@ def _read_api_key() -> str | None:
     return os.environ.get("OPENROUTER_API_KEY")
 
 
-async def run_live(*, run_id: str, authorization: str, spending_limit_usd: str) -> dict[str, Any]:
+async def run_live(
+    *,
+    run_id: str,
+    authorization: str,
+    spending_limit_usd: str,
+    profile: Issue130Profile = R1_PROFILE,
+) -> dict[str, Any]:
     run_dir = safe_run_dir(run_id, create=False)
     gate = strict_json_load(run_dir / "operator-gate.json")
     _validate_gate_integrity(
         run_dir,
         gate,
         expected_status="awaitingFinalLiveRunRatification",
+        profile=profile,
     )
     if authorization != gate.get("authorizationPhrase") or spending_limit_usd != gate.get("ratifiedSpendingLimitUSD"):
         raise RuntimeError("exact run authorization or spending limit is missing")
     material = deepcopy(gate)
     material["authorizationPhrase"] = None
-    if authorization != "AUTHORIZE_PACEPROMPT_ISSUE130_" + canonical_hash(material)[:16].upper():
+    if authorization != profile.authorization_prefix + canonical_hash(material)[:16].upper():
         raise RuntimeError("operator gate changed after its authorization phrase was sealed")
     if (run_dir / "live-state.json").exists():
         raise RuntimeError("this non-resumable run already entered live execution")
-    specs = load_model_specs(MODELS)
+    specs = load_model_specs(profile.models)
     live_catalogue = snapshot_catalogue(run_dir / "live-catalogue", specs)
     compare_catalogues(gate["selectedEndpoints"], live_catalogue["selected"])
     _, live_bodies = await _mock_payloads(
         run_dir,
         live_catalogue["selected"][0],
         directory_name="live-mock-payloads",
+        profile=profile,
     )
-    live_preflight = cost_preflight(live_catalogue["selected"][0], live_bodies)
+    live_preflight = cost_preflight(live_catalogue["selected"][0], live_bodies, profile=profile)
     live_preflight["hardLimitUSD"] = gate["ratifiedSpendingLimitUSD"]
     live_preflight["admitted"] = Decimal(live_preflight["worstCaseUSD"]) <= Decimal(gate["ratifiedSpendingLimitUSD"])
     live_preflight["status"] = "currentPricesAdmitted" if live_preflight["admitted"] else "currentPricesExceedRatifiedLimit"
@@ -695,13 +949,14 @@ async def run_live(*, run_id: str, authorization: str, spending_limit_usd: str) 
         run_dir / "operator-ratification.json",
         {
             "runID": run_id, "authorizationPhrase": authorization,
-            "spendingLimitUSD": spending_limit_usd, "providerCallLimit": 182,
+            "spendingLimitUSD": spending_limit_usd,
+            "providerCallLimit": gate["costPreflight"]["callCount"],
             "credentialAvailable": True, "credentialPersisted": False,
             "liveCatalogueSha256": sha256_file(run_dir / "live-catalogue" / "selected.json"),
             "liveCostPreflight": live_preflight,
         },
     )
-    policy = strict_json_load(POLICY)
+    policy = strict_json_load(profile.policy)
     cases = projected_cases()
     development = strict_json_load(DEVELOPMENT_CASES)
     queue = strict_json_load(run_dir / "planned-queue.json")
@@ -710,15 +965,61 @@ async def run_live(*, run_id: str, authorization: str, spending_limit_usd: str) 
         run_dir=run_dir, gate=dict(gate, selectedEndpoints=live_catalogue["selected"]), api_key=api_key,
         schema=strict_json_load(MODEL_SCHEMA), transport_schema=strategy.schema(), cases=cases,
         development_cases=development, queue=queue["entries"], specs=specs,
-        messages_for_case=model_messages, repository_root=REPOSITORY_ROOT,
+        messages_for_case=lambda case, strategy: model_messages(case, strategy, profile=profile),
+        repository_root=REPOSITORY_ROOT,
         schema_file_bytes=strategy.schema_file_bytes(), execution_policy=policy["execution"],
         run_configuration_id=policy["runPolicyVersion"], spending_limit_usd=spending_limit_usd,
         transport_strategy_for_spec=strategy_for, warmup_case_id=policy["execution"]["warmupCaseID"],
         require_returned_identity=True, host_latency_profile=True,
-        prompt_template_version="workout-import-prompt/issue130-comparison-r1",
+        prompt_template_version=profile.prompt_template_version,
+        issue130_profile=profile,
     )
     try:
         return await runner.execute()
     finally:
         runner.api_key = ""
         api_key = ""
+
+
+def queue_document_r2() -> dict[str, Any]:
+    return queue_document(profile=R2_PROFILE)
+
+
+def queue_document_r2_retry() -> dict[str, Any]:
+    return queue_document(profile=R2_RETRY_PROFILE)
+
+
+async def prepare_gate_r2(
+    run_id: str,
+    *,
+    fetch: Callable[[str], bytes] | None = None,
+) -> dict[str, Any]:
+    return await prepare_gate(run_id, fetch=fetch, profile=R2_PROFILE)
+
+
+async def prepare_gate_r2_retry(
+    run_id: str,
+    *,
+    fetch: Callable[[str], bytes] | None = None,
+) -> dict[str, Any]:
+    return await prepare_gate(run_id, fetch=fetch, profile=R2_RETRY_PROFILE)
+
+
+def seal_gate_r2(run_id: str) -> dict[str, Any]:
+    ratification = strict_json_load(R2_RATIFICATION)
+    if run_id != ratification["ratifiedRunID"]:
+        raise RuntimeError("r2 gate run ID differs from the exact ratification")
+    return seal_gate(
+        run_id,
+        ratification["ratifiedSpendingLimitUSD"],
+        profile=R2_PROFILE,
+    )
+
+
+async def run_live_r2(*, run_id: str, authorization: str, spending_limit_usd: str) -> dict[str, Any]:
+    return await run_live(
+        run_id=run_id,
+        authorization=authorization,
+        spending_limit_usd=spending_limit_usd,
+        profile=R2_PROFILE,
+    )

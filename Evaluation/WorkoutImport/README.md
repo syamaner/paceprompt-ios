@@ -245,9 +245,27 @@ in the same or equivalent unit for one field and scope cannot fall through to
 available positional kind inference or add `steps.kind` to the clarification
 paths. The r2 prompt hash is
 `5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007`.
-No run policy references r2, so this correction alone authorises no provider
-call, route, generation profile, repetition count, spending or production
-change.
+The separately versioned `HostEval/run-policy-issue130-r2-proposal.json` now
+defines one exact recommended comparison profile without altering or enabling
+the sealed r1 runner. It keeps the r1 model, route, schema, generation, ordering,
+timeout, scorer and hard-gate choices, changes only the candidate arm to r2, and
+freezes proposed queue hash
+`8939a0960ca0a7a01afff8d3335eebf3bc52989e90d8582150b627bc26024ccc`.
+Its proposed `24.102774` USD ceiling is an offline recalculation from the sealed
+r1 catalogue prices rather than current-price evidence. The operator ratified
+the exact proposal hash and ceiling in
+`HostEval/issue130-r2-ratification.json`. That bounded authority enables only a
+fresh public-catalogue preflight and zero-spend gate sealing. Credential access,
+provider inference, evaluation spend, live execution, prompt selection and
+production change remain explicitly unauthorised until the generated
+run-specific phrase is separately approved.
+
+The authentication-failed first r2 run is retained as immutable terminal
+evidence. `HostEval/issue130-r2-retry1-proposal.json` defines a replacement run
+instance without changing the comparison profile or queue. It also freezes the
+credential-precedence correction: clear any inherited `OPENROUTER_API_KEY`
+before loading the operator-designated checkout-root `.env`. The replacement
+proposal itself authorises only zero-spend public-catalogue gate preparation.
 
 ## Developer-only targets and execution boundary
 
