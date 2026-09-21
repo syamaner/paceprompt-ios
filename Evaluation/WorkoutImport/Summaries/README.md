@@ -26,3 +26,12 @@ Reviewed summaries:
 - [`open-weight-v4-2026-09-05.md`](open-weight-v4-2026-09-05.md) records the
   issue #17 host-side open-weight evaluation and the ratified decision to retain
   `openai/gpt-5.6-sol`.
+- [`issue145-stage-a-2026-09-20.md`](issue145-stage-a-2026-09-20.md) records
+  the separately authorised four-model Stage A evaluation of the issue #130 r2
+  production prompt. Its exact aggregate and mechanical audit are published as
+  [`issue145-stage-a-data.json`](issue145-stage-a-data.json) and
+  [`issue145-stage-a-evidence-integrity.json`](issue145-stage-a-evidence-integrity.json).
+  [`issue145-stage-a-publication-manifest.json`](issue145-stage-a-publication-manifest.json)
+  hash-binds those files, the human report and the ignored run provenance; run
+  `python3 -B Evaluation/WorkoutImport/Summaries/verify_issue145_stage_a_publication.py`
+  to verify the committed publication.

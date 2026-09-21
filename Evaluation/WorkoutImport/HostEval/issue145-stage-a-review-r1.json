@@ -1,0 +1,41 @@
+{
+  "reviewContractVersion": "paceprompt-issue145-stage-a-review/r1",
+  "status": "awaiting-exact-profile-ratification",
+  "reviewedAt": "2026-09-20",
+  "selectionRule": "top four issue145 candidates by sealed v3-or-v4 weighted composite",
+  "selectionSourceSha256": "a5648e4dbb0dd22643c775938a400ae8ab3d056592931d80568b535da3c9ce58",
+  "selectedModels": [
+    {"modelID": "openai/gpt-5.6-sol", "weightedCompositePercent": "99.3817"},
+    {"modelID": "google/gemini-3.7-flash", "weightedCompositePercent": "98.1422"},
+    {"modelID": "qwen/qwen3.8-27b", "weightedCompositePercent": "91.9060"},
+    {"modelID": "openai/gpt-5.6-luna", "weightedCompositePercent": "91.3305"}
+  ],
+  "qualification": "comparative ranking only; no selected model passed every prior hard gate",
+  "scope": {
+    "strata": ["v3-heldout-regression", "issue130-acceptance-r2"],
+    "distinctCases": 109,
+    "repetitionsPerStratum": 1,
+    "scoredAttempts": 436,
+    "warmups": 4,
+    "totalProviderCalls": 440
+  },
+  "outputLimitReview": {
+    "proposedForStageA": 8192,
+    "loweredTo2048": false,
+    "reason": "A 2,048-token ceiling is not mechanically safe from the sealed evidence because the schema permits 64 steps and unbounded text, Gemini uses medium reasoning, and per-attempt output-token maxima are not retained.",
+    "nextDecision": "Use Stage A reported token evidence to prepare a separately ratified Stage B ceiling."
+  },
+  "stageB": {
+    "automaticContinuation": false,
+    "automaticModelSelection": false,
+    "remainingScoredAttempts": 872,
+    "requiresSeparateRatification": true
+  },
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false,
+    "productionChange": false
+  }
+}

@@ -3107,6 +3107,23 @@ def main(argv: list[str] | None = None) -> int:
     run_open_weight_v4.add_argument("--live", action="store_true")
     run_open_weight_v4.add_argument("--authorization")
     run_open_weight_v4.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue145-v5")
+    subparsers.add_parser("enumerate-issue145-v5")
+    prepare_issue145_v5 = subparsers.add_parser("prepare-issue145-v5-gate")
+    prepare_issue145_v5.add_argument("--run-id", required=True)
+    subparsers.add_parser("verify-issue145-stage-a")
+    subparsers.add_parser("enumerate-issue145-stage-a")
+    prepare_issue145_stage_a = subparsers.add_parser(
+        "prepare-issue145-stage-a-gate"
+    )
+    prepare_issue145_stage_a.add_argument("--run-id", required=True)
+    seal_issue145_stage_a = subparsers.add_parser("seal-issue145-stage-a-gate")
+    seal_issue145_stage_a.add_argument("--run-id", required=True)
+    run_issue145_stage_a = subparsers.add_parser("run-issue145-stage-a")
+    run_issue145_stage_a.add_argument("--run-id", required=True)
+    run_issue145_stage_a.add_argument("--live", action="store_true")
+    run_issue145_stage_a.add_argument("--authorization")
+    run_issue145_stage_a.add_argument("--spending-limit-usd")
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3358,6 +3375,58 @@ def main(argv: list[str] | None = None) -> int:
         print_json(
             asyncio.run(
                 run_open_weight_v4_live(
+                    run_id=args.run_id,
+                    authorization=args.authorization or "",
+                    spending_limit_usd=args.spending_limit_usd or "",
+                )
+            )
+        )
+        return 0
+    if args.command == "verify-issue145-v5":
+        from .issue145 import verify as verify_issue145_v5
+
+        report = verify_issue145_v5()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-issue145-v5":
+        from .issue145 import queue_document as issue145_v5_queue
+
+        print_json(issue145_v5_queue())
+        return 0
+    if args.command == "prepare-issue145-v5-gate":
+        from .issue145 import prepare_gate as prepare_issue145_v5_gate
+
+        print_json(asyncio.run(prepare_issue145_v5_gate(args.run_id)))
+        return 0
+    if args.command == "verify-issue145-stage-a":
+        from .issue145_stage_a import verify as verify_issue145_stage_a
+
+        report = verify_issue145_stage_a()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-issue145-stage-a":
+        from .issue145_stage_a import queue_document as issue145_stage_a_queue
+
+        print_json(issue145_stage_a_queue())
+        return 0
+    if args.command == "prepare-issue145-stage-a-gate":
+        from .issue145_stage_a import prepare_gate as prepare_issue145_stage_a_gate
+
+        print_json(asyncio.run(prepare_issue145_stage_a_gate(args.run_id)))
+        return 0
+    if args.command == "seal-issue145-stage-a-gate":
+        from .issue145_stage_a import seal_gate as seal_issue145_stage_a_gate
+
+        print_json(seal_issue145_stage_a_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-stage-a":
+        from .issue145_stage_a import run_live as run_issue145_stage_a_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-stage-a requires --live")
+        print_json(
+            asyncio.run(
+                run_issue145_stage_a_live(
                     run_id=args.run_id,
                     authorization=args.authorization or "",
                     spending_limit_usd=args.spending_limit_usd or "",

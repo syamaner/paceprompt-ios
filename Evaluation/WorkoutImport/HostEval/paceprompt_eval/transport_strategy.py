@@ -244,6 +244,7 @@ V2_7_REGISTRY_ID = "strategyRegistryV27"
 V2_8_REGISTRY_ID = "strategyRegistryV28"
 V2_9_REGISTRY_ID = "strategyRegistryV29"
 V4_OPEN_WEIGHT_REGISTRY_ID = "strategyRegistryV4OpenWeight"
+ISSUE145_V5_REGISTRY_ID = "strategyRegistryIssue145V5"
 
 
 V2_7_ROUTE_STRATEGIES: Mapping[ProviderRoute, TransportStrategyID] = MappingProxyType(
@@ -348,6 +349,34 @@ V4_OPEN_WEIGHT_ROUTE_STRATEGIES: Mapping[
 )
 
 
+ISSUE145_V5_ROUTE_STRATEGIES: Mapping[
+    ProviderRoute, TransportStrategyID
+] = MappingProxyType(
+    {
+        **V2_9_ROUTE_STRATEGIES,
+        **{
+            route: strategy
+            for route, strategy in V4_OPEN_WEIGHT_ROUTE_STRATEGIES.items()
+            if route.requested_model_id
+            not in {
+                "mistralai/mistral-small-2603",
+                "deepseek/deepseek-v4-flash-0731",
+            }
+        },
+        ProviderRoute(
+            "mistralai/mistral-small-2603",
+            "mistralai/mistral-small-2603",
+            "mistral/zdr",
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "deepseek/deepseek-v4-flash-0731",
+            "deepseek/deepseek-v4-flash-20260731",
+            "deepinfra/fp8",
+        ): TransportStrategyID.NESTED_V2_3,
+    }
+)
+
+
 ROUTE_STRATEGY_REGISTRIES: Mapping[
     str, Mapping[ProviderRoute, TransportStrategyID]
 ] = MappingProxyType(
@@ -356,6 +385,7 @@ ROUTE_STRATEGY_REGISTRIES: Mapping[
         V2_8_REGISTRY_ID: V2_8_ROUTE_STRATEGIES,
         V2_9_REGISTRY_ID: V2_9_ROUTE_STRATEGIES,
         V4_OPEN_WEIGHT_REGISTRY_ID: V4_OPEN_WEIGHT_ROUTE_STRATEGIES,
+        ISSUE145_V5_REGISTRY_ID: ISSUE145_V5_ROUTE_STRATEGIES,
     }
 )
 
