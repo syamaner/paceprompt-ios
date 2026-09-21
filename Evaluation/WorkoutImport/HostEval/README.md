@@ -653,6 +653,84 @@ reports native and forced-tool transport complexity separately, selects no
 automatic winner and cannot change the production provider. Any displacement
 of Sol remains a separate human decision after the evidence audit.
 
+## Issue #145 full-matrix v5 preparation
+
+The additive v5 profile evaluates the current issue #130 r2 production prompt
+against two separately reported, byte-preserved strata: the 79-case v3 held-out
+regression corpus and the 30-case reviewer-authored issue #130 acceptance
+corpus. It does not rewrite either corpus, their manifests, the schemas or the
+deterministic scorer. Three repetitions over 12 declared models produce 3,924
+scored attempts, plus one warm-up per model for 3,936 planned calls.
+
+The profile retains each model's previously ratified v3 or v4 generation and
+transport settings. It replaces two catalogue routes that are no longer
+available: Mistral Small 2603 uses `mistral/zdr`, and DeepSeek v4 Flash uses
+`deepinfra/fp8`. Those replacements remain blocked from live use until a
+separately authorised compatibility probe succeeds.
+
+Offline verification and queue enumeration do not use the network, read a
+credential or expose a live command:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-v5
+uv run --frozen paceprompt-host-eval enumerate-issue145-v5
+```
+
+Zero-spend gate preparation reads only the public catalogue, writes 12 mocked
+route-aware payloads, freezes the deterministic queue and calculates a
+conservative cost estimate under the ignored run directory:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue145-v5-gate \
+  --run-id <new-run-id>
+```
+
+Preparation intentionally emits no authorisation phrase and cannot admit the
+matrix: the hard spending limit is `null`. A later run requires separate probe
+evidence, exact spending-limit ratification, a newly bound run instance and
+explicit live authorisation. Results must remain separated by stratum and no
+automatic winner, publication or production-route change is permitted.
+
+### Cost-bounded four-model Stage A
+
+The additive Stage A proposal preserves the twelve-model review while reducing
+the first live decision to the four highest weighted composites in the sealed
+v3 and v4 summaries: Sol, Gemini 3.7 Flash, Qwen 3.8 27B and Luna. It retains
+all 109 cases but performs one repetition, producing 436 scored attempts and
+four warm-ups. The deterministic queue and a fresh public-catalogue cost
+preflight are bound by `issue145-stage-a-proposal-r1.json`.
+
+The output ceiling remains 8,192 for Stage A. Lowering it to 2,048 is not yet
+mechanically safe because the schema permits 64 steps and unbounded text,
+Gemini's medium reasoning shares the output allowance, and the protected
+summary does not contain per-attempt output-token maxima. Stage A must retain
+reported token evidence so a later Stage B ceiling can be reviewed rather than
+guessed.
+
+Offline verification, enumeration and zero-spend preparation are:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-stage-a
+uv run --frozen paceprompt-host-eval enumerate-issue145-stage-a
+uv run --frozen paceprompt-host-eval prepare-issue145-stage-a-gate \
+  --run-id <new-run-id>
+```
+
+The prepared gate has no authorisation phrase or hard limit. After exact profile
+and limit ratification, sealing installs the ratified limit and derives a phrase
+from the complete gate without reading a credential:
+
+```sh
+uv run --frozen paceprompt-host-eval seal-issue145-stage-a-gate \
+  --run-id <ratified-run-id>
+```
+
+Live execution is separately fail-closed behind `--live`, the exact sealed
+phrase and the exact ratified limit. It rechecks source, queue, payload,
+catalogue and cost evidence before reading `OPENROUTER_API_KEY`. Stage B cannot
+start automatically and requires a separately reviewed profile after Stage A
+token, cost, completion and route evidence is available.
+
 ## Frozen protocol
 
 - 17 development cases and 34 held-out cases, with eight fixed few-shot

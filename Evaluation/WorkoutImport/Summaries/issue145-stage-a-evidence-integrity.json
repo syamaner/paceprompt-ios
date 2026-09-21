@@ -1,0 +1,7 @@
+{
+  "auditContractVersion": "paceprompt-host-eval-evidence-integrity/issue145-v5-stage-a",
+  "automaticEvidenceAcceptance": true,
+  "errors": [],
+  "passed": true,
+  "providerDecision": "requiresHumanRatification"
+}

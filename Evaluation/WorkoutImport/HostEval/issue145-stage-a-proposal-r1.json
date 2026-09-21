@@ -1,0 +1,58 @@
+{
+  "proposalContractVersion": "paceprompt-issue145-stage-a-proposal/r1",
+  "status": "awaiting-operator-ratification",
+  "proposedRunID": "issue145-top4-stage-a-v5-20260920-01",
+  "profile": {
+    "parentTwelveModelReviewSha256": "e21347e3a5d71be45717a8083e76878e3b450c5f1a7c7c9e30e0fca7aa92778b",
+    "stageAReviewSha256": "29fbe1056a8c25267c14005a84a24e24f0787b3adc72ba5e0b1539acceba0974",
+    "modelsSha256": "f83a7ef3d59bc575ce50d1a57abd343e0b533bef30ec858bf46a715056caf95e",
+    "runPolicySha256": "4c2d010c7a32eef1ac05ab31ad5978c572e7b3c4539f52c509ec95e0e32bfcad",
+    "selectionSourceSha256": "a5648e4dbb0dd22643c775938a400ae8ab3d056592931d80568b535da3c9ce58",
+    "queueSha256": "1d99300cffea87bd01eb081131e877032e169601c7db7b0ed2b5ff04ded52f3d",
+    "models": [
+      "openai/gpt-5.6-sol",
+      "google/gemini-3.7-flash",
+      "qwen/qwen3.8-27b",
+      "openai/gpt-5.6-luna"
+    ],
+    "strata": ["v3-heldout-regression", "issue130-acceptance-r2"],
+    "repetitionsPerStratum": 1,
+    "scoredAttempts": 436,
+    "warmups": 4,
+    "totalProviderCalls": 440,
+    "maxOutputTokens": 8192
+  },
+  "publicCatalogue": {
+    "preparedRunID": "issue145-top4-stage-a-v5-prep-20260920-01",
+    "snapshotSha256": "e60bd144a4f47a7dbc496c7e8bceef5df0a97e881e6582354134e56056dece99",
+    "plannedQueueFileSha256": "e604ed6a042693d9d121e2c35e4f90bea3637269e9b3b40ffe7213a842aaefa9",
+    "allConfiguredRoutesAvailable": true,
+    "replacementRouteCompatibilityProbesRequired": false
+  },
+  "spending": {
+    "currency": "USD",
+    "conservativeWorstCase": "24.65417240",
+    "recommendedHardLimit": "24.65417240",
+    "hardLimitRatified": false,
+    "perModelWorstCase": {
+      "openai/gpt-5.6-sol": "14.791840",
+      "google/gemini-3.7-flash": "5.52681000",
+      "qwen/qwen3.8-27b": "2.67611440",
+      "openai/gpt-5.6-luna": "1.6594080"
+    }
+  },
+  "stageB": {
+    "automaticContinuation": false,
+    "remainingScoredAttempts": 872,
+    "requiresFreshTokenAndCostEvidence": true,
+    "requiresSeparateOperatorRatification": true
+  },
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false,
+    "publication": false,
+    "productionChange": false
+  }
+}
