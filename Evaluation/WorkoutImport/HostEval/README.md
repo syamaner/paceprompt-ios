@@ -731,6 +731,53 @@ catalogue and cost evidence before reading `OPENROUTER_API_KEY`. Stage B cannot
 start automatically and requires a separately reviewed profile after Stage A
 token, cost, completion and route evidence is available.
 
+### Three-model Stage B proposal
+
+The Stage B proposal retains the three candidates that passed their Stage A
+warm-up and completed all 109 scored positions: Sol, Qwen 3.8 27B and Luna.
+Gemini 3.7 Flash remains excluded because its Stage A warm-up failed the strict
+schema at `$.outcome`; this proposal does not silently recover or reroute it.
+
+Stage B adds global repetitions 2 and 3 over the same sealed 79-case regression
+and 30-case issue #130 acceptance strata. This produces 654 scored attempts and
+three warm-ups, for 657 provider calls. Combined comparison is permitted only
+after the separate Stage A and Stage B integrity audits pass. The three
+repetitions then use a two-of-three per-case majority; there is still no
+automatic winner or production-route change.
+
+The only generation change from the retained Stage A profiles is a proposed
+6,144-token output ceiling. Stage A reported no output-limit failures and a
+maximum of 3,959 output tokens. A 4,096 ceiling was rejected because its 137
+token margin is only 3.5%; 6,144 leaves 2,185 tokens, or about 55%, of headroom.
+
+Offline verification and queue enumeration are:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-stage-b
+uv run --frozen paceprompt-host-eval enumerate-issue145-stage-b
+```
+
+Zero-spend preparation reads only the public catalogue and writes mocked
+payloads, the deterministic queue and the conservative cost calculation under
+the ignored run directory:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue145-stage-b-gate \
+  --run-id <preparation-run-id>
+```
+
+The committed r1 proposal binds proposed run
+`issue145-top3-stage-b-v5-20260921-01`, queue SHA-256
+`e505a355a81c9c810c26b6718c0a1324a3cf2ddbc70733ca96dc717852a80346`,
+public-catalogue snapshot SHA-256
+`a174b002cc20094690b429e4e5a5528e863eb1f7e2c5b8658775ba48e2f4d2e4`
+and conservative limit `$32.07052912`. Its SHA-256 is
+`1646c57a6da4edeb444ffcae752862824b1fe83ec43dd2357b5cb29faf5bc302`.
+It grants no live, credential, inference, spending, publication or production
+authority. This slice deliberately provides no Stage B live command; exact
+profile and limit ratification, a separately reviewed live runner, and exact
+run-instance authorisation are all still required.
+
 ## Frozen protocol
 
 - 17 development cases and 34 held-out cases, with eight fixed few-shot

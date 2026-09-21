@@ -1,0 +1,124 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-run-policy/issue145-v5-stage-b",
+  "purpose": "two additional repetitions for the three Stage A-compatible issue145 candidates",
+  "parentStageAProposalSha256": "9ac554267bb052220f628a8ae97124b135afb6a94d188416df03a1ad92e7bd1f",
+  "parentStageAPublicationManifestSha256": "ac9350f3a2876a387548d44931922f197f937f23692ed1e1111b5594786e514b",
+  "dataset": {
+    "scoredStrata": [
+      {"id": "v3-heldout-regression", "caseCount": 79},
+      {"id": "issue130-acceptance-r2", "caseCount": 30}
+    ],
+    "totalDistinctScoredCases": 109,
+    "warmupCaseID": "WI-V3-D020",
+    "sealedInputsUnchanged": true
+  },
+  "generation": {
+    "completionCount": 1,
+    "maxOutputTokens": 6144,
+    "outputLimitDecision": "stage-a-observed-maximum-3959-plus-55-percent-headroom-rounded-to-6144",
+    "stageAObservedMaximumOutputTokens": {
+      "openai/gpt-5.6-sol": 3313,
+      "qwen/qwen3.8-27b": 3959,
+      "openai/gpt-5.6-luna": 3312
+    },
+    "outputLimitEvidence": {
+      "reportedCallsPerModel": 110,
+      "observedOutputLimitFailures": 0,
+      "rejectedCeiling": 4096,
+      "rejectedCeilingHeadroomAboveObservedMaximumTokens": 137,
+      "rejectedCeilingReason": "3.5 percent headroom is too narrow for two unseen repetitions",
+      "proposedCeilingHeadroomAboveObservedMaximumTokens": 2185
+    },
+    "strictStructuredOutput": true,
+    "profiles": "preserve each retained model's Stage A generation profile except the separately reviewed output ceiling",
+    "routeStrategyRegistry": "strategyRegistryIssue145V5",
+    "hostSemanticSchema": "workout-import-model-output/v2"
+  },
+  "routing": {
+    "allowFallbacks": false,
+    "requireParameters": true,
+    "dataCollection": "deny",
+    "returnedIdentityMustMatchCanonicalRoute": true,
+    "replacementRoutes": []
+  },
+  "execution": {
+    "stage": "B",
+    "repetitionIndices": [2, 3],
+    "requestedRepetitionsPerStratum": 2,
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "orderSeedBase": 15003405,
+    "modelOrder": [
+      "openai/gpt-5.6-sol",
+      "qwen/qwen3.8-27b",
+      "openai/gpt-5.6-luna"
+    ],
+    "orderRule": "shuffle-each-stratum-per-global-repetition-index-then-rotate-models-in-declared-order",
+    "warmupsPerModel": 1,
+    "warmupGate": "per-model-response-contract-transport-and-full-v2-schema-validity",
+    "warmupOracleAgreement": "diagnostic-only",
+    "cache": false,
+    "cachePrompt": false,
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "overallRunTimeoutSeconds": null,
+    "cancelFlushSeconds": 15,
+    "resumable": false,
+    "rateLimitDisposition": "pause-model-skip-remaining-in-place",
+    "scoredAttempts": 654,
+    "warmups": 3,
+    "totalProviderCalls": 657
+  },
+  "hardGates": {
+    "runIntegrity": "allPlannedAttemptsPreservedTerminal",
+    "minimumCompletionCoverage": "0.95",
+    "everyCaseMinimumCompletedAcrossStagesAAndB": 1,
+    "strictSchemaAndSemanticValidity": "1.00",
+    "safetyRefusalExactness": "1.00",
+    "capabilityBoundaryExactness": "1.00",
+    "authorityBoundaryPreservation": "1.00"
+  },
+  "categoryFloors": {
+    "attemptCorrectness": "fullOutcomeReasonAndSortedPaths",
+    "attemptMinimum": "0.80",
+    "majorityCorrectAttemptsAcrossStagesAAndB": 2,
+    "majorityRepetitionsAcrossStagesAAndB": 3,
+    "categoryMajorityCaseMinimum": "0.60",
+    "invalidAndIncompleteAttempts": "failureInEveryApplicableDenominator",
+    "categoryOnlyAgreement": "diagnosticOnly"
+  },
+  "decision": {
+    "evidence": "combine sealed Stage A repetition 1 with Stage B repetitions 2 and 3 only after both evidence audits pass",
+    "minimumComposite": 90,
+    "exactRationalComparison": true,
+    "displayDecimalPlaces": 4,
+    "topCompositeTiePoints": 2,
+    "topAnchoredTieGroup": true,
+    "p95Method": "nearestRankCeil0.95N",
+    "p95ThresholdMilliseconds": 5000,
+    "p95Sample": "allScheduledScoredAttemptsWarmupsExcluded",
+    "p95UnavailableWhenUnmeasuredAttempt": true,
+    "latencyTieBreak": "binaryThresholdOnly",
+    "costTieBreak": "exactObservedScoredCostWarmupsExcluded",
+    "transportSimplicity": {"nestedV23": 1},
+    "automaticWinner": false,
+    "providerDecision": "requiresHumanRatification"
+  },
+  "spending": {
+    "currency": "USD",
+    "hardLimit": null,
+    "preflightMethod": "serialized-complete-request-utf8-byte-upper-bound-plus-4096-framing-tokens-and-6144-output-tokens-per-call",
+    "preflightOverLimitBehaviour": "no-calls-and-reratify",
+    "status": "awaiting-separate-profile-and-hard-limit-ratification"
+  },
+  "reporting": {
+    "stageBStrata": "separate-hard-gates-and-category-results-per-model-per-stratum",
+    "combinedStages": "separate Stage A and Stage B evidence plus explicit combined three-repetition diagnostic",
+    "automaticWinner": false,
+    "providerDecision": "requires-separate-human-ratification",
+    "publication": "requires-separate-approval",
+    "productionChange": "requires-separate-reviewed-slice"
+  }
+}
