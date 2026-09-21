@@ -1,0 +1,65 @@
+{
+  "authority": {
+    "credentialRead": false,
+    "liveRun": false,
+    "productionChange": false,
+    "providerInference": false,
+    "publication": false,
+    "spend": false
+  },
+  "controls": {
+    "attemptTimeoutSeconds": 180,
+    "automaticRetries": 0,
+    "cancelFlushSeconds": 15,
+    "connectTimeoutSeconds": 15,
+    "globalConcurrency": 1,
+    "httpConnectRetries": 0,
+    "minimumInterCallDelaySeconds": 2,
+    "overallRunTimeoutSeconds": null,
+    "rateLimitDisposition": "pause-model-skip-remaining-in-place",
+    "resumable": false
+  },
+  "profile": {
+    "maxOutputTokens": 6144,
+    "models": [
+      "openai/gpt-5.6-sol",
+      "qwen/qwen3.8-27b",
+      "openai/gpt-5.6-luna"
+    ],
+    "plannedQueueFileSha256": "3b90d505c753100b50298f85d9f5869e6012091c46a0352853ef757555e936d2",
+    "queueSha256": "e505a355a81c9c810c26b6718c0a1324a3cf2ddbc70733ca96dc717852a80346",
+    "repetitionIndices": [
+      2,
+      3
+    ],
+    "review": "276f8deb740be6774af2c4c9134b1410d471ab7a5a8708623ca969d9625f0bbc",
+    "runPolicy": "8ee31d253bac71869e2f38b821a201231a5405265ccfa00ab88ec9eb19a6240c",
+    "scoredAttempts": 654,
+    "stageAAggregate": "bf922a6302e78ac47064ce578991e2205ca2d59592a123f29b65515dca2c2e0e",
+    "stageAPublicationManifest": "ac9350f3a2876a387548d44931922f197f937f23692ed1e1111b5594786e514b",
+    "strata": [
+      "v3-heldout-regression",
+      "issue130-acceptance-r2"
+    ],
+    "totalProviderCalls": 657,
+    "warmups": 3
+  },
+  "proposalContractVersion": "paceprompt-issue145-stage-b-proposal/r1",
+  "proposedRunID": "issue145-top3-stage-b-v5-20260921-01",
+  "publicCatalogue": {
+    "allConfiguredRoutesAvailable": true,
+    "snapshotSha256": "a174b002cc20094690b429e4e5a5528e863eb1f7e2c5b8658775ba48e2f4d2e4"
+  },
+  "spending": {
+    "conservativeWorstCase": "32.07052912",
+    "currency": "USD",
+    "hardLimitRatified": false,
+    "perModelWorstCase": {
+      "openai/gpt-5.6-luna": "2.7654956",
+      "openai/gpt-5.6-sol": "24.963884",
+      "qwen/qwen3.8-27b": "4.34114952"
+    },
+    "recommendedHardLimit": "32.07052912"
+  },
+  "status": "awaiting-operator-ratification"
+}

@@ -1,0 +1,62 @@
+{
+  "modelSetVersion": "paceprompt-host-eval-models/issue145-v5-stage-b",
+  "selectionBasis": {
+    "source": "Evaluation/WorkoutImport/Summaries/issue145-stage-a-data.json",
+    "sourceSha256": "bf922a6302e78ac47064ce578991e2205ca2d59592a123f29b65515dca2c2e0e",
+    "rule": "retain every Stage A model whose compatibility warm-up passed and whose 109 scored positions completed",
+    "excludedModel": "google/gemini-3.7-flash",
+    "excludedReason": "Stage A strict-schema warm-up failed at $.outcome; no recovery is inferred"
+  },
+  "catalogueURL": "https://openrouter.ai/api/v1/models",
+  "models": [
+    {
+      "requestedModelID": "openai/gpt-5.6-sol",
+      "canonicalRevision": "openai/gpt-5.6-sol-20260709",
+      "providerEndpoint": "openai",
+      "quantization": null,
+      "role": "candidateAndCeiling",
+      "temperature": null,
+      "topP": null,
+      "reasoning": {"enabled": false, "effort": "none", "exclude": false},
+      "maxOutputTokens": 6144,
+      "requiredParameters": ["max_tokens", "response_format", "structured_outputs"],
+      "responseContract": "nativeJsonSchema",
+      "transportRegistry": "strategyRegistryIssue145V5",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    },
+    {
+      "requestedModelID": "qwen/qwen3.8-27b",
+      "canonicalRevision": "qwen/qwen3.8-27b-20260814",
+      "providerEndpoint": "parasail/fp8",
+      "quantization": "fp8",
+      "role": "openWeightCandidate",
+      "temperature": null,
+      "topP": null,
+      "reasoning": null,
+      "maxOutputTokens": 6144,
+      "zdr": true,
+      "requiredParameters": ["max_tokens", "response_format", "structured_outputs"],
+      "responseContract": "nativeJsonSchema",
+      "transportRegistry": "strategyRegistryIssue145V5",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    },
+    {
+      "requestedModelID": "openai/gpt-5.6-luna",
+      "canonicalRevision": "openai/gpt-5.6-luna-20260709",
+      "providerEndpoint": "openai",
+      "quantization": null,
+      "role": "productionCandidate",
+      "temperature": null,
+      "topP": null,
+      "reasoning": {"enabled": false, "effort": "none", "exclude": false},
+      "maxOutputTokens": 6144,
+      "requiredParameters": ["max_tokens", "response_format", "structured_outputs"],
+      "responseContract": "nativeJsonSchema",
+      "transportRegistry": "strategyRegistryIssue145V5",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    }
+  ]
+}

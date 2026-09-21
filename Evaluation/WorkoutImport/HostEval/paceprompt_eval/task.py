@@ -3124,6 +3124,12 @@ def main(argv: list[str] | None = None) -> int:
     run_issue145_stage_a.add_argument("--live", action="store_true")
     run_issue145_stage_a.add_argument("--authorization")
     run_issue145_stage_a.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue145-stage-b")
+    subparsers.add_parser("enumerate-issue145-stage-b")
+    prepare_issue145_stage_b = subparsers.add_parser(
+        "prepare-issue145-stage-b-gate"
+    )
+    prepare_issue145_stage_b.add_argument("--run-id", required=True)
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3433,6 +3439,22 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         )
+        return 0
+    if args.command == "verify-issue145-stage-b":
+        from .issue145_stage_b import verify as verify_issue145_stage_b
+
+        report = verify_issue145_stage_b()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-issue145-stage-b":
+        from .issue145_stage_b import queue_document as issue145_stage_b_queue
+
+        print_json(issue145_stage_b_queue())
+        return 0
+    if args.command == "prepare-issue145-stage-b-gate":
+        from .issue145_stage_b import prepare_gate as prepare_issue145_stage_b_gate
+
+        print_json(asyncio.run(prepare_issue145_stage_b_gate(args.run_id)))
         return 0
     if args.command == "enumerate":
         report = verify()
