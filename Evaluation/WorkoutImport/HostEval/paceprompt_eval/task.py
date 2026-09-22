@@ -3137,6 +3137,16 @@ def main(argv: list[str] | None = None) -> int:
     run_issue145_stage_b.add_argument("--live", action="store_true")
     run_issue145_stage_b.add_argument("--authorization")
     run_issue145_stage_b.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue145-route-probes")
+    prepare_route_probes = subparsers.add_parser("prepare-issue145-route-probes-gate")
+    prepare_route_probes.add_argument("--run-id", required=True)
+    seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
+    seal_route_probes.add_argument("--run-id", required=True)
+    run_route_probes = subparsers.add_parser("run-issue145-route-probes")
+    run_route_probes.add_argument("--run-id", required=True)
+    run_route_probes.add_argument("--live", action="store_true")
+    run_route_probes.add_argument("--authorization")
+    run_route_probes.add_argument("--spending-limit-usd")
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3482,6 +3492,32 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         )
+        return 0
+    if args.command == "verify-issue145-route-probes":
+        from .issue145_route_probes import verify as verify_route_probes
+
+        print_json(verify_route_probes())
+        return 0
+    if args.command == "prepare-issue145-route-probes-gate":
+        from .issue145_route_probes import prepare_gate as prepare_route_probe_gate
+
+        print_json(prepare_route_probe_gate(args.run_id))
+        return 0
+    if args.command == "seal-issue145-route-probes-gate":
+        from .issue145_route_probes import seal_gate as seal_route_probe_gate
+
+        print_json(seal_route_probe_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-route-probes":
+        from .issue145_route_probes import run_live as run_route_probes_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-route-probes requires --live")
+        print_json(asyncio.run(run_route_probes_live(
+            run_id=args.run_id,
+            authorization=args.authorization or "",
+            spending_limit_usd=args.spending_limit_usd or "",
+        )))
         return 0
     if args.command == "enumerate":
         report = verify()

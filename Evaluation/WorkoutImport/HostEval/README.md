@@ -691,16 +691,33 @@ evidence, exact spending-limit ratification, a newly bound run instance and
 explicit live authorisation. Results must remain separated by stratum and no
 automatic winner, publication or production-route change is permitted.
 
-The additive `issue145-full-matrix-route-probe-proposal-r1.json` freezes a
-two-call, zero-scored compatibility proposal for the changed Mistral and
-DeepSeek routes, bound to the 22 September public-catalogue preparation. Its
-SHA-256 is `2c4b2a6122a50fd5acc029f9282cd8bd3bb429072afe6b174ed446058715b500`.
-The conservative two-call recommendation is USD 0.01192791. This file is a
-proposal only: no probe runner, credential access, model call, spend, full
-matrix admission, result publication, production change, release or issue
-closure follows from it. The 3,936-call full-matrix preparation separately
-estimated USD 98.742225560 at the snapshot prices; that is not a ratified
-hard limit, and the final run must be freshly bound after route proof.
+The additive `issue145-full-matrix-route-probe-proposal-r1.json` freezes two
+ordered, zero-scored compatibility calls for the changed Mistral and DeepSeek
+routes, bound to the 22 September public-catalogue preparation. Its SHA-256 is
+`2c4b2a6122a50fd5acc029f9282cd8bd3bb429072afe6b174ed446058715b500`.
+The separate `issue145-full-matrix-route-probe-ratification-r1.json` binds the
+exact run ID and USD 0.01192791 hard limit to zero-spend runner implementation
+and gate sealing only. It explicitly withholds credential, provider, spend and
+live-run authority. The ignored parent preparation must still be present and
+byte-identical; a clean checkout without it cannot seal this probe.
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-route-probes
+uv run --frozen paceprompt-host-eval prepare-issue145-route-probes-gate \
+  --run-id issue145-full-matrix-route-probes-v5-20260922-01
+uv run --frozen paceprompt-host-eval seal-issue145-route-probes-gate \
+  --run-id issue145-full-matrix-route-probes-v5-20260922-01
+```
+
+These commands read no credential, refresh no catalogue and make no provider
+call. The sealed gate still requires separate exact-run live authorisation.
+Live execution, if later authorised, refreshes only the two public routes,
+rejects route or price increases before key lookup, runs serially with no
+retry or fallback, and stops after a failed compatibility call. Its report is
+diagnostic, never an automatic winner or full-matrix admission. The 3,936-call
+full-matrix preparation separately estimated USD 98.742225560 at snapshot
+prices; that is not a ratified hard limit and the final run must be freshly
+bound after route proof.
 
 ### Cost-bounded four-model Stage A
 
