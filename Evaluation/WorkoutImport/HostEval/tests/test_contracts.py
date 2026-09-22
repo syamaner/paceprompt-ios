@@ -17,6 +17,7 @@ from paceprompt_eval.task import (
 )
 from paceprompt_eval.transport_strategy import (
     PROVIDER_SCHEMA_PROFILES,
+    SOL_COMPARISON_REGISTRY_ID,
     SchemaProfileID,
     strategy_for,
 )
@@ -166,6 +167,24 @@ class ContractTests(unittest.TestCase):
         self.assertTrue(
             all(strategy_for(spec).identifier.value == "semanticJsonV29" for spec in diagnostic)
         )
+
+    def test_sol_comparison_registry_pins_both_openai_routes(self) -> None:
+        baseline = load_model_specs(MODELS)[0]
+        self.assertEqual(baseline.requested_model_id, "openai/gpt-5.6-sol")
+        for model_id, revision in (
+            ("openai/gpt-5.6-sol", "openai/gpt-5.6-sol-20260709"),
+            ("openai/gpt-6-sol", "openai/gpt-6-sol-20260922"),
+        ):
+            spec = replace(
+                baseline,
+                requested_model_id=model_id,
+                canonical_revision=revision,
+                transport_registry_id=SOL_COMPARISON_REGISTRY_ID,
+                transport_strategy_id="nestedV23",
+            )
+            self.assertEqual(strategy_for(spec).identifier.value, "nestedV23")
+            with self.assertRaises(ValueError):
+                strategy_for(replace(spec, canonical_revision=revision + "-drift"))
 
     def test_gemini_profile_rejects_schema_expansion_before_payload_build(self) -> None:
         profile = PROVIDER_SCHEMA_PROFILES[
