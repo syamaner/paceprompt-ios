@@ -3137,6 +3137,18 @@ def main(argv: list[str] | None = None) -> int:
     run_issue145_stage_b.add_argument("--live", action="store_true")
     run_issue145_stage_b.add_argument("--authorization")
     run_issue145_stage_b.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-sol-comparison")
+    subparsers.add_parser("enumerate-sol-comparison")
+    prepare_sol_comparison = subparsers.add_parser("prepare-sol-comparison-gate")
+    prepare_sol_comparison.add_argument("--run-id", required=True)
+    seal_sol_comparison = subparsers.add_parser("seal-sol-comparison-gate")
+    seal_sol_comparison.add_argument("--run-id", required=True)
+    seal_sol_comparison.add_argument("--spending-limit-usd", required=True)
+    run_sol_comparison = subparsers.add_parser("run-sol-comparison")
+    run_sol_comparison.add_argument("--run-id", required=True)
+    run_sol_comparison.add_argument("--live", action="store_true")
+    run_sol_comparison.add_argument("--authorization")
+    run_sol_comparison.add_argument("--spending-limit-usd")
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3482,6 +3494,38 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         )
+        return 0
+    if args.command == "verify-sol-comparison":
+        from .sol_comparison import verify as verify_sol_comparison
+
+        report = verify_sol_comparison()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-sol-comparison":
+        from .sol_comparison import queue_document as sol_comparison_queue
+
+        print_json(sol_comparison_queue())
+        return 0
+    if args.command == "prepare-sol-comparison-gate":
+        from .sol_comparison import prepare_gate as prepare_sol_comparison_gate
+
+        print_json(asyncio.run(prepare_sol_comparison_gate(args.run_id)))
+        return 0
+    if args.command == "seal-sol-comparison-gate":
+        from .sol_comparison import seal_gate as seal_sol_comparison_gate
+
+        print_json(seal_sol_comparison_gate(args.run_id, args.spending_limit_usd))
+        return 0
+    if args.command == "run-sol-comparison":
+        from .sol_comparison import run_live as run_sol_comparison_live
+
+        if not args.live:
+            raise SystemExit("run-sol-comparison requires --live")
+        print_json(asyncio.run(run_sol_comparison_live(
+            run_id=args.run_id,
+            authorization=args.authorization or "",
+            spending_limit_usd=args.spending_limit_usd or "",
+        )))
         return 0
     if args.command == "enumerate":
         report = verify()

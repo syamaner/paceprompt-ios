@@ -1,0 +1,80 @@
+{
+  "runPolicyVersion": "paceprompt-host-eval-run-policy/sol-comparison-v1",
+  "status": "proposed-awaiting-operator-ratification",
+  "purpose": "fresh paired cost and quality diagnostic under the production issue130-r2 prompt",
+  "sealedInputs": {
+    "productionPromptSha256": "5e27496875f6fd20d737d8c190fc938bfdc2b2cd3658e48f606dccf64bbdf007",
+    "v3HeldoutCasesSha256": "645b17e90a8096fe56c766221288fda4e588f8fa45b1b650638970d5449c1159",
+    "issue130AcceptanceRevision": "issue-130-reviewer-acceptance/r2",
+    "issue130AcceptanceCorpusSha256": "204c6814cb62523426ed8871d77159f39a4daf4dc495ece7fcc70627e6d22864",
+    "scorerSha256": "45fe2dd6dd063ad2292e79fcf2bd520881bbeb374ea90571c7937f3d7be0bba1",
+    "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+  },
+  "dataset": {
+    "scoredStrata": [
+      {"id": "v3-heldout-regression", "caseCount": 79},
+      {"id": "issue130-acceptance-r2", "caseCount": 30}
+    ],
+    "totalDistinctScoredCases": 109,
+    "warmupCaseID": "WI-V3-D020"
+  },
+  "generation": {
+    "completionCount": 1,
+    "maxOutputTokens": 6144,
+    "strictStructuredOutput": true,
+    "transportStrategy": "nestedV23",
+    "hostSemanticSchema": "workout-import-model-output/v2"
+  },
+  "routing": {
+    "allowFallbacks": false,
+    "requireParameters": true,
+    "dataCollection": "deny",
+    "returnedIdentityMustMatchCanonicalRoute": true
+  },
+  "execution": {
+    "modelOrder": ["openai/gpt-5.6-sol", "openai/gpt-6-sol"],
+    "requestedRepetitionsPerStratum": 1,
+    "orderSeedBase": 15003405,
+    "orderRule": "shuffle-each-stratum-then-alternate-model-order-per-case",
+    "warmupsPerModel": 1,
+    "warmupGate": "per-model-response-contract-transport-and-full-v2-schema-validity",
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "cache": false,
+    "cachePrompt": false,
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "overallRunTimeoutSeconds": null,
+    "cancelFlushSeconds": 15,
+    "resumable": false,
+    "rateLimitDisposition": "pause-model-skip-remaining-in-place",
+    "scoredAttempts": 218,
+    "warmups": 2,
+    "totalProviderCalls": 220
+  },
+  "scoring": {
+    "strictExactPerAttempt": true,
+    "reportStrataSeparately": true,
+    "preserveEmptyCapabilityGateAsFalse": true,
+    "automaticWinner": false,
+    "decision": "publish-evidence-backed-recommendation-for-human-review"
+  },
+  "spending": {
+    "currency": "USD",
+    "preflightMethod": "serialized-complete-request-utf8-byte-upper-bound-plus-4096-framing-tokens-and-6144-output-tokens-per-call",
+    "catalogueWorstCaseUSDAtPreparation": "25.080060",
+    "proposedHardLimitUSD": "26.00",
+    "preflightOverLimitBehaviour": "no-calls-and-reratify",
+    "hardLimitRatified": false
+  },
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false,
+    "publication": false,
+    "productionChange": false
+  }
+}

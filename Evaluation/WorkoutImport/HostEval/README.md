@@ -827,6 +827,45 @@ unchanged v3 scorer reports its non-empty capability hard gate as false for
 every model. The publication records that structural result explicitly and
 does not reinterpret it into an eligible model.
 
+### GPT-5.6 Sol versus GPT-6 Sol comparison
+
+`models-v1-sol-comparison.json` and `run-policy-v1-sol-comparison.json` define
+a developer-only comparison. They leave the accepted issue #145 evidence and
+production import configuration untouched. The model routes are pinned to
+`openai/gpt-5.6-sol-20260709/openai` and
+`openai/gpt-6-sol-20260922/openai`, both using the same nested strict transport
+schema and the production `issue130-r2` prompt. Each receives the same 79 v3
+held-out and 30 issue #130 reviewer acceptance cases in one alternating,
+deterministic pass. Two development warm-ups plus 218 scored attempts make
+220 maximum provider calls. The output ceiling is 6,144 tokens; reasoning is
+disabled. No fallback or automatic retry is configured.
+
+The public OpenRouter catalogue observed on 2026-09-22 listed both exact
+OpenAI endpoints at USD 2 per million input tokens and USD 10 per million
+output tokens. An offline serialized-payload upper bound plus 4,096 framing
+tokens per call yielded USD 12.539040 for GPT-5.6 Sol and USD 12.541020 for
+GPT-6 Sol, or USD 25.080060 together. The ratified hard ceiling was USD 26.00;
+the runner refuses all calls if a fresh preflight exceeds it. The authorized
+run completed at USD 1.8668044 provider-reported cost. Its operator-accepted
+aggregate, evidence audit and human GPT-6 Sol selection for a separate
+reviewed production change are in
+`../Summaries/issue145-sol56-vs-sol6-2026-09-22.md`. The one-pass result
+remains diagnostic, and this slice does not change the production model.
+
+The zero-spend preparation command writes its catalogue snapshot, complete
+mocked requests, deterministic queue, hashes and operator gate to the ignored
+run directory:
+
+```sh
+env -u OPENROUTER_API_KEY uv run --frozen paceprompt-host-eval \
+  prepare-sol-comparison-gate --run-id sol56-vs-sol6-20260922-01
+```
+
+`seal-sol-comparison-gate` requires the approved exact USD limit. The live
+command additionally requires `--live`, the sealed phrase and the matching
+limit; it rechecks the profile, route and current catalogue before accessing
+`OPENROUTER_API_KEY`.
+
 ## Frozen protocol
 
 - 17 development cases and 34 held-out cases, with eight fixed few-shot

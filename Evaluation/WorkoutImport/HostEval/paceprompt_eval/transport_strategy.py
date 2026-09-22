@@ -245,6 +245,7 @@ V2_8_REGISTRY_ID = "strategyRegistryV28"
 V2_9_REGISTRY_ID = "strategyRegistryV29"
 V4_OPEN_WEIGHT_REGISTRY_ID = "strategyRegistryV4OpenWeight"
 ISSUE145_V5_REGISTRY_ID = "strategyRegistryIssue145V5"
+SOL_COMPARISON_REGISTRY_ID = "strategyRegistrySolComparisonV1"
 
 
 V2_7_ROUTE_STRATEGIES: Mapping[ProviderRoute, TransportStrategyID] = MappingProxyType(
@@ -377,6 +378,20 @@ ISSUE145_V5_ROUTE_STRATEGIES: Mapping[
 )
 
 
+SOL_COMPARISON_ROUTE_STRATEGIES: Mapping[
+    ProviderRoute, TransportStrategyID
+] = MappingProxyType(
+    {
+        ProviderRoute(
+            "openai/gpt-5.6-sol", "openai/gpt-5.6-sol-20260709", "openai"
+        ): TransportStrategyID.NESTED_V2_3,
+        ProviderRoute(
+            "openai/gpt-6-sol", "openai/gpt-6-sol-20260922", "openai"
+        ): TransportStrategyID.NESTED_V2_3,
+    }
+)
+
+
 ROUTE_STRATEGY_REGISTRIES: Mapping[
     str, Mapping[ProviderRoute, TransportStrategyID]
 ] = MappingProxyType(
@@ -386,6 +401,7 @@ ROUTE_STRATEGY_REGISTRIES: Mapping[
         V2_9_REGISTRY_ID: V2_9_ROUTE_STRATEGIES,
         V4_OPEN_WEIGHT_REGISTRY_ID: V4_OPEN_WEIGHT_ROUTE_STRATEGIES,
         ISSUE145_V5_REGISTRY_ID: ISSUE145_V5_ROUTE_STRATEGIES,
+        SOL_COMPARISON_REGISTRY_ID: SOL_COMPARISON_ROUTE_STRATEGIES,
     }
 )
 
