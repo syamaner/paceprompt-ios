@@ -35,3 +35,11 @@ Reviewed summaries:
   hash-binds those files, the human report and the ignored run provenance; run
   `python3 -B Evaluation/WorkoutImport/Summaries/verify_issue145_stage_a_publication.py`
   to verify the committed publication.
+- [`issue145-stage-b-and-comparison-2026-09-22.md`](issue145-stage-b-and-comparison-2026-09-22.md)
+  publishes the accepted Stage B aggregate and the protected three-repetition
+  Stage A+B comparison. The comparison deliberately selects no model and
+  preserves the inherited capability-gate result without relaxing the scorer.
+  [`issue145-stage-a-b-publication-manifest.json`](issue145-stage-a-b-publication-manifest.json)
+  binds the exact ratified proposal, ratification, new aggregate artifacts,
+  ignored-run provenance and protected historical summaries. Verify it with
+  `python3 -B Evaluation/WorkoutImport/Summaries/verify_issue145_stage_a_b_publication.py`.
