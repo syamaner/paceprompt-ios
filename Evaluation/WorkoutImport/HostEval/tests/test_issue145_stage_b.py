@@ -11,10 +11,14 @@ from unittest.mock import patch
 
 from paceprompt_eval.issue145_stage_a import queue_document as stage_a_queue
 from paceprompt_eval.issue145_stage_b import (
+    AUTHORIZATION_PREFIX,
     MODELS,
     RUN_POLICY,
+    _admit_live_cost_preflight,
     prepare_gate,
     queue_document,
+    run_live,
+    seal_gate,
     verify,
 )
 from paceprompt_eval.openrouter import load_model_specs
@@ -117,7 +121,7 @@ class Issue145StageBTests(unittest.TestCase):
         self.assertFalse(policy["decision"]["automaticWinner"])
         self.assertIsNone(policy["spending"]["hardLimit"])
 
-    def test_zero_spend_gate_does_not_read_credential_or_enable_live_run(self) -> None:
+    def test_zero_spend_gate_does_not_read_credential_or_authorize_live_run(self) -> None:
         specs = load_model_specs(MODELS)
         with tempfile.TemporaryDirectory() as directory, patch(
             "paceprompt_eval.v3.RUNS_ROOT", Path(directory)
@@ -139,13 +143,107 @@ class Issue145StageBTests(unittest.TestCase):
         self.assertFalse(gate["credentialRead"])
         self.assertEqual(gate["spendUSD"], "0.00")
         self.assertIsNone(gate["authorizationPhrase"])
-        self.assertFalse(gate["liveExecutionImplemented"])
+        self.assertTrue(gate["liveExecutionImplemented"])
         self.assertEqual(gate["costPreflight"]["callCount"], 657)
         self.assertIsNone(gate["costPreflight"]["hardLimitUSD"])
         self.assertFalse(gate["costPreflight"]["admitted"])
         self.assertEqual(proposal["profile"]["scoredAttempts"], 654)
         self.assertEqual(proposal["profile"]["maxOutputTokens"], 6144)
         self.assertNotIn(b"must-not-be-read", serialized)
+
+    def test_ratified_gate_seals_exact_limit_but_wrong_live_authority_fails_closed(self) -> None:
+        specs = load_model_specs(MODELS)
+        run_id = "issue145-top3-stage-b-v5-20260921-01"
+        with tempfile.TemporaryDirectory() as directory, patch(
+            "paceprompt_eval.v3.RUNS_ROOT", Path(directory)
+        ), patch.dict(os.environ, {"OPENROUTER_API_KEY": "must-not-be-read"}):
+            asyncio.run(prepare_gate(run_id, fetch=self._fake_catalogue(specs)))
+            gate = seal_gate(run_id)
+            with self.assertRaisesRegex(RuntimeError, "exact Stage B authorization"):
+                asyncio.run(
+                    run_live(
+                        run_id=run_id,
+                        authorization="wrong",
+                        spending_limit_usd="32.07052912",
+                    )
+                )
+
+        self.assertEqual(gate["status"], "awaitingFinalLiveRunAuthorization")
+        self.assertEqual(gate["ratifiedSpendingLimitUSD"], "32.07052912")
+        self.assertEqual(gate["costPreflight"]["hardLimitUSD"], "32.07052912")
+        self.assertTrue(gate["costPreflight"]["admitted"])
+        self.assertTrue(gate["authorizationPhrase"].startswith(AUTHORIZATION_PREFIX))
+
+    def test_live_current_price_admission_binds_exact_ratified_limit(self) -> None:
+        preflight = {
+            "hardLimitUSD": None,
+            "callCount": 657,
+            "estimatedUSD": "32.07052912",
+            "admitted": False,
+            "status": "awaitingSeparateHardLimitRatification",
+            "perModelEstimatedUSD": {},
+        }
+
+        admitted = _admit_live_cost_preflight(preflight, "32.07052912")
+
+        self.assertIsNone(preflight["hardLimitUSD"])
+        self.assertFalse(preflight["admitted"])
+        self.assertEqual(admitted["hardLimitUSD"], "32.07052912")
+        self.assertTrue(admitted["admitted"])
+        self.assertEqual(
+            admitted["status"], "admittedUnderExactRatifiedHardLimit"
+        )
+        with self.assertRaisesRegex(RuntimeError, "current Stage B prices exceed"):
+            _admit_live_cost_preflight(preflight, "32.07052911")
+
+    def test_successful_live_admission_is_recorded_before_execution(self) -> None:
+        specs = load_model_specs(MODELS)
+        run_id = "issue145-top3-stage-b-v5-20260921-01"
+
+        async def fake_execute(_runner):
+            return {"status": "test-complete"}
+
+        with tempfile.TemporaryDirectory() as directory, patch(
+            "paceprompt_eval.v3.RUNS_ROOT", Path(directory)
+        ), patch.dict(os.environ, {"OPENROUTER_API_KEY": "synthetic-test-key"}):
+            asyncio.run(prepare_gate(run_id, fetch=self._fake_catalogue(specs)))
+            gate = seal_gate(run_id)
+
+            def fake_live_snapshot(root: Path, *_args, **_kwargs):
+                root.mkdir(parents=True, exist_ok=True)
+                selected = gate["selectedEndpoints"]
+                (root / "selected.json").write_text(
+                    json.dumps(selected, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                return {"selected": selected}
+
+            with patch(
+                "paceprompt_eval.issue145_stage_b.snapshot_catalogue",
+                side_effect=fake_live_snapshot,
+            ), patch(
+                "paceprompt_eval.issue145_stage_b.StageBLiveRun.execute",
+                new=fake_execute,
+            ):
+                result = asyncio.run(
+                    run_live(
+                        run_id=run_id,
+                        authorization=gate["authorizationPhrase"],
+                        spending_limit_usd="32.07052912",
+                    )
+                )
+            operator_record = json.loads(
+                (Path(directory) / run_id / "operator-ratification.json").read_text()
+            )
+
+        self.assertEqual(result, {"status": "test-complete"})
+        self.assertEqual(operator_record["providerCallLimit"], 657)
+        live_preflight = operator_record["liveCostPreflight"]
+        self.assertEqual(live_preflight["hardLimitUSD"], "32.07052912")
+        self.assertTrue(live_preflight["admitted"])
+        self.assertEqual(
+            live_preflight["status"], "admittedUnderExactRatifiedHardLimit"
+        )
 
     def test_stage_a_evidence_tampering_fails_closed(self) -> None:
         source = (
