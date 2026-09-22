@@ -1,0 +1,15 @@
+{
+  "ratificationContractVersion": "paceprompt-issue145-stage-a-b-publication-ratification/r1",
+  "ratifiedAt": "2026-09-22",
+  "ratifiedProposalSha256": "bbef325cd88faac72424b647b692a1217989f4f09c2db80bc1345bb7db1ad3c4",
+  "authority": {
+    "boundedPublicationImplementation": true,
+    "exactHeadReview": true,
+    "rawRunEvidencePublication": false,
+    "modelSelection": false,
+    "scorerOrGateRelaxation": false,
+    "productionChange": false,
+    "merge": false,
+    "issueClosure": false
+  }
+}

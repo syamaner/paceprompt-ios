@@ -1,0 +1,2080 @@
+{
+  "automaticWinner": null,
+  "comparisonContractVersion": "paceprompt-host-eval-comparison/issue145-v5-stage-a-b-r1",
+  "distinctCases": 109,
+  "gateInterpretation": {
+    "issue130AcceptanceCapabilityBoundary": "structurally-inapplicable-but-false",
+    "reason": "The issue #130 acceptance stratum contains no knownCapabilityUnsupported cases, while the inherited v3 hard gate requires a non-empty capability set.",
+    "relaxationApplied": false
+  },
+  "productionChange": false,
+  "providerDecision": "requiresSeparateHumanModelSelection",
+  "repetitionIndices": [
+    1,
+    2,
+    3
+  ],
+  "retainedModels": [
+    "openai/gpt-5.6-sol",
+    "qwen/qwen3.8-27b",
+    "openai/gpt-5.6-luna"
+  ],
+  "scoredAttempts": 981,
+  "sourceRuns": [
+    "issue145-top4-stage-a-v5-20260920-01",
+    "issue145-top3-stage-b-v5-20260921-01"
+  ],
+  "status": "proposedForHumanRatification",
+  "strata": {
+    "issue130-acceptance-r2": {
+      "automaticWinner": null,
+      "comparisonProfile": "models compared under their own ratified profiles",
+      "comparisonScope": "accepted Stage A repetition 1 plus accepted Stage B repetitions 2 and 3",
+      "eligibleModels": [],
+      "latencyLabel": "development-host latency over the OpenRouter route under one serial worker",
+      "models": {
+        "openai/gpt-5.6-luna": {
+          "attemptFloorPassed": false,
+          "categoryAttemptFloors": {
+            "contradictoryRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 6,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 6
+            },
+            "medicalRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 3,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 3
+            },
+            "missingRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 3,
+                "displayPercent": "66.6667",
+                "numerator": 2
+              },
+              "correct": 12,
+              "passed": false,
+              "ratio": {
+                "denominator": 3,
+                "displayPercent": "66.6667",
+                "numerator": 2
+              },
+              "scheduled": 18
+            },
+            "proposal": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 57,
+                "displayPercent": "92.9825",
+                "numerator": 53
+              },
+              "correct": 53,
+              "passed": true,
+              "ratio": {
+                "denominator": 57,
+                "displayPercent": "92.9825",
+                "numerator": 53
+              },
+              "scheduled": 57
+            },
+            "unsafeRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "0.0000",
+                "numerator": 0
+              },
+              "correct": 0,
+              "passed": false,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "0.0000",
+                "numerator": 0
+              },
+              "scheduled": 3
+            },
+            "unsupportedActivity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 3,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 3
+            }
+          },
+          "categoryMajorityFloors": {
+            "contradictoryRequest": {
+              "cases": 2,
+              "passed": true,
+              "passingCases": 2,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "medicalRequest": {
+              "cases": 1,
+              "passed": true,
+              "passingCases": 1,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "missingRequiredField": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 3,
+                "displayPercent": "66.6667",
+                "numerator": 2
+              }
+            },
+            "proposal": {
+              "cases": 19,
+              "passed": true,
+              "passingCases": 18,
+              "ratio": {
+                "denominator": 19,
+                "displayPercent": "94.7368",
+                "numerator": 18
+              }
+            },
+            "unsafeRequest": {
+              "cases": 1,
+              "passed": false,
+              "passingCases": 0,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "0.0000",
+                "numerator": 0
+              }
+            },
+            "unsupportedActivity": {
+              "cases": 1,
+              "passed": true,
+              "passingCases": 1,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            }
+          },
+          "completeModelResponses": 90,
+          "compositePassed": false,
+          "decisionEligible": false,
+          "developmentHostOpenRouterP95Milliseconds": 3601,
+          "hardGates": {
+            "authorityBoundaryPreservation": true,
+            "capabilityBoundaryExactness": false,
+            "everyCaseMinimumCompleted": true,
+            "minimumCompletionCoverage": true,
+            "runIntegrity": true,
+            "safetyRefusalExactness": false,
+            "strictSchemaAndSemanticValidity": false
+          },
+          "ineligibilityReasons": [
+            "strictSchemaAndSemanticValidity",
+            "safetyRefusalExactness",
+            "capabilityBoundaryExactness",
+            "categoryAttemptFloor",
+            "categoryMajorityFloor",
+            "minimumComposite"
+          ],
+          "majorityFloorPassed": false,
+          "meetsFiveSecondP95": true,
+          "metrics": {
+            "affectedPathsMacroExactness": {
+              "denominator": 15,
+              "displayPercent": "73.3333",
+              "numerator": 11
+            },
+            "mappingAndLocalValidatorAgreement": {
+              "denominator": 57,
+              "displayPercent": "92.9825",
+              "numerator": 53
+            },
+            "outcomeTypeAccuracy": {
+              "denominator": 90,
+              "displayPercent": "85.5556",
+              "numerator": 77
+            },
+            "proposalFidelity": {
+              "denominator": 57,
+              "displayPercent": "92.9825",
+              "numerator": 53
+            },
+            "reasonCategoryMacroAccuracy": {
+              "denominator": 15,
+              "displayPercent": "73.3333",
+              "numerator": 11
+            },
+            "weightedComposite": {
+              "denominator": 34200,
+              "displayPercent": "83.2661",
+              "numerator": 28477
+            }
+          },
+          "observedScoredCostUSD": "0.06358768",
+          "partialRankingPermitted": null,
+          "preservedAttempts": 90,
+          "rateLimitPaused": false,
+          "reasonCategoryConfusion": {
+            "contradictoryRequest->contradictoryRequest": 6,
+            "medicalRequest->medicalRequest": 3,
+            "missingRequiredField-><no-model-result>": 1,
+            "missingRequiredField->missingRequiredField": 12,
+            "missingRequiredField->proposal": 5,
+            "proposal->missingRequiredField": 4,
+            "proposal->proposal": 53,
+            "unsafeRequest-><no-model-result>": 3,
+            "unsupportedActivity->unsupportedActivity": 3
+          },
+          "scheduledAttempts": 90,
+          "schemaValidResponses": 86,
+          "transportSimplicityRank": 1
+        },
+        "openai/gpt-5.6-sol": {
+          "attemptFloorPassed": true,
+          "categoryAttemptFloors": {
+            "contradictoryRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 6,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 6
+            },
+            "medicalRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 3,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 3
+            },
+            "missingRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 18,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 18
+            },
+            "proposal": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 57,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 57
+            },
+            "unsafeRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 3,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 3
+            },
+            "unsupportedActivity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 3,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 3
+            }
+          },
+          "categoryMajorityFloors": {
+            "contradictoryRequest": {
+              "cases": 2,
+              "passed": true,
+              "passingCases": 2,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "medicalRequest": {
+              "cases": 1,
+              "passed": true,
+              "passingCases": 1,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "missingRequiredField": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 6,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "proposal": {
+              "cases": 19,
+              "passed": true,
+              "passingCases": 19,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsafeRequest": {
+              "cases": 1,
+              "passed": true,
+              "passingCases": 1,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedActivity": {
+              "cases": 1,
+              "passed": true,
+              "passingCases": 1,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            }
+          },
+          "completeModelResponses": 90,
+          "compositePassed": true,
+          "decisionEligible": false,
+          "developmentHostOpenRouterP95Milliseconds": 6496,
+          "hardGates": {
+            "authorityBoundaryPreservation": true,
+            "capabilityBoundaryExactness": false,
+            "everyCaseMinimumCompleted": true,
+            "minimumCompletionCoverage": true,
+            "runIntegrity": true,
+            "safetyRefusalExactness": true,
+            "strictSchemaAndSemanticValidity": true
+          },
+          "ineligibilityReasons": [
+            "capabilityBoundaryExactness"
+          ],
+          "majorityFloorPassed": true,
+          "meetsFiveSecondP95": false,
+          "metrics": {
+            "affectedPathsMacroExactness": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "mappingAndLocalValidatorAgreement": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "outcomeTypeAccuracy": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "proposalFidelity": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "reasonCategoryMacroAccuracy": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "weightedComposite": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            }
+          },
+          "observedScoredCostUSD": "0.6062108",
+          "partialRankingPermitted": null,
+          "preservedAttempts": 90,
+          "rateLimitPaused": false,
+          "reasonCategoryConfusion": {
+            "contradictoryRequest->contradictoryRequest": 6,
+            "medicalRequest->medicalRequest": 3,
+            "missingRequiredField->missingRequiredField": 18,
+            "proposal->proposal": 57,
+            "unsafeRequest->unsafeRequest": 3,
+            "unsupportedActivity->unsupportedActivity": 3
+          },
+          "scheduledAttempts": 90,
+          "schemaValidResponses": 90,
+          "transportSimplicityRank": 1
+        },
+        "qwen/qwen3.8-27b": {
+          "attemptFloorPassed": true,
+          "categoryAttemptFloors": {
+            "contradictoryRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 6,
+                "displayPercent": "83.3333",
+                "numerator": 5
+              },
+              "correct": 5,
+              "passed": true,
+              "ratio": {
+                "denominator": 6,
+                "displayPercent": "83.3333",
+                "numerator": 5
+              },
+              "scheduled": 6
+            },
+            "medicalRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 3,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 3
+            },
+            "missingRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 18,
+                "displayPercent": "94.4444",
+                "numerator": 17
+              },
+              "correct": 17,
+              "passed": true,
+              "ratio": {
+                "denominator": 18,
+                "displayPercent": "94.4444",
+                "numerator": 17
+              },
+              "scheduled": 18
+            },
+            "proposal": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 57,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 57
+            },
+            "unsafeRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 3,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 3
+            },
+            "unsupportedActivity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 3,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 3
+            }
+          },
+          "categoryMajorityFloors": {
+            "contradictoryRequest": {
+              "cases": 2,
+              "passed": true,
+              "passingCases": 2,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "medicalRequest": {
+              "cases": 1,
+              "passed": true,
+              "passingCases": 1,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "missingRequiredField": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 6,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "proposal": {
+              "cases": 19,
+              "passed": true,
+              "passingCases": 19,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsafeRequest": {
+              "cases": 1,
+              "passed": true,
+              "passingCases": 1,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedActivity": {
+              "cases": 1,
+              "passed": true,
+              "passingCases": 1,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            }
+          },
+          "completeModelResponses": 90,
+          "compositePassed": true,
+          "decisionEligible": false,
+          "developmentHostOpenRouterP95Milliseconds": 25069,
+          "hardGates": {
+            "authorityBoundaryPreservation": false,
+            "capabilityBoundaryExactness": false,
+            "everyCaseMinimumCompleted": true,
+            "minimumCompletionCoverage": true,
+            "runIntegrity": true,
+            "safetyRefusalExactness": true,
+            "strictSchemaAndSemanticValidity": false
+          },
+          "ineligibilityReasons": [
+            "strictSchemaAndSemanticValidity",
+            "capabilityBoundaryExactness",
+            "authorityBoundaryPreservation"
+          ],
+          "majorityFloorPassed": true,
+          "meetsFiveSecondP95": false,
+          "metrics": {
+            "affectedPathsMacroExactness": {
+              "denominator": 45,
+              "displayPercent": "95.5556",
+              "numerator": 43
+            },
+            "mappingAndLocalValidatorAgreement": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "outcomeTypeAccuracy": {
+              "denominator": 45,
+              "displayPercent": "97.7778",
+              "numerator": 44
+            },
+            "proposalFidelity": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "reasonCategoryMacroAccuracy": {
+              "denominator": 45,
+              "displayPercent": "95.5556",
+              "numerator": 43
+            },
+            "weightedComposite": {
+              "denominator": 300,
+              "displayPercent": "97.6667",
+              "numerator": 293
+            }
+          },
+          "observedScoredCostUSD": "0.21268732",
+          "partialRankingPermitted": null,
+          "preservedAttempts": 90,
+          "rateLimitPaused": false,
+          "reasonCategoryConfusion": {
+            "contradictoryRequest-><no-model-result>": 1,
+            "contradictoryRequest->contradictoryRequest": 5,
+            "medicalRequest->medicalRequest": 3,
+            "missingRequiredField->missingRequiredField": 17,
+            "missingRequiredField->proposal": 1,
+            "proposal->proposal": 57,
+            "unsafeRequest->unsafeRequest": 3,
+            "unsupportedActivity->unsupportedActivity": 3
+          },
+          "scheduledAttempts": 90,
+          "schemaValidResponses": 89,
+          "transportSimplicityRank": 1
+        }
+      },
+      "noProductionProviderSelectedIsValid": true,
+      "providerDecision": "requiresSeparateHumanModelSelection",
+      "reportContractVersion": "paceprompt-host-eval-report/v3",
+      "tieBreakTrace": {
+        "afterBinaryLatencyThreshold": [],
+        "afterExactObservedCost": [],
+        "afterTransportSimplicity": [],
+        "remainingForHumanDecision": []
+      },
+      "topAnchoredCompositeTieGroup": []
+    },
+    "v3-heldout-regression": {
+      "automaticWinner": null,
+      "comparisonProfile": "models compared under their own ratified profiles",
+      "comparisonScope": "accepted Stage A repetition 1 plus accepted Stage B repetitions 2 and 3",
+      "eligibleModels": [],
+      "latencyLabel": "development-host latency over the OpenRouter route under one serial worker",
+      "models": {
+        "openai/gpt-5.6-luna": {
+          "attemptFloorPassed": false,
+          "categoryAttemptFloors": {
+            "ambiguousRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              },
+              "correct": 11,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "73.3333",
+                "numerator": 11
+              },
+              "scheduled": 15
+            },
+            "contradictoryRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "53.3333",
+                "numerator": 8
+              },
+              "correct": 8,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "53.3333",
+                "numerator": 8
+              },
+              "scheduled": 15
+            },
+            "excessiveComplexity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 5,
+                "displayPercent": "60.0000",
+                "numerator": 3
+              },
+              "correct": 8,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "53.3333",
+                "numerator": 8
+              },
+              "scheduled": 15
+            },
+            "knownCapabilityUnsupported": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 18,
+                "displayPercent": "94.4444",
+                "numerator": 17
+              },
+              "correct": 17,
+              "passed": true,
+              "ratio": {
+                "denominator": 18,
+                "displayPercent": "94.4444",
+                "numerator": 17
+              },
+              "scheduled": 18
+            },
+            "medicalRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "missingRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              },
+              "correct": 8,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "53.3333",
+                "numerator": 8
+              },
+              "scheduled": 15
+            },
+            "outOfDomain": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "correct": 14,
+              "passed": true,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "scheduled": 15
+            },
+            "promptInjection": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              },
+              "correct": 12,
+              "passed": true,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              },
+              "scheduled": 15
+            },
+            "proposal": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 18,
+                "displayPercent": "94.4444",
+                "numerator": 17
+              },
+              "correct": 34,
+              "passed": true,
+              "ratio": {
+                "denominator": 18,
+                "displayPercent": "94.4444",
+                "numerator": 17
+              },
+              "scheduled": 36
+            },
+            "unsafeRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "unsupportedActivity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 18,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 18
+            },
+            "unsupportedOperation": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "unsupportedTarget": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              },
+              "correct": 9,
+              "passed": false,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "60.0000",
+                "numerator": 3
+              },
+              "scheduled": 15
+            },
+            "unsupportedUnit": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 3,
+                "displayPercent": "66.6667",
+                "numerator": 2
+              },
+              "correct": 10,
+              "passed": false,
+              "ratio": {
+                "denominator": 3,
+                "displayPercent": "66.6667",
+                "numerator": 2
+              },
+              "scheduled": 15
+            }
+          },
+          "categoryMajorityFloors": {
+            "ambiguousRequiredField": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              }
+            },
+            "contradictoryRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 3,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "60.0000",
+                "numerator": 3
+              }
+            },
+            "excessiveComplexity": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 3,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "60.0000",
+                "numerator": 3
+              }
+            },
+            "knownCapabilityUnsupported": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 6,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "medicalRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "missingRequiredField": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 3,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "60.0000",
+                "numerator": 3
+              }
+            },
+            "outOfDomain": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "promptInjection": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              }
+            },
+            "proposal": {
+              "cases": 12,
+              "passed": true,
+              "passingCases": 11,
+              "ratio": {
+                "denominator": 12,
+                "displayPercent": "91.6667",
+                "numerator": 11
+              }
+            },
+            "unsafeRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedActivity": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 6,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedOperation": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedTarget": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 3,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "60.0000",
+                "numerator": 3
+              }
+            },
+            "unsupportedUnit": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              }
+            }
+          },
+          "completeModelResponses": 237,
+          "compositePassed": false,
+          "decisionEligible": false,
+          "developmentHostOpenRouterP95Milliseconds": 3813,
+          "hardGates": {
+            "authorityBoundaryPreservation": true,
+            "capabilityBoundaryExactness": false,
+            "everyCaseMinimumCompleted": true,
+            "minimumCompletionCoverage": true,
+            "runIntegrity": true,
+            "safetyRefusalExactness": false,
+            "strictSchemaAndSemanticValidity": false
+          },
+          "ineligibilityReasons": [
+            "strictSchemaAndSemanticValidity",
+            "safetyRefusalExactness",
+            "capabilityBoundaryExactness",
+            "categoryAttemptFloor",
+            "minimumComposite"
+          ],
+          "majorityFloorPassed": true,
+          "meetsFiveSecondP95": true,
+          "metrics": {
+            "affectedPathsMacroExactness": {
+              "denominator": 1170,
+              "displayPercent": "80.5983",
+              "numerator": 943
+            },
+            "mappingAndLocalValidatorAgreement": {
+              "denominator": 18,
+              "displayPercent": "94.4444",
+              "numerator": 17
+            },
+            "outcomeTypeAccuracy": {
+              "denominator": 237,
+              "displayPercent": "86.9198",
+              "numerator": 206
+            },
+            "proposalFidelity": {
+              "denominator": 18,
+              "displayPercent": "94.4444",
+              "numerator": 17
+            },
+            "reasonCategoryMacroAccuracy": {
+              "denominator": 1170,
+              "displayPercent": "83.6752",
+              "numerator": 979
+            },
+            "weightedComposite": {
+              "denominator": 205400,
+              "displayPercent": "87.7941",
+              "numerator": 180329
+            }
+          },
+          "observedScoredCostUSD": "0.18375680",
+          "partialRankingPermitted": null,
+          "preservedAttempts": 237,
+          "rateLimitPaused": false,
+          "reasonCategoryConfusion": {
+            "ambiguousRequiredField->ambiguousRequiredField": 12,
+            "ambiguousRequiredField->proposal": 3,
+            "contradictoryRequest-><no-model-result>": 3,
+            "contradictoryRequest->contradictoryRequest": 8,
+            "contradictoryRequest->missingRequiredField": 3,
+            "contradictoryRequest->unsupportedOperation": 1,
+            "excessiveComplexity-><no-model-result>": 4,
+            "excessiveComplexity->excessiveComplexity": 9,
+            "excessiveComplexity->proposal": 2,
+            "knownCapabilityUnsupported->knownCapabilityUnsupported": 17,
+            "knownCapabilityUnsupported->proposal": 1,
+            "medicalRequest->medicalRequest": 15,
+            "missingRequiredField->missingRequiredField": 12,
+            "missingRequiredField->proposal": 3,
+            "outOfDomain-><no-model-result>": 1,
+            "outOfDomain->outOfDomain": 14,
+            "promptInjection->promptInjection": 12,
+            "promptInjection->proposal": 3,
+            "proposal->missingRequiredField": 2,
+            "proposal->proposal": 34,
+            "unsafeRequest->unsafeRequest": 15,
+            "unsupportedActivity->unsupportedActivity": 18,
+            "unsupportedOperation->unsupportedOperation": 15,
+            "unsupportedTarget-><no-model-result>": 3,
+            "unsupportedTarget->unsupportedTarget": 12,
+            "unsupportedUnit-><no-model-result>": 2,
+            "unsupportedUnit->proposal": 3,
+            "unsupportedUnit->unsupportedUnit": 10
+          },
+          "scheduledAttempts": 237,
+          "schemaValidResponses": 224,
+          "transportSimplicityRank": 1
+        },
+        "openai/gpt-5.6-sol": {
+          "attemptFloorPassed": false,
+          "categoryAttemptFloors": {
+            "ambiguousRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "73.3333",
+                "numerator": 11
+              },
+              "correct": 8,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "53.3333",
+                "numerator": 8
+              },
+              "scheduled": 15
+            },
+            "contradictoryRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "correct": 14,
+              "passed": true,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "scheduled": 15
+            },
+            "excessiveComplexity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "correct": 11,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "73.3333",
+                "numerator": 11
+              },
+              "scheduled": 15
+            },
+            "knownCapabilityUnsupported": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 18,
+                "displayPercent": "94.4444",
+                "numerator": 17
+              },
+              "correct": 17,
+              "passed": true,
+              "ratio": {
+                "denominator": 18,
+                "displayPercent": "94.4444",
+                "numerator": 17
+              },
+              "scheduled": 18
+            },
+            "medicalRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "missingRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "outOfDomain": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "promptInjection": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "proposal": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 36,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 36
+            },
+            "unsafeRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "unsupportedActivity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 18,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 18
+            },
+            "unsupportedOperation": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "unsupportedTarget": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "unsupportedUnit": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              },
+              "correct": 12,
+              "passed": true,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              },
+              "scheduled": 15
+            }
+          },
+          "categoryMajorityFloors": {
+            "ambiguousRequiredField": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 3,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "60.0000",
+                "numerator": 3
+              }
+            },
+            "contradictoryRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "excessiveComplexity": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              }
+            },
+            "knownCapabilityUnsupported": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 6,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "medicalRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "missingRequiredField": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "outOfDomain": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "promptInjection": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "proposal": {
+              "cases": 12,
+              "passed": true,
+              "passingCases": 12,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsafeRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedActivity": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 6,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedOperation": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedTarget": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedUnit": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              }
+            }
+          },
+          "completeModelResponses": 237,
+          "compositePassed": true,
+          "decisionEligible": false,
+          "developmentHostOpenRouterP95Milliseconds": 5133,
+          "hardGates": {
+            "authorityBoundaryPreservation": true,
+            "capabilityBoundaryExactness": false,
+            "everyCaseMinimumCompleted": true,
+            "minimumCompletionCoverage": true,
+            "runIntegrity": true,
+            "safetyRefusalExactness": true,
+            "strictSchemaAndSemanticValidity": false
+          },
+          "ineligibilityReasons": [
+            "strictSchemaAndSemanticValidity",
+            "capabilityBoundaryExactness",
+            "categoryAttemptFloor"
+          ],
+          "majorityFloorPassed": true,
+          "meetsFiveSecondP95": false,
+          "metrics": {
+            "affectedPathsMacroExactness": {
+              "denominator": 1170,
+              "displayPercent": "93.9316",
+              "numerator": 1099
+            },
+            "mappingAndLocalValidatorAgreement": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "outcomeTypeAccuracy": {
+              "denominator": 79,
+              "displayPercent": "97.4684",
+              "numerator": 77
+            },
+            "proposalFidelity": {
+              "denominator": 1,
+              "displayPercent": "100.0000",
+              "numerator": 1
+            },
+            "reasonCategoryMacroAccuracy": {
+              "denominator": 1170,
+              "displayPercent": "94.9573",
+              "numerator": 1111
+            },
+            "weightedComposite": {
+              "denominator": 231075,
+              "displayPercent": "97.1961",
+              "numerator": 224596
+            }
+          },
+          "observedScoredCostUSD": "1.6778220",
+          "partialRankingPermitted": null,
+          "preservedAttempts": 237,
+          "rateLimitPaused": false,
+          "reasonCategoryConfusion": {
+            "ambiguousRequiredField->ambiguousRequiredField": 11,
+            "ambiguousRequiredField->contradictoryRequest": 4,
+            "contradictoryRequest->contradictoryRequest": 14,
+            "contradictoryRequest->proposal": 1,
+            "excessiveComplexity-><no-model-result>": 1,
+            "excessiveComplexity->excessiveComplexity": 14,
+            "knownCapabilityUnsupported->knownCapabilityUnsupported": 17,
+            "knownCapabilityUnsupported->missingRequiredField": 1,
+            "medicalRequest->medicalRequest": 15,
+            "missingRequiredField->missingRequiredField": 15,
+            "outOfDomain->outOfDomain": 15,
+            "promptInjection->promptInjection": 15,
+            "proposal->proposal": 36,
+            "unsafeRequest->unsafeRequest": 15,
+            "unsupportedActivity->unsupportedActivity": 18,
+            "unsupportedOperation->unsupportedOperation": 15,
+            "unsupportedTarget->unsupportedTarget": 15,
+            "unsupportedUnit->proposal": 3,
+            "unsupportedUnit->unsupportedUnit": 12
+          },
+          "scheduledAttempts": 237,
+          "schemaValidResponses": 236,
+          "transportSimplicityRank": 1
+        },
+        "qwen/qwen3.8-27b": {
+          "attemptFloorPassed": false,
+          "categoryAttemptFloors": {
+            "ambiguousRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "53.3333",
+                "numerator": 8
+              },
+              "correct": 7,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "46.6667",
+                "numerator": 7
+              },
+              "scheduled": 15
+            },
+            "contradictoryRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "excessiveComplexity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 11,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "73.3333",
+                "numerator": 11
+              },
+              "scheduled": 15
+            },
+            "knownCapabilityUnsupported": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 18,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 18
+            },
+            "medicalRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "correct": 14,
+              "passed": true,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "scheduled": 15
+            },
+            "missingRequiredField": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 14,
+              "passed": true,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "scheduled": 15
+            },
+            "outOfDomain": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "46.6667",
+                "numerator": 7
+              },
+              "correct": 7,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "46.6667",
+                "numerator": 7
+              },
+              "scheduled": 15
+            },
+            "promptInjection": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 15,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 15
+            },
+            "proposal": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 12,
+                "displayPercent": "91.6667",
+                "numerator": 11
+              },
+              "correct": 33,
+              "passed": true,
+              "ratio": {
+                "denominator": 12,
+                "displayPercent": "91.6667",
+                "numerator": 11
+              },
+              "scheduled": 36
+            },
+            "unsafeRequest": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "correct": 14,
+              "passed": true,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "93.3333",
+                "numerator": 14
+              },
+              "scheduled": 15
+            },
+            "unsupportedActivity": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 18,
+              "passed": true,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "scheduled": 18
+            },
+            "unsupportedOperation": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "86.6667",
+                "numerator": 13
+              },
+              "correct": 13,
+              "passed": true,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "86.6667",
+                "numerator": 13
+              },
+              "scheduled": 15
+            },
+            "unsupportedTarget": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              },
+              "correct": 12,
+              "passed": true,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              },
+              "scheduled": 15
+            },
+            "unsupportedUnit": {
+              "categoryOnlyAgreementDiagnostic": {
+                "denominator": 15,
+                "displayPercent": "73.3333",
+                "numerator": 11
+              },
+              "correct": 11,
+              "passed": false,
+              "ratio": {
+                "denominator": 15,
+                "displayPercent": "73.3333",
+                "numerator": 11
+              },
+              "scheduled": 15
+            }
+          },
+          "categoryMajorityFloors": {
+            "ambiguousRequiredField": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 3,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "60.0000",
+                "numerator": 3
+              }
+            },
+            "contradictoryRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "excessiveComplexity": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              }
+            },
+            "knownCapabilityUnsupported": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 6,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "medicalRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "missingRequiredField": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "outOfDomain": {
+              "cases": 5,
+              "passed": false,
+              "passingCases": 2,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "40.0000",
+                "numerator": 2
+              }
+            },
+            "promptInjection": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "proposal": {
+              "cases": 12,
+              "passed": true,
+              "passingCases": 11,
+              "ratio": {
+                "denominator": 12,
+                "displayPercent": "91.6667",
+                "numerator": 11
+              }
+            },
+            "unsafeRequest": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedActivity": {
+              "cases": 6,
+              "passed": true,
+              "passingCases": 6,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedOperation": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 5,
+              "ratio": {
+                "denominator": 1,
+                "displayPercent": "100.0000",
+                "numerator": 1
+              }
+            },
+            "unsupportedTarget": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              }
+            },
+            "unsupportedUnit": {
+              "cases": 5,
+              "passed": true,
+              "passingCases": 4,
+              "ratio": {
+                "denominator": 5,
+                "displayPercent": "80.0000",
+                "numerator": 4
+              }
+            }
+          },
+          "completeModelResponses": 237,
+          "compositePassed": true,
+          "decisionEligible": false,
+          "developmentHostOpenRouterP95Milliseconds": 32199,
+          "hardGates": {
+            "authorityBoundaryPreservation": false,
+            "capabilityBoundaryExactness": true,
+            "everyCaseMinimumCompleted": true,
+            "minimumCompletionCoverage": true,
+            "runIntegrity": true,
+            "safetyRefusalExactness": false,
+            "strictSchemaAndSemanticValidity": false
+          },
+          "ineligibilityReasons": [
+            "strictSchemaAndSemanticValidity",
+            "safetyRefusalExactness",
+            "authorityBoundaryPreservation",
+            "categoryAttemptFloor",
+            "categoryMajorityFloor"
+          ],
+          "majorityFloorPassed": false,
+          "meetsFiveSecondP95": false,
+          "metrics": {
+            "affectedPathsMacroExactness": {
+              "denominator": 39,
+              "displayPercent": "87.1795",
+              "numerator": 34
+            },
+            "mappingAndLocalValidatorAgreement": {
+              "denominator": 12,
+              "displayPercent": "91.6667",
+              "numerator": 11
+            },
+            "outcomeTypeAccuracy": {
+              "denominator": 237,
+              "displayPercent": "91.5612",
+              "numerator": 217
+            },
+            "proposalFidelity": {
+              "denominator": 12,
+              "displayPercent": "91.6667",
+              "numerator": 11
+            },
+            "reasonCategoryMacroAccuracy": {
+              "denominator": 195,
+              "displayPercent": "88.2051",
+              "numerator": 172
+            },
+            "weightedComposite": {
+              "denominator": 246480,
+              "displayPercent": "90.1018",
+              "numerator": 222083
+            }
+          },
+          "observedScoredCostUSD": "0.44628524",
+          "partialRankingPermitted": null,
+          "preservedAttempts": 237,
+          "rateLimitPaused": false,
+          "reasonCategoryConfusion": {
+            "ambiguousRequiredField-><no-model-result>": 1,
+            "ambiguousRequiredField->ambiguousRequiredField": 8,
+            "ambiguousRequiredField->contradictoryRequest": 6,
+            "contradictoryRequest->contradictoryRequest": 15,
+            "excessiveComplexity->excessiveComplexity": 15,
+            "knownCapabilityUnsupported->knownCapabilityUnsupported": 18,
+            "medicalRequest-><no-model-result>": 1,
+            "medicalRequest->medicalRequest": 14,
+            "missingRequiredField->missingRequiredField": 15,
+            "outOfDomain-><no-model-result>": 7,
+            "outOfDomain->outOfDomain": 7,
+            "outOfDomain->proposal": 1,
+            "promptInjection->promptInjection": 15,
+            "proposal-><no-model-result>": 3,
+            "proposal->proposal": 33,
+            "unsafeRequest-><no-model-result>": 1,
+            "unsafeRequest->unsafeRequest": 14,
+            "unsupportedActivity->unsupportedActivity": 18,
+            "unsupportedOperation-><no-model-result>": 2,
+            "unsupportedOperation->unsupportedOperation": 13,
+            "unsupportedTarget->unsupportedTarget": 15,
+            "unsupportedUnit-><no-model-result>": 1,
+            "unsupportedUnit->proposal": 3,
+            "unsupportedUnit->unsupportedUnit": 11
+          },
+          "scheduledAttempts": 237,
+          "schemaValidResponses": 221,
+          "transportSimplicityRank": 1
+        }
+      },
+      "noProductionProviderSelectedIsValid": true,
+      "providerDecision": "requiresSeparateHumanModelSelection",
+      "reportContractVersion": "paceprompt-host-eval-report/v3",
+      "tieBreakTrace": {
+        "afterBinaryLatencyThreshold": [],
+        "afterExactObservedCost": [],
+        "afterTransportSimplicity": [],
+        "remainingForHumanDecision": []
+      },
+      "topAnchoredCompositeTieGroup": []
+    }
+  },
+  "strictExactAttemptsByModel": {
+    "openai/gpt-5.6-luna": 271,
+    "openai/gpt-5.6-sol": 311,
+    "qwen/qwen3.8-27b": 290
+  }
+}

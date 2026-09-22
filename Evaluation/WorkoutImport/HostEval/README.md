@@ -810,6 +810,23 @@ fail before credential access. Stage B output is diagnostic and separate;
 combination with protected Stage A evidence, model selection, publication and
 production changes remain later reviewed decisions.
 
+### Accepted Stage A+B publication
+
+The separately ratified publication proposal is committed as
+`issue145-stage-a-b-publication-proposal-r1.json` at SHA-256
+`bbef325cd88faac72424b647b692a1217989f4f09c2db80bc1345bb7db1ad3c4`.
+Its ratification authorises only the bounded aggregate publication and
+exact-head review. It does not authorise raw-run publication, model selection,
+scorer or gate relaxation, a production change, merge or issue closure.
+
+The protected comparison combines Stage A repetition 1 with Stage B
+repetitions 2 and 3 for the three retained models. It retains 981 scored
+attempts over 109 cases and reports each corpus stratum separately. The issue
+#130 acceptance stratum contains no `knownCapabilityUnsupported` case, so the
+unchanged v3 scorer reports its non-empty capability hard gate as false for
+every model. The publication records that structural result explicitly and
+does not reinterpret it into an eligible model.
+
 ## Frozen protocol
 
 - 17 development cases and 34 held-out cases, with eight fixed few-shot
