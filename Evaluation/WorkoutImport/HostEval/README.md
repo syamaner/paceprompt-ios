@@ -773,10 +773,42 @@ public-catalogue snapshot SHA-256
 `a174b002cc20094690b429e4e5a5528e863eb1f7e2c5b8658775ba48e2f4d2e4`
 and conservative limit `$32.07052912`. Its SHA-256 is
 `1646c57a6da4edeb444ffcae752862824b1fe83ec43dd2357b5cb29faf5bc302`.
-It grants no live, credential, inference, spending, publication or production
-authority. This slice deliberately provides no Stage B live command; exact
-profile and limit ratification, a separately reviewed live runner, and exact
-run-instance authorisation are all still required.
+The separately recorded r1 ratification binds that proposal, run ID, the
+6,144-token output ceiling and the exact `$32.07052912` hard limit. It grants
+zero-spend gate preparation and sealing only: no credential read, provider
+inference, spending, live run, publication or production change.
+
+After a fresh public-catalogue preparation for the ratified run ID, sealing
+rechecks the complete HostEval source tree, every versioned configuration,
+ratification, deterministic queue, mocked request, catalogue endpoint and
+conservative cost before deriving a run-specific phrase:
+
+```sh
+env -u OPENROUTER_API_KEY uv run --frozen paceprompt-host-eval \
+  prepare-issue145-stage-b-gate \
+  --run-id issue145-top3-stage-b-v5-20260921-01
+env -u OPENROUTER_API_KEY uv run --frozen paceprompt-host-eval \
+  seal-issue145-stage-b-gate \
+  --run-id issue145-top3-stage-b-v5-20260921-01
+```
+
+The implemented live command remains inert unless a later operator statement
+separately authorises the exact sealed phrase and repeats the exact hard limit:
+
+```sh
+paceprompt-host-eval run-issue145-stage-b \
+  --run-id issue145-top3-stage-b-v5-20260921-01 \
+  --live \
+  --authorization <exact-sealed-phrase> \
+  --spending-limit-usd 32.07052912
+```
+
+Even then the runner revalidates the sealed evidence and a current public
+catalogue before it reads `OPENROUTER_API_KEY`. Price increases, route drift,
+source drift, any previous live-state file, or a mismatched phrase or limit
+fail before credential access. Stage B output is diagnostic and separate;
+combination with protected Stage A evidence, model selection, publication and
+production changes remain later reviewed decisions.
 
 ## Frozen protocol
 

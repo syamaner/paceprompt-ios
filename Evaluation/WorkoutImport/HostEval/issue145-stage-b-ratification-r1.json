@@ -1,0 +1,22 @@
+{
+  "ratificationContractVersion": "paceprompt-issue145-stage-b-ratification/r1",
+  "ratifiedAt": "2026-09-22",
+  "ratifiedProposalSha256": "1646c57a6da4edeb444ffcae752862824b1fe83ec43dd2357b5cb29faf5bc302",
+  "ratifiedRunID": "issue145-top3-stage-b-v5-20260921-01",
+  "ratifiedModelCount": 3,
+  "ratifiedScoredAttempts": 654,
+  "ratifiedWarmups": 3,
+  "ratifiedTotalProviderCalls": 657,
+  "ratifiedMaxOutputTokens": 6144,
+  "ratifiedSpendingLimitUSD": "32.07052912",
+  "authority": {
+    "zeroSpendGatePreparation": true,
+    "gateSealing": true,
+    "credentialRead": false,
+    "providerInference": false,
+    "evaluationSpend": false,
+    "liveRun": false,
+    "publication": false,
+    "productionChange": false
+  }
+}

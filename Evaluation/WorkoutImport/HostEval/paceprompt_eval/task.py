@@ -3130,6 +3130,13 @@ def main(argv: list[str] | None = None) -> int:
         "prepare-issue145-stage-b-gate"
     )
     prepare_issue145_stage_b.add_argument("--run-id", required=True)
+    seal_issue145_stage_b = subparsers.add_parser("seal-issue145-stage-b-gate")
+    seal_issue145_stage_b.add_argument("--run-id", required=True)
+    run_issue145_stage_b = subparsers.add_parser("run-issue145-stage-b")
+    run_issue145_stage_b.add_argument("--run-id", required=True)
+    run_issue145_stage_b.add_argument("--live", action="store_true")
+    run_issue145_stage_b.add_argument("--authorization")
+    run_issue145_stage_b.add_argument("--spending-limit-usd")
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3455,6 +3462,26 @@ def main(argv: list[str] | None = None) -> int:
         from .issue145_stage_b import prepare_gate as prepare_issue145_stage_b_gate
 
         print_json(asyncio.run(prepare_issue145_stage_b_gate(args.run_id)))
+        return 0
+    if args.command == "seal-issue145-stage-b-gate":
+        from .issue145_stage_b import seal_gate as seal_issue145_stage_b_gate
+
+        print_json(seal_issue145_stage_b_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-stage-b":
+        from .issue145_stage_b import run_live as run_issue145_stage_b_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-stage-b requires --live")
+        print_json(
+            asyncio.run(
+                run_issue145_stage_b_live(
+                    run_id=args.run_id,
+                    authorization=args.authorization or "",
+                    spending_limit_usd=args.spending_limit_usd or "",
+                )
+            )
+        )
         return 0
     if args.command == "enumerate":
         report = verify()
