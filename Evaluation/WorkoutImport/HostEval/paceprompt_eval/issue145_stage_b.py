@@ -519,10 +519,21 @@ def _payload_templates(run_dir: Path, gate: dict[str, Any]) -> dict[str, dict[st
 
 
 def _validate_gate_integrity(
-    run_dir: Path, gate: dict[str, Any], *, expected_status: str
+    run_dir: Path,
+    gate: dict[str, Any],
+    *,
+    expected_run_id: str,
+    expected_status: str,
 ) -> dict[str, dict[str, Any]]:
     if gate.get("gateContractVersion") != GATE_CONTRACT:
         raise RuntimeError("gate contract is not issue #145 Stage B")
+    ratified_run_id = strict_json_load(RATIFICATION).get("ratifiedRunID")
+    if (
+        gate.get("runID") != expected_run_id
+        or run_dir.name != expected_run_id
+        or ratified_run_id != expected_run_id
+    ):
+        raise RuntimeError("Stage B gate does not bind this exact run directory")
     if gate.get("status") != expected_status:
         raise RuntimeError(f"gate is not {expected_status}")
     verification = verify()
@@ -608,6 +619,7 @@ def seal_gate(run_id: str) -> dict[str, Any]:
     _validate_gate_integrity(
         run_dir,
         gate,
+        expected_run_id=run_id,
         expected_status="awaitingExactProfileAndSpendingLimitRatification",
     )
     limit_text = ratification["ratifiedSpendingLimitUSD"]
@@ -822,6 +834,7 @@ async def run_live(
     templates = _validate_gate_integrity(
         run_dir,
         gate,
+        expected_run_id=run_id,
         expected_status="awaitingFinalLiveRunAuthorization",
     )
     if (

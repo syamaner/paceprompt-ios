@@ -5,6 +5,7 @@ from collections import Counter
 import json
 import os
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -195,6 +196,34 @@ class Issue145StageBTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RuntimeError, "current Stage B prices exceed"):
             _admit_live_cost_preflight(preflight, "32.07052911")
+
+    def test_copied_sealed_gate_cannot_replay_exact_live_authorization(self) -> None:
+        specs = load_model_specs(MODELS)
+        run_id = "issue145-top3-stage-b-v5-20260921-01"
+        copied_run_id = "copied-stage-b-run"
+        with tempfile.TemporaryDirectory() as directory, patch(
+            "paceprompt_eval.v3.RUNS_ROOT", Path(directory)
+        ), patch.dict(os.environ, {"OPENROUTER_API_KEY": "must-not-be-read"}):
+            asyncio.run(prepare_gate(run_id, fetch=self._fake_catalogue(specs)))
+            gate = seal_gate(run_id)
+            shutil.copytree(
+                Path(directory) / run_id,
+                Path(directory) / copied_run_id,
+            )
+            with patch(
+                "paceprompt_eval.issue145_stage_b.snapshot_catalogue"
+            ) as live_catalogue, self.assertRaisesRegex(
+                RuntimeError, "exact run directory"
+            ):
+                asyncio.run(
+                    run_live(
+                        run_id=copied_run_id,
+                        authorization=gate["authorizationPhrase"],
+                        spending_limit_usd="32.07052912",
+                    )
+                )
+
+        live_catalogue.assert_not_called()
 
     def test_successful_live_admission_is_recorded_before_execution(self) -> None:
         specs = load_model_specs(MODELS)
