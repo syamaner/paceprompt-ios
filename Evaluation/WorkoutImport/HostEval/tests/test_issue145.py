@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import Counter
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -18,11 +19,64 @@ from paceprompt_eval.issue145 import (
     scored_strata,
     verify,
 )
+from paceprompt_eval.catalogue import conservative_call_cost
 from paceprompt_eval.openrouter import FORCED_TOOL_ARGUMENTS, load_model_specs
 from paceprompt_eval.transport_strategy import ISSUE145_V5_REGISTRY_ID, strategy_for
+from paceprompt_eval.v3 import HOST_EVAL_ROOT, sha256_file, strict_json_load
 
 
 class Issue145V5Tests(unittest.TestCase):
+    def test_full_matrix_route_probe_proposal_is_bounded_and_inert(self) -> None:
+        proposal = strict_json_load(
+            HOST_EVAL_ROOT / "issue145-full-matrix-route-probe-proposal-r1.json"
+        )
+        self.assertEqual(proposal["status"], "proposed-not-ratified")
+        self.assertEqual(proposal["parentModelsSha256"], sha256_file(MODELS))
+        self.assertEqual(
+            proposal["parentRunPolicySha256"],
+            sha256_file(HOST_EVAL_ROOT / "run-policy-v5-issue145.json"),
+        )
+        self.assertEqual(
+            proposal["publicCatalogueSelectedSha256"],
+            "686809362bf4e66bfda56233cddbb9488fdbe17cdfdc5c7b05fc5382ca769bcf",
+        )
+        self.assertEqual(proposal["warmupCaseID"], "WI-V3-D020")
+        calls = proposal["orderedCalls"]
+        self.assertEqual([call["requestedModelID"] for call in calls], [
+            "mistralai/mistral-small-2603",
+            "deepseek/deepseek-v4-flash-0731",
+        ])
+        specs = {spec.requested_model_id: spec for spec in load_model_specs(MODELS)}
+        for call in calls:
+            spec = specs[call["requestedModelID"]]
+            self.assertEqual(call["canonicalRevision"], spec.canonical_revision)
+            self.assertEqual(call["providerEndpoint"], spec.provider_endpoint)
+            self.assertGreater(call["completeRequestUTF8Bytes"], 0)
+            self.assertEqual(len(call["mockPayloadSha256"]), 64)
+            self.assertEqual(
+                Decimal(call["conservativeCallUSD"]),
+                conservative_call_cost(
+                    input_utf8_bytes=call["completeRequestUTF8Bytes"],
+                    input_price=call["inputPricePerTokenUSD"],
+                    output_price=call["outputPricePerTokenUSD"],
+                    output_tokens=spec.max_output_tokens,
+                ),
+            )
+        self.assertEqual(
+            sum(Decimal(call["conservativeCallUSD"]) for call in calls),
+            Decimal(proposal["spending"]["conservativeWorstCase"]),
+        )
+        self.assertEqual(
+            proposal["spending"]["recommendedHardLimit"],
+            proposal["spending"]["conservativeWorstCase"],
+        )
+        self.assertFalse(proposal["spending"]["hardLimitRatified"])
+        self.assertEqual(proposal["execution"]["totalProviderCalls"], 2)
+        self.assertEqual(proposal["execution"]["scoredHeldoutCalls"], 0)
+        self.assertEqual(proposal["execution"]["automaticRetries"], 0)
+        self.assertFalse(proposal["execution"]["fallbacks"])
+        self.assertFalse(any(proposal["authority"].values()))
+
     def test_ratified_configuration_and_two_stratum_queue_are_exact(self) -> None:
         report = verify()
         self.assertEqual(report["status"], "valid", report["errors"])
