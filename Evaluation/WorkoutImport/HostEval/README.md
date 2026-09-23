@@ -822,6 +822,24 @@ The r3 verifier checks that these are the only changes from verified r2:
 .venv/bin/paceprompt-host-eval verify-issue145-route-retry-proposal-r3
 ```
 
+`paceprompt_eval.issue145_retry_execution` is an isolated, offline-tested
+physical-send journal for a future r3 runner. It reserves the worst-case USD
+amount and durably marks each wire send as possibly sent *before* invoking an
+injected one-send adapter. A complete transient HTTP response may trigger only
+the versioned retry planner's bounded delay and another separately reserved
+wire send. Missing responses, cancellation, route mismatch and ambiguous
+headers stop without replay. The ledger keeps one logical position for scoring
+and distinct evidence for every physical send. Its verifier checks queue order,
+wire identity, charges and evidence hashes; any eventual restart must also bind
+the complete evidence-tree hash in a fresh child gate.
+
+This component is **not** wired to the provider or CLI. The r3 profile remains
+unratified, with no finite ratified lineage cap, compatible route proof, sealed
+live gate or authority to read credentials. The future adapter must separately
+prove exact-route identity, byte-identical retry request bodies, no hidden SDK
+retry/fallback, global two-second pacing and redaction before this component
+can be used for a live run. Existing v5 runs and evidence are unchanged.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing
