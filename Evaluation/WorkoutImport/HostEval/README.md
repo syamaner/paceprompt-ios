@@ -778,6 +778,37 @@ offline; it neither seals a live gate nor reads a credential:
 .venv/bin/paceprompt-host-eval verify-issue145-lineage-proposal
 ```
 
+The additive `issue145-route-retry-proposal-r2.json` is a **new, unratified**
+future-run proposal after two `mistral/zdr` compatibility probes ended with
+rate-limit classifications. Their non-sensitive file-hash inventories and
+selected public `mistral` endpoint snapshot are committed in
+`issue145-route-retry-evidence-r1.json` (SHA-256
+`1152ad79e75bb3aeb0c2702526bdf9529a611415f82edffcf4b16a3c89c5c45d`);
+the sealed two-call proposal and ratification hashes are bound as well. The
+ignored raw request and response evidence remains unpublished. It proposes
+the public `mistral` endpoint while retaining `zdr: true`,
+`data_collection: deny`, exact-route identity and no fallback. Whether that
+endpoint can satisfy ZDR remains unproven and requires a new compatibility
+probe; the two prior failed probes are not reinterpreted. The proposal also
+recommends at most three physical sends per logical position, only after a
+complete 429/502/503/504/524/529 HTTP response. It uses `Retry-After` seconds
+or an HTTP date as a minimum, otherwise 30- then 120-second waits. An invalid
+or overlong header, duplicate case-insensitive header names, a missing response,
+an ambiguous send, or an exhausted
+send/wait/budget limit stops retries. Each send requires a new worst-case USD
+reservation and separately preserved wire evidence; the frozen scored
+denominator remains one logical position. These are proposed controls, **not**
+the sealed v5 zero-retry policy and not an implemented live runner. The prior
+snapshot's three-send USD 296.226676680 upper estimate is not a hard limit.
+
+The verifier checks sealed inputs, the additive proposal, committed route-change
+evidence (plus the ignored local evidence when present), proposed retry bounds and the absence of live
+authority. It reads no credential and makes no provider call:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-route-retry-proposal
+```
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing
