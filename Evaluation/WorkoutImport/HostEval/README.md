@@ -852,6 +852,41 @@ bind the complete profile and queue, enforce global two-second pacing and
 redaction, and verify the full immutable lineage before any live use. Existing
 v5 runs and evidence are unchanged.
 
+The additive r3 full-matrix overlay now materialises the proposed 12-model
+document without editing v5: only the Mistral endpoint changes from
+`mistral/zdr` to `mistral`, its `zdr` request field is omitted, and the
+versioned transport registry reflects that exact route. The companion policy
+overlay records the proposed retry and restart controls while retaining the
+frozen 3,936-position queue. Both overlays explicitly deny credential access,
+inference, spend and live execution. The preparation command fetches only the
+public catalogue and constructs 12 mocked request bodies and a conservative
+one-send/three-send cost preflight under the ignored `.runs` tree. Its audit
+checks the overlay and queue hashes, selected and raw catalogue response
+hashes, mocked payloads, cost calculation and complete evidence-tree hash.
+It reconstructs selected endpoint data from the saved raw public responses
+and regenerates model request bodies from the sealed inputs; the SDK's
+per-capture `x-irid` trace header is the sole ignored volatile field.
+This is not route compatibility proof or a live gate:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-full-matrix-r3
+.venv/bin/paceprompt-host-eval prepare-issue145-full-matrix-r3-proposal \
+  --run-id <new-unique-preparation-id>
+.venv/bin/paceprompt-host-eval verify-issue145-full-matrix-r3-prepared \
+  --run-id <same-preparation-id>
+.venv/bin/paceprompt-host-eval verify-issue145-full-matrix-r3-ratification \
+  --require-prepared-evidence
+```
+
+The operator ratified exact proposal SHA-256
+`f58b5f76356d48e954ad257123b9f44c3ab0f870d85023fe6813cf78e71ed720`
+and a USD 300.00 cumulative full-matrix lineage cap on 24 September 2026;
+the additive ratification file preserves that narrow authority without
+rewriting the proposal. Compatible route proof, a reviewed and sealed live
+gate, and separate initial live-run authorisation are still required before
+reading a credential or calling a provider. No candidate or production route
+is selected by this preparation.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing

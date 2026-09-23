@@ -3141,6 +3141,17 @@ def main(argv: list[str] | None = None) -> int:
     subparsers.add_parser("verify-issue145-route-probes")
     subparsers.add_parser("verify-issue145-route-retry-proposal")
     subparsers.add_parser("verify-issue145-route-retry-proposal-r3")
+    subparsers.add_parser("verify-issue145-full-matrix-r3")
+    verify_issue145_r3_ratification = subparsers.add_parser(
+        "verify-issue145-full-matrix-r3-ratification"
+    )
+    verify_issue145_r3_ratification.add_argument(
+        "--require-prepared-evidence", action="store_true"
+    )
+    prepare_issue145_r3 = subparsers.add_parser("prepare-issue145-full-matrix-r3-proposal")
+    prepare_issue145_r3.add_argument("--run-id", required=True)
+    verify_issue145_r3_prepared = subparsers.add_parser("verify-issue145-full-matrix-r3-prepared")
+    verify_issue145_r3_prepared.add_argument("--run-id", required=True)
     prepare_route_probes = subparsers.add_parser("prepare-issue145-route-probes-gate")
     prepare_route_probes.add_argument("--run-id", required=True)
     seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
@@ -3522,6 +3533,31 @@ def main(argv: list[str] | None = None) -> int:
         from .issue145_retry_profile_r3 import verify as verify_retry_proposal_r3
 
         report = verify_retry_proposal_r3()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-full-matrix-r3":
+        from .issue145_full_matrix_r3 import verify as verify_issue145_r3
+
+        report = verify_issue145_r3()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-full-matrix-r3-ratification":
+        from .issue145_full_matrix_r3 import verify_ratification
+
+        report = verify_ratification(
+            require_prepared_evidence=args.require_prepared_evidence
+        )
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "prepare-issue145-full-matrix-r3-proposal":
+        from .issue145_full_matrix_r3 import prepare_proposal as prepare_issue145_r3
+
+        print_json(asyncio.run(prepare_issue145_r3(args.run_id)))
+        return 0
+    if args.command == "verify-issue145-full-matrix-r3-prepared":
+        from .issue145_full_matrix_r3 import verify_prepared_proposal
+
+        report = verify_prepared_proposal(args.run_id)
         print_json(report)
         return 0 if report["status"] == "valid" else 1
     if args.command == "prepare-issue145-route-probes-gate":

@@ -377,6 +377,25 @@ ISSUE145_V5_ROUTE_STRATEGIES: Mapping[
 )
 
 
+ISSUE145_R3_REGISTRY_ID = "strategyRegistryIssue145R3"
+ISSUE145_R3_ROUTE_STRATEGIES: Mapping[
+    ProviderRoute, TransportStrategyID
+] = MappingProxyType(
+    {
+        **{
+            route: strategy
+            for route, strategy in ISSUE145_V5_ROUTE_STRATEGIES.items()
+            if route.requested_model_id != "mistralai/mistral-small-2603"
+        },
+        ProviderRoute(
+            "mistralai/mistral-small-2603",
+            "mistralai/mistral-small-2603",
+            "mistral",
+        ): TransportStrategyID.NESTED_V2_3,
+    }
+)
+
+
 ROUTE_STRATEGY_REGISTRIES: Mapping[
     str, Mapping[ProviderRoute, TransportStrategyID]
 ] = MappingProxyType(
@@ -386,6 +405,7 @@ ROUTE_STRATEGY_REGISTRIES: Mapping[
         V2_9_REGISTRY_ID: V2_9_ROUTE_STRATEGIES,
         V4_OPEN_WEIGHT_REGISTRY_ID: V4_OPEN_WEIGHT_ROUTE_STRATEGIES,
         ISSUE145_V5_REGISTRY_ID: ISSUE145_V5_ROUTE_STRATEGIES,
+        ISSUE145_R3_REGISTRY_ID: ISSUE145_R3_ROUTE_STRATEGIES,
     }
 )
 
