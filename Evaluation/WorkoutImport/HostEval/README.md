@@ -863,6 +863,9 @@ public catalogue and constructs 12 mocked request bodies and a conservative
 one-send/three-send cost preflight under the ignored `.runs` tree. Its audit
 checks the overlay and queue hashes, selected and raw catalogue response
 hashes, mocked payloads, cost calculation and complete evidence-tree hash.
+It reconstructs selected endpoint data from the saved raw public responses
+and regenerates model request bodies from the sealed inputs; the SDK's
+per-capture `x-irid` trace header is the sole ignored volatile field.
 This is not route compatibility proof or a live gate:
 
 ```sh
@@ -871,13 +874,18 @@ This is not route compatibility proof or a live gate:
   --run-id <new-unique-preparation-id>
 .venv/bin/paceprompt-host-eval verify-issue145-full-matrix-r3-prepared \
   --run-id <same-preparation-id>
+.venv/bin/paceprompt-host-eval verify-issue145-full-matrix-r3-ratification \
+  --require-prepared-evidence
 ```
 
-An exact profile/cap ratification, compatible route proof, reviewed and sealed
-live gate, and separate initial live-run authorisation are still required
-before reading a credential or calling a provider. The preliminary cost
-preflight is an estimate, not a spending limit. No candidate or production
-route is selected by this preparation.
+The operator ratified exact proposal SHA-256
+`f58b5f76356d48e954ad257123b9f44c3ab0f870d85023fe6813cf78e71ed720`
+and a USD 300.00 cumulative full-matrix lineage cap on 24 September 2026;
+the additive ratification file preserves that narrow authority without
+rewriting the proposal. Compatible route proof, a reviewed and sealed live
+gate, and separate initial live-run authorisation are still required before
+reading a credential or calling a provider. No candidate or production route
+is selected by this preparation.
 
 ### Cost-bounded four-model Stage A
 
