@@ -829,9 +829,10 @@ injected one-send adapter. A complete transient HTTP response may trigger only
 the versioned retry planner's bounded delay and another separately reserved
 wire send. Missing responses, cancellation, route mismatch and ambiguous
 headers stop without replay. The ledger keeps one logical position for scoring
-and distinct evidence for every physical send. Its verifier checks queue order,
-wire identity, charges and evidence hashes; any eventual restart must also bind
-the complete evidence-tree hash in a fresh child gate.
+and distinct evidence for every physical send. Its verifier requires the
+externally authorised queue, hard limit and a separately sealed complete
+evidence-tree hash; it also rejects symlinks and checks wire/terminal-state
+coherence. A fresh child gate must bind that parent tree hash before restart.
 
 This component is **not** wired to the provider or CLI. The r3 profile remains
 unratified, with no finite ratified lineage cap, compatible route proof, sealed

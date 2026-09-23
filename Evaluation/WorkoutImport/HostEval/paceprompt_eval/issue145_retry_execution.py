@@ -20,7 +20,7 @@ from typing import Any, Awaitable, Callable
 
 from .issue145_lineage import usd
 from .issue145_retry import RetryPolicy, decide_retry, reserve_wire_send
-from .v3 import sha256_file, strict_json_load
+from .v3 import canonical_hash, sha256_file, strict_json_load
 
 
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,179}\Z")
@@ -69,6 +69,25 @@ def _atomic_json(path: Path, value: dict[str, Any]) -> None:
             os.unlink(temporary)
 
 
+def evidence_tree_sha256(run_dir: Path) -> str:
+    """Hash the complete local evidence tree; a child must supply its sealed hash.
+
+    This function does not itself authenticate a tree. The expected digest must
+    come from a separately bound parent gate, never from this tree at admission.
+    """
+    if run_dir.is_symlink() or not run_dir.is_dir():
+        raise ValueError("run directory is missing or symlinked")
+    files: dict[str, str] = {}
+    for path in sorted(run_dir.rglob("*")):
+        if path.is_symlink():
+            raise ValueError("wire evidence contains a symlink")
+        if path.is_file():
+            files[str(path.relative_to(run_dir))] = sha256_file(path)
+        elif not path.is_dir():
+            raise ValueError("wire evidence contains a non-regular path")
+    return canonical_hash(files)
+
+
 class RetryingWireExecutor:
     """Run each frozen logical position with bounded visible physical sends.
 
@@ -81,6 +100,7 @@ class RetryingWireExecutor:
         self,
         *,
         run_dir: Path,
+        evidence_root: Path,
         profile_sha256: str,
         planned_position_ids: tuple[str, ...],
         hard_limit_usd: str,
@@ -100,8 +120,12 @@ class RetryingWireExecutor:
             raise ValueError("a positive finite USD limit is required")
         if policy != _R3_POLICY:
             raise ValueError("the issue #145 r3 retry policy is required")
-        if not run_dir.is_dir() or (run_dir / "wire-ledger.json").exists():
-            raise ValueError("a fresh existing run directory is required")
+        if (evidence_root.is_symlink() or not evidence_root.is_dir()
+                or run_dir.parent.resolve() != evidence_root.resolve()
+                or run_dir.is_symlink() or not run_dir.is_dir()
+                or (run_dir / "wire-ledger.json").exists()
+                or (run_dir / "wire-ledger.json").is_symlink()):
+            raise ValueError("a fresh run directory under the bound evidence root is required")
         evidence_dir = run_dir / "wire-evidence"
         evidence_dir.mkdir(exist_ok=False)
         self.run_dir = run_dir
@@ -124,6 +148,9 @@ class RetryingWireExecutor:
         _atomic_json(self.ledger_path, self.ledger)
 
     def _persist(self) -> None:
+        if (self.run_dir.is_symlink() or self.evidence_dir.is_symlink()
+                or self.ledger_path.is_symlink()):
+            raise ValueError("wire journal path became symlinked")
         _atomic_json(self.ledger_path, self.ledger)
 
     async def run_position(
@@ -208,6 +235,9 @@ class RetryingWireExecutor:
                 if not isinstance(evidence, dict) or "responseHeaders" not in evidence:
                     raise ValueError("wire evidence redactor must preserve redacted response headers")
                 evidence_path = self.evidence_dir / f"{wire_id}.json"
+                if (self.run_dir.is_symlink() or self.evidence_dir.is_symlink()
+                        or evidence_path.is_symlink()):
+                    raise ValueError("wire evidence path became symlinked")
                 _atomic_json(evidence_path, evidence)
                 wire["evidenceSha256"] = sha256_file(evidence_path)
                 wire["statusCode"] = response.status_code
@@ -288,55 +318,104 @@ class RetryingWireExecutor:
         raise AssertionError("retry policy send bound was bypassed")
 
     def lineage_attempts(self) -> list[dict[str, Any]]:
-        """Project one logical record per position for a verified child plan."""
-        attempts = []
-        for logical_id in self.ledger["plannedPositionIDs"]:
-            position = next(
-                (item for item in self.ledger["positions"] if item["logicalID"] == logical_id),
-                None,
-            )
-            if position is None:
-                attempts.append({"attemptID": logical_id, "state": "notStarted",
-                                 "reservedWorstCaseUSD": None, "actualUSD": None})
-                continue
-            wires = position["wires"]
-            worst = sum((usd(item["reservedWorstCaseUSD"]) for item in wires), usd("0"))
-            known = all("reportedCostUSD" in item for item in wires)
-            attempts.append({
-                "attemptID": logical_id,
-                "state": (
-                    "possiblySent" if position["state"] in {"inProgress", "terminalPossiblySent"}
-                    else "completed" if position["state"] == "terminalComplete"
-                    else "failed"
-                ),
-                "reservedWorstCaseUSD": format(worst, "f"),
-                "actualUSD": (
-                    format(sum((usd(item["chargedUSD"]) for item in wires), usd("0")), "f")
-                    if known and wires else None
-                ),
-            })
-        return attempts
+        """Preview projection; only a verified ledger may admit a child."""
+        return _lineage_attempts(self.ledger)
 
 
-def verify_wire_ledger(run_dir: Path, *, profile_sha256: str) -> dict[str, Any]:
-    """Audit immutable evidence without permitting an in-place restart."""
-    ledger = strict_json_load(run_dir / "wire-ledger.json")
+def _lineage_attempts(ledger: dict[str, Any]) -> list[dict[str, Any]]:
+    attempts = []
+    for logical_id in ledger["plannedPositionIDs"]:
+        position = next(
+            (item for item in ledger["positions"] if item["logicalID"] == logical_id),
+            None,
+        )
+        if position is None:
+            attempts.append({"attemptID": logical_id, "state": "notStarted",
+                             "reservedWorstCaseUSD": None, "actualUSD": None})
+            continue
+        wires = position["wires"]
+        worst = sum((usd(item["reservedWorstCaseUSD"]) for item in wires), usd("0"))
+        known = all("reportedCostUSD" in item for item in wires)
+        attempts.append({
+            "attemptID": logical_id,
+            "state": (
+                "possiblySent" if position["state"] in {"inProgress", "terminalPossiblySent"}
+                else "completed" if position["state"] == "terminalComplete"
+                else "failed"
+            ),
+            "reservedWorstCaseUSD": format(worst, "f"),
+            "actualUSD": (
+                format(sum((usd(item["chargedUSD"]) for item in wires), usd("0")), "f")
+                if known and wires else None
+            ),
+        })
+    return attempts
+
+
+def verify_wire_ledger(
+    run_dir: Path,
+    *,
+    evidence_root: Path,
+    profile_sha256: str,
+    planned_position_ids: tuple[str, ...],
+    hard_limit_usd: str,
+    sealed_evidence_tree_sha256: str,
+) -> dict[str, Any]:
+    """Audit a sealed tree against external profile, queue and budget authority.
+
+    The caller must obtain the sealed tree digest from a separately bound
+    parent gate. Recomputing it from the candidate tree at admission would be
+    self-attestation and cannot establish immutable lineage evidence.
+    """
     errors: list[str] = []
+    if (
+        evidence_root.is_symlink() or not evidence_root.is_dir()
+        or run_dir.parent.resolve() != evidence_root.resolve()
+        or run_dir.is_symlink()
+    ):
+        errors.append("run directory is outside the bound evidence root or symlinked")
+    if not _SHA.fullmatch(profile_sha256) or not _SHA.fullmatch(sealed_evidence_tree_sha256):
+        errors.append("profile or sealed evidence-tree hash is invalid")
+    if (not planned_position_ids
+            or any(not isinstance(item, str) or not _ID.fullmatch(item)
+                   for item in planned_position_ids)
+            or len(set(planned_position_ids)) != len(planned_position_ids)):
+        errors.append("externally authorised queue is invalid")
+    try:
+        cap = usd(hard_limit_usd)
+        if cap <= 0:
+            errors.append("externally authorised hard limit is invalid")
+    except ValueError:
+        errors.append("externally authorised hard limit is invalid")
+        cap = usd("0")
+    try:
+        tree_hash = evidence_tree_sha256(run_dir)
+        if tree_hash != sealed_evidence_tree_sha256:
+            errors.append("sealed evidence tree changed")
+    except (OSError, ValueError) as error:
+        errors.append(f"evidence tree invalid: {error}")
+        tree_hash = None
+    if errors:
+        return {"status": "invalid", "errors": errors, "evidenceTreeSha256": tree_hash}
+    try:
+        ledger = strict_json_load(run_dir / "wire-ledger.json")
+    except (OSError, ValueError) as error:
+        return {"status": "invalid", "errors": [f"wire ledger unreadable: {error}"],
+                "evidenceTreeSha256": tree_hash}
+    if not isinstance(ledger, dict):
+        return {"status": "invalid", "errors": ["wire ledger is not an object"],
+                "evidenceTreeSha256": tree_hash}
     if ledger.get("contractVersion") != "paceprompt-host-eval-wire-ledger/issue145-r1":
         errors.append("ledger contract changed")
     if ledger.get("profileSha256") != profile_sha256:
         errors.append("profile changed")
     if ledger.get("runID") != run_dir.name:
         errors.append("run ID changed")
-    planned = ledger.get("plannedPositionIDs")
-    if (
-        not isinstance(planned, list)
-        or not planned
-        or any(not isinstance(item, str) or not _ID.fullmatch(item) for item in planned)
-        or len(set(planned)) != len(planned)
-    ):
-        errors.append("frozen queue invalid")
-        planned = []
+    planned = list(planned_position_ids)
+    if ledger.get("plannedPositionIDs") != planned:
+        errors.append("frozen queue differs from external authority")
+    if ledger.get("hardLimitUSD") != hard_limit_usd:
+        errors.append("hard limit differs from external authority")
     positions = ledger.get("positions")
     if not isinstance(positions, list) or len(positions) > len(planned):
         errors.append("position list invalid")
@@ -352,7 +431,7 @@ def verify_wire_ledger(run_dir: Path, *, profile_sha256: str) -> dict[str, Any]:
         if not isinstance(wires, list) or len(wires) > 3:
             errors.append(f"wire list invalid: {index}")
             continue
-        if not wires and position.get("state") != "terminalBudgetStop":
+        if not wires and position.get("state") not in {"inProgress", "terminalPossiblySent"}:
             errors.append(f"unsent position state invalid: {index}")
         for number, wire in enumerate(wires, start=1):
             if not isinstance(wire, dict):
@@ -382,10 +461,48 @@ def verify_wire_ledger(run_dir: Path, *, profile_sha256: str) -> dict[str, Any]:
                     errors.append(f"wire evidence changed: {expected_id}")
             elif wire.get("state") not in {"possiblySent", "ambiguousFailure"}:
                 errors.append(f"completed wire lacks evidence: {expected_id}")
+            if number < len(wires):
+                decision = wire.get("retryDecision")
+                if (wire.get("state") != "completeHTTPResponse"
+                        or not isinstance(decision, dict)
+                        or decision.get("retry") is not True
+                        or wire.get("statusCode") not in _R3_POLICY.retryable_status_codes):
+                    errors.append(f"non-retryable wire has a successor: {expected_id}")
+        if wires:
+            last = wires[-1]
+            if isinstance(last, dict):
+                last_state = last.get("state")
+                status = last.get("statusCode")
+                decision = last.get("retryDecision")
+                retry = decision.get("retry") if isinstance(decision, dict) else None
+                terminal = position.get("state")
+                if terminal == "terminalComplete" and not (
+                    last_state == "completeHTTPResponse" and type(status) is int
+                    and 200 <= status < 300 and retry is False
+                ):
+                    errors.append(f"successful position lacks a terminal success: {index}")
+                if terminal == "terminalBudgetStop" and not (
+                    last_state == "completeHTTPResponse" and retry is True
+                ):
+                    errors.append(f"budget stop lacks a pending retry: {index}")
+                if terminal == "terminalFailure" and not (
+                    last_state in {"contractFailure", "costContractFailure",
+                                   "returnedRouteMismatch", "ambiguousResponseHeaders"}
+                    or (last_state == "completeHTTPResponse" and retry is False
+                        and type(status) is int and not 200 <= status < 300)
+                ):
+                    errors.append(f"failed position has incompatible last wire: {index}")
+                if terminal == "terminalPossiblySent" and not (
+                    last_state in {"possiblySent", "ambiguousFailure", "noCompleteHTTPResponse"}
+                    or (last_state == "completeHTTPResponse" and retry is True)
+                ):
+                    errors.append(f"possibly sent position has incompatible last wire: {index}")
     try:
-        accounting_invalid = charged != usd(ledger.get("chargedUSD")) or charged > usd(ledger.get("hardLimitUSD"))
+        accounting_invalid = charged != usd(ledger.get("chargedUSD")) or charged > cap
     except (ValueError, TypeError):
         accounting_invalid = True
     if accounting_invalid:
         errors.append("ledger charge or hard limit changed")
-    return {"status": "valid" if not errors else "invalid", "errors": errors}
+    return {"status": "valid" if not errors else "invalid", "errors": errors,
+            "evidenceTreeSha256": tree_hash,
+            "attempts": _lineage_attempts(ledger) if not errors else None}

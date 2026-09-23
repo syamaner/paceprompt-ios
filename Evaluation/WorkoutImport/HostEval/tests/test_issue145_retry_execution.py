@@ -13,9 +13,10 @@ import unittest
 from paceprompt_eval.issue145_retry import RetryPolicy
 from paceprompt_eval.issue145_lineage import admit_child
 from paceprompt_eval.issue145_retry_execution import (
-    RetryingWireExecutor, WireResponse, verify_wire_ledger,
+    RetryingWireExecutor, WireResponse, evidence_tree_sha256, verify_wire_ledger,
 )
 from paceprompt_eval.openrouter import redact
+from paceprompt_eval.v3 import sha256_file
 
 
 PROFILE = "a" * 64
@@ -47,10 +48,19 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
 
     def executor(self, cap: str = "0.03", ids: tuple[str, ...] = ("one", "two")) -> RetryingWireExecutor:
         return RetryingWireExecutor(
-            run_dir=self.run_dir, profile_sha256=PROFILE,
+            run_dir=self.run_dir, evidence_root=self.run_dir.parent, profile_sha256=PROFILE,
             planned_position_ids=ids, hard_limit_usd=cap, policy=self.policy,
             send_once=self.send, redact_evidence=lambda item: dict(item),
             sleep=self.sleep, now=lambda: NOW,
+        )
+
+    def audit(self, executor: RetryingWireExecutor, *, sealed_hash: str | None = None,
+              ids: tuple[str, ...] | None = None, cap: str | None = None) -> dict:
+        return verify_wire_ledger(
+            self.run_dir, evidence_root=self.run_dir.parent, profile_sha256=PROFILE,
+            planned_position_ids=ids or tuple(executor.ledger["plannedPositionIDs"]),
+            hard_limit_usd=cap or executor.ledger["hardLimitUSD"],
+            sealed_evidence_tree_sha256=sealed_hash or evidence_tree_sha256(self.run_dir),
         )
 
     @staticmethod
@@ -75,7 +85,7 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(position["wires"][0]["retryDecision"]["headerSource"], "Retry-After")
         first_evidence = json.loads((self.run_dir / "wire-evidence" / "one--wire-01.json").read_text())
         self.assertEqual(first_evidence["responseHeaders"], [{"Retry-After": "45"}])
-        self.assertEqual(verify_wire_ledger(self.run_dir, profile_sha256=PROFILE)["status"], "valid")
+        self.assertEqual(self.audit(executor)["status"], "valid")
         self.assertEqual(executor.lineage_attempts()[0]["actualUSD"], "0.010")
         self.assertEqual(executor.lineage_attempts()[1]["state"], "notStarted")
 
@@ -99,7 +109,7 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(position["wires"]), 1)
         self.assertEqual(len(self.calls), 1)
         self.assertEqual(self.waits, [30])
-        self.assertEqual(verify_wire_ledger(self.run_dir, profile_sha256=PROFILE)["status"], "valid")
+        self.assertEqual(self.audit(executor)["status"], "valid")
 
     async def test_ambiguous_send_is_never_retried_and_is_conservatively_charged(self) -> None:
         async def ambiguous(_logical: str, _wire: str, _body: bytes) -> WireResponse:
@@ -116,7 +126,7 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(executor.lineage_attempts()[0]["state"], "possiblySent")
         self.assertIsNone(executor.lineage_attempts()[0]["actualUSD"])
         self.assertEqual(executor.ledger["chargedUSD"], "0.01")
-        self.assertEqual(verify_wire_ledger(self.run_dir, profile_sha256=PROFILE)["status"], "valid")
+        self.assertEqual(self.audit(executor)["status"], "valid")
 
     async def test_malformed_retry_header_and_wrong_route_stop_closed(self) -> None:
         self.responses = [self.response(429, (("Retry-After", "1"), ("retry-after", "2")))]
@@ -146,10 +156,11 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
             await executor.run_position(logical_id="one", request_body=BODY,
                                         worst_case_usd="0.01")
         path = self.run_dir / "wire-evidence" / "one--wire-01.json"
+        sealed_hash = evidence_tree_sha256(self.run_dir)
         path.write_text(json.dumps({"synthetic": False}), encoding="utf-8")
-        report = verify_wire_ledger(self.run_dir, profile_sha256=PROFILE)
+        report = self.audit(executor, sealed_hash=sealed_hash)
         self.assertEqual(report["status"], "invalid")
-        self.assertTrue(any("evidence changed" in item for item in report["errors"]))
+        self.assertIn("sealed evidence tree changed", report["errors"])
 
     async def test_no_complete_response_and_cancelled_send_never_retry(self) -> None:
         self.responses = [self.response(None, None)]
@@ -173,7 +184,7 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
                                         worst_case_usd="0.01")
         self.assertEqual(executor.lineage_attempts()[0]["state"], "possiblySent")
         self.assertEqual(executor.ledger["chargedUSD"], "0.01")
-        self.assertEqual(verify_wire_ledger(self.run_dir, profile_sha256=PROFILE)["status"], "valid")
+        self.assertEqual(self.audit(executor)["status"], "valid")
 
     async def test_third_transient_response_exhausts_send_limit(self) -> None:
         self.responses = [self.response(503), self.response(429), self.response(529)]
@@ -247,13 +258,14 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
         executor.send_once = ambiguous
         await executor.run_position(logical_id="one", request_body=BODY,
                                     worst_case_usd="0.01")
-        self.assertEqual(verify_wire_ledger(self.run_dir, profile_sha256=PROFILE)["status"], "valid")
+        audit = self.audit(executor)
+        self.assertEqual(audit["status"], "valid")
         parent = {
             "runID": self.run_dir.name, "rootRunID": self.run_dir.name,
             "profileSha256": PROFILE, "lineageHardLimitUSD": "0.03",
             "parentRunID": None, "parentEvidenceSha256": None,
-            "verifiedEvidenceTreeSha256": "d" * 64,
-            "attempts": executor.lineage_attempts(),
+            "verifiedEvidenceTreeSha256": audit["evidenceTreeSha256"],
+            "attempts": audit["attempts"],
         }
         admission = admit_child(
             root_run_id=self.run_dir.name, profile_sha256=PROFILE,
@@ -269,6 +281,64 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
                 parents=[parent], child_run_id="wrong-child",
                 child_queue_ids=["one"], child_worst_case_usd={"one": "0.01"},
             )
+
+    async def test_audit_requires_external_queue_cap_and_sealed_tree(self) -> None:
+        self.responses = [self.response(200)]
+        executor = self.executor()
+        await executor.run_position(logical_id="one", request_body=BODY,
+                                    worst_case_usd="0.01")
+        sealed = evidence_tree_sha256(self.run_dir)
+        self.assertEqual(self.audit(executor, sealed_hash=sealed)["status"], "valid")
+        self.assertEqual(self.audit(executor, sealed_hash=sealed, ids=("two", "one"))["status"],
+                         "invalid")
+        self.assertEqual(self.audit(executor, sealed_hash=sealed, cap="0.04")["status"],
+                         "invalid")
+
+        evidence_path = self.run_dir / "wire-evidence" / "one--wire-01.json"
+        evidence_path.write_text('{"synthetic":"changed"}', encoding="utf-8")
+        ledger_path = self.run_dir / "wire-ledger.json"
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        ledger["positions"][0]["wires"][0]["evidenceSha256"] = sha256_file(evidence_path)
+        ledger_path.write_text(json.dumps(ledger), encoding="utf-8")
+        report = self.audit(executor, sealed_hash=sealed)
+        self.assertEqual(report["status"], "invalid")
+        self.assertIn("sealed evidence tree changed", report["errors"])
+
+    async def test_audit_rejects_symlinked_run_and_evidence_paths(self) -> None:
+        alias = Path(self.temporary.name) / "run-alias"
+        alias.symlink_to(self.run_dir, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "bound evidence root"):
+            RetryingWireExecutor(
+                run_dir=alias, evidence_root=alias.parent, profile_sha256=PROFILE,
+                planned_position_ids=("one",), hard_limit_usd="0.03", policy=self.policy,
+                send_once=self.send, redact_evidence=lambda item: item,
+                sleep=self.sleep, now=lambda: NOW,
+            )
+        self.responses = [self.response(200)]
+        executor = self.executor()
+        await executor.run_position(logical_id="one", request_body=BODY,
+                                    worst_case_usd="0.01")
+        sealed = evidence_tree_sha256(self.run_dir)
+        path = self.run_dir / "wire-evidence" / "one--wire-01.json"
+        moved = Path(self.temporary.name) / "moved-evidence.json"
+        path.rename(moved)
+        path.symlink_to(moved)
+        report = self.audit(executor, sealed_hash=sealed)
+        self.assertEqual(report["status"], "invalid")
+        self.assertTrue(any("symlink" in error for error in report["errors"]))
+
+    async def test_resealed_incoherent_terminal_state_still_fails(self) -> None:
+        self.responses = [self.response(429)]
+        executor = self.executor(cap="0.01")
+        await executor.run_position(logical_id="one", request_body=BODY,
+                                    worst_case_usd="0.01")
+        path = self.run_dir / "wire-ledger.json"
+        ledger = json.loads(path.read_text(encoding="utf-8"))
+        ledger["positions"][0]["state"] = "terminalComplete"
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        report = self.audit(executor)
+        self.assertEqual(report["status"], "invalid")
+        self.assertTrue(any("terminal success" in error for error in report["errors"]))
 
 
 if __name__ == "__main__":
