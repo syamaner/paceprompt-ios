@@ -1,0 +1,68 @@
+{
+  "proposalVersion": "paceprompt-host-eval-proposal/issue145-full-matrix-lineage-r1",
+  "status": "proposed-not-ratified",
+  "purpose": "versioned manual-continuation profile for the issue145 full matrix",
+  "baseProfile": {
+    "runPolicyV5Sha256": "189bb7a381aa64761c46d6b0c39ad225b06d533133988fdf8351e2c0fda06f6d",
+    "modelsV5Sha256": "27cff2665a89ca038bd0f4a99ce66d7a0d6dc240b5e8001b019ce83048cf38fe",
+    "candidateReviewSha256": "e21347e3a5d71be45717a8083e76878e3b450c5f1a7c7c9e30e0fca7aa92778b",
+    "candidateRatificationSha256": "e90532026d08d0d9d3423a47220de652fee17d6e154b544b9516fa4e30b67384",
+    "queueSha256": "3327dd619bf13eac0eb6ec7de3c5f5d43ee3d2959ff5323d9b4d18fb50466f53",
+    "standingRestartContractSha256": "e75c2af9081df9f3472894e5648298e1ad837dcbf16879182f92ea8bf6f7c68b"
+  },
+  "proposedDelta": {
+    "onlyChangedV5ExecutionField": "resumable",
+    "resumable": true,
+    "restartMode": "manual-verified-descendants-only",
+    "lineageDepthLimit": null,
+    "automaticRetryOrFallback": false,
+    "startedPositionReplay": false,
+    "terminalScoredResultReplacement": false,
+    "cumulativeHardLimitAcrossDescendants": true,
+    "unknownCallCost": "charge-conservative-reserved-worst-case",
+    "parentEvidence": "verify-complete-immutable-ancestry-before-child-admission",
+    "sourceRepairs": "only-separately-reviewed-compatible-HostEval-changes"
+  },
+  "unchangedV5Execution": {
+    "models": 12,
+    "scoredStrata": 2,
+    "distinctCases": 109,
+    "requestedRepetitionsPerStratum": 3,
+    "scoredAttempts": 3924,
+    "warmups": 12,
+    "totalProviderCalls": 3936,
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "maxOutputTokens": 8192
+  },
+  "publicCataloguePreparation": {
+    "runID": "issue145-full-matrix-v5-20260923-prep03",
+    "catalogueURL": "https://openrouter.ai/api/v1/models",
+    "localSnapshotRecordedAtUTC": "2026-09-23T07:04:31Z",
+    "modelsResponseSha256": "ec0f7b08f25342d0da06317fbde112c3ccacb01c88eea57e076ab579628d2c04",
+    "selectedSha256": "5f6cb4a54fb5aef0a16c4fe0eb8e3321449a5be08df42097c10c5edcf360a0bc",
+    "costManifestSha256": "1b3b6fe731d8f063761ecf55e3a6340347aa212501cfd15295045b3d83b688b7",
+    "conservativeWorstCaseUSD": "98.742225560",
+    "providerCalls": 0,
+    "credentialRead": false,
+    "spendUSD": "0.00"
+  },
+  "unresolvedBeforeLive": {
+    "replacementRouteCompatibilityProof": null,
+    "rootRunID": null,
+    "finiteLineageHardLimitUSD": null,
+    "exactVersionedProfileRatification": null,
+    "initialLiveAuthorization": null,
+    "reviewedAndBoundRunnerSourceSha256": null
+  },
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false,
+    "publishResults": false,
+    "productionChange": false
+  }
+}

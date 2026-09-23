@@ -3108,6 +3108,7 @@ def main(argv: list[str] | None = None) -> int:
     run_open_weight_v4.add_argument("--authorization")
     run_open_weight_v4.add_argument("--spending-limit-usd")
     subparsers.add_parser("verify-issue145-v5")
+    subparsers.add_parser("verify-issue145-lineage-proposal")
     subparsers.add_parser("enumerate-issue145-v5")
     prepare_issue145_v5 = subparsers.add_parser("prepare-issue145-v5-gate")
     prepare_issue145_v5.add_argument("--run-id", required=True)
@@ -3414,6 +3415,12 @@ def main(argv: list[str] | None = None) -> int:
         from .issue145 import verify as verify_issue145_v5
 
         report = verify_issue145_v5()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-lineage-proposal":
+        from .issue145_lineage_profile import verify as verify_issue145_lineage_proposal
+
+        report = verify_issue145_lineage_proposal()
         print_json(report)
         return 0 if report["status"] == "valid" else 1
     if args.command == "enumerate-issue145-v5":

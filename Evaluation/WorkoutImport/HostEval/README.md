@@ -764,6 +764,20 @@ credential or dispatch a call. No full-matrix restart command exists yet; the
 sealed v5 policy still states `resumable: false`, and the replacement routes
 still require proof.
 
+The additive `issue145-full-matrix-lineage-proposal-r1.json` proposes an
+otherwise byte-pinned v5 profile with manual, verified continuation. It binds
+the fresh public-catalogue preparation and its USD 98.742225560 conservative
+whole-run estimate. The selected public routes/prices and per-model bounds are
+committed as separate, non-sensitive manifests so a clean checkout can
+recompute that estimate offline. The proposal leaves route proof, root run ID,
+finite lineage hard limit, exact profile ratification, reviewed runner source and initial
+live authorisation unresolved. This command verifies the proposal entirely
+offline; it neither seals a live gate nor reads a credential:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-lineage-proposal
+```
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing
