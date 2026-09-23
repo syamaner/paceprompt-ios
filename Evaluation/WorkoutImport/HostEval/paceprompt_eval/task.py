@@ -3140,6 +3140,7 @@ def main(argv: list[str] | None = None) -> int:
     run_issue145_stage_b.add_argument("--spending-limit-usd")
     subparsers.add_parser("verify-issue145-route-probes")
     subparsers.add_parser("verify-issue145-route-retry-proposal")
+    subparsers.add_parser("verify-issue145-route-retry-proposal-r3")
     prepare_route_probes = subparsers.add_parser("prepare-issue145-route-probes-gate")
     prepare_route_probes.add_argument("--run-id", required=True)
     seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
@@ -3515,6 +3516,12 @@ def main(argv: list[str] | None = None) -> int:
         from .issue145_retry_profile import verify as verify_retry_proposal
 
         report = verify_retry_proposal()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-route-retry-proposal-r3":
+        from .issue145_retry_profile_r3 import verify as verify_retry_proposal_r3
+
+        report = verify_retry_proposal_r3()
         print_json(report)
         return 0 if report["status"] == "valid" else 1
     if args.command == "prepare-issue145-route-probes-gate":

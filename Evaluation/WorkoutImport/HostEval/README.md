@@ -809,6 +809,19 @@ authority. It reads no credential and makes no provider call:
 .venv/bin/paceprompt-host-eval verify-issue145-route-retry-proposal
 ```
 
+The additive `issue145-route-retry-proposal-r3.json` supersedes r2 **for a
+future synthetic evaluation only**. The operator decided that ZDR is not
+required for this use case, so r3 specifies omission of the request's `zdr`
+field on the proposed exact `mistral` route. It still requires
+`data_collection: deny`, no route fallback, the same finite retry controls,
+and a separately ratified hard spending limit. It does not modify the sealed
+r2 proposal, production request or prompt, and it grants no live authority.
+The r3 verifier checks that these are the only changes from verified r2:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-route-retry-proposal-r3
+```
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing
