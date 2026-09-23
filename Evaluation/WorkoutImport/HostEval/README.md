@@ -887,6 +887,26 @@ gate, and separate initial live-run authorisation are still required before
 reading a credential or calling a provider. No candidate or production route
 is selected by this preparation.
 
+The next zero-spend proposal isolates compatibility proof for the two
+replacement routes. It references the ratified full-matrix profile but is a
+separate, unratified probe budget and eventual live gate: first the Mistral
+`mistral` route, then DeepSeek `deepinfra/fp8`, each with the sealed v3
+development warm-up `WI-V3-D020` and no scored held-out case. The proposed
+bounded-retry ceiling is three physical sends per logical warm-up, so at most
+six sends. The prepared proposal SHA-256 is
+`133091376a862247ce72a4413c988e5c2fa9dd23be62f66960cf9d71c755ddce`;
+its public-catalogue/mock-derived three-send worst case is USD 0.03577518.
+It is not a ratified probe hard limit, route proof or permission to read the
+key. The ignored proposal audit re-derives its calls and cost from the
+separately audited full-matrix preparation:
+
+```sh
+.venv/bin/paceprompt-host-eval prepare-issue145-r3-route-probe-proposal \
+  --run-id <new-unique-probe-proposal-id>
+.venv/bin/paceprompt-host-eval verify-issue145-r3-route-probe-proposal \
+  --run-id <same-probe-proposal-id>
+```
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing

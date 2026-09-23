@@ -3152,6 +3152,14 @@ def main(argv: list[str] | None = None) -> int:
     prepare_issue145_r3.add_argument("--run-id", required=True)
     verify_issue145_r3_prepared = subparsers.add_parser("verify-issue145-full-matrix-r3-prepared")
     verify_issue145_r3_prepared.add_argument("--run-id", required=True)
+    prepare_issue145_r3_probes = subparsers.add_parser(
+        "prepare-issue145-r3-route-probe-proposal"
+    )
+    prepare_issue145_r3_probes.add_argument("--run-id", required=True)
+    verify_issue145_r3_probes = subparsers.add_parser(
+        "verify-issue145-r3-route-probe-proposal"
+    )
+    verify_issue145_r3_probes.add_argument("--run-id", required=True)
     prepare_route_probes = subparsers.add_parser("prepare-issue145-route-probes-gate")
     prepare_route_probes.add_argument("--run-id", required=True)
     seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
@@ -3556,6 +3564,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "verify-issue145-full-matrix-r3-prepared":
         from .issue145_full_matrix_r3 import verify_prepared_proposal
+
+        report = verify_prepared_proposal(args.run_id)
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "prepare-issue145-r3-route-probe-proposal":
+        from .issue145_r3_route_probe_profile import prepare_proposal
+
+        print_json(prepare_proposal(args.run_id))
+        return 0
+    if args.command == "verify-issue145-r3-route-probe-proposal":
+        from .issue145_r3_route_probe_profile import verify_prepared_proposal
 
         report = verify_prepared_proposal(args.run_id)
         print_json(report)
