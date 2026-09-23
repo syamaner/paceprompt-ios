@@ -834,12 +834,23 @@ externally authorised queue, hard limit and a separately sealed complete
 evidence-tree hash; it also rejects symlinks and checks wire/terminal-state
 coherence. A fresh child gate must bind that parent tree hash before restart.
 
-This component is **not** wired to the provider or CLI. The r3 profile remains
-unratified, with no finite ratified lineage cap, compatible route proof, sealed
-live gate or authority to read credentials. The future adapter must separately
-prove exact-route identity, byte-identical retry request bodies, no hidden SDK
-retry/fallback, global two-second pacing and redaction before this component
-can be used for a live run. Existing v5 runs and evidence are unchanged.
+`paceprompt_eval.issue145_wire_adapter` adds an unwired one-send OpenRouter
+transport seam. Its caller must supply a process-only credential, an explicit
+timeout and externally bound request hash and model/provider identities for
+each logical position. It sends the exact bytes once, disables HTTP transport
+retries and redirects, preserves duplicate response headers for the journal's
+retry decision, and does not claim an actual cost when one is unverified; the
+journal then retains its conservative worst-case charge. Local mock-transport
+tests cover byte identity, wrong/missing returned route identity, no hidden
+retry and the two-send transient-response path. No provider call is made by
+these tests.
+
+Neither component is wired to a live CLI. The r3 profile remains unratified,
+with no finite ratified lineage cap, compatible route proof, sealed live gate
+or authority to read credentials. A future reviewed runner must additionally
+bind the complete profile and queue, enforce global two-second pacing and
+redaction, and verify the full immutable lineage before any live use. Existing
+v5 runs and evidence are unchanged.
 
 ### Cost-bounded four-model Stage A
 
