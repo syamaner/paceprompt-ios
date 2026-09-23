@@ -754,6 +754,16 @@ for a future separately versioned full-matrix runner. It does not retroactively
 change this probe's exact child-authorization rule, make the sealed v5 matrix
 resumable, or authorise a provider call.
 
+The additive `issue145_lineage.py` is a zero-spend, pure admission component
+for that future runner. Given already-verified immutable parent evidence, it
+checks root/profile continuity, arbitrary manual lineage depth, exact parent
+links, terminal/never-sent positions in frozen queue order, bound per-call
+reservations and cumulative actual-or-conservative charges against a finite
+lineage cap. It does not verify raw evidence trees, seal a live gate, read a
+credential or dispatch a call. No full-matrix restart command exists yet; the
+sealed v5 policy still states `resumable: false`, and the replacement routes
+still require proof.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing
