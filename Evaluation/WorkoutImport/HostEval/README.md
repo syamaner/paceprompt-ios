@@ -748,6 +748,12 @@ has its own finite cap and exact authorization; there are no automatic retries
 or cumulative spend assumptions. This recovery lineage is limited to the
 two-route probe, not the unratified 3,936-call matrix.
 
+The operator-approved [issue #145 standing restart and compatible-repair
+contract](issue145-standing-restart-and-repair-r1.md) sets the requirements
+for a future separately versioned full-matrix runner. It does not retroactively
+change this probe's exact child-authorization rule, make the sealed v5 matrix
+resumable, or authorise a provider call.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing
