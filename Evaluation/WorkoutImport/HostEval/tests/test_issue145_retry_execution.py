@@ -15,6 +15,7 @@ from paceprompt_eval.issue145_lineage import admit_child
 from paceprompt_eval.issue145_retry_execution import (
     RetryingWireExecutor, WireResponse, verify_wire_ledger,
 )
+from paceprompt_eval.openrouter import redact
 
 
 PROFILE = "a" * 64
@@ -73,7 +74,7 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(position["wires"]), 2)
         self.assertEqual(position["wires"][0]["retryDecision"]["headerSource"], "Retry-After")
         first_evidence = json.loads((self.run_dir / "wire-evidence" / "one--wire-01.json").read_text())
-        self.assertEqual(first_evidence["responseHeaders"], [["Retry-After", "45"]])
+        self.assertEqual(first_evidence["responseHeaders"], [{"Retry-After": "45"}])
         self.assertEqual(verify_wire_ledger(self.run_dir, profile_sha256=PROFILE)["status"], "valid")
         self.assertEqual(executor.lineage_attempts()[0]["actualUSD"], "0.010")
         self.assertEqual(executor.lineage_attempts()[1]["state"], "notStarted")
@@ -205,6 +206,20 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(executor.lineage_attempts()[0]["state"], "possiblySent")
         self.assertEqual(executor.ledger["chargedUSD"], "0.01")
         self.assertEqual(self.waits, [])
+
+    async def test_existing_redactor_masks_sensitive_header_values(self) -> None:
+        self.responses = [self.response(429, (("Set-Cookie", "synthetic-secret"),
+                                            ("Retry-After", "30")))]
+        executor = self.executor()
+        executor.redact_evidence = lambda item: redact(item, ("synthetic-secret",))
+        await executor.run_position(logical_id="one", request_body=BODY,
+                                    worst_case_usd="0.01")
+        evidence = json.loads((self.run_dir / "wire-evidence" / "one--wire-01.json").read_text())
+        self.assertEqual(evidence["responseHeaders"], [
+            {"Set-Cookie": "[REDACTED]"}, {"Retry-After": "30"},
+        ])
+        self.assertNotIn("synthetic-secret", (self.run_dir / "wire-evidence" /
+                                             "one--wire-01.json").read_text())
 
     async def test_journal_is_written_before_the_one_send(self) -> None:
         executor = self.executor()

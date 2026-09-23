@@ -200,7 +200,10 @@ class RetryingWireExecutor:
                     return position
 
                 raw_evidence = dict(response.evidence)
-                raw_evidence["responseHeaders"] = response.header_pairs
+                raw_evidence["responseHeaders"] = (
+                    [{key: value} for key, value in response.header_pairs]
+                    if response.header_pairs is not None else None
+                )
                 evidence = self.redact_evidence(raw_evidence)
                 if not isinstance(evidence, dict) or "responseHeaders" not in evidence:
                     raise ValueError("wire evidence redactor must preserve redacted response headers")
