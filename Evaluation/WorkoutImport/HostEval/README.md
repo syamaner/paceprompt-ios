@@ -691,6 +691,156 @@ evidence, exact spending-limit ratification, a newly bound run instance and
 explicit live authorisation. Results must remain separated by stratum and no
 automatic winner, publication or production-route change is permitted.
 
+The additive `issue145-full-matrix-route-probe-proposal-r1.json` freezes two
+ordered, zero-scored compatibility calls for the changed Mistral and DeepSeek
+routes, bound to the 22 September public-catalogue preparation. Its SHA-256 is
+`2c4b2a6122a50fd5acc029f9282cd8bd3bb429072afe6b174ed446058715b500`.
+The separate `issue145-full-matrix-route-probe-ratification-r1.json` binds the
+exact run ID and USD 0.01192791 hard limit to zero-spend runner implementation
+and gate sealing only. It explicitly withholds credential, provider, spend and
+live-run authority. The ignored parent preparation must still be present and
+byte-identical; a clean checkout without it cannot seal this probe.
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-route-probes
+uv run --frozen paceprompt-host-eval prepare-issue145-route-probes-gate \
+  --run-id issue145-full-matrix-route-probes-v5-20260922-01
+uv run --frozen paceprompt-host-eval seal-issue145-route-probes-gate \
+  --run-id issue145-full-matrix-route-probes-v5-20260922-01
+```
+
+These commands read no credential, refresh no catalogue and make no provider
+call. The sealed gate still requires separate exact-run live authorisation.
+Live execution, if later authorised, refreshes only the two public routes,
+rejects route or price increases before key lookup, runs serially with no
+retry or fallback, and stops after a failed compatibility call. Its report is
+diagnostic, never an automatic winner or full-matrix admission. The 3,936-call
+full-matrix preparation separately estimated USD 98.742225560 at snapshot
+prices; that is not a ratified hard limit and the final run must be freshly
+bound after route proof.
+
+The first probe instance ended after one HTTP 429 on the Mistral route. Its
+ignored raw evidence is preserved and its original run ID remains
+non-resumable. A zero-spend recovery gate can create a fresh child instance
+bound to exact hashes of the terminal parent gate, live admission, report,
+audit, state and complete raw-evidence tree. It reuses the frozen two-call
+profile and USD 0.01192791 per-instance
+limit; it does not infer a retry, change the route, score cases or merge
+attempts across instances. Preparation and sealing make no inference call and
+read no credential:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue145-route-probes-recovery-gate \
+  --parent-run-id issue145-full-matrix-route-probes-v5-20260922-01 \
+  --run-id <new-unique-run-id>
+uv run --frozen paceprompt-host-eval seal-issue145-route-probes-recovery-gate \
+  --run-id <same-new-run-id>
+```
+
+The child gate derives a new exact authorization phrase. The operator must
+authorize that specific phrase and the same finite hard limit before any live
+execution; there is no automatic restart. The live command performs the same
+fresh catalogue, route and price preflight before credential lookup. A child
+that enters live execution is also non-resumable. If it ends as an audited
+terminal failure, the same preparation command can name that child as
+`--parent-run-id` and create another uniquely named descendant. Each child
+has its own finite cap and exact authorization; there are no automatic retries
+or cumulative spend assumptions. This recovery lineage is limited to the
+two-route probe, not the unratified 3,936-call matrix.
+
+The operator-approved [issue #145 standing restart and compatible-repair
+contract](issue145-standing-restart-and-repair-r1.md) sets the requirements
+for a future separately versioned full-matrix runner. It does not retroactively
+change this probe's exact child-authorization rule, make the sealed v5 matrix
+resumable, or authorise a provider call.
+
+The additive `issue145_lineage.py` is a zero-spend, pure admission component
+for that future runner. Given already-verified immutable parent evidence, it
+checks root/profile continuity, arbitrary manual lineage depth, exact parent
+links, terminal/never-sent positions in frozen queue order, bound per-call
+reservations and cumulative actual-or-conservative charges against a finite
+lineage cap. It does not verify raw evidence trees, seal a live gate, read a
+credential or dispatch a call. No full-matrix restart command exists yet; the
+sealed v5 policy still states `resumable: false`, and the replacement routes
+still require proof.
+
+The additive `issue145-full-matrix-lineage-proposal-r1.json` proposes an
+otherwise byte-pinned v5 profile with manual, verified continuation. It binds
+the fresh public-catalogue preparation and its USD 98.742225560 conservative
+whole-run estimate. The selected public routes/prices and per-model bounds are
+committed as separate, non-sensitive manifests so a clean checkout can
+recompute that estimate offline. The proposal leaves route proof, root run ID,
+finite lineage hard limit, exact profile ratification, reviewed runner source and initial
+live authorisation unresolved. This command verifies the proposal entirely
+offline; it neither seals a live gate nor reads a credential:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-lineage-proposal
+```
+
+The additive `issue145-route-retry-proposal-r2.json` is a **new, unratified**
+future-run proposal after two `mistral/zdr` compatibility probes ended with
+rate-limit classifications. Their non-sensitive file-hash inventories and
+selected public `mistral` endpoint snapshot are committed in
+`issue145-route-retry-evidence-r1.json` (SHA-256
+`1152ad79e75bb3aeb0c2702526bdf9529a611415f82edffcf4b16a3c89c5c45d`);
+the sealed two-call proposal and ratification hashes are bound as well. The
+ignored raw request and response evidence remains unpublished. It proposes
+the public `mistral` endpoint while retaining `zdr: true`,
+`data_collection: deny`, exact-route identity and no fallback. Whether that
+endpoint can satisfy ZDR remains unproven and requires a new compatibility
+probe; the two prior failed probes are not reinterpreted. The proposal also
+recommends at most three physical sends per logical position, only after a
+complete 429/502/503/504/524/529 HTTP response. It uses `Retry-After` seconds
+or an HTTP date as a minimum, otherwise 30- then 120-second waits. An invalid
+or overlong header, duplicate case-insensitive header names, a missing response,
+an ambiguous send, or an exhausted
+send/wait/budget limit stops retries. Each send requires a new worst-case USD
+reservation and separately preserved wire evidence; the frozen scored
+denominator remains one logical position. These are proposed controls, **not**
+the sealed v5 zero-retry policy and not an implemented live runner. The prior
+snapshot's three-send USD 296.226676680 upper estimate is not a hard limit.
+
+The verifier checks sealed inputs, the additive proposal, committed route-change
+evidence (plus the ignored local evidence when present), proposed retry bounds and the absence of live
+authority. It reads no credential and makes no provider call:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-route-retry-proposal
+```
+
+The additive `issue145-route-retry-proposal-r3.json` supersedes r2 **for a
+future synthetic evaluation only**. The operator decided that ZDR is not
+required for this use case, so r3 specifies omission of the request's `zdr`
+field on the proposed exact `mistral` route. It still requires
+`data_collection: deny`, no route fallback, the same finite retry controls,
+and a separately ratified hard spending limit. It does not modify the sealed
+r2 proposal, production request or prompt, and it grants no live authority.
+The r3 verifier checks that these are the only changes from verified r2:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-route-retry-proposal-r3
+```
+
+`paceprompt_eval.issue145_retry_execution` is an isolated, offline-tested
+physical-send journal for a future r3 runner. It reserves the worst-case USD
+amount and durably marks each wire send as possibly sent *before* invoking an
+injected one-send adapter. A complete transient HTTP response may trigger only
+the versioned retry planner's bounded delay and another separately reserved
+wire send. Missing responses, cancellation, route mismatch and ambiguous
+headers stop without replay. The ledger keeps one logical position for scoring
+and distinct evidence for every physical send. Its verifier requires the
+externally authorised queue, hard limit and a separately sealed complete
+evidence-tree hash; it also rejects symlinks and checks wire/terminal-state
+coherence. A fresh child gate must bind that parent tree hash before restart.
+
+This component is **not** wired to the provider or CLI. The r3 profile remains
+unratified, with no finite ratified lineage cap, compatible route proof, sealed
+live gate or authority to read credentials. The future adapter must separately
+prove exact-route identity, byte-identical retry request bodies, no hidden SDK
+retry/fallback, global two-second pacing and redaction before this component
+can be used for a live run. Existing v5 runs and evidence are unchanged.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing

@@ -1,0 +1,111 @@
+{
+  "interpretation": "two terminal rateLimited classifications on mistral/zdr; the proposed mistral endpoint is public-catalogue metadata only, with ZDR and inference compatibility unproven",
+  "manifestVersion": "paceprompt-host-eval-evidence/issue145-route-retry-r1",
+  "sealedProbeContract": {
+    "proposalSha256": "2c4b2a6122a50fd5acc029f9282cd8bd3bb429072afe6b174ed446058715b500",
+    "ratificationSha256": "b879cdd6eec28626d102719ceb02aae4d58e0ef3f729c0318dfba7a323183485"
+  },
+  "priorProbeRuns": [
+    {
+      "diagnosticClassification": "rateLimited",
+      "evidenceTreeSha256": "95abcaee76a9a01ee679a1f53776f1ee0c659b0c6082c0c4482cf3ea75329fe1",
+      "fileSha256": {
+        "diagnostic-report.json": "7fa60e170755986e0b15e28e75c5bef9964d2d95947e53185caf0ccf4e2c30bf",
+        "evidence-integrity-audit.json": "1cca41107a0d5e3ac0b1bea39e6b77fde78ddcbd5122ea5f4cb7c80dc3d93714",
+        "failures/warmup-mistralai--mistral-small-2603.json": "4ccc1042a6e15d9efc168b0df15b51792a17ed6bd235dfed13c92094b0e9291b",
+        "framework-logs/warmup-mistralai--mistral-small-2603-python-logging.json": "a0f23ae8d304e1a81bec92f0cbc7dbdffe41f09fb0f48b03c50e00d1f8aea79e",
+        "framework-logs/warmup-mistralai--mistral-small-2603.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+        "live-catalogue/deepseek--deepseek-v4-flash-0731.json": "ea28022c55f75a3ccced346ebf9b8adc7b1d87ab9d5500fae9bb97ab9934078e",
+        "live-catalogue/mistralai--mistral-small-2603.json": "41c6f43c3f234739b898537429284a266ece17ce1dcf9b06fe9c6b368e8ece3d",
+        "live-catalogue/models.json": "6e4f855eddf52e54bfe29692fbf2879ec6e5bf25e6bcc5b5209f9651b6dda7db",
+        "live-catalogue/selected.json": "872c9c682c39cf9f06adaec37afd497e5f222b56e0ff6dae76184da8aa14c3e0",
+        "live-state.json": "4648512436c3bc7ec313509af89254a67c7bc0ca6aa0cad1c645459c18c0e3e2",
+        "operator-gate.json": "ff4fc862dcf9435364c13e1258fbd8743d41fbba6316534a9fb772704056df27",
+        "operator-ratification.json": "3e9a7d3e865c5f0b40e324d7a742f4b4159f27340c5ae6ef02e2679bfde0efdf",
+        "requests/warmup-mistralai--mistral-small-2603.json": "0c301936b4942126df67081566660a69e9e77cb0f6272b309d01cba8e607de37",
+        "responses/warmup-mistralai--mistral-small-2603.json": "e190e4ae180e31366b252cf3f8da00f1a8fb16fdc972e8292351b277a35d49e8",
+        "transcripts/warmup-mistralai--mistral-small-2603.json": "f8e794143482eece23184a5a5f5a5ef63d89990aaff3b639047f1d7d3e961f72"
+      },
+      "providerCalls": 1,
+      "runID": "issue145-full-matrix-route-probes-v5-20260922-01",
+      "scoredCalls": 0,
+      "secondModelCalled": false
+    },
+    {
+      "diagnosticClassification": "rateLimited",
+      "evidenceTreeSha256": "8cee0b8d907f5fa34f179f476b6668b5a0164e2054757662d3e085b226bc7db3",
+      "fileSha256": {
+        "diagnostic-report.json": "1940811958e5352d5d8584220a2871142a6c348ebfa3f28c7f6a97337c2bd6f3",
+        "evidence-integrity-audit.json": "1cca41107a0d5e3ac0b1bea39e6b77fde78ddcbd5122ea5f4cb7c80dc3d93714",
+        "failures/warmup-mistralai--mistral-small-2603.json": "e2b6ec5ffd70cbb6fc5b10650109b451bc54f7d6dbd54a3b611b4bca6b2f20e1",
+        "framework-logs/warmup-mistralai--mistral-small-2603-python-logging.json": "a0f23ae8d304e1a81bec92f0cbc7dbdffe41f09fb0f48b03c50e00d1f8aea79e",
+        "framework-logs/warmup-mistralai--mistral-small-2603.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+        "live-catalogue/deepseek--deepseek-v4-flash-0731.json": "7e93887756f3c6c67a2901c4585e8252d524469f62ea1439874c1106caa0390e",
+        "live-catalogue/mistralai--mistral-small-2603.json": "cc253a8b5d583df737cf0db27ba0f0176b9843cb7590949492c5af5738174d0a",
+        "live-catalogue/models.json": "e08acccb7606b59e7b6b5f740297190919349c4cebb1f78871c23c8fba9d2718",
+        "live-catalogue/selected.json": "d4e37e4173118f9178ec4bf91da07dc019e508aed2679a44b53cf05668b1d592",
+        "live-state.json": "e52b89093117bd2cf1e4fa689af9325763ac77eb89e2bcaadd66532aaf92f7cc",
+        "operator-gate.json": "0e3d0f204828b20dbce233d10b009dd9ae3da1e060280e76bd15a9a6b813db1d",
+        "operator-ratification.json": "2902e2a6ba78e02cd562c712b8dd35cb413d0cfcdd297dd0a2afa9e8523d453b",
+        "requests/warmup-mistralai--mistral-small-2603.json": "690edfa17063d7782f9273bb5716d406a74542709d57559e25b0152d5798aaa4",
+        "responses/warmup-mistralai--mistral-small-2603.json": "25aef5216b9c042eb94219bb69a33859e8ddab70060d6b5e1d2bdd89c42524b3",
+        "transcripts/warmup-mistralai--mistral-small-2603.json": "3cdd073c27f1179efad0a6689ce418a0d9f3001246d3982efc0e536eac7982df"
+      },
+      "providerCalls": 1,
+      "runID": "issue145-full-matrix-route-probes-v5-20260923-03",
+      "scoredCalls": 0,
+      "secondModelCalled": false
+    }
+  ],
+  "publicCatalogueSelectedEndpoint": {
+    "endpoint": {
+      "context_length": 262144,
+      "latency_last_30m": null,
+      "max_completion_tokens": 209715,
+      "max_prompt_tokens": null,
+      "model_id": "mistralai/mistral-small-2603",
+      "model_name": "Mistral: Mistral Small 4",
+      "name": "Mistral | mistralai/mistral-small-2603",
+      "pricing": {
+        "completion": "0.0000006",
+        "discount": 0,
+        "input_cache_read": "0.000000015",
+        "prompt": "0.00000015"
+      },
+      "provider_name": "Mistral",
+      "quantization": "unknown",
+      "status": 0,
+      "supported_parameters": [
+        "reasoning",
+        "include_reasoning",
+        "max_tokens",
+        "temperature",
+        "top_p",
+        "stop",
+        "frequency_penalty",
+        "presence_penalty",
+        "seed",
+        "response_format",
+        "structured_outputs",
+        "tools",
+        "tool_choice",
+        "reasoning_effort"
+      ],
+      "supports_implicit_caching": false,
+      "supports_tool_choice": {
+        "auto": true,
+        "function": true,
+        "none": true,
+        "required": true
+      },
+      "supports_voice_cloning": false,
+      "tag": "mistral",
+      "throughput_last_30m": null,
+      "uptime_last_1d": 99.98913132081624,
+      "uptime_last_30m": 100,
+      "uptime_last_5m": 100
+    },
+    "sourceResponseSha256": "cc253a8b5d583df737cf0db27ba0f0176b9843cb7590949492c5af5738174d0a",
+    "sourceRunID": "issue145-full-matrix-route-probes-v5-20260923-03"
+  }
+}

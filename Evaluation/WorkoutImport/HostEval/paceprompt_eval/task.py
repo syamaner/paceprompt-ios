@@ -3108,6 +3108,7 @@ def main(argv: list[str] | None = None) -> int:
     run_open_weight_v4.add_argument("--authorization")
     run_open_weight_v4.add_argument("--spending-limit-usd")
     subparsers.add_parser("verify-issue145-v5")
+    subparsers.add_parser("verify-issue145-lineage-proposal")
     subparsers.add_parser("enumerate-issue145-v5")
     prepare_issue145_v5 = subparsers.add_parser("prepare-issue145-v5-gate")
     prepare_issue145_v5.add_argument("--run-id", required=True)
@@ -3137,6 +3138,23 @@ def main(argv: list[str] | None = None) -> int:
     run_issue145_stage_b.add_argument("--live", action="store_true")
     run_issue145_stage_b.add_argument("--authorization")
     run_issue145_stage_b.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue145-route-probes")
+    subparsers.add_parser("verify-issue145-route-retry-proposal")
+    subparsers.add_parser("verify-issue145-route-retry-proposal-r3")
+    prepare_route_probes = subparsers.add_parser("prepare-issue145-route-probes-gate")
+    prepare_route_probes.add_argument("--run-id", required=True)
+    seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
+    seal_route_probes.add_argument("--run-id", required=True)
+    prepare_route_probe_recovery = subparsers.add_parser("prepare-issue145-route-probes-recovery-gate")
+    prepare_route_probe_recovery.add_argument("--run-id", required=True)
+    prepare_route_probe_recovery.add_argument("--parent-run-id", required=True)
+    seal_route_probe_recovery = subparsers.add_parser("seal-issue145-route-probes-recovery-gate")
+    seal_route_probe_recovery.add_argument("--run-id", required=True)
+    run_route_probes = subparsers.add_parser("run-issue145-route-probes")
+    run_route_probes.add_argument("--run-id", required=True)
+    run_route_probes.add_argument("--live", action="store_true")
+    run_route_probes.add_argument("--authorization")
+    run_route_probes.add_argument("--spending-limit-usd")
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3401,6 +3419,12 @@ def main(argv: list[str] | None = None) -> int:
         report = verify_issue145_v5()
         print_json(report)
         return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-lineage-proposal":
+        from .issue145_lineage_profile import verify as verify_issue145_lineage_proposal
+
+        report = verify_issue145_lineage_proposal()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
     if args.command == "enumerate-issue145-v5":
         from .issue145 import queue_document as issue145_v5_queue
 
@@ -3482,6 +3506,54 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         )
+        return 0
+    if args.command == "verify-issue145-route-probes":
+        from .issue145_route_probes import verify as verify_route_probes
+
+        print_json(verify_route_probes())
+        return 0
+    if args.command == "verify-issue145-route-retry-proposal":
+        from .issue145_retry_profile import verify as verify_retry_proposal
+
+        report = verify_retry_proposal()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-route-retry-proposal-r3":
+        from .issue145_retry_profile_r3 import verify as verify_retry_proposal_r3
+
+        report = verify_retry_proposal_r3()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "prepare-issue145-route-probes-gate":
+        from .issue145_route_probes import prepare_gate as prepare_route_probe_gate
+
+        print_json(prepare_route_probe_gate(args.run_id))
+        return 0
+    if args.command == "seal-issue145-route-probes-gate":
+        from .issue145_route_probes import seal_gate as seal_route_probe_gate
+
+        print_json(seal_route_probe_gate(args.run_id))
+        return 0
+    if args.command == "prepare-issue145-route-probes-recovery-gate":
+        from .issue145_route_probes import prepare_recovery_gate
+
+        print_json(prepare_recovery_gate(args.run_id, args.parent_run_id))
+        return 0
+    if args.command == "seal-issue145-route-probes-recovery-gate":
+        from .issue145_route_probes import seal_recovery_gate
+
+        print_json(seal_recovery_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-route-probes":
+        from .issue145_route_probes import run_live as run_route_probes_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-route-probes requires --live")
+        print_json(asyncio.run(run_route_probes_live(
+            run_id=args.run_id,
+            authorization=args.authorization or "",
+            spending_limit_usd=args.spending_limit_usd or "",
+        )))
         return 0
     if args.command == "enumerate":
         report = verify()
