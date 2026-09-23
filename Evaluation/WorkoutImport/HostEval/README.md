@@ -719,6 +719,35 @@ full-matrix preparation separately estimated USD 98.742225560 at snapshot
 prices; that is not a ratified hard limit and the final run must be freshly
 bound after route proof.
 
+The first probe instance ended after one HTTP 429 on the Mistral route. Its
+ignored raw evidence is preserved and its original run ID remains
+non-resumable. A zero-spend recovery gate can create a fresh child instance
+bound to exact hashes of the terminal parent gate, live admission, report,
+audit, state and complete raw-evidence tree. It reuses the frozen two-call
+profile and USD 0.01192791 per-instance
+limit; it does not infer a retry, change the route, score cases or merge
+attempts across instances. Preparation and sealing make no inference call and
+read no credential:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue145-route-probes-recovery-gate \
+  --parent-run-id issue145-full-matrix-route-probes-v5-20260922-01 \
+  --run-id <new-unique-run-id>
+uv run --frozen paceprompt-host-eval seal-issue145-route-probes-recovery-gate \
+  --run-id <same-new-run-id>
+```
+
+The child gate derives a new exact authorization phrase. The operator must
+authorize that specific phrase and the same finite hard limit before any live
+execution; there is no automatic restart. The live command performs the same
+fresh catalogue, route and price preflight before credential lookup. A child
+that enters live execution is also non-resumable. If it ends as an audited
+terminal failure, the same preparation command can name that child as
+`--parent-run-id` and create another uniquely named descendant. Each child
+has its own finite cap and exact authorization; there are no automatic retries
+or cumulative spend assumptions. This recovery lineage is limited to the
+two-route probe, not the unratified 3,936-call matrix.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing

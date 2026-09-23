@@ -35,6 +35,15 @@ PROPOSAL_SHA256 = "2c4b2a6122a50fd5acc029f9282cd8bd3bb429072afe6b174ed446058715b
 RATIFICATION_SHA256 = "b879cdd6eec28626d102719ceb02aae4d58e0ef3f729c0318dfba7a323183485"
 GATE_CONTRACT = "paceprompt-host-eval-operator-gate/issue145-route-probes-r1"
 AUTHORIZATION_PREFIX = "AUTHORIZE_PACEPROMPT_ISSUE145_ROUTE_PROBES_"
+RECOVERY_GATE_CONTRACT = "paceprompt-host-eval-operator-gate/issue145-route-probes-recovery-r1"
+FAILED_RUN_ID = "issue145-full-matrix-route-probes-v5-20260922-01"
+FAILED_EVIDENCE_SHA256 = {
+    "operator-gate.json": "ff4fc862dcf9435364c13e1258fbd8743d41fbba6316534a9fb772704056df27",
+    "diagnostic-report.json": "7fa60e170755986e0b15e28e75c5bef9964d2d95947e53185caf0ccf4e2c30bf",
+    "evidence-integrity-audit.json": "1cca41107a0d5e3ac0b1bea39e6b77fde78ddcbd5122ea5f4cb7c80dc3d93714",
+    "live-state.json": "4648512436c3bc7ec313509af89254a67c7bc0ca6aa0cad1c645459c18c0e3e2",
+}
+FAILED_EVIDENCE_TREE_SHA256 = "95abcaee76a9a01ee679a1f53776f1ee0c659b0c6082c0c4482cf3ea75329fe1"
 
 
 def _profile() -> tuple[dict[str, Any], dict[str, Any], tuple[Any, ...]]:
@@ -198,6 +207,147 @@ def _prepared_gate() -> dict[str, Any]:
     }
 
 
+def _failed_run_evidence(
+    parent_run_id: str, ancestry: frozenset[str] = frozenset()
+) -> dict[str, str]:
+    """Bind a child to a terminal failed instance and its validated lineage."""
+    if parent_run_id in ancestry:
+        raise RuntimeError("route-probe recovery lineage contains a cycle")
+    run_dir = safe_run_dir(parent_run_id, create=False)
+    if any(path.is_symlink() for path in run_dir.rglob("*")):
+        raise RuntimeError("route-probe evidence contains a symlink")
+    if parent_run_id != FAILED_RUN_ID:
+        _validate_recovery_gate(
+            parent_run_id, "awaitingFinalLiveRunAuthorization", ancestry
+        )
+    evidence = {
+        name: sha256_file(run_dir / name) for name in FAILED_EVIDENCE_SHA256
+    }
+    if parent_run_id == FAILED_RUN_ID and evidence != FAILED_EVIDENCE_SHA256:
+        raise RuntimeError("original failed route-probe evidence changed")
+    report = strict_json_load(run_dir / "diagnostic-report.json")
+    state = strict_json_load(run_dir / "live-state.json")
+    audit = strict_json_load(run_dir / "evidence-integrity-audit.json")
+    gate = strict_json_load(run_dir / "operator-gate.json")
+    admission = strict_json_load(run_dir / "operator-ratification.json")
+    attempts = state.get("attempts", [])
+    expected_models = [item["requestedModelID"] for item in _profile()[0]["orderedCalls"]]
+    if not isinstance(attempts, list) or not 1 <= len(attempts) <= 2:
+        raise RuntimeError("failed route-probe attempts are missing or excessive")
+    money = (
+        Decimal(state.get("guardChargedUSD", "NaN")),
+        Decimal(state.get("guardReservedUSD", "NaN")),
+        Decimal(admission.get("liveCostPreflightUSD", "NaN")),
+    )
+    if any(not value.is_finite() or value < 0 for value in money):
+        raise RuntimeError("failed route-probe spend evidence is invalid")
+    expected_ids = [f"warmup-{model_id.replace('/', '--')}" for model_id in expected_models]
+    if (
+        [item.get("attemptID") for item in attempts] != expected_ids[:len(attempts)]
+        or [item.get("modelID") for item in attempts] != expected_models[:len(attempts)]
+        or [item.get("modelID") for item in report.get("attempts", [])]
+           != expected_models[:len(attempts)]
+        or [item.get("hostClassification") for item in report.get("attempts", [])]
+           != [item.get("hostClassification") for item in attempts]
+        or [item.get("compatibilityPassed") for item in report.get("attempts", [])]
+           != [item.get("compatibilityPassed") for item in attempts]
+        or any(item.get("terminal") is not True for item in attempts)
+        or any(item.get("compatibilityPassed") is not True for item in attempts[:-1])
+        or attempts[-1].get("compatibilityPassed") is not False
+        or admission.get("runID") != parent_run_id
+        or admission.get("authorizationPhrase") != gate.get("authorizationPhrase")
+        or admission.get("spendingLimitUSD") != gate.get("ratifiedSpendingLimitUSD")
+        or admission.get("providerCallLimit") != 2
+        or admission.get("credentialAvailable") is not True
+        or admission.get("credentialPersisted") is not False
+        or sha256_file(run_dir / "live-catalogue" / "selected.json")
+           != admission.get("liveCatalogueSha256")
+        or money[0] > Decimal(gate["ratifiedSpendingLimitUSD"])
+        or money[1] != 0
+        or money[2] > Decimal(gate["ratifiedSpendingLimitUSD"])
+    ):
+        raise RuntimeError("parent route probe lacks exact live admission or attempt lineage")
+    for attempt_id in expected_ids[:len(attempts)]:
+        for directory, suffix in (
+            ("requests", ".json"), ("responses", ".json"),
+            ("transcripts", ".json"), ("framework-logs", ".json"),
+            ("framework-logs", "-python-logging.json"),
+        ):
+            strict_json_load(run_dir / directory / f"{attempt_id}{suffix}")
+    if (
+        report.get("runID") != parent_run_id
+        or type(report.get("providerCalls")) is not int
+        or report["providerCalls"] not in (1, 2)
+        or report.get("stoppedAfterFailure") is not True
+        or len(state.get("attempts", [])) != report["providerCalls"]
+        or state.get("runID") != parent_run_id
+        or state.get("status") != "completeAwaitingHumanEvidenceAcceptance"
+        or audit.get("passed") is not True
+        or audit.get("errors") != []
+    ):
+        raise RuntimeError("parent route probe is not an audited terminal failure")
+    tree = canonical_hash({
+        str(path.relative_to(run_dir)): sha256_file(path)
+        for path in sorted(run_dir.rglob("*")) if path.is_file()
+    })
+    if parent_run_id == FAILED_RUN_ID and tree != FAILED_EVIDENCE_TREE_SHA256:
+        raise RuntimeError("original failed route-probe raw evidence changed")
+    return dict(evidence, evidenceTreeSha256=tree)
+
+
+def _prepared_recovery_gate(
+    run_id: str, parent_run_id: str,
+    ancestry: frozenset[str] = frozenset(),
+) -> dict[str, Any]:
+    if run_id == FAILED_RUN_ID or run_id == parent_run_id or run_id in ancestry:
+        raise RuntimeError("recovery requires a fresh run ID")
+    # Validate the identifier without creating or mutating the directory.
+    safe_run_dir(run_id, create=False)
+    evidence = _failed_run_evidence(parent_run_id, ancestry | {run_id})
+    prepared = _prepared_gate()
+    prepared.update({
+        "gateContractVersion": RECOVERY_GATE_CONTRACT,
+        "runID": run_id,
+        "recoveryOf": {"runID": parent_run_id, "evidenceSha256": evidence},
+        "requiredBeforeLive": [
+            "separate-exact-recovery-run-authorization",
+            "fresh-public-catalogue-route-and-price-preflight",
+        ],
+    })
+    return prepared
+
+
+def prepare_recovery_gate(run_id: str, parent_run_id: str) -> dict[str, Any]:
+    prepared = _prepared_recovery_gate(run_id, parent_run_id)
+    run_dir = safe_run_dir(run_id, create=True)
+    write_json(run_dir / "operator-gate.json", prepared)
+    return prepared
+
+
+def _validate_recovery_gate(
+    run_id: str, status: str, ancestry: frozenset[str] = frozenset()
+) -> tuple[Path, dict[str, Any]]:
+    if run_id in ancestry:
+        raise RuntimeError("route-probe recovery lineage contains a cycle")
+    run_dir = safe_run_dir(run_id, create=False)
+    gate = strict_json_load(run_dir / "operator-gate.json")
+    parent_run_id = gate.get("recoveryOf", {}).get("runID")
+    if not isinstance(parent_run_id, str):
+        raise RuntimeError("recovery gate lacks a parent run ID")
+    expected = _prepared_recovery_gate(run_id, parent_run_id, ancestry)
+    comparison = expected if status == "awaitingZeroSpendSealing" else _sealed_gate(expected)
+    if gate != comparison or gate.get("status") != status:
+        raise RuntimeError("recovery gate differs from frozen parent evidence and profile")
+    return run_dir, gate
+
+
+def seal_recovery_gate(run_id: str) -> dict[str, Any]:
+    run_dir, prepared = _validate_recovery_gate(run_id, "awaitingZeroSpendSealing")
+    sealed = _sealed_gate(prepared)
+    write_json(run_dir / "operator-gate.json", sealed)
+    return sealed
+
+
 def prepare_gate(run_id: str) -> dict[str, Any]:
     expected = _prepared_gate()
     if run_id != expected["runID"]:
@@ -292,7 +442,8 @@ async def run_live(
     *, run_id: str, authorization: str, spending_limit_usd: str,
     fetch: Callable[[str], bytes] | None = None,
 ) -> dict[str, Any]:
-    run_dir, gate = _validate_gate(run_id, "awaitingFinalLiveRunAuthorization")
+    validate = _validate_gate if run_id == FAILED_RUN_ID else _validate_recovery_gate
+    run_dir, gate = validate(run_id, "awaitingFinalLiveRunAuthorization")
     if (
         authorization != gate["authorizationPhrase"]
         or spending_limit_usd != gate["ratifiedSpendingLimitUSD"]

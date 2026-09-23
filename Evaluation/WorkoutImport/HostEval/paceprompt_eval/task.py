@@ -3142,6 +3142,11 @@ def main(argv: list[str] | None = None) -> int:
     prepare_route_probes.add_argument("--run-id", required=True)
     seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
     seal_route_probes.add_argument("--run-id", required=True)
+    prepare_route_probe_recovery = subparsers.add_parser("prepare-issue145-route-probes-recovery-gate")
+    prepare_route_probe_recovery.add_argument("--run-id", required=True)
+    prepare_route_probe_recovery.add_argument("--parent-run-id", required=True)
+    seal_route_probe_recovery = subparsers.add_parser("seal-issue145-route-probes-recovery-gate")
+    seal_route_probe_recovery.add_argument("--run-id", required=True)
     run_route_probes = subparsers.add_parser("run-issue145-route-probes")
     run_route_probes.add_argument("--run-id", required=True)
     run_route_probes.add_argument("--live", action="store_true")
@@ -3507,6 +3512,16 @@ def main(argv: list[str] | None = None) -> int:
         from .issue145_route_probes import seal_gate as seal_route_probe_gate
 
         print_json(seal_route_probe_gate(args.run_id))
+        return 0
+    if args.command == "prepare-issue145-route-probes-recovery-gate":
+        from .issue145_route_probes import prepare_recovery_gate
+
+        print_json(prepare_recovery_gate(args.run_id, args.parent_run_id))
+        return 0
+    if args.command == "seal-issue145-route-probes-recovery-gate":
+        from .issue145_route_probes import seal_recovery_gate
+
+        print_json(seal_recovery_gate(args.run_id))
         return 0
     if args.command == "run-issue145-route-probes":
         from .issue145_route_probes import run_live as run_route_probes_live
