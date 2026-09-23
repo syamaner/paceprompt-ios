@@ -334,6 +334,12 @@ def _lineage_attempts(ledger: dict[str, Any]) -> list[dict[str, Any]]:
                              "reservedWorstCaseUSD": None, "actualUSD": None})
             continue
         wires = position["wires"]
+        # The position journal precedes the first possibly-sent wire marker.
+        # An interruption in that gap cannot have reached send_once.
+        if not wires:
+            attempts.append({"attemptID": logical_id, "state": "notStarted",
+                             "reservedWorstCaseUSD": None, "actualUSD": None})
+            continue
         worst = sum((usd(item["reservedWorstCaseUSD"]) for item in wires), usd("0"))
         known = all("reportedCostUSD" in item for item in wires)
         attempts.append({

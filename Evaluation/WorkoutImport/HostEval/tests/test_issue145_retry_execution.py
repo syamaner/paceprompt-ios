@@ -282,6 +282,42 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
                 child_queue_ids=["one"], child_worst_case_usd={"one": "0.01"},
             )
 
+    async def test_crash_after_position_journal_before_first_wire_is_never_sent(self) -> None:
+        executor = self.executor()
+        persist = executor._persist
+
+        def crash_after_position_journal() -> None:
+            persist()
+            raise RuntimeError("synthetic crash before wire marker")
+
+        executor._persist = crash_after_position_journal
+        with self.assertRaisesRegex(RuntimeError, "before wire marker"):
+            await executor.run_position(logical_id="one", request_body=BODY,
+                                        worst_case_usd="0.01")
+        self.assertEqual(self.calls, [])
+        audit = self.audit(executor)
+        self.assertEqual(audit["status"], "valid")
+        self.assertEqual(audit["attempts"][0], {
+            "attemptID": "one", "state": "notStarted",
+            "reservedWorstCaseUSD": None, "actualUSD": None,
+        })
+        parent = {
+            "runID": self.run_dir.name, "rootRunID": self.run_dir.name,
+            "profileSha256": PROFILE, "lineageHardLimitUSD": "0.03",
+            "parentRunID": None, "parentEvidenceSha256": None,
+            "verifiedEvidenceTreeSha256": audit["evidenceTreeSha256"],
+            "attempts": audit["attempts"],
+        }
+        admission = admit_child(
+            root_run_id=self.run_dir.name, profile_sha256=PROFILE,
+            queue_ids=["one", "two"], hard_limit_usd="0.03",
+            parents=[parent], child_run_id="child-run",
+            child_queue_ids=["one", "two"],
+            child_worst_case_usd={"one": "0.01", "two": "0.01"},
+        )
+        self.assertEqual(admission["priorChargedUSD"], "0")
+        self.assertEqual(admission["plannedAttemptIDs"], ["one", "two"])
+
     async def test_audit_requires_external_queue_cap_and_sealed_tree(self) -> None:
         self.responses = [self.response(200)]
         executor = self.executor()
