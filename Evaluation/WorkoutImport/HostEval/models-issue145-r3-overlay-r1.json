@@ -1,0 +1,21 @@
+{
+  "modelOverlayVersion": "paceprompt-host-eval-model-overlay/issue145-r3-r1",
+  "status": "proposed-not-ratified",
+  "baseModelsSha256": "27cff2665a89ca038bd0f4a99ce66d7a0d6dc240b5e8001b019ce83048cf38fe",
+  "baseModelSetVersion": "paceprompt-host-eval-models/issue145-v5",
+  "materializedModelSetVersion": "paceprompt-host-eval-models/issue145-r3-proposal",
+  "transportRegistry": "strategyRegistryIssue145R3",
+  "changedModelID": "mistralai/mistral-small-2603",
+  "changedFields": {
+    "providerEndpoint": "mistral",
+    "zdr": "omit"
+  },
+  "unchangedFields": "apart-from-version-and-registry-identifiers-all-other-eleven-models-and-all-other-Mistral-fields-equal-v5",
+  "routeRetryProposalSha256": "ad6762c835ad6266e81754dae1742c6aecceb884592e677940ed288442e5af3b",
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false
+  }
+}

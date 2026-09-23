@@ -1,0 +1,35 @@
+{
+  "policyOverlayVersion": "paceprompt-host-eval-run-policy-overlay/issue145-r3-r1",
+  "status": "proposed-not-ratified",
+  "baseRunPolicySha256": "189bb7a381aa64761c46d6b0c39ad225b06d533133988fdf8351e2c0fda06f6d",
+  "routeRetryProposalSha256": "ad6762c835ad6266e81754dae1742c6aecceb884592e677940ed288442e5af3b",
+  "standingRestartContractSha256": "e75c2af9081df9f3472894e5648298e1ad837dcbf16879182f92ea8bf6f7c68b",
+  "queueSha256": "3327dd619bf13eac0eb6ec7de3c5f5d43ee3d2959ff5323d9b4d18fb50466f53",
+  "logicalPositions": 3936,
+  "maximumPhysicalSends": 11808,
+  "changedExecution": {
+    "manualVerifiedDescendantRestarts": true,
+    "maxPhysicalSendsPerLogicalPosition": 3,
+    "retryableCompleteHTTPResponseStatuses": [429, 502, 503, 504, 524, 529],
+    "fallbackBackoffSeconds": [30, 120],
+    "retryAfterHeader": "honour-case-insensitive-integer-seconds-or-HTTP-date-as-minimum-wait",
+    "maxSingleWaitSeconds": 900,
+    "maxCumulativeWaitSecondsPerPosition": 900,
+    "missingOrAmbiguousResponseRetry": false,
+    "httpClientAutomaticRetries": 0,
+    "inspectAutomaticRetries": 0,
+    "fallbackRoutesOrModels": false,
+    "globalConcurrency": 1,
+    "minimumDelayBetweenPhysicalSendsSeconds": 2,
+    "unknownCost": "charge-reserved-worst-case",
+    "possiblySentPositionReplay": false
+  },
+  "unchangedV5": "prompt-corpora-expected-answers-model-order-generation-response-contracts-queue-scorer-gates-and-reporting",
+  "finiteLineageHardLimitUSD": null,
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false
+  }
+}
