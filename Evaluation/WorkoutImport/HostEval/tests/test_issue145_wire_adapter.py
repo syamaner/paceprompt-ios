@@ -60,13 +60,65 @@ class OpenRouterOneSendTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_wrong_route_and_missing_identity_fail_closed(self) -> None:
         for body in ({"model": "synthetic/model", "provider": "other"},
-                     {"model": "synthetic/model"}):
+                     {"model": "synthetic/model"},
+                     {"model": ["synthetic/model"], "provider": "Synthetic"},
+                     {"model": "synthetic/model", "provider": {"name": "Synthetic"}}):
             with self.subTest(body=body):
                 adapter = self.adapter(httpx2.MockTransport(
                     lambda _request: httpx2.Response(200, json=body),
                 ))
                 result = await adapter.send_once("position-1", "position-1--wire-01", BODY)
                 self.assertFalse(result.returned_route_matches)
+
+    async def test_malformed_identity_is_journalled_as_complete_response(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir = Path(directory) / "synthetic-run"
+            run_dir.mkdir()
+            adapter = self.adapter(httpx2.MockTransport(
+                lambda _request: httpx2.Response(200, json={
+                    "model": ["synthetic/model"], "provider": {"name": "Synthetic"},
+                }),
+            ))
+
+            async def no_sleep(_seconds: int) -> None:
+                self.fail("malformed identity cannot trigger a retry")
+
+            executor = RetryingWireExecutor(
+                run_dir=run_dir, evidence_root=run_dir.parent,
+                profile_sha256="a" * 64, planned_position_ids=("position-1",),
+                hard_limit_usd="0.01",
+                policy=RetryPolicy(3, frozenset({429, 502, 503, 504, 524, 529}),
+                                   (30, 120), 900, 900),
+                send_once=adapter.send_once, redact_evidence=lambda item: item,
+                sleep=no_sleep, now=lambda: datetime(2026, 9, 23, tzinfo=timezone.utc),
+            )
+            result = await executor.run_position(
+                logical_id="position-1", request_body=BODY, worst_case_usd="0.01",
+            )
+            self.assertEqual(result["state"], "terminalFailure")
+            self.assertEqual(result["wires"][0]["state"], "returnedRouteMismatch")
+            evidence = json.loads((run_dir / "wire-evidence" /
+                                   "position-1--wire-01.json").read_text())
+            self.assertEqual(evidence["body"]["model"], ["synthetic/model"])
+
+    async def test_falsey_injected_transport_never_falls_through_to_network(self) -> None:
+        calls = 0
+
+        class FalseyMockTransport(httpx2.MockTransport):
+            def __bool__(self) -> bool:
+                return False
+
+        def handle(_request: httpx2.Request) -> httpx2.Response:
+            nonlocal calls
+            calls += 1
+            return httpx2.Response(200, json={
+                "model": "synthetic/model", "provider": "Synthetic",
+            })
+
+        adapter = self.adapter(FalseyMockTransport(handle))
+        result = await adapter.send_once("position-1", "position-1--wire-01", BODY)
+        self.assertEqual(calls, 1)
+        self.assertTrue(result.returned_route_matches)
 
     async def test_changed_body_and_unknown_position_cannot_reach_transport(self) -> None:
         calls = 0

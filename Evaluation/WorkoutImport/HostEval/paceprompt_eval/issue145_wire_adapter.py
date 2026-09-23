@@ -78,7 +78,8 @@ class OpenRouterOneSend:
             raise ValueError("physical send request bytes changed")
         async with httpx2.AsyncClient(
             timeout=self.timeout,
-            transport=self.transport or httpx2.AsyncHTTPTransport(retries=0),
+            transport=(self.transport if self.transport is not None
+                       else httpx2.AsyncHTTPTransport(retries=0)),
             follow_redirects=False,
             trust_env=False,
         ) as client:
@@ -98,9 +99,13 @@ class OpenRouterOneSend:
             except (UnicodeDecodeError, json.JSONDecodeError):
                 decoded = {"undecodableUtf8ByteCount": len(raw)}
             body = decoded if isinstance(decoded, dict) else {"nonObjectBody": decoded}
+            model = body.get("model")
+            provider = body.get("provider")
             matching = (
-                body.get("model") in {binding.requested_model_id, binding.canonical_revision}
-                and body.get("provider") in {binding.provider_endpoint, binding.reported_provider_name}
+                isinstance(model, str)
+                and isinstance(provider, str)
+                and model in (binding.requested_model_id, binding.canonical_revision)
+                and provider in (binding.provider_endpoint, binding.reported_provider_name)
             )
             return WireResponse(
                 status_code=response.status_code,
