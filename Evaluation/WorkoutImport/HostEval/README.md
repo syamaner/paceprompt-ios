@@ -994,6 +994,32 @@ catalogue, a separately reviewed live gate/runner, exact authorization and
 DeepSeek compatibility evidence are required before any scored matrix send.
 There is no credential read or provider-call entrypoint in this module.
 
+### Fresh DeepSeek compatibility profile (zero spend)
+
+`paceprompt_eval.issue145_deepseek_probe_profile` binds the accepted `-03`
+DeepSeek-only proposal, the accepted r3 probe request and a separately saved,
+hash-pinned read-only public catalogue snapshot. It replays the raw catalogue
+locally, checks the exact `deepinfra/fp8` route and required parameters, and
+recalculates the conservative per-send cost before freezing one unscored
+warm-up's request hash, retry bounds, timeouts and recommended USD limit.
+The ignored accepted proposal and catalogue snapshot must be present; a clean
+checkout without either fails closed. The first local `-01` profile failed
+its JSON round-trip check before any live gate; `-02` preceded a
+historical-evidence test correction; independent review of `-03` found
+missing accepted-request and endpoint-status checks; `-04` preceded
+source-tree binding; `-05` preceded the clean-checkout status-test repair.
+All five ignored files are preserved, and the corrected profile uses `-06`.
+From this directory:
+
+```sh
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_profile import prepare_profile; print(prepare_profile())'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_profile import verify_prepared_profile; print(verify_prepared_profile())'
+```
+
+This is a profile for separate operator ratification, not a live gate. The
+fresh endpoint listing is not response-compatibility proof. The profile does
+not read a credential, seal a live authorization phrase or send a request.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing

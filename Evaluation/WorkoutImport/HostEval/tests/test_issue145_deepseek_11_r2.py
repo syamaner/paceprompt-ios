@@ -9,9 +9,10 @@ from unittest.mock import patch
 from paceprompt_eval.issue145_deepseek_11_r2 import (
     DEEPSEEK_MODEL, LINEAGE_CEILING_USD, MATRIX_RUN_ID, PARENT_RUN_ID,
     _historical_deepseek_call, _parent, deepseek_material, matrix_material,
-    verify_prepared_proposals,
 )
-from paceprompt_eval.v3 import safe_run_dir
+from paceprompt_eval.issue145_deepseek_probe_profile import _accepted_parent
+from paceprompt_eval.issue145_retry_execution import evidence_tree_sha256
+from paceprompt_eval.v3 import safe_run_dir, strict_json_load
 
 
 class HermeticProposalTests(unittest.TestCase):
@@ -122,7 +123,16 @@ class DeepSeekElevenR2Tests(unittest.TestCase):
         self.assertFalse(proposal["credentialRead"])
         self.assertEqual(proposal["providerCalls"], 0)
 
-    def test_prepared_artifacts_rebuild_exactly(self) -> None:
+    def test_prepared_artifacts_remain_pinned_after_source_revision(self) -> None:
         if not safe_run_dir(MATRIX_RUN_ID, create=False).is_dir():
             self.skipTest("ignored r2 proposal not prepared")
-        self.assertEqual(verify_prepared_proposals()["status"], "valid")
+        self.assertEqual(_accepted_parent()["requestedModelID"], DEEPSEEK_MODEL)
+        matrix_dir = safe_run_dir(MATRIX_RUN_ID, create=False)
+        self.assertEqual(
+            evidence_tree_sha256(matrix_dir),
+            "316123933703743c4a85f147517ed5c01fab1718c503712b30933f05131c2a9c",
+        )
+        self.assertEqual(
+            strict_json_load(matrix_dir / "proposal.json")["proposalSha256"],
+            "f1f51e8d37c5d6859f23bb233c7c389e1497ed2db42445a6c5f75918b95aa439",
+        )
