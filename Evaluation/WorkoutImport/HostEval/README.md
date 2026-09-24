@@ -917,10 +917,16 @@ policy, source tree and cap. Preparation and sealing remain zero-spend:
 ```sh
 .venv/bin/paceprompt-host-eval verify-issue145-r3-route-probe-ratification
 .venv/bin/paceprompt-host-eval prepare-issue145-r3-route-probe-gate \
-  --run-id issue145-r3-route-probes-20260924-01
+  --run-id issue145-r3-route-probes-20260924-02
 .venv/bin/paceprompt-host-eval seal-issue145-r3-route-probe-gate \
-  --run-id issue145-r3-route-probes-20260924-01
+  --run-id issue145-r3-route-probes-20260924-02
 ```
+
+The first sealed instance (`...-01`) stopped in its synchronous evidence audit
+before catalogue access or any physical provider send. Its original gate is
+preserved byte-for-byte under the ignored `stale/` evidence directory. The
+repaired runner binds that failed gate hash, requires a fresh `...-02` run ID
+and source-bound seal, and does not carry the old authorization phrase forward.
 
 The distinct `run-issue145-r3-route-probe` entrypoint requires `--live`, that
 sealed gate's exact authorization phrase and the exact USD limit. It rejects

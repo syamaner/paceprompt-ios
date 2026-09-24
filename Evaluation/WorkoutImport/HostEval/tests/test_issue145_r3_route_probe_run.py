@@ -11,13 +11,35 @@ import unittest
 from unittest.mock import patch
 
 from paceprompt_eval.issue145_r3_route_probe_run import (
-    RUN_ID, _complete_probe_results, _inspect_success, _sealed_gate,
+    PREVIOUS_RUN_ID, RUN_ID, _complete_probe_results, _inspect_success,
+    _previous_failed_gate, _sealed_gate,
     prepare_gate, run_live, seal_gate,
 )
 from paceprompt_eval.runner import write_json
+from paceprompt_eval.v3 import sha256_file
 
 
 class R3RouteProbeGateTests(unittest.TestCase):
+    def test_previous_failed_instance_is_hash_bound_and_has_no_wire_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            previous = Path(directory)
+            gate_path = previous / "operator-gate.json"
+            write_json(gate_path, {
+                "runID": PREVIOUS_RUN_ID,
+                "status": "awaitingFinalLiveRunAuthorization",
+                "credentialRead": False, "providerCalls": 0,
+                "spendUSD": "0.00", "hardLimitUSD": "0.03577518",
+                "routeCompatibilityProof": None,
+            })
+            with patch("paceprompt_eval.issue145_r3_route_probe_run.PREVIOUS_RUN_DIR", previous), patch(
+                "paceprompt_eval.issue145_r3_route_probe_run.PREVIOUS_GATE_SHA256",
+                sha256_file(gate_path),
+            ):
+                self.assertEqual(_previous_failed_gate()["providerCalls"], 0)
+                write_json(previous / "wire-ledger.json", {})
+                with self.assertRaisesRegex(RuntimeError, "evidence changed"):
+                    _previous_failed_gate()
+
     def test_gate_seals_exact_run_without_live_authority(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -67,6 +89,34 @@ class R3RouteProbeGateTests(unittest.TestCase):
                             run_id=RUN_ID, authorization=phrase,
                             spending_limit_usd=limit, api_key_lookup=forbidden,
                         ))
+
+    def test_lineage_audit_runs_outside_live_event_loop(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir = Path(directory)
+            gate = {"authorizationPhrase": "exact-phrase", "hardLimitUSD": "0.03577518"}
+
+            def audit(_run_id: str, *, sealed: bool) -> tuple[Path, dict[str, str]]:
+                self.assertTrue(sealed)
+                asyncio.run(asyncio.sleep(0))
+                return run_dir, gate
+
+            def parent_audit() -> None:
+                asyncio.run(asyncio.sleep(0))
+                raise RuntimeError("parent audit completed outside live loop")
+
+            with patch("paceprompt_eval.issue145_r3_route_probe_run._validate_gate", audit), patch(
+                "paceprompt_eval.issue145_r3_route_probe_run._parent", parent_audit
+            ):
+                with self.assertRaisesRegex(RuntimeError, "authorization"):
+                    asyncio.run(run_live(
+                        run_id=RUN_ID, authorization="wrong",
+                        spending_limit_usd="0.03577518",
+                    ))
+                with self.assertRaisesRegex(RuntimeError, "parent audit completed"):
+                    asyncio.run(run_live(
+                        run_id=RUN_ID, authorization="exact-phrase",
+                        spending_limit_usd="0.03577518",
+                    ))
 
     def test_success_inspection_rejects_truncated_or_invalid_response(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
