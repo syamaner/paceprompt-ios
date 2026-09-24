@@ -12,12 +12,12 @@ from typing import Any
 
 from .catalogue import conservative_call_cost
 from .issue145 import _body_for_case
-from .issue145_full_matrix_r3 import RATIFICATION, RATIFICATION_SHA256, verify_ratification
+from .issue145_full_matrix_r3 import RATIFICATION as MATRIX_RATIFICATION, RATIFICATION_SHA256 as MATRIX_RATIFICATION_SHA256, verify_ratification
 from .issue145_retry_profile_r3 import PROPOSAL_SHA256 as RETRY_PROPOSAL_SHA256
 from .issue145_retry_execution import evidence_tree_sha256
 from .openrouter import ModelSpec
 from .runner import write_json
-from .v3 import asset_paths, canonical_hash, load_cases, safe_run_dir, strict_json_load
+from .v3 import HOST_EVAL_ROOT, asset_paths, canonical_hash, load_cases, safe_run_dir, sha256_file, strict_json_load
 
 
 ORDERED_MODELS = (
@@ -25,13 +25,15 @@ ORDERED_MODELS = (
     "deepseek/deepseek-v4-flash-0731",
 )
 WARMUP_CASE_ID = "WI-V3-D020"
+RATIFICATION = HOST_EVAL_ROOT / "issue145-r3-route-probe-ratification-r1.json"
+RATIFICATION_SHA256 = "25be71a59053e69b1031530e5fdf6132d9d6b1616869069f00591fb3add5d94a"
 
 
 def proposal_material(run_id: str) -> dict[str, Any]:
     checked = verify_ratification(require_prepared_evidence=True)
     if checked["status"] != "valid":
         raise RuntimeError(f"r3 profile/cap ratification failed: {checked['errors']}")
-    ratification = strict_json_load(RATIFICATION)
+    ratification = strict_json_load(MATRIX_RATIFICATION)
     ratified_dir = safe_run_dir(ratification["preparedRunID"], create=False)
     ratified = strict_json_load(ratified_dir / "r3-proposal.json")
     catalogue = strict_json_load(ratified_dir / "catalogue" / "selected.json")
@@ -75,7 +77,7 @@ def proposal_material(run_id: str) -> dict[str, Any]:
         "status": "awaiting-separate-probe-cap-and-live-gate-ratification",
         "runID": run_id,
         "parentFullMatrixProfileSha256": ratified["profileSha256"],
-        "parentRatificationSha256": RATIFICATION_SHA256,
+        "parentRatificationSha256": MATRIX_RATIFICATION_SHA256,
         "parentPreparedEvidenceTreeSha256": ratification[
             "supportingPreparedEvidenceTreeSha256"
         ],
@@ -119,3 +121,41 @@ def verify_prepared_proposal(run_id: str) -> dict[str, Any]:
         "credentialRead": False, "providerCalls": 0, "spendUSD": "0.00",
         "liveAuthorized": False,
     }
+
+
+def verify_probe_ratification() -> dict[str, Any]:
+    """Bind the operator's narrow cap approval to the sealed ignored proposal."""
+    errors: list[str] = []
+    if sha256_file(RATIFICATION) != RATIFICATION_SHA256:
+        errors.append("probe ratification bytes changed")
+    ratification = strict_json_load(RATIFICATION)
+    expected = {
+        "ratificationVersion": "paceprompt-host-eval-ratification/issue145-r3-route-probes-r1",
+        "status": "probe-profile-and-cap-ratified-live-run-not-authorized",
+        "source": "operator replied 'I ratify' on 2026-09-24 to the exact two-route probe profile and USD 0.03577518 hard-limit question",
+        "operatorRatifiedFields": ["proposalSha256", "probeHardLimitUSD"],
+        "proposalSha256": "133091376a862247ce72a4413c988e5c2fa9dd23be62f66960cf9d71c755ddce",
+        "supportingPreparedEvidenceTreeSha256": "da389803ca4c7c71ca6583579f83295e2c13283281ec8d3ed6470cdd08259920",
+        "preparedRunID": "issue145-r3-route-probe-proposal-20260924-01",
+        "probeHardLimitUSD": "0.03577518", "currency": "USD",
+        "scope": "two r3 replacement-route development warm-ups only; no scored cases",
+        "maximumLogicalPositions": 2, "maximumPhysicalSends": 6,
+        "separateFromFullMatrixLineageCap": True,
+        "routeCompatibilityProof": None, "liveGate": None,
+        "initialLiveAuthorization": None,
+        "authority": {"credentialRead": False, "providerInference": False,
+                      "spend": False, "liveRun": False},
+    }
+    if ratification != expected:
+        errors.append("probe ratification scope changed")
+    prepared = verify_prepared_proposal(ratification["preparedRunID"])
+    if (prepared["status"] != "valid"
+            or prepared["proposalSha256"] != ratification["proposalSha256"]
+            or prepared["evidenceTreeSha256"] != ratification["supportingPreparedEvidenceTreeSha256"]
+            or prepared["recommendedProbeHardLimitUSD"] != ratification["probeHardLimitUSD"]):
+        errors.append("ratified proposal, evidence or hard limit changed")
+    return {"status": "valid" if not errors else "invalid", "errors": errors,
+            "ratificationSha256": RATIFICATION_SHA256,
+            "proposalSha256": ratification["proposalSha256"],
+            "hardLimitUSD": ratification["probeHardLimitUSD"],
+            "liveAuthorized": False}

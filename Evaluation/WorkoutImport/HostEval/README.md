@@ -907,6 +907,32 @@ separately audited full-matrix preparation:
   --run-id <same-probe-proposal-id>
 ```
 
+On 24 September 2026 the operator ratified that exact proposal and its
+separate USD 0.03577518 probe hard limit. The additive
+`issue145-r3-route-probe-ratification-r1.json` is pinned by SHA-256 and does
+not authorise a credential read or model call. The r3 gate binds the two
+ordered development warm-up request hashes, saved endpoint evidence, retry
+policy, source tree and cap. Preparation and sealing remain zero-spend:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-r3-route-probe-ratification
+.venv/bin/paceprompt-host-eval prepare-issue145-r3-route-probe-gate \
+  --run-id issue145-r3-route-probes-20260924-01
+.venv/bin/paceprompt-host-eval seal-issue145-r3-route-probe-gate \
+  --run-id issue145-r3-route-probes-20260924-01
+```
+
+The distinct `run-issue145-r3-route-probe` entrypoint requires `--live`, that
+sealed gate's exact authorization phrase and the exact USD limit. It rejects
+replay, refreshes the public route and price catalogue before consulting the
+process key, preserves every possibly-sent wire in an ignored worst-case
+budget journal, retries only the ratified complete HTTP transient statuses,
+and stops after a failed warm-up. It never scores held-out cases. A successful
+local schema check is diagnostic until the complete ignored evidence receives
+separate human acceptance; neither gate sealing nor a passing warm-up selects
+a production route or closes issue #145. Do not invoke the live entrypoint
+without separate exact-instance operator authorization.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing

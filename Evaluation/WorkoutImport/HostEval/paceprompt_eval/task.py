@@ -3160,6 +3160,20 @@ def main(argv: list[str] | None = None) -> int:
         "verify-issue145-r3-route-probe-proposal"
     )
     verify_issue145_r3_probes.add_argument("--run-id", required=True)
+    subparsers.add_parser("verify-issue145-r3-route-probe-ratification")
+    prepare_issue145_r3_probe_gate = subparsers.add_parser(
+        "prepare-issue145-r3-route-probe-gate"
+    )
+    prepare_issue145_r3_probe_gate.add_argument("--run-id", required=True)
+    seal_issue145_r3_probe_gate = subparsers.add_parser(
+        "seal-issue145-r3-route-probe-gate"
+    )
+    seal_issue145_r3_probe_gate.add_argument("--run-id", required=True)
+    run_issue145_r3_probe = subparsers.add_parser("run-issue145-r3-route-probe")
+    run_issue145_r3_probe.add_argument("--run-id", required=True)
+    run_issue145_r3_probe.add_argument("--live", action="store_true")
+    run_issue145_r3_probe.add_argument("--authorization")
+    run_issue145_r3_probe.add_argument("--spending-limit-usd")
     prepare_route_probes = subparsers.add_parser("prepare-issue145-route-probes-gate")
     prepare_route_probes.add_argument("--run-id", required=True)
     seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
@@ -3579,6 +3593,33 @@ def main(argv: list[str] | None = None) -> int:
         report = verify_prepared_proposal(args.run_id)
         print_json(report)
         return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-r3-route-probe-ratification":
+        from .issue145_r3_route_probe_profile import verify_probe_ratification
+
+        report = verify_probe_ratification()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "prepare-issue145-r3-route-probe-gate":
+        from .issue145_r3_route_probe_run import prepare_gate
+
+        print_json(prepare_gate(args.run_id))
+        return 0
+    if args.command == "seal-issue145-r3-route-probe-gate":
+        from .issue145_r3_route_probe_run import seal_gate
+
+        print_json(seal_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-r3-route-probe":
+        from .issue145_r3_route_probe_run import run_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-r3-route-probe requires --live")
+        print_json(asyncio.run(run_live(
+            run_id=args.run_id,
+            authorization=args.authorization or "",
+            spending_limit_usd=args.spending_limit_usd or "",
+        )))
+        return 0
     if args.command == "prepare-issue145-route-probes-gate":
         from .issue145_route_probes import prepare_gate as prepare_route_probe_gate
 
