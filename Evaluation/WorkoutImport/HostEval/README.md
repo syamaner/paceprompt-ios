@@ -969,6 +969,31 @@ proposal has no credential or live-run entrypoint. A separate exact profile,
 cap, compatibility proof and initial live authorization remain necessary
 before any evaluation send or publication.
 
+### DeepSeek-only compatibility and eleven-candidate r2 preparation
+
+`paceprompt_eval.issue145_deepseek_11_r2` creates two new ignored, immutable
+zero-spend proposals without changing the r1 evidence: a one-position DeepSeek
+`deepinfra/fp8` development warm-up and a source-bound eleven-candidate r2
+queue. Preparing them requires the accepted, hash-pinned ignored r1 proposal
+to be restored locally; a clean checkout without it fails closed. The local
+`-01` and `-02` preparations were superseded during review; their ignored
+files remain preserved. From `Evaluation/WorkoutImport/HostEval/`, after the
+source and prerequisite evidence are final:
+
+```sh
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_11_r2 import prepare_proposals; print(prepare_proposals())'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_11_r2 import verify_prepared_proposals; print(verify_prepared_proposals())'
+```
+
+The warm-up's USD 0.00917478 recommendation is mechanically derived from the
+accepted probe's hash-pinned **saved** catalogue bound, not a fresh price or
+ratified hard limit. The operator's
+USD 300.00 cumulative ceiling is recorded on the r2 matrix proposal, but its
+exact executable profile and hard limit are not yet ratified. A fresh public
+catalogue, a separately reviewed live gate/runner, exact authorization and
+DeepSeek compatibility evidence are required before any scored matrix send.
+There is no credential read or provider-call entrypoint in this module.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing
