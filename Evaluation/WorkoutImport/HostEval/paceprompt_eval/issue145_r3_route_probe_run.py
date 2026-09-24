@@ -28,11 +28,16 @@ from .scorer_adapter import parse_model_output
 from .transport_strategy import strategy_for
 from .v3 import (
     MODEL_SCHEMA, RUNS_ROOT, asset_paths, canonical_hash, host_source_tree_hash,
-    load_cases, safe_run_dir, strict_json_load,
+    load_cases, safe_run_dir, sha256_file, strict_json_load,
 )
 
 
-RUN_ID = "issue145-r3-route-probes-20260924-01"
+RUN_ID = "issue145-r3-route-probes-20260924-02"
+PREVIOUS_RUN_ID = "issue145-r3-route-probes-20260924-01"
+PREVIOUS_GATE_SHA256 = "d31365c14425d9050b570bb59676416fdef83c196a7ea80bc592e576aa95bfa8"
+PREVIOUS_RUN_DIR = (
+    RUNS_ROOT / "stale" / "issue145-r3-route-probes-20260924-01-sync-audit-preflight-failure"
+)
 GATE_VERSION = "paceprompt-host-eval-operator-gate/issue145-r3-route-probes-r1"
 AUTH_PREFIX = "AUTHORIZE_PACEPROMPT_ISSUE145_R3_ROUTE_PROBES_"
 POLICY = RetryPolicy(3, frozenset({429, 502, 503, 504, 524, 529}), (30, 120), 900, 900)
@@ -81,6 +86,28 @@ def _request_bytes(proposal: dict[str, Any]) -> dict[str, bytes]:
     return result
 
 
+def _previous_failed_gate() -> dict[str, Any]:
+    """Preserve the pre-send failed instance instead of editing or replaying it."""
+    gate_path = PREVIOUS_RUN_DIR / "operator-gate.json"
+    if (PREVIOUS_RUN_DIR.is_symlink() or not PREVIOUS_RUN_DIR.is_dir()
+            or gate_path.is_symlink()
+            or {path.name for path in PREVIOUS_RUN_DIR.iterdir()} != {"operator-gate.json"}
+            or sha256_file(gate_path) != PREVIOUS_GATE_SHA256):
+        raise RuntimeError("previous pre-send route-probe gate evidence changed")
+    previous = strict_json_load(gate_path)
+    if (previous.get("runID") != PREVIOUS_RUN_ID
+            or previous.get("status") != "awaitingFinalLiveRunAuthorization"
+            or previous.get("credentialRead") is not False
+            or previous.get("providerCalls") != 0
+            or previous.get("spendUSD") != "0.00"
+            or previous.get("hardLimitUSD") != "0.03577518"
+            or previous.get("routeCompatibilityProof") is not None):
+        raise RuntimeError("previous route-probe gate crossed the live boundary")
+    return {"runID": PREVIOUS_RUN_ID, "sealedGateSha256": PREVIOUS_GATE_SHA256,
+            "observedOutcome": "pre-send-synchronous-audit-event-loop-failure",
+            "providerCalls": 0, "spendUSD": "0.00"}
+
+
 def _prepared_gate() -> dict[str, Any]:
     ratification, proposal, specs, selected = _parent()
     requests = _request_bytes(proposal)
@@ -91,6 +118,7 @@ def _prepared_gate() -> dict[str, Any]:
     return {
         "gateVersion": GATE_VERSION, "runID": RUN_ID,
         "status": "awaitingZeroSpendSealing",
+        "previousFailedGate": _previous_failed_gate(),
         "hostSourceTreeSha256": host_source_tree_hash(),
         "ratificationSha256": verify_probe_ratification()["ratificationSha256"],
         "proposalSha256": ratification["proposalSha256"],
@@ -196,12 +224,14 @@ async def run_live(
     fetch: Callable[[str], bytes] | None = None,
     api_key_lookup: Callable[[], str | None] | None = None,
 ) -> dict[str, Any]:
-    run_dir, gate = _validate_gate(run_id, sealed=True)
+    # The sealed lineage audit rebuilds mocked payloads with asyncio.run().
+    # Run that synchronous audit outside this live coroutine's event loop.
+    run_dir, gate = await asyncio.to_thread(_validate_gate, run_id, sealed=True)
     if authorization != gate["authorizationPhrase"] or spending_limit_usd != gate["hardLimitUSD"]:
         raise RuntimeError("exact r3 probe live authorization and hard limit are required")
     if any((run_dir / name).exists() for name in ("live-state.json", "wire-ledger.json")):
         raise RuntimeError("r3 probe instance has already entered live execution")
-    _, proposal, specs, _ = _parent()
+    _, proposal, specs, _ = await asyncio.to_thread(_parent)
     live = snapshot_catalogue(
         run_dir / "live-catalogue", tuple(specs),
         required_parameters=required_parameter_contracts(tuple(specs)),
