@@ -15,6 +15,7 @@ from paceprompt_eval.issue145_deepseek_probe_profile import (
     _fresh_catalogue,
     profile_material, verify_prepared_profile,
 )
+from paceprompt_eval.issue145_deepseek_probe_gate import PROFILE_SOURCE_SHA256
 from paceprompt_eval.issue145 import EXAMPLES, PRODUCTION_PROMPT
 from paceprompt_eval.catalogue import conservative_call_cost
 from paceprompt_eval.openrouter import ModelSpec
@@ -139,7 +140,13 @@ class LocalEvidenceProfileTests(unittest.TestCase):
     def test_prepared_profile_rebuilds_when_local_evidence_is_available(self) -> None:
         if not safe_run_dir(PROFILE_RUN_ID, create=False).is_dir():
             self.skipTest("ignored exact profile is not prepared")
-        self.assertEqual(verify_prepared_profile()["status"], "valid")
+        # The profile remains sealed to its original preparation source; the
+        # additive live gate changes the current HostEval source tree.
+        with patch("paceprompt_eval.issue145_deepseek_probe_profile.host_source_tree_hash",
+                   return_value=PROFILE_SOURCE_SHA256):
+            self.assertEqual(verify_prepared_profile()["status"], "valid")
+        with self.assertRaisesRegex(RuntimeError, "source tree changed"):
+            verify_prepared_profile()
         with patch("paceprompt_eval.issue145_deepseek_probe_profile.host_source_tree_hash",
                    return_value="0" * 64):
             with self.assertRaisesRegex(RuntimeError, "source tree changed"):
