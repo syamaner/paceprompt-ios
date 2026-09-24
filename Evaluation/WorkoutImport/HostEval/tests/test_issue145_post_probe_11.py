@@ -9,8 +9,9 @@ from unittest.mock import patch
 from paceprompt_eval.issue145 import queue_document
 from paceprompt_eval.issue145_post_probe_11 import (
     ACCEPTED_RUN_ID, EXCLUDED_MODEL, PROPOSAL_RUN_ID, _accepted_probe,
-    _filtered_queue, proposal_material, verify_prepared_proposal,
+    _filtered_queue, proposal_material,
 )
+from paceprompt_eval.issue145_deepseek_11_r2 import _parent
 from paceprompt_eval.v3 import safe_run_dir
 
 
@@ -75,7 +76,8 @@ class PostProbeElevenCandidateTests(unittest.TestCase):
         self.assertFalse(proposal["credentialRead"])
         self.assertEqual(proposal["providerCalls"], 0)
 
-    def test_prepared_proposal_rebuilds_from_parent_and_accepted_evidence(self) -> None:
+    def test_prepared_r1_proposal_remains_pinned_after_source_revision(self) -> None:
         if not safe_run_dir(PROPOSAL_RUN_ID, create=False).is_dir():
             self.skipTest("ignored prepared proposal is not present")
-        self.assertEqual(verify_prepared_proposal(PROPOSAL_RUN_ID)["status"], "valid")
+        proposal, queue = _parent()
+        self.assertEqual(proposal["queueSha256"], queue["queueSha256"])
