@@ -1020,6 +1020,31 @@ This is a profile for separate operator ratification, not a live gate. The
 fresh endpoint listing is not response-compatibility proof. The profile does
 not read a credential, seal a live authorization phrase or send a request.
 
+### Ratified DeepSeek compatibility gate (zero spend)
+
+`issue145-deepseek-probe-ratification-r1.json` records the operator's exact
+ratification of the `-06` profile and USD 0.00917478 hard limit. It does not
+authorize credential access, a provider request or spend. The additive
+`paceprompt_eval.issue145_deepseek_probe_gate` binds that immutable profile,
+one unscored `WI-V3-D020` request, the current HostEval source tree and a
+three-send maximum. It rejects a changed profile, request, route, native
+response authority or increased live catalogue price. Local preparation and
+sealing only write ignored files under `.runs/host-eval/`; they do not read
+`.env` or call a provider:
+
+```sh
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_gate import verify_ratification; print(verify_ratification())'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_gate import prepare_gate, RUN_ID; print(prepare_gate(RUN_ID))'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_gate import seal_gate, RUN_ID; print(seal_gate(RUN_ID))'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_gate import verify_sealed_gate, RUN_ID; print(verify_sealed_gate(RUN_ID))'
+```
+
+`run_live` is a separate, non-CLI entrypoint that requires the exact sealed
+phrase and hard limit before a fresh catalogue preflight or key lookup. A
+future live operator must separately authorize that exact run and must provide
+the key at execution time; the preparation phase does neither. A successful
+diagnostic response is not scored acceptance or a production-model decision.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing
