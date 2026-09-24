@@ -939,6 +939,36 @@ separate human acceptance; neither gate sealing nor a passing warm-up selects
 a production route or closes issue #145. Do not invoke the live entrypoint
 without separate exact-instance operator authorization.
 
+### Post-probe eleven-candidate proposal (zero spend)
+
+The operator accepted the terminal `issue145-r3-route-probes-20260924-02`
+evidence and allowed excluding the rate-limited Mistral Small 2603 candidate
+if needed. The accepted result is three complete upstream-shared-pool 429s
+on the `mistral` route, not a model-quality result. DeepSeek was not started.
+The additive proposal excludes only that candidate; the separate Mistral Small
+3.2 24B candidate remains. It filters the sealed twelve-model queue and
+renumbers each case/repetition's model positions without changing any other
+attempt identity or relative order. The sealed queue, scorer, corpora and
+historical publications are not edited.
+
+From `Evaluation/WorkoutImport/HostEval/`, prepare and mechanically verify:
+
+```sh
+.venv/bin/paceprompt-host-eval prepare-issue145-post-probe-11-proposal \
+  --run-id issue145-11model-proposal-20260924-01
+.venv/bin/paceprompt-host-eval verify-issue145-post-probe-11-proposal \
+  --run-id issue145-11model-proposal-20260924-01
+```
+
+This binds the accepted ignored evidence, original ratified profile,
+developer-source hash, exact eleven routes, derived 3,597-position scored
+queue and saved-catalogue cost calculation. The saved-price three-send bound
+is USD 287.514142080, not a newly ratified hard limit or a substitute for a
+fresh public catalogue. DeepSeek still needs route compatibility proof. This
+proposal has no credential or live-run entrypoint. A separate exact profile,
+cap, compatibility proof and initial live authorization remain necessary
+before any evaluation send or publication.
+
 ### Cost-bounded four-model Stage A
 
 The additive Stage A proposal preserves the twelve-model review while reducing

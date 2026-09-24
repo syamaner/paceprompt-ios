@@ -3174,6 +3174,14 @@ def main(argv: list[str] | None = None) -> int:
     run_issue145_r3_probe.add_argument("--live", action="store_true")
     run_issue145_r3_probe.add_argument("--authorization")
     run_issue145_r3_probe.add_argument("--spending-limit-usd")
+    prepare_post_probe_11 = subparsers.add_parser(
+        "prepare-issue145-post-probe-11-proposal"
+    )
+    prepare_post_probe_11.add_argument("--run-id", required=True)
+    verify_post_probe_11 = subparsers.add_parser(
+        "verify-issue145-post-probe-11-proposal"
+    )
+    verify_post_probe_11.add_argument("--run-id", required=True)
     prepare_route_probes = subparsers.add_parser("prepare-issue145-route-probes-gate")
     prepare_route_probes.add_argument("--run-id", required=True)
     seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
@@ -3620,6 +3628,17 @@ def main(argv: list[str] | None = None) -> int:
             spending_limit_usd=args.spending_limit_usd or "",
         )))
         return 0
+    if args.command == "prepare-issue145-post-probe-11-proposal":
+        from .issue145_post_probe_11 import prepare_proposal
+
+        print_json(prepare_proposal(args.run_id))
+        return 0
+    if args.command == "verify-issue145-post-probe-11-proposal":
+        from .issue145_post_probe_11 import verify_prepared_proposal
+
+        report = verify_prepared_proposal(args.run_id)
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
     if args.command == "prepare-issue145-route-probes-gate":
         from .issue145_route_probes import prepare_gate as prepare_route_probe_gate
 
