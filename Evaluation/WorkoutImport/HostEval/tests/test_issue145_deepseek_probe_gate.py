@@ -6,6 +6,7 @@ import asyncio
 from copy import deepcopy
 from decimal import Decimal
 import hashlib
+import inspect
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -20,11 +21,17 @@ from paceprompt_eval.issue145_deepseek_probe_gate import (
     run_live, verify_ratification,
 )
 from paceprompt_eval.issue145_deepseek_probe_profile import PROFILE_RUN_ID
+from paceprompt_eval.issue145_wire_adapter import OpenRouterOneSend
 from paceprompt_eval.transport_strategy import strategy_for
 from paceprompt_eval.v3 import asset_paths, load_cases, safe_run_dir
 
 
 class DeepSeekGateTests(unittest.TestCase):
+    def test_live_entrypoint_cannot_inject_catalogue_or_wire_transport(self) -> None:
+        parameters = inspect.signature(run_live).parameters
+        self.assertNotIn("fetch", parameters)
+        self.assertNotIn("transport", parameters)
+
     def test_ratification_is_exact_and_withholds_live_authority(self) -> None:
         if not safe_run_dir(PROFILE_RUN_ID, create=False).is_dir():
             self.skipTest("ignored ratified profile is absent")
@@ -191,6 +198,11 @@ class DeepSeekLiveBoundaryTests(unittest.IsolatedAsyncioTestCase):
                     "choices": [{"finish_reason": "stop", "message": {"content": "{}"}}],
                 })
 
+            def mocked_sender(**kwargs: object) -> OpenRouterOneSend:
+                return OpenRouterOneSend(
+                    **kwargs, transport=httpx2.MockTransport(handler),
+                )
+
             with (patch("paceprompt_eval.issue145_deepseek_probe_gate._validate_gate",
                         return_value=(run_dir, gate)),
                   patch("paceprompt_eval.issue145_deepseek_probe_gate._ratified",
@@ -198,13 +210,14 @@ class DeepSeekLiveBoundaryTests(unittest.IsolatedAsyncioTestCase):
                   patch("paceprompt_eval.issue145_deepseek_probe_gate.RUNS_ROOT", root),
                   patch("paceprompt_eval.issue145_deepseek_probe_gate.snapshot_catalogue",
                         return_value={"selected": [endpoint]}),
+                  patch("paceprompt_eval.issue145_deepseek_probe_gate.OpenRouterOneSend",
+                        side_effect=mocked_sender),
                   patch("paceprompt_eval.issue145_deepseek_probe_gate._inspect_success",
                         return_value={"compatibilityPassed": True, "reason": "synthetic-valid"})):
                 report = await run_live(
                     run_id=RUN_ID, authorization=gate["authorizationPhrase"],
                     spending_limit_usd=HARD_LIMIT_USD,
                     api_key_lookup=lambda: "synthetic-key",
-                    transport=httpx2.MockTransport(handler),
                 )
             self.assertEqual(len(sends), 1)
             self.assertEqual(report["scoredHeldoutCalls"], 0)

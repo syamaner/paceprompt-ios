@@ -236,9 +236,7 @@ def _inspect_success(run_dir: Path, position: dict[str, Any], spec: ModelSpec,
 
 async def run_live(
     *, run_id: str, authorization: str, spending_limit_usd: str,
-    fetch: Callable[[str], bytes] | None = None,
     api_key_lookup: Callable[[], str | None] | None = None,
-    transport: httpx2.AsyncBaseTransport | None = None,
 ) -> dict[str, Any]:
     # The parent verifier rebuilds historical mock evidence using asyncio.run().
     # Keep that synchronous audit outside this live coroutine's event loop.
@@ -251,7 +249,6 @@ async def run_live(
     live = snapshot_catalogue(
         run_dir / "live-catalogue", (spec,),
         required_parameters=required_parameter_contracts((spec,)),
-        **({"fetch": fetch} if fetch is not None else {}),
     )
     compare_catalogues([gate["selectedEndpoint"]], live["selected"])
     if len(live["selected"]) != 1 or type(live["selected"][0].get("status")) is not int or live["selected"][0]["status"] != 0:
@@ -280,7 +277,6 @@ async def run_live(
     sender = OpenRouterOneSend(
         bindings={LOGICAL_ID: binding}, api_key=key,
         timeout=httpx2.Timeout(connect=15, read=180, write=15, pool=15),
-        transport=transport,
     )
     last_send_at: float | None = None
 
