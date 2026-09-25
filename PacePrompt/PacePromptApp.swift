@@ -1,4 +1,12 @@
 import SwiftUI
+import UIKit
+
+@MainActor
+final class ApplicationWorkoutDisplayWakeController: WorkoutDisplayWakeControlling {
+  func setWorkoutKeepsScreenAwake(_ enabled: Bool) {
+    UIApplication.shared.isIdleTimerDisabled = enabled
+  }
+}
 
 @main
 struct PacePromptApp: App {
@@ -35,7 +43,10 @@ struct PacePromptApp: App {
     _treadmill = StateObject(wrappedValue: resolvedTreadmill)
     _plans = StateObject(wrappedValue: resolvedPlans)
     _workoutSession = StateObject(
-      wrappedValue: WorkoutSessionCoordinator(binding: binding)
+      wrappedValue: WorkoutSessionCoordinator(
+        binding: binding,
+        displayWakeController: ApplicationWorkoutDisplayWakeController()
+      )
     )
   }
 
