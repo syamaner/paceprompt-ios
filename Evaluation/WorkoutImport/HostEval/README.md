@@ -1278,3 +1278,24 @@ reviewed runner before any credential read or inference send. A Together
 warm-up must pass the existing native transport and full semantic schema gate
 before its scored positions may run; catalogue metadata alone is not a
 compatibility or model-quality result.
+
+## Issue #145 ratified Together r4 gate (zero-spend preparation)
+
+The operator subsequently confirmed the exact r4 profile, root run and USD
+300 cumulative cap. `issue145-11model-together-r4-ratification-r1.json`
+records that decision without changing the earlier CoreWeave ratification or
+evidence. `issue145_11model_together_gate` and
+`issue145_11model_together_run` are separately versioned so the r3 gate and
+runner remain byte-identical. The Together gate checks the source-bound
+profile, frozen prompt/corpora/scorer, exact route and output contract, all
+3,608 planned positions and fresh public prices. The serial runner retains
+the three-send transient retry, durable wire ledger, two-second
+post-completion pacing, warm-up admission, separate fixed-denominator stratum
+reports and cumulative restart budget.
+
+`verify-ratification`, `prepare-root`, `seal-root` and `verify-root` are
+zero-spend actions. The sealed gate yields an exact authorization phrase;
+that phrase, run ID and USD limit need a separate explicit live authorization
+before the runner may read the process-only key or send inference. Raw run
+evidence remains local and ignored. Aggregate publication and production
+selection remain separate.
