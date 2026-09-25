@@ -18,8 +18,9 @@ from typing import Any, Callable
 from .catalogue import conservative_call_cost, snapshot_catalogue
 from .issue145 import (
     BASETEN_DUPLICATE_ALLOWLIST, _body_for_case, mock_payloads,
-    required_parameter_contracts, scored_strata,
+    PRODUCTION_PROMPT, RUN_POLICY, required_parameter_contracts, scored_strata,
 )
+from .issue130 import EXAMPLES
 from .issue145_full_matrix_r3 import materialized_models
 from .issue145_lineage import admit_child
 from .issue145_post_deepseek_11_r3 import (
@@ -27,10 +28,11 @@ from .issue145_post_deepseek_11_r3 import (
     profile_material,
 )
 from .issue145_retry_execution import evidence_tree_sha256, verify_wire_ledger
+from .issue145_source_repair import verify_source_chain
 from .openrouter import ModelSpec
 from .runner import write_json
 from .v3 import (
-    HOST_EVAL_ROOT, RUNS_ROOT, asset_paths, canonical_hash,
+    HOST_EVAL_ROOT, RUNS_ROOT, WORKOUT_IMPORT_ROOT, asset_paths, canonical_hash,
     host_source_tree_hash, load_cases, safe_run_dir, sha256_file,
     strict_json_load,
 )
@@ -235,7 +237,7 @@ async def prepare_gate(
     return gate
 
 
-def _expected_gate(run_dir: Path) -> dict[str, Any]:
+def _expected_gate(run_dir: Path, *, source_hash: str | None = None) -> dict[str, Any]:
     profile, queue = ratified_profile()
     if strict_json_load(run_dir / "planned-queue.json") != queue:
         raise RuntimeError("gate queue changed")
@@ -273,7 +275,7 @@ def _expected_gate(run_dir: Path) -> dict[str, Any]:
         "profileEvidenceTreeSha256": PROFILE_EVIDENCE_SHA256,
         "profilePreparationSourceTreeSha256": PROFILE_SOURCE_SHA256,
         "ratificationSha256": sha256_file(RATIFICATION),
-        "hostSourceTreeSha256": host_source_tree_hash(),
+        "hostSourceTreeSha256": source_hash or host_source_tree_hash(),
         "queueSha256": EXPECTED_QUEUE_SHA256,
         "materializedModelsSha256": sha256_file(run_dir / "models-11-materialized.json"),
         "plannedCallsSha256": sha256_file(run_dir / "planned-calls.json"),
@@ -293,6 +295,7 @@ def seal_gate(run_id: str) -> dict[str, Any]:
     if run_id != PROPOSED_ROOT_RUN_ID:
         raise RuntimeError("root run ID differs from ratification")
     run_dir = checked_run_dir(run_id, create=False)
+    _verify_frozen_eval_inputs()
     actual = strict_json_load(run_dir / "operator-gate.json")
     expected = _expected_gate(run_dir)
     if actual != expected:
@@ -303,14 +306,19 @@ def seal_gate(run_id: str) -> dict[str, Any]:
     return sealed
 
 
-def verify_sealed_gate(run_id: str) -> dict[str, Any]:
+def verify_sealed_gate(
+    run_id: str, *, repair_seals: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
     if run_id != PROPOSED_ROOT_RUN_ID:
         raise RuntimeError("root run ID differs from ratification")
+    _verify_frozen_eval_inputs()
     run_dir = checked_run_dir(run_id, create=False)
-    expected = _expected_gate(run_dir)
+    actual = strict_json_load(run_dir / "operator-gate.json")
+    source_hash = actual.get("hostSourceTreeSha256")
+    verify_source_chain(source_hash, host_source_tree_hash(), repair_seals or [])
+    expected = _expected_gate(run_dir, source_hash=source_hash)
     sealed = dict(expected, status="awaitingFinalLiveRunAuthorization")
     sealed["authorizationPhrase"] = AUTH_PREFIX + canonical_hash(expected)[:16].upper()
-    actual = strict_json_load(run_dir / "operator-gate.json")
     if actual != sealed:
         raise RuntimeError("sealed gate changed")
     return {"status": "valid", "runID": run_id,
@@ -321,8 +329,39 @@ def verify_sealed_gate(run_id: str) -> dict[str, Any]:
             "liveAuthorized": False}
 
 
+def _verify_frozen_eval_inputs() -> None:
+    """Recheck ratified corpus, prompt, schemas and scorer outside HostEval too."""
+    policy = strict_json_load(RUN_POLICY)
+    frozen = policy["artifacts"]
+    paths = asset_paths()
+    bound = {
+        "productionPromptSha256": PRODUCTION_PROMPT,
+        "productionExamplesSha256": EXAMPLES,
+        "heldoutCasesSha256": paths["heldoutCases"],
+        "heldoutManifestSha256": paths["heldoutManifest"],
+        "acceptanceCasesSha256": WORKOUT_IMPORT_ROOT / "Corpus" / "v3" / "cases.json",
+        "acceptanceManifestSha256": WORKOUT_IMPORT_ROOT / "Corpus" / "v3" / "manifest.json",
+        "acceptanceSemanticReviewSha256": WORKOUT_IMPORT_ROOT / "Corpus" / "v3" / "semantic-review.json",
+        "modelOutputSchemaSha256": paths["modelSchema"],
+        "nestedTransportSchemaSha256": paths["nestedV23Schema"],
+        "semanticJsonTransportSchemaSha256": paths["semanticJsonV29Schema"],
+        "scorerSha256": WORKOUT_IMPORT_ROOT / "Scoring" / "scorer.py",
+        "schemaValidationSha256": WORKOUT_IMPORT_ROOT / "Scoring" / "schema_validation.py",
+    }
+    for field, path in bound.items():
+        if sha256_file(path) != frozen[field]:
+            raise RuntimeError(f"frozen evaluation input changed: {field}")
+    contracts = {
+        "workout-proposal-v1.schema.json": "d83e628cedc99f1201efb05f22f52fb9c32f7fc888674fad54e0e62e70cc90cc",
+        "workout-import-result-v1.schema.json": "af57217d2fb175c74c37b0c70487966f6850e0e55dc7a123a600217a4d527cb9",
+    }
+    for name, expected in contracts.items():
+        if sha256_file(WORKOUT_IMPORT_ROOT / "Contracts" / name) != expected:
+            raise RuntimeError(f"frozen scorer contract changed: {name}")
+
+
 def _verified_ancestors(
-    seals: list[dict[str, str]],
+    seals: list[dict[str, str]], *, repair_seals: list[dict[str, str]],
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Accept only externally supplied, exact immutable ancestor tree hashes."""
     if not seals or seals[0].get("runID") != PROPOSED_ROOT_RUN_ID:
@@ -332,6 +371,7 @@ def _verified_ancestors(
     all_ids.extend(item["attemptID"] for item in queue["entries"])
     parents: list[dict[str, Any]] = []
     seen_runs: set[str] = set()
+    root_phrase: str | None = None
     for index, seal in enumerate(seals):
         if set(seal) != {"runID", "gateSha256", "evidenceTreeSha256"}:
             raise RuntimeError("ancestor seal requires exact run, gate and tree hashes")
@@ -346,10 +386,11 @@ def _verified_ancestors(
             raise RuntimeError("ancestor gate or evidence differs from external seal")
         gate = strict_json_load(gate_path)
         if index == 0:
-            verified = verify_sealed_gate(run_id)
+            verified = verify_sealed_gate(run_id, repair_seals=repair_seals)
             if verified["gateSha256"] != seal["gateSha256"]:
                 raise RuntimeError("root gate differs from external seal")
             instance_cap = HARD_LIMIT_USD
+            root_phrase = verified["authorizationPhrase"]
         else:
             if (gate.get("gateVersion") != CHILD_GATE_VERSION
                     or gate.get("status") != "awaitingFinalLiveRunAuthorization"
@@ -357,11 +398,22 @@ def _verified_ancestors(
                     or gate.get("rootRunID") != PROPOSED_ROOT_RUN_ID
                     or gate.get("profileSha256") != PROFILE_SHA256
                     or gate.get("cumulativeHardLimitUSD") != HARD_LIMIT_USD
-                    or gate.get("hostSourceTreeSha256") != host_source_tree_hash()):
+                    or not isinstance(gate.get("hostSourceTreeSha256"), str)):
                 raise RuntimeError("child ancestor gate changed")
-            verified_child = verify_sealed_child_gate(run_id)
-            if (verified_child["gateSha256"] != seal["gateSha256"]
-                    or verified_child["hardLimitUSD"] != gate["instanceHardLimitUSD"]):
+            verify_source_chain(
+                gate["hostSourceTreeSha256"], host_source_tree_hash(), repair_seals,
+            )
+            expected = _child_material(
+                run_id, seals[:index], directory,
+                gate_repair_seals=gate["sourceRepairSeals"],
+                verification_repair_seals=repair_seals,
+                source_hash=gate["hostSourceTreeSha256"],
+                verified_parents=(parents, all_ids),
+            )
+            if gate != dict(
+                expected, status="awaitingFinalLiveRunAuthorization",
+                authorizationPhrase=root_phrase,
+            ):
                 raise RuntimeError("child ancestor admission differs from its seal")
             instance_cap = gate["instanceHardLimitUSD"]
         calls = strict_json_load(directory / "planned-calls.json")
@@ -389,9 +441,15 @@ def _verified_ancestors(
 
 
 def _child_material(
-    run_id: str, seals: list[dict[str, str]], directory: Path,
+    run_id: str, seals: list[dict[str, str]], directory: Path, *,
+    gate_repair_seals: list[dict[str, str]],
+    verification_repair_seals: list[dict[str, str]],
+    source_hash: str | None = None,
+    verified_parents: tuple[list[dict[str, Any]], list[str]] | None = None,
 ) -> dict[str, Any]:
-    parents, all_ids = _verified_ancestors(seals)
+    parents, all_ids = verified_parents or _verified_ancestors(
+        seals, repair_seals=verification_repair_seals,
+    )
     terminal = {item["attemptID"] for parent in parents for item in parent["attempts"]
                 if item["state"] != "notStarted"}
     remaining = [item for item in all_ids if item not in terminal]
@@ -449,7 +507,8 @@ def _child_material(
         "ancestorSeals": seals,
         "profileSha256": PROFILE_SHA256,
         "queueSha256": EXPECTED_QUEUE_SHA256,
-        "hostSourceTreeSha256": host_source_tree_hash(),
+        "hostSourceTreeSha256": source_hash or host_source_tree_hash(),
+        "sourceRepairSeals": gate_repair_seals,
         "ratificationSha256": sha256_file(RATIFICATION),
         "materializedModelsSha256": sha256_file(directory / "models-11-materialized.json"),
         "mockSummarySha256": sha256_file(directory / "mock-summary.json"),
@@ -469,12 +528,14 @@ def _child_material(
 
 def prepare_child_gate(
     run_id: str, *, ancestor_seals: list[dict[str, str]],
+    source_repair_seals: list[dict[str, str]] | None = None,
     fetch: Callable[[str], bytes] | None = None,
 ) -> dict[str, Any]:
     """Manually initiate a child, with caller-supplied immutable ancestry."""
     if run_id == PROPOSED_ROOT_RUN_ID:
         raise RuntimeError("child needs a fresh run ID")
-    parents, all_ids = _verified_ancestors(ancestor_seals)
+    repairs = source_repair_seals or []
+    parents, all_ids = _verified_ancestors(ancestor_seals, repair_seals=repairs)
     terminal = {item["attemptID"] for parent in parents for item in parent["attempts"]
                 if item["state"] != "notStarted"}
     remaining = [item for item in all_ids if item not in terminal]
@@ -505,7 +566,10 @@ def prepare_child_gate(
     derived, _ = planned_calls(profile, queue, templates, selected["selected"])
     calls = [item for item in derived if item["attemptID"] in remaining]
     write_json(directory / "planned-calls.json", calls)
-    gate = _child_material(run_id, ancestor_seals, directory)
+    gate = _child_material(
+        run_id, ancestor_seals, directory,
+        gate_repair_seals=repairs, verification_repair_seals=repairs,
+    )
     write_json(directory / "operator-gate.json", gate)
     return gate
 
@@ -513,22 +577,41 @@ def prepare_child_gate(
 def seal_child_gate(run_id: str) -> dict[str, Any]:
     directory = checked_run_dir(run_id, create=False)
     actual = strict_json_load(directory / "operator-gate.json")
-    expected = _child_material(run_id, actual["ancestorSeals"], directory)
+    repairs = actual["sourceRepairSeals"]
+    expected = _child_material(
+        run_id, actual["ancestorSeals"], directory,
+        gate_repair_seals=repairs, verification_repair_seals=repairs,
+    )
     if actual != expected:
         raise RuntimeError("prepared child gate changed")
-    root_phrase = verify_sealed_gate(PROPOSED_ROOT_RUN_ID)["authorizationPhrase"]
+    root_phrase = verify_sealed_gate(
+        PROPOSED_ROOT_RUN_ID, repair_seals=repairs,
+    )["authorizationPhrase"]
     sealed = dict(expected, status="awaitingFinalLiveRunAuthorization",
                   authorizationPhrase=root_phrase)
     write_json(directory / "operator-gate.json", sealed)
     return sealed
 
 
-def verify_sealed_child_gate(run_id: str) -> dict[str, Any]:
+def verify_sealed_child_gate(
+    run_id: str, *, repair_seals: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
     directory = checked_run_dir(run_id, create=False)
     actual = strict_json_load(directory / "operator-gate.json")
-    expected = _child_material(run_id, actual["ancestorSeals"], directory)
+    own_repairs = actual["sourceRepairSeals"]
+    verification_repairs = repair_seals if repair_seals is not None else own_repairs
+    source_hash = actual.get("hostSourceTreeSha256")
+    verify_source_chain(source_hash, host_source_tree_hash(), verification_repairs)
+    expected = _child_material(
+        run_id, actual["ancestorSeals"], directory,
+        gate_repair_seals=own_repairs,
+        verification_repair_seals=verification_repairs,
+        source_hash=source_hash,
+    )
     sealed = dict(expected, status="awaitingFinalLiveRunAuthorization",
-                  authorizationPhrase=verify_sealed_gate(PROPOSED_ROOT_RUN_ID)["authorizationPhrase"])
+                  authorizationPhrase=verify_sealed_gate(
+                      PROPOSED_ROOT_RUN_ID, repair_seals=verification_repairs,
+                  )["authorizationPhrase"])
     if actual != sealed:
         raise RuntimeError("sealed child gate changed")
     return {"status": "valid", "runID": run_id,
@@ -551,7 +634,17 @@ def main() -> None:
         "--ancestor-seal", action="append", default=[],
         help="Externally pinned RUN_ID:GATE_SHA256:EVIDENCE_TREE_SHA256 (root first)",
     )
+    parser.add_argument(
+        "--source-repair-seal", action="append", default=[],
+        help="Reviewed repository-relative repair JSON path and SHA-256, joined by ':'",
+    )
     args = parser.parse_args()
+    repairs = []
+    for item in args.source_repair_seal:
+        parts = item.rsplit(":", 1)
+        if len(parts) != 2:
+            parser.error("source repair seal must have path and SHA-256")
+        repairs.append({"path": parts[0], "sha256": parts[1]})
     if args.action == "verify-ratification":
         profile, queue = ratified_profile()
         result = {"status": "valid", "profileSha256": profile["profileSha256"],
@@ -565,7 +658,7 @@ def main() -> None:
         elif args.action == "seal-root":
             result = seal_gate(args.run_id)
         elif args.action == "verify-root":
-            result = verify_sealed_gate(args.run_id)
+            result = verify_sealed_gate(args.run_id, repair_seals=repairs)
         elif args.action == "prepare-child":
             seals = []
             for item in args.ancestor_seal:
@@ -573,11 +666,15 @@ def main() -> None:
                 if len(parts) != 3:
                     parser.error("ancestor seal must have run, gate and tree hashes")
                 seals.append(dict(zip(("runID", "gateSha256", "evidenceTreeSha256"), parts)))
-            result = prepare_child_gate(args.run_id, ancestor_seals=seals)
+            result = prepare_child_gate(
+                args.run_id, ancestor_seals=seals, source_repair_seals=repairs,
+            )
         elif args.action == "seal-child":
             result = seal_child_gate(args.run_id)
         else:
-            result = verify_sealed_child_gate(args.run_id)
+            result = verify_sealed_child_gate(
+                args.run_id, repair_seals=repairs or None,
+            )
     print(json.dumps(result, sort_keys=True))
 
 

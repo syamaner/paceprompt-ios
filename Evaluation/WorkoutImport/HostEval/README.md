@@ -1213,10 +1213,10 @@ From this directory, the following commands use only local data and a public
 catalogue; they do not load `OPENROUTER_API_KEY` or call an inference endpoint:
 
 ```sh
-.venv/bin/python -m paceprompt_eval.issue145_11model_gate verify-ratification
-.venv/bin/python -m paceprompt_eval.issue145_11model_gate prepare-root --run-id issue145-11model-matrix-20260925-01
-.venv/bin/python -m paceprompt_eval.issue145_11model_gate seal-root --run-id issue145-11model-matrix-20260925-01
-.venv/bin/python -m paceprompt_eval.issue145_11model_gate verify-root --run-id issue145-11model-matrix-20260925-01
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate verify-ratification
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate prepare-root --run-id issue145-11model-matrix-20260925-01
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate seal-root --run-id issue145-11model-matrix-20260925-01
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate verify-root --run-id issue145-11model-matrix-20260925-01
 ```
 
 The ignored gate binds all 3,608 exact logical request hashes, 11 per-model
@@ -1237,3 +1237,17 @@ are terminal and cannot be replayed. The root phrase covers an admitted child
 under the standing restart contract; a child is never started automatically.
 Raw run evidence stays ignored. Aggregate publication, model selection,
 production changes, merge and issue closure remain separate decisions.
+
+If a later reviewed compatible HostEval-only repair changes the source hash,
+historical gates remain immutable. Before a child can start, a separate
+committed JSON bridge under `Evaluation/WorkoutImport/SourceRepairBridges/`
+must bind the old and new source hashes, old and new commits, exact complete
+diff SHA-256, independent review evidence, focused validation evidence and
+affirmation that frozen inputs remain unchanged. Supply its repository-relative
+path and file SHA-256 with `--source-repair-seal PATH:SHA256` when preparing or
+verifying the child (and when running an already sealed instance under a
+repaired source). The gate verifies the Git blobs, diff, commit ancestry and
+full bridge chain before credential admission. The gate also rechecks the
+ratified prompt, corpus, schema and scorer assets outside HostEval, including
+the two v1 scorer contracts, before it can admit a live run. No bridge is
+created or approved by this initial zero-spend slice.

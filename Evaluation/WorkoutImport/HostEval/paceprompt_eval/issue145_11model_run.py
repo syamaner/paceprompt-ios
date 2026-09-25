@@ -32,6 +32,7 @@ from .issue145_11model_gate import (
     planned_calls, ratified_profile, verify_sealed_child_gate,
     verify_sealed_gate,
 )
+from .issue145_lineage import usd
 from .issue145_retry import RetryPolicy
 from .issue145_retry_execution import RetryingWireExecutor, evidence_tree_sha256
 from .issue145_wire_adapter import OpenRouterOneSend, WireRouteBinding
@@ -53,6 +54,61 @@ from .v3 import (
 
 POLICY = RetryPolicy(3, frozenset({429, 502, 503, 504, 524, 529}),
                      (30, 120), 900, 900)
+
+
+class CompletionPacer:
+    """Keep the frozen two-second interval after each physical send finishes."""
+
+    def __init__(self, sender: OpenRouterOneSend, *,
+                 now: Callable[[], float] = time.monotonic,
+                 sleep: Callable[[float], Any] = asyncio.sleep) -> None:
+        self.sender = sender
+        self.now = now
+        self.sleep = sleep
+        self.last_finished_at: float | None = None
+
+    async def send_once(self, logical_id: str, wire_id: str, body: bytes) -> Any:
+        if self.last_finished_at is not None:
+            remaining = 2 - (self.now() - self.last_finished_at)
+            if remaining > 0:
+                await self.sleep(remaining)
+        started = self.now()
+        try:
+            response = await asyncio.wait_for(
+                self.sender.send_once(logical_id, wire_id, body), timeout=180,
+            )
+        finally:
+            self.last_finished_at = self.now()
+        elapsed = max(0, round((self.last_finished_at - started) * 1000))
+        return replace(response, evidence={
+            **response.evidence, "providerLatencyMilliseconds": elapsed,
+        })
+
+
+def _conservative_charges(gate: dict[str, Any], ledger: dict[str, Any]) -> tuple[str, str]:
+    instance = usd(ledger["chargedUSD"])
+    prior = usd(gate.get("priorChargedUSD", "0"))
+    cumulative = prior + instance
+    if cumulative > usd(HARD_LIMIT_USD):
+        raise RuntimeError("lineage charge exceeds ratified cumulative cap")
+    return format(instance, "f"), format(cumulative, "f")
+
+
+def _diagnostic_stratum_report(
+    attempts: list[dict[str, Any]], cases: list[dict[str, Any]],
+    specs: tuple[ModelSpec, ...], policy: dict[str, Any],
+) -> dict[str, Any]:
+    report = aggregate_v3(attempts, cases, specs, policy)
+    report["diagnosticOnly"] = True
+    report["automaticWinner"] = None
+    cost_available = all(
+        item["observedScoredCostUSD"] is not None
+        for item in report["models"].values()
+    )
+    report["costTieBreakAvailable"] = cost_available
+    if not cost_available:
+        report["tieBreakTrace"] = None
+    return report
 
 
 def _completion(
@@ -118,6 +174,12 @@ def _score_one(
     )}
     result["status"] = position["state"]
     result["terminal"] = True
+    reported = [wire.get("reportedCostUSD") for wire in position["wires"]]
+    result["reportedCostUSD"] = (
+        format(sum((usd(value) for value in reported), Decimal("0")), "f")
+        if reported and all(isinstance(value, str) for value in reported)
+        else None
+    )
     if position["state"] == "terminalComplete":
         try:
             last_wire = position["wires"][-1]["wireID"]
@@ -198,11 +260,14 @@ def _score_one(
 async def run_live(
     *, run_id: str, authorization: str, spending_limit_usd: str,
     api_key_lookup: Callable[[], str | None] | None = None,
+    source_repair_seals: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Execute one exact root or manually prepared descendant once."""
     # Historical profile verification invokes a synchronous mock coroutine.
     verifier = verify_sealed_gate if run_id == PROPOSED_ROOT_RUN_ID else verify_sealed_child_gate
-    checked = await asyncio.to_thread(verifier, run_id)
+    checked = await asyncio.to_thread(
+        verifier, run_id, repair_seals=source_repair_seals,
+    )
     if (authorization != checked["authorizationPhrase"]
             or spending_limit_usd != HARD_LIMIT_USD):
         raise RuntimeError("exact reviewed eleven-model live authorization and cap required")
@@ -261,23 +326,12 @@ async def run_live(
         bindings=bindings, api_key=key,
         timeout=httpx2.Timeout(connect=15, read=180, write=15, pool=15),
     )
-    last_send_at: float | None = None
-
-    async def paced_send(logical_id: str, wire_id: str, body: bytes) -> Any:
-        nonlocal last_send_at
-        now = time.monotonic()
-        if last_send_at is not None and now - last_send_at < 2:
-            await asyncio.sleep(2 - (now - last_send_at))
-        last_send_at = time.monotonic()
-        response = await asyncio.wait_for(sender.send_once(logical_id, wire_id, body), timeout=180)
-        elapsed = max(0, round((time.monotonic() - last_send_at) * 1000))
-        return replace(response, evidence={
-            **response.evidence, "providerLatencyMilliseconds": elapsed,
-        })
+    pacer = CompletionPacer(sender)
 
     write_json(run_dir / "live-state.json", {
         "runID": run_id, "status": "authorisedBeforeFirstSend",
         "authorizationPhrase": authorization, "hardLimitUSD": spending_limit_usd,
+        "sourceRepairSeals": source_repair_seals or gate.get("sourceRepairSeals", []),
         "liveCatalogueSha256": canonical_hash(live),
         "credentialPersisted": False,
     })
@@ -286,7 +340,7 @@ async def run_live(
         profile_sha256=profile["profileSha256"],
         planned_position_ids=tuple(item["attemptID"] for item in calls),
         hard_limit_usd=gate.get("instanceHardLimitUSD", spending_limit_usd), policy=POLICY,
-        send_once=paced_send, redact_evidence=lambda value: redact(value, (key,)),
+        send_once=pacer.send_once, redact_evidence=lambda value: redact(value, (key,)),
         sleep=asyncio.sleep, now=lambda: datetime.now(timezone.utc),
     )
     (run_dir / "normalized-results").mkdir()
@@ -415,12 +469,10 @@ async def run_live(
     policy = deepcopy(strict_json_load(V3_RUN_POLICY))
     stratum_reports: dict[str, Any] = {}
     for stratum_id, cases in scored_strata():
-        report = aggregate_v3(
+        report = _diagnostic_stratum_report(
             [item for item in scored_results if item["stratumID"] == stratum_id],
             cases, specs, policy,
         )
-        report["diagnosticOnly"] = True
-        report["automaticWinner"] = None
         stratum_reports[stratum_id] = report
     aggregate_report = {
         "reportContractVersion": "paceprompt-host-eval-report/issue145-11model-r3-r1",
@@ -431,13 +483,15 @@ async def run_live(
     }
     write_json(run_dir / "aggregate-report.json", aggregate_report)
     write_json(run_dir / "stratum-reports.json", stratum_reports)
+    instance_charge, cumulative_charge = _conservative_charges(gate, executor.ledger)
     report = {
         "reportVersion": "paceprompt-host-eval-report/issue145-11model-r3-r1",
         "runID": run_id, "profileSha256": profile["profileSha256"],
         "queueSha256": queue["queueSha256"],
         "fixedScoredDenominator": 3597,
         "positionResults": len(saved),
-        "chargedConservativeUSD": executor.ledger["chargedUSD"],
+        "instanceChargedConservativeUSD": instance_charge,
+        "cumulativeChargedConservativeUSD": cumulative_charge,
         "status": "requiresSeparateEvidenceAuditAndHumanDecision",
         "productionSelection": None,
     }
@@ -445,6 +499,7 @@ async def run_live(
     write_json(run_dir / "live-state.json", {
         "runID": run_id, "status": "completeAwaitingHumanEvidenceAcceptance",
         "authorizationPhrase": authorization, "hardLimitUSD": spending_limit_usd,
+        "sourceRepairSeals": source_repair_seals or gate.get("sourceRepairSeals", []),
         "liveCatalogueSha256": canonical_hash(live),
         "credentialPersisted": False,
     })
@@ -462,10 +517,18 @@ def main() -> None:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--authorization", required=True)
     parser.add_argument("--spending-limit-usd", required=True)
+    parser.add_argument("--source-repair-seal", action="append", default=[])
     args = parser.parse_args()
+    repairs = []
+    for item in args.source_repair_seal:
+        parts = item.rsplit(":", 1)
+        if len(parts) != 2:
+            parser.error("source repair seal must have path and SHA-256")
+        repairs.append({"path": parts[0], "sha256": parts[1]})
     report = asyncio.run(run_live(
         run_id=args.run_id, authorization=args.authorization,
         spending_limit_usd=args.spending_limit_usd,
+        source_repair_seals=repairs or None,
     ))
     print(json.dumps(report, sort_keys=True))
 
