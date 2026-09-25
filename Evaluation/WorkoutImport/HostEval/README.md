@@ -1251,3 +1251,30 @@ full bridge chain before credential admission. The gate also rechecks the
 ratified prompt, corpus, schema and scorer assets outside HostEval, including
 the two v1 scorer contracts, before it can admit a live run. No bridge is
 created or approved by this initial zero-spend slice.
+
+## Issue #145 MiniMax Together r4 proposal (zero spend)
+
+The operator selected an additive eleven-model proposal after the ratified
+MiniMax `coreweave/fp4` route alternated between available and unavailable
+in fresh public preflight. `issue145_11model_together_r4` changes only that
+model's exact endpoint to `together`; the other ten model routes, 109 scored
+questions and answers, 3,597 scored queue positions, generation controls,
+retry policy and separate per-stratum reporting remain unchanged. It removes
+the old MiniMax `zdr` requirement, while retaining the outbound
+`data_collection=deny`, exact-provider pin and disabled fallback. The old r3
+profile and its unstarted sealed CoreWeave gate are not rewritten.
+
+From `HostEval/`, these commands use only a public catalogue and mocked
+payloads; they do not load a credential or call an inference endpoint:
+
+```sh
+uv run --frozen python -m paceprompt_eval.issue145_11model_together_r4 prepare
+uv run --frozen python -m paceprompt_eval.issue145_11model_together_r4 verify
+```
+
+The proposal is not a live gate: its exact profile, Together route, finite cumulative cap
+and initial live execution require separate ratification and an independently
+reviewed runner before any credential read or inference send. A Together
+warm-up must pass the existing native transport and full semantic schema gate
+before its scored positions may run; catalogue metadata alone is not a
+compatibility or model-quality result.

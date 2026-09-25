@@ -127,8 +127,9 @@ def cases_by_id() -> dict[str, dict[str, Any]]:
 def planned_calls(
     profile: dict[str, Any], queue: dict[str, Any],
     templates: dict[str, dict[str, Any]], selected: list[dict[str, Any]],
+    *, specs_override: tuple[ModelSpec, ...] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, bytes]]:
-    specs = model_specs(profile)
+    specs = specs_override if specs_override is not None else model_specs(profile)
     by_model = {spec.requested_model_id: spec for spec in specs}
     prices = {item["requestedModelID"]: item for item in selected}
     cases = cases_by_id()
