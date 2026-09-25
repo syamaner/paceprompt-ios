@@ -1199,3 +1199,41 @@ does not reinterpret it into an eligible model.
 
 The composite comparison is secondary to the hard gates and disaggregated
 results. The harness never selects a production provider.
+
+# Issue #145 eleven-model r3 gate (zero-spend preparation)
+
+The operator ratified profile SHA-256
+`ac3bd1269e1b6f219f5624bdef3978a18bb17b6fec3eb7f80e9ed1bee9246bfe`,
+root run `issue145-11model-matrix-20260925-01`, and a cumulative USD 300.00
+hard limit on 25 September 2026. This is **not** live-run authorisation. The
+additive ratification is `issue145-11model-r3-ratification-r1.json`; the earlier
+proposal, queue, scorer, corpora, prompt and provider evidence remain sealed.
+
+From this directory, the following commands use only local data and a public
+catalogue; they do not load `OPENROUTER_API_KEY` or call an inference endpoint:
+
+```sh
+.venv/bin/python -m paceprompt_eval.issue145_11model_gate verify-ratification
+.venv/bin/python -m paceprompt_eval.issue145_11model_gate prepare-root --run-id issue145-11model-matrix-20260925-01
+.venv/bin/python -m paceprompt_eval.issue145_11model_gate seal-root --run-id issue145-11model-matrix-20260925-01
+.venv/bin/python -m paceprompt_eval.issue145_11model_gate verify-root --run-id issue145-11model-matrix-20260925-01
+```
+
+The ignored gate binds all 3,608 exact logical request hashes, 11 per-model
+warm-ups, 3,597 scored positions, 10,824 maximum physical sends, fresh public
+endpoint identity and three-send conservative cost. Preparation fails closed
+if a route disappears, price rises beyond the finite cap, a request control
+changes, or the immutable profile/queue differs. A live send is possible only
+through the separate `issue145_11model_run` entrypoint with the sealed phrase,
+exact cumulative cap and a *later* operator live-run authorisation. Do not run
+that entrypoint under the present zero-spend approval.
+
+After an authorised root ends or is interrupted, a manually initiated child
+must supply root-to-leaf `--ancestor-seal` values containing externally pinned
+run ID, gate SHA-256 and complete evidence-tree SHA-256. The child gate verifies
+every ancestor and its wire ledger, reserves the inherited cumulative budget,
+and admits only never-started positions. Skipped or possibly sent positions
+are terminal and cannot be replayed. The root phrase covers an admitted child
+under the standing restart contract; a child is never started automatically.
+Raw run evidence stays ignored. Aggregate publication, model selection,
+production changes, merge and issue closure remain separate decisions.

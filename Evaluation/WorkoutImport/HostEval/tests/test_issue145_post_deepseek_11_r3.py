@@ -10,6 +10,7 @@ from paceprompt_eval.issue145_post_deepseek_11_r3 import (
     PROPOSAL_RUN_ID, _accepted_probe, _probe_outcome_valid,
     profile_material, verify_prepared_profile,
 )
+from paceprompt_eval.issue145_11model_gate import PROFILE_SHA256, ratified_profile
 from paceprompt_eval.v3 import safe_run_dir
 
 
@@ -87,10 +88,16 @@ class LocalAcceptedEvidenceTests(unittest.TestCase):
         if not safe_run_dir(PROPOSAL_RUN_ID, create=False).is_dir():
             self.skipTest("ignored proposal evidence is not present")
 
-    def test_accepted_probe_is_exact_and_profile_verifies(self) -> None:
+    def test_accepted_probe_and_pinned_historical_profile_verify_after_source_revision(self) -> None:
         self.assertEqual(_accepted_probe()["evidenceTreeSha256"],
                          PROBE_EVIDENCE_SHA256)
-        self.assertEqual(verify_prepared_profile(PROPOSAL_RUN_ID)["status"], "valid")
+        # The proposal's old verifier intentionally compares to the *current*
+        # source tree; an additive live runner changes that tree without
+        # rewriting the sealed proposal. The new verifier pins its preparation
+        # source hash and exact ignored evidence instead.
+        self.assertEqual(verify_prepared_profile(PROPOSAL_RUN_ID)["status"], "invalid")
+        profile, _ = ratified_profile()
+        self.assertEqual(profile["profileSha256"], PROFILE_SHA256)
 
     def test_probe_hash_mismatch_fails_closed(self) -> None:
         with patch("paceprompt_eval.issue145_post_deepseek_11_r3.PROBE_EVIDENCE_SHA256",
