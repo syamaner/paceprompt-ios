@@ -7,6 +7,27 @@ enum WorkoutSessionStage: Equatable {
   case exercise
 }
 
+@MainActor
+protocol WorkoutDisplayWakeControlling: AnyObject {
+  func setWorkoutKeepsScreenAwake(_ enabled: Bool)
+}
+
+struct WorkoutDisplayWakePolicy {
+  static func shouldKeepScreenAwake(
+    sessionStage: WorkoutSessionStage,
+    exerciseStage: WorkoutExerciseStage
+  ) -> Bool {
+    guard sessionStage == .exercise else { return false }
+    switch exerciseStage {
+    case .finished, .failed, .interrupted:
+      return false
+    case .waiting, .applying, .running, .override, .checking, .paused, .restoring,
+      .awaitingPhysicalStop, .readyToEnd, .ending:
+      return true
+    }
+  }
+}
+
 struct WorkoutSessionLimitDraft: Equatable {
   var maximumSpeed = ""
   var maximumInclination = ""
@@ -53,10 +74,21 @@ final class WorkoutSessionCoordinator: ObservableObject {
   @Published private(set) var revision = 0
 
   let binding: ProductionWorkoutExecutionBinding
+  private let displayWakeController: any WorkoutDisplayWakeControlling
+  private var displayWakeIsEnabled: Bool?
 
-  init(binding: ProductionWorkoutExecutionBinding) {
+  init(
+    binding: ProductionWorkoutExecutionBinding,
+    displayWakeController: any WorkoutDisplayWakeControlling
+  ) {
     self.binding = binding
+    self.displayWakeController = displayWakeController
+    displayWakeIsEnabled = false
+    displayWakeController.setWorkoutKeepsScreenAwake(false)
     _ = binding.orchestrator.recoverInterruptedHistory()
+    binding.executionStateObserver = { [weak self] _ in
+      self?.synchronizeDisplayWakePolicy()
+    }
   }
 
   var isPresented: Bool { stage != .inactive }
@@ -184,6 +216,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
 
   func refresh() {
     binding.tick()
+    synchronizeDisplayWakePolicy()
     revision &+= 1
   }
 
@@ -197,7 +230,18 @@ final class WorkoutSessionCoordinator: ObservableObject {
     selectedPlan = nil
     limits = .init()
     notice = nil
+    synchronizeDisplayWakePolicy()
     revision &+= 1
+  }
+
+  private func synchronizeDisplayWakePolicy() {
+    let shouldKeepScreenAwake = WorkoutDisplayWakePolicy.shouldKeepScreenAwake(
+      sessionStage: stage,
+      exerciseStage: exercisePresentation.stage
+    )
+    guard displayWakeIsEnabled != shouldKeepScreenAwake else { return }
+    displayWakeIsEnabled = shouldKeepScreenAwake
+    displayWakeController.setWorkoutKeepsScreenAwake(shouldKeepScreenAwake)
   }
 }
 

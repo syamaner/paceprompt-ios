@@ -72,6 +72,13 @@ final class HomeFlowUITests: XCTestCase {
         )
 
         app.buttons["Settings"].tap()
+        let screenAwake = app.descendants(matching: .any)["settings.screen-awake"]
+        XCTAssertTrue(screenAwake.waitForExistence(timeout: 2))
+        XCTAssertTrue(screenAwake.label.contains("keeps the display awake"))
+        app.swipeUp()
+        let guidedAccess = app.descendants(matching: .any)["settings.guided-access"]
+        XCTAssertTrue(guidedAccess.waitForExistence(timeout: 2))
+        XCTAssertTrue(guidedAccess.label.contains("triple-click the side button"))
         let privacy = app.descendants(matching: .any)["settings.privacy"]
         XCTAssertTrue(privacy.waitForExistence(timeout: 2))
         XCTAssertTrue(privacy.label.contains("No analytics or Health reads are used."))

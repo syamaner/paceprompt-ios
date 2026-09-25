@@ -268,6 +268,7 @@ final class ProductionWorkoutExecutionBinding {
   private var controlSuppressedUntilNewConnection = false
   private var handlingBackgroundTelemetryWake = false
   private let automaticTicks: Bool
+  var executionStateObserver: ((WorkoutExecutionState) -> Void)?
 
   init(
     client: any FTMSClientProtocol,
@@ -779,6 +780,7 @@ final class ProductionWorkoutExecutionBinding {
       .awaitingPhysicalStopForCompletion, .readyToEnd, .ending:
       break
     }
+    executionStateObserver?(result.state)
     return result
   }
 
