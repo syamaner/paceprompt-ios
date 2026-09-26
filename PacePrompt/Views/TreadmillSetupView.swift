@@ -15,6 +15,13 @@ struct TreadmillSetupView: View {
                 connectionSection
             }
 
+            if let profiles = treadmill.planningProfiles {
+                Section {
+                    if let failure = profiles.failure { Label(failure.message, systemImage: "exclamationmark.triangle") }
+                    NavigationLink("Saved treadmills") { PlanningProfilesView(model: profiles) }
+                        .frame(minHeight: 44).accessibilityIdentifier("profiles.manage")
+                }
+            }
             capabilitySection
             subscriptionSection
             freshnessCaptureSection
@@ -26,6 +33,7 @@ struct TreadmillSetupView: View {
 
             safetySection
         }
+        .modifier(OptionalPlanningProfileDiscoveryPresentation(model: treadmill.planningProfiles))
         .navigationTitle("Treadmill")
         .navigationBarTitleDisplayMode(.inline)
     }

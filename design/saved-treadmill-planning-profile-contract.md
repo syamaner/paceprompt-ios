@@ -2,7 +2,7 @@
 
 Contract: `saved-treadmill-planning/v1`. Issue: [#140](https://github.com/syamaner/paceprompt-ios/issues/140), parent [#139](https://github.com/syamaner/paceprompt-ios/issues/139).
 
-Status: specification selected under the operator's instruction to deliver #140 autonomously; acceptance requires independent exact-head review and merge. This document defines future #141–#144 behaviour. It does not claim that the current app implements it.
+Status: ratified by #140 / PR #168. The #141 implementation adds the local profile repository and lifecycle (4i–4l); authoring integration, historical plan compatibility and live-preflight changes in #142–#144 remain future behaviour. Implementation and simulator evidence do not establish signed-device protection or physical Bluetooth acceptance.
 
 ## Authority and architecture gate
 

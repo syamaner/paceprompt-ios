@@ -60,6 +60,7 @@ if rg -n 'CBCentralManagerOptionRestoreIdentifierKey|willRestoreState' PacePromp
   exit 1
 fi
 
+python3 -B scripts/verify_planning_profile_boundaries.py
 python3 -B scripts/verify_import_resources.py
 python3 -B scripts/verify_release_configuration.py
 python3 -B Evaluation/WorkoutImport/Scoring/scorer.py \

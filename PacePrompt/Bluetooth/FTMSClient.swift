@@ -44,6 +44,7 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
     private var currentPeripheral: CBPeripheral?
     private var currentName = "Treadmill"
     private var pendingInitialReads: Set<String> = []
+    private var currentCharacteristics: [String: CBCharacteristic] = [:]
     private var deferredNotificationCharacteristics: [String: CBCharacteristic] = [:]
     private var retainedControlPointLink: CoreBluetoothFTMSControlPointLink?
 #if DEBUG
@@ -151,6 +152,7 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
 
     private func resetPendingOperations() {
         pendingInitialReads.removeAll()
+        currentCharacteristics.removeAll()
         deferredNotificationCharacteristics.removeAll()
     }
 
@@ -209,6 +211,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        guard peripheral === currentPeripheral else { return }
         delegate?.ftmsClient(self, didReceive: .connection(.discovering(name: currentName)))
         peripheral.discoverServices([CBUUID(string: FTMSUUID.service)])
     }
@@ -218,6 +221,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         didFailToConnect peripheral: CBPeripheral,
         error: Error?
     ) {
+        guard peripheral === currentPeripheral else { return }
         resetPendingOperations()
         invalidateControlPointLink(reason: error?.localizedDescription ?? "Connection failed")
         currentPeripheral = nil
@@ -235,6 +239,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
+        guard peripheral === currentPeripheral else { return }
         resetPendingOperations()
         invalidateControlPointLink(reason: error?.localizedDescription)
         currentPeripheral = nil
@@ -248,6 +253,7 @@ extension FTMSClient: @MainActor CBCentralManagerDelegate {
 
 extension FTMSClient: @MainActor CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        guard peripheral === currentPeripheral else { return }
         if let error {
             delegate?.ftmsClient(self, didReceive: .connection(.failed(message: error.localizedDescription)))
             return
@@ -272,11 +278,13 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         didDiscoverCharacteristicsFor service: CBService,
         error: Error?
     ) {
+        guard peripheral === currentPeripheral else { return }
         if let error {
             delegate?.ftmsClient(self, didReceive: .connection(.failed(message: error.localizedDescription)))
             return
         }
 
+        guard peripheral === currentPeripheral, service.peripheral === currentPeripheral else { return }
         let characteristics = service.characteristics ?? []
         let infos = characteristics.map {
             FTMSCharacteristicInfo(
@@ -291,6 +299,7 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         for characteristic in characteristics {
             characteristicsByUUID[characteristic.uuid.uuidString.uppercased()] = characteristic
         }
+        currentCharacteristics = characteristicsByUUID
         if let controlPoint = characteristicsByUUID[FTMSUUID.fitnessMachineControlPoint] {
             retainedControlPointLink = CoreBluetoothFTMSControlPointLink(
                 peripheral: peripheral,
@@ -345,6 +354,7 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         error: Error?
     ) {
         let uuid = characteristic.uuid.uuidString.uppercased()
+        guard peripheral === currentPeripheral, currentCharacteristics[uuid] === characteristic else { return }
         if uuid == FTMSUUID.fitnessMachineControlPoint {
             retainedControlPointLink?.receiveIndication(characteristic.value, error: error)
             return
@@ -385,6 +395,7 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
         error: Error?
     ) {
         let uuid = characteristic.uuid.uuidString.uppercased()
+        guard peripheral === currentPeripheral, currentCharacteristics[uuid] === characteristic else { return }
         if uuid == FTMSUUID.fitnessMachineControlPoint {
             retainedControlPointLink?.receiveNotificationState(
                 isNotifying: characteristic.isNotifying,
