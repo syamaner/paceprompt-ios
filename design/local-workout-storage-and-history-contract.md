@@ -158,3 +158,7 @@ The accepted contract enables, but does not authorise, these separately bounded 
 7. separately authorised on-device Data Protection and recovery validation.
 
 None of these slices may add network transmission, HealthKit, watchOS, FTMS writes, workout execution or physical hardware operation unless that exact work has separate current authority.
+
+## Saved planning profiles: separate future storage boundary
+
+The [saved treadmill planning profile contract](saved-treadmill-planning-profile-contract.md), issue #140, permits a separate protected/backup-excluded historical-profile collection containing bounded decoded ranges, accepted observation date, user name and an installation-local opaque identity token. This narrow exception to the non-persistent live-capability rule does not permit raw packets, raw peripheral identifiers or Bluetooth names in that store. Plans/history/exports remain equipment-neutral and do not gain profile fields. Its separate confirmed reset scope does not silently expand Reset local workout data. The current app implementation is unchanged by this documentation amendment.
