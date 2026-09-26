@@ -315,7 +315,13 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       modifiedAt: Date(timeIntervalSince1970: 200),
       plan: h.plan.plan
     )
-    let coordinator = WorkoutSessionCoordinator(binding: h.binding)
+    let displayWake = RecordingWorkoutDisplayWakeController()
+    let coordinator = WorkoutSessionCoordinator(
+      binding: h.binding,
+      displayWakeController: displayWake
+    )
+
+    XCTAssertEqual(displayWake.values, [false])
 
     coordinator.begin(record)
     coordinator.limits = .init(
@@ -333,6 +339,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     coordinator.handlePreflight(.beginWorkout)
 
     XCTAssertEqual(coordinator.stage, .exercise)
+    XCTAssertEqual(displayWake.values.last, true)
     XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
     XCTAssertEqual(h.binding.orchestrator.frozenAttempt?.sourcePlanID, planID)
     XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.schemaVersion, 2)
@@ -348,7 +355,11 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       modifiedAt: Date(timeIntervalSince1970: 200),
       plan: h.plan.plan
     )
-    let coordinator = WorkoutSessionCoordinator(binding: h.binding)
+    let displayWake = RecordingWorkoutDisplayWakeController()
+    let coordinator = WorkoutSessionCoordinator(
+      binding: h.binding,
+      displayWakeController: displayWake
+    )
 
     coordinator.begin(record)
     coordinator.limits = .init(
@@ -358,6 +369,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     coordinator.cancelBeforeExercise()
 
     XCTAssertEqual(coordinator.stage, .inactive)
+    XCTAssertEqual(displayWake.values.last, false)
     XCTAssertEqual(h.binding.orchestrator.state.execution, .idle)
     XCTAssertNil(h.binding.orchestrator.frozenAttempt)
     XCTAssertNil(h.binding.orchestrator.lastPersistedSummary)
@@ -372,6 +384,36 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
+  func testSessionCoordinatorReleasesDisplayWakeAfterInterruption() {
+    let h = Harness()
+    h.makeReadyWithFreshStationaryTelemetry()
+    let record = SavedPlanRecord(
+      id: UUID(uuidString: "00000000-0000-0000-0000-000000000109")!,
+      createdAt: Date(timeIntervalSince1970: 100),
+      modifiedAt: Date(timeIntervalSince1970: 200),
+      plan: h.plan.plan
+    )
+    let displayWake = RecordingWorkoutDisplayWakeController()
+    let coordinator = WorkoutSessionCoordinator(
+      binding: h.binding,
+      displayWakeController: displayWake
+    )
+    coordinator.begin(record)
+    coordinator.limits = .init(
+      maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3"
+    )
+    coordinator.prepareWorkout()
+    coordinator.handlePreflight(.beginWorkout)
+
+    XCTAssertEqual(displayWake.values, [false, true])
+
+    h.binding.receive(.connection(.disconnected(message: "Synthetic interruption")))
+
+    XCTAssertEqual(coordinator.exercisePresentation.stage, .interrupted)
+    XCTAssertEqual(displayWake.values, [false, true, false])
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
   func testSessionLimitDraftParsesExactLocaleDecimalWithoutInventingDefaults() {
     XCTAssertNil(WorkoutSessionLimitDraft().ceilings())
     let parsed = WorkoutSessionLimitDraft(
@@ -383,6 +425,41 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(parsed?.maximumSpeed.value, Decimal(string: "0.70"))
     XCTAssertEqual(parsed?.maximumInclination.value, 1)
     XCTAssertEqual(parsed?.maximumStepSpeedChange.value, Decimal(string: "0.10"))
+  }
+
+  func testDisplayWakePolicyKeepsOnlyNonterminalExerciseStagesAwake() {
+    let activeStages: [WorkoutExerciseStage] = [
+      .waiting, .applying, .running, .override, .checking, .paused, .restoring,
+      .awaitingPhysicalStop, .readyToEnd, .ending,
+    ]
+    let terminalStages: [WorkoutExerciseStage] = [.finished, .failed, .interrupted]
+
+    for stage in activeStages {
+      XCTAssertTrue(
+        WorkoutDisplayWakePolicy.shouldKeepScreenAwake(
+          sessionStage: .exercise,
+          exerciseStage: stage
+        ),
+        "Expected \(stage) to keep the display awake"
+      )
+    }
+    for stage in terminalStages {
+      XCTAssertFalse(
+        WorkoutDisplayWakePolicy.shouldKeepScreenAwake(
+          sessionStage: .exercise,
+          exerciseStage: stage
+        ),
+        "Expected \(stage) to release the display wake request"
+      )
+    }
+    for stage in [WorkoutSessionStage.inactive, .preparation, .preflight] {
+      XCTAssertFalse(
+        WorkoutDisplayWakePolicy.shouldKeepScreenAwake(
+          sessionStage: stage,
+          exerciseStage: .running
+        )
+      )
+    }
   }
 
   func testAcceptedPhysicalResumeRestoresEffectiveSpeedThenInclination() throws {
@@ -752,6 +829,15 @@ private final class BindingClock: WorkoutOrchestrationClock {
 private final class BindingAttemptIDs: WorkoutAttemptIDSource {
   func nextAttemptID() -> UUID {
     UUID(uuidString: "00000000-0000-0000-0000-000000000063")!
+  }
+}
+
+@MainActor
+private final class RecordingWorkoutDisplayWakeController: WorkoutDisplayWakeControlling {
+  private(set) var values: [Bool] = []
+
+  func setWorkoutKeepsScreenAwake(_ enabled: Bool) {
+    values.append(enabled)
   }
 }
 
