@@ -41,6 +41,14 @@ git ls-remote origin 'refs/tags/testflight/<marketing-version>-b<build>'
 version/build. `git ls-remote` must print nothing. Stop if either is already in
 use.
 
+If the API key is held only in the protected GitHub environment, do not decode
+or copy it locally just to run this command. Choose a number above the last
+successful release and confirm that its tag is unused. In that operating mode,
+Apple build freshness and the existing app/group/tester are checked by the
+trusted hosted preflight after environment approval and before importing the
+signing identity or uploading. A collision fails closed; investigate it and
+prepare a new build rather than rerunning or moving the immutable tag.
+
 Create a fresh branch from current remote `main`; do not reuse an earlier
 release branch:
 
