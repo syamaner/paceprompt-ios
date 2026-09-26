@@ -5,6 +5,15 @@ Frozen before adapter implementation on 6 September 2026, based on remote main
 Dependencies 6, 10, 11, 15 and 17 were verified closed. This is a mocked implementation
 contract, not live-route acceptance. No credential read, inference or spend is authorised.
 
+26 September 2026 model-identity amendment: the operator selected GPT-6 Sol from
+the separately accepted `sol56-vs-sol6-20260922-01` comparison and authorised the
+bounded production change and internal TestFlight build. The selected request
+alias is `openai/gpt-6-sol`; accepted canonical revision is
+`openai/gpt-6-sol-20260922`. See [the decision record](gpt6-sol-production-decision.md).
+This changes only model identity and its disclosure/fixtures; prompt, route,
+schema, parser rules, mapping, consent, local validation and saved-plan authority
+remain unchanged. Prior evaluation evidence remains immutable.
+
 ## Complete outbound request
 
 [outbound-request.json](outbound-request.json) is the complete synthetic body,
@@ -36,8 +45,8 @@ showing every permitted optional metadata field. It is not a provider transcript
 Success requires HTTP 200 and application/json, with a single complete UTF-8 JSON
 object and no duplicate keys at any depth. Required top-level keys:
 `id` (nonempty string), `object` (`chat.completion`), `created` (nonnegative integer),
-`model` (`openai/gpt-5.6-sol-20260709` or the requested alias
-`openai/gpt-5.6-sol`), `provider` (`openai` or exactly `OpenAI`),
+`model` (`openai/gpt-6-sol-20260922` or the requested alias
+`openai/gpt-6-sol`), `provider` (`openai` or exactly `OpenAI`),
 `choices` (exactly one item). Optional top-level keys: `system_fingerprint`
 (string/null), `usage` (closed object described below), `service_tier`
 (null or `default`). No other fields are accepted, including opt-in router metadata.
@@ -125,8 +134,9 @@ paceprompt_eval/{v3,scorer_adapter}.py. Verification is development-only.
 - [Provider routing](https://openrouter.ai/docs/guides/routing/provider-selection):
   only/order, no fallback, required parameters and data collection denial.
   Service-tier endpoints require explicit opt-in and do not match base slugs.
-- [Sol catalogue](https://openrouter.ai/api/v1/models/openai/gpt-5.6-sol/endpoints):
-  current `openai` endpoint lists the ratified revision and structured output support.
+- [Selected Sol catalogue](https://openrouter.ai/api/v1/models/openai/gpt-6-sol/endpoints):
+  the accepted comparison snapshot pins the `openai` endpoint and selected revision;
+  production response identity still fails closed on drift.
 - [Structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs):
   strict json_schema request format; local validation remains mandatory.
 - [Data collection](https://openrouter.ai/docs/guides/privacy/data-collection):

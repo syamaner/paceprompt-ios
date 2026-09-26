@@ -17,6 +17,13 @@ hard safety gate or decision rule is authorised.
 
 Reviewed summaries:
 
+- [`issue145-sol56-vs-sol6-2026-09-22.md`](issue145-sol56-vs-sol6-2026-09-22.md)
+  preserves the accepted one-repetition comparison and human GPT-6 Sol selection.
+  Its aggregate, audit and manifest are unchanged from the earlier publication
+  branch. Verify with `python3 -B Evaluation/WorkoutImport/Summaries/verify_sol_comparison_publication.py`.
+  The later [production decision](../../../docs/import/gpt6-sol-production-decision.md)
+  implements that selection without relaxing evaluation gates.
+
 - [`issue145-together-matrix-2026-09-26.md`](issue145-together-matrix-2026-09-26.md)
   records the accepted amended eleven-model Together lineage, including
   admission failures, rate-limit pauses and uncertain sends. The additive

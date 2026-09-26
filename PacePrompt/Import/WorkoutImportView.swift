@@ -43,7 +43,7 @@ struct WorkoutImportView: View {
                 NavigationStack {
                     Form {
                         Section("Send this workout text remotely?") {
-                            Text("Your entered workout text will leave this device and be processed by OpenRouter and OpenAI using openai/gpt-5.6-sol, to produce an untrusted structured workout proposal.")
+                            Text("Your entered workout text will leave this device and be processed by OpenRouter and OpenAI using openai/gpt-6-sol, to produce an untrusted structured workout proposal.")
                             Text("We send the exact text below, en-GB locale, the supported unit vocabulary, the fixed versioned instructions, schema and eleven examples, and only your current speed/inclination capability states. Capability ranges remain on this device.")
                             Text("Your stored OpenRouter key authenticates this request. No saved plans, workout history, health data or device identifiers are sent. Remote processing has no zero-retention guarantee; account logging and provider retention policies apply.")
                             Text("PacePrompt validates the proposal locally. You must review the exact plan and separately confirm before it is saved. A request can incur charges on your OpenRouter account.")

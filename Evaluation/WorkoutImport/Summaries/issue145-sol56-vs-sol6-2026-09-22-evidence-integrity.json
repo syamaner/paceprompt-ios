@@ -1,0 +1,7 @@
+{
+  "auditContractVersion": "paceprompt-host-eval-evidence-integrity/sol-comparison-v1",
+  "automaticEvidenceAcceptance": true,
+  "errors": [],
+  "passed": true,
+  "providerDecision": "requiresHumanRatification"
+}
