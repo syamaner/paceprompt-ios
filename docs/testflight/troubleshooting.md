@@ -51,7 +51,8 @@ PY
 
 ## Outcome A: failure before upload and Apple has no build
 
-Examples include source-guard failure, missing approval, toolchain mismatch,
+Examples include source-guard failure, unsigned-build failure, archive-transfer
+rejection, missing/invalid trusted-tools pin, missing approval, toolchain mismatch,
 credential decoding, certificate/profile mismatch, archive/export failure or
 signed-artifact guard failure.
 
@@ -117,6 +118,31 @@ TestFlight App Review without separate authorisation.
 
 ## Common failures
 
+### Missing or invalid trusted tools pin
+
+Verify `RELEASE_TOOLS_SHA` is a full reviewed commit SHA containing the split
+release tools. Follow `setup.md` to bootstrap or deliberately upgrade it.
+Never use a floating branch/tag or silently fall back to candidate tools. An
+old pin can intentionally reject new metadata or unsupported nested code; obtain
+review for the tools update before changing it.
+
+### Archive identity, digest, path or platform mismatch
+
+Stop before signing. The transfer must belong to this exact workflow run,
+attempt 1, source SHA and tag. Do not download another run's archive or substitute
+a file manually. Diagnose in a reviewed change and use a new build/tag; do not
+weaken digest, traversal, symlink, size or nested-code checks. The download
+Action's own digest mismatch can be a warning, so the trusted verifier separately
+requires an exact package SHA-256 match.
+
+### Unsigned build succeeds but signing/export fails
+
+Do not rebuild the candidate on the credential-bearing runner. Check the fixed
+trusted entitlement policy against the profile, archive metadata, signing
+identity and the pinned Xcode export options. Local unsigned-archive success does
+not establish hosted signing/export compatibility. Preserve the failed run and
+use the normal new-build recovery path after a reviewed repair.
+
 ### `Cloud signing permission error` or no profile found
 
 This workflow intentionally uses manual signing. Confirm the current workflow
@@ -158,7 +184,9 @@ obtain an explicit decision before changing tester access.
 Follow [`setup.md`](setup.md) to create a replacement Apple Distribution
 certificate, `.p12` and matching App Store Connect profile. Validate locally,
 replace the environment secrets together, and use a fresh release candidate.
-Do not revoke the old certificate until the replacement release succeeds.
+For planned expiry rotation, revoke the old certificate after the replacement
+release succeeds. For suspected exposure, revoke immediately and stop releases;
+do not preserve a compromised identity while testing its replacement.
 
 ### API 401 or 403
 
