@@ -1,0 +1,442 @@
+{
+  "credentialReadDuringPublication": false,
+  "inferenceSpendDuringPublicationUSD": "0.00",
+  "publicationContractVersion": "paceprompt-workout-import-publication/issue145-together-matrix-r1",
+  "sourceRuns": [
+    "issue145-11model-together-matrix-20260925-01",
+    "issue145-11model-together-matrix-20260926-01"
+  ],
+  "strata": {
+    "issue130-acceptance-r2": {
+      "deepseek/deepseek-v4-flash-0731": {
+        "completionTokens": 70836,
+        "conservativeChargeUSD": "0.27492624",
+        "logicalStates": {
+          "terminalComplete": 90
+        },
+        "physicalSends": 90,
+        "promptTokens": 398334,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 82,
+        "totalTokens": 469170,
+        "usageComplete": true,
+        "usageReportedSends": 90,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "google/gemini-3.7-flash": {
+        "completionTokens": 0,
+        "conservativeChargeUSD": "0",
+        "logicalStates": {
+          "terminalSkipped": 90
+        },
+        "physicalSends": 0,
+        "promptTokens": 0,
+        "reportedCostComplete": true,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 0,
+        "totalTokens": 0,
+        "usageComplete": true,
+        "usageReportedSends": 0,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "minimax/minimax-m3": {
+        "completionTokens": 14050,
+        "conservativeChargeUSD": "1.5941952",
+        "logicalStates": {
+          "terminalComplete": 90
+        },
+        "physicalSends": 90,
+        "promptTokens": 396708,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 63,
+        "totalTokens": 410758,
+        "usageComplete": true,
+        "usageReportedSends": 90,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "mistralai/mistral-small-3.2-24b-instruct": {
+        "completionTokens": 0,
+        "conservativeChargeUSD": "0",
+        "logicalStates": {
+          "terminalSkipped": 90
+        },
+        "physicalSends": 0,
+        "promptTokens": 0,
+        "reportedCostComplete": true,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 0,
+        "totalTokens": 0,
+        "usageComplete": true,
+        "usageReportedSends": 0,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "nvidia/nemotron-3-ultra-550b-a55b": {
+        "completionTokens": 0,
+        "conservativeChargeUSD": "0",
+        "logicalStates": {
+          "terminalSkipped": 90
+        },
+        "physicalSends": 0,
+        "promptTokens": 0,
+        "reportedCostComplete": true,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 0,
+        "totalTokens": 0,
+        "usageComplete": true,
+        "usageReportedSends": 0,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "nvidia/nemotron-3.5-lightning": {
+        "completionTokens": 0,
+        "conservativeChargeUSD": "0",
+        "logicalStates": {
+          "terminalSkipped": 90
+        },
+        "physicalSends": 0,
+        "promptTokens": 0,
+        "reportedCostComplete": true,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 0,
+        "totalTokens": 0,
+        "usageComplete": true,
+        "usageReportedSends": 0,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "openai/gpt-5.6-luna": {
+        "completionTokens": 14804,
+        "conservativeChargeUSD": "1.3584828",
+        "logicalStates": {
+          "terminalComplete": 90
+        },
+        "physicalSends": 90,
+        "promptTokens": 423462,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 75,
+        "totalTokens": 438266,
+        "usageComplete": true,
+        "usageReportedSends": 90,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "openai/gpt-5.6-sol": {
+        "completionTokens": 15989,
+        "conservativeChargeUSD": "12.110268",
+        "logicalStates": {
+          "terminalComplete": 90
+        },
+        "physicalSends": 90,
+        "promptTokens": 423462,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 90,
+        "totalTokens": 439451,
+        "usageComplete": true,
+        "usageReportedSends": 90,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "qwen/qwen-2.5-7b-instruct": {
+        "completionTokens": 23467,
+        "conservativeChargeUSD": "0.3840504",
+        "logicalStates": {
+          "terminalComplete": 90
+        },
+        "physicalSends": 90,
+        "promptTokens": 383910,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 25,
+        "totalTokens": 407377,
+        "usageComplete": true,
+        "usageReportedSends": 90,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "qwen/qwen3.8-27b": {
+        "completionTokens": 97004,
+        "conservativeChargeUSD": "2.19049056",
+        "logicalStates": {
+          "terminalComplete": 89,
+          "terminalPossiblySent": 1
+        },
+        "physicalSends": 90,
+        "promptTokens": 394945,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 86,
+        "totalTokens": 491949,
+        "usageComplete": false,
+        "usageReportedSends": 89,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "z-ai/glm-5.3-flash": {
+        "completionTokens": 0,
+        "conservativeChargeUSD": "0",
+        "logicalStates": {
+          "terminalSkipped": 90
+        },
+        "physicalSends": 0,
+        "promptTokens": 0,
+        "reportedCostComplete": true,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 90,
+        "strictExactAttempts": 0,
+        "totalTokens": 0,
+        "usageComplete": true,
+        "usageReportedSends": 0,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      }
+    },
+    "v3-heldout-regression": {
+      "deepseek/deepseek-v4-flash-0731": {
+        "completionTokens": 144075,
+        "conservativeChargeUSD": "0.72615156",
+        "logicalStates": {
+          "terminalComplete": 237
+        },
+        "physicalSends": 238,
+        "promptTokens": 1043079,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 170,
+        "totalTokens": 1187154,
+        "usageComplete": false,
+        "usageReportedSends": 237,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "google/gemini-3.7-flash": {
+        "completionTokens": 0,
+        "conservativeChargeUSD": "0",
+        "logicalStates": {
+          "terminalSkipped": 237
+        },
+        "physicalSends": 0,
+        "promptTokens": 0,
+        "reportedCostComplete": true,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 0,
+        "totalTokens": 0,
+        "usageComplete": true,
+        "usageReportedSends": 0,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "minimax/minimax-m3": {
+        "completionTokens": 32387,
+        "conservativeChargeUSD": "4.1936751",
+        "logicalStates": {
+          "terminalComplete": 237
+        },
+        "physicalSends": 237,
+        "promptTokens": 1038945,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 148,
+        "totalTokens": 1071332,
+        "usageComplete": true,
+        "usageReportedSends": 237,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "mistralai/mistral-small-3.2-24b-instruct": {
+        "completionTokens": 7077,
+        "conservativeChargeUSD": "0.306825925",
+        "logicalStates": {
+          "terminalComplete": 72,
+          "terminalFailure": 1,
+          "terminalSkipped": 164
+        },
+        "physicalSends": 85,
+        "promptTokens": 315632,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 51,
+        "totalTokens": 322709,
+        "usageComplete": false,
+        "usageReportedSends": 72,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "nvidia/nemotron-3-ultra-550b-a55b": {
+        "completionTokens": 0,
+        "conservativeChargeUSD": "0",
+        "logicalStates": {
+          "terminalSkipped": 237
+        },
+        "physicalSends": 0,
+        "promptTokens": 0,
+        "reportedCostComplete": true,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 0,
+        "totalTokens": 0,
+        "usageComplete": true,
+        "usageReportedSends": 0,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "nvidia/nemotron-3.5-lightning": {
+        "completionTokens": 27639,
+        "conservativeChargeUSD": "0.74812920",
+        "logicalStates": {
+          "terminalComplete": 186,
+          "terminalFailure": 1,
+          "terminalSkipped": 50
+        },
+        "physicalSends": 200,
+        "promptTokens": 837849,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 75,
+        "totalTokens": 865488,
+        "usageComplete": false,
+        "usageReportedSends": 186,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "openai/gpt-5.6-luna": {
+        "completionTokens": 40086,
+        "conservativeChargeUSD": "3.5744232",
+        "logicalStates": {
+          "terminalComplete": 237
+        },
+        "physicalSends": 237,
+        "promptTokens": 1109433,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 198,
+        "totalTokens": 1149519,
+        "usageComplete": true,
+        "usageReportedSends": 237,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "openai/gpt-5.6-sol": {
+        "completionTokens": 34500,
+        "conservativeChargeUSD": "31.861224",
+        "logicalStates": {
+          "terminalComplete": 236,
+          "terminalUnprojected": 1
+        },
+        "physicalSends": 237,
+        "promptTokens": 1104760,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 219,
+        "totalTokens": 1139260,
+        "usageComplete": false,
+        "usageReportedSends": 236,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "qwen/qwen-2.5-7b-instruct": {
+        "completionTokens": 40707,
+        "conservativeChargeUSD": "1.0141418",
+        "logicalStates": {
+          "terminalComplete": 237
+        },
+        "physicalSends": 238,
+        "promptTokens": 1004862,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 77,
+        "totalTokens": 1045569,
+        "usageComplete": false,
+        "usageReportedSends": 237,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "qwen/qwen3.8-27b": {
+        "completionTokens": 175573,
+        "conservativeChargeUSD": "5.76479400",
+        "logicalStates": {
+          "terminalComplete": 235,
+          "terminalPossiblySent": 2
+        },
+        "physicalSends": 237,
+        "promptTokens": 1036736,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 201,
+        "totalTokens": 1212309,
+        "usageComplete": false,
+        "usageReportedSends": 235,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      },
+      "z-ai/glm-5.3-flash": {
+        "completionTokens": 83,
+        "conservativeChargeUSD": "0.020092975",
+        "logicalStates": {
+          "terminalComplete": 1,
+          "terminalFailure": 1,
+          "terminalSkipped": 235
+        },
+        "physicalSends": 5,
+        "promptTokens": 4153,
+        "reportedCostComplete": false,
+        "reportedCostScope": "reported physical sends only; subtotal is not total cost or invoice",
+        "reportedCostSends": 0,
+        "reportedCostSubtotalUSD": "0",
+        "scheduledAttempts": 237,
+        "strictExactAttempts": 1,
+        "totalTokens": 4236,
+        "usageComplete": false,
+        "usageReportedSends": 1,
+        "usageTotalsScope": "reported physical sends only; missing usage is not zero"
+      }
+    }
+  }
+}
