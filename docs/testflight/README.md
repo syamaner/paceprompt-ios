@@ -73,3 +73,12 @@ stopped. All four passed in isolation on the default iPhone 17 Pro/iOS 26.5,
 and the complete replacement gate on that destination passed. This does not
 establish that the alternate simulator's layout issue is fixed; app/UI code
 was not changed by this release-security slice.
+
+On 26 September 2026, PR #165 merged the split workflow at
+`2050f1dee6763297fc784f80aaf59c317b2d7e29`. Independent exact-head review found no
+actionable findings, exact-main CI passed, and the protected environment's
+`RELEASE_TOOLS_SHA` was set to that merge SHA and read back successfully. The
+release tests and lint checks also passed from that exact merged checkout.
+This activation did not create a release tag or exercise Apple signing/upload;
+a fresh build is required because 1.0.1 (10) was already uploaded by the prior
+workflow.
