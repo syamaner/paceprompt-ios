@@ -1199,3 +1199,103 @@ does not reinterpret it into an eligible model.
 
 The composite comparison is secondary to the hard gates and disaggregated
 results. The harness never selects a production provider.
+
+# Issue #145 eleven-model r3 gate (zero-spend preparation)
+
+The operator ratified profile SHA-256
+`ac3bd1269e1b6f219f5624bdef3978a18bb17b6fec3eb7f80e9ed1bee9246bfe`,
+root run `issue145-11model-matrix-20260925-01`, and a cumulative USD 300.00
+hard limit on 25 September 2026. This is **not** live-run authorisation. The
+additive ratification is `issue145-11model-r3-ratification-r1.json`; the earlier
+proposal, queue, scorer, corpora, prompt and provider evidence remain sealed.
+
+From this directory, the following commands use only local data and a public
+catalogue; they do not load `OPENROUTER_API_KEY` or call an inference endpoint:
+
+```sh
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate verify-ratification
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate prepare-root --run-id issue145-11model-matrix-20260925-01
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate seal-root --run-id issue145-11model-matrix-20260925-01
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate verify-root --run-id issue145-11model-matrix-20260925-01
+```
+
+The ignored gate binds all 3,608 exact logical request hashes, 11 per-model
+warm-ups, 3,597 scored positions, 10,824 maximum physical sends, fresh public
+endpoint identity and three-send conservative cost. Preparation fails closed
+if a route disappears, price rises beyond the finite cap, a request control
+changes, or the immutable profile/queue differs. A live send is possible only
+through the separate `issue145_11model_run` entrypoint with the sealed phrase,
+exact cumulative cap and a *later* operator live-run authorisation. Do not run
+that entrypoint under the present zero-spend approval.
+
+After an authorised root ends or is interrupted, a manually initiated child
+must supply root-to-leaf `--ancestor-seal` values containing externally pinned
+run ID, gate SHA-256 and complete evidence-tree SHA-256. The child gate verifies
+every ancestor and its wire ledger, reserves the inherited cumulative budget,
+and admits only never-started positions. Skipped or possibly sent positions
+are terminal and cannot be replayed. The root phrase covers an admitted child
+under the standing restart contract; a child is never started automatically.
+Raw run evidence stays ignored. Aggregate publication, model selection,
+production changes, merge and issue closure remain separate decisions.
+
+If a later reviewed compatible HostEval-only repair changes the source hash,
+historical gates remain immutable. Before a child can start, a separate
+committed JSON bridge under `Evaluation/WorkoutImport/SourceRepairBridges/`
+must bind the old and new source hashes, old and new commits, exact complete
+diff SHA-256, independent review evidence, focused validation evidence and
+affirmation that frozen inputs remain unchanged. Supply its repository-relative
+path and file SHA-256 with `--source-repair-seal PATH:SHA256` when preparing or
+verifying the child (and when running an already sealed instance under a
+repaired source). The gate verifies the Git blobs, diff, commit ancestry and
+full bridge chain before credential admission. The gate also rechecks the
+ratified prompt, corpus, schema and scorer assets outside HostEval, including
+the two v1 scorer contracts, before it can admit a live run. No bridge is
+created or approved by this initial zero-spend slice.
+
+## Issue #145 MiniMax Together r4 proposal (zero spend)
+
+The operator selected an additive eleven-model proposal after the ratified
+MiniMax `coreweave/fp4` route alternated between available and unavailable
+in fresh public preflight. `issue145_11model_together_r4` changes only that
+model's exact endpoint to `together`; the other ten model routes, 109 scored
+questions and answers, 3,597 scored queue positions, generation controls,
+retry policy and separate per-stratum reporting remain unchanged. It removes
+the old MiniMax `zdr` requirement, while retaining the outbound
+`data_collection=deny`, exact-provider pin and disabled fallback. The old r3
+profile and its unstarted sealed CoreWeave gate are not rewritten.
+
+From `HostEval/`, these commands use only a public catalogue and mocked
+payloads; they do not load a credential or call an inference endpoint:
+
+```sh
+uv run --frozen python -m paceprompt_eval.issue145_11model_together_r4 prepare
+uv run --frozen python -m paceprompt_eval.issue145_11model_together_r4 verify
+```
+
+The proposal is not a live gate: its exact profile, Together route, finite cumulative cap
+and initial live execution require separate ratification and an independently
+reviewed runner before any credential read or inference send. A Together
+warm-up must pass the existing native transport and full semantic schema gate
+before its scored positions may run; catalogue metadata alone is not a
+compatibility or model-quality result.
+
+## Issue #145 ratified Together r4 gate (zero-spend preparation)
+
+The operator subsequently confirmed the exact r4 profile, root run and USD
+300 cumulative cap. `issue145-11model-together-r4-ratification-r1.json`
+records that decision without changing the earlier CoreWeave ratification or
+evidence. `issue145_11model_together_gate` and
+`issue145_11model_together_run` are separately versioned so the r3 gate and
+runner remain byte-identical. The Together gate checks the source-bound
+profile, frozen prompt/corpora/scorer, exact route and output contract, all
+3,608 planned positions and fresh public prices. The serial runner retains
+the three-send transient retry, durable wire ledger, two-second
+post-completion pacing, warm-up admission, separate fixed-denominator stratum
+reports and cumulative restart budget.
+
+`verify-ratification`, `prepare-root`, `seal-root` and `verify-root` are
+zero-spend actions. The sealed gate yields an exact authorization phrase;
+that phrase, run ID and USD limit need a separate explicit live authorization
+before the runner may read the process-only key or send inference. Raw run
+evidence remains local and ignored. Aggregate publication and production
+selection remain separate.

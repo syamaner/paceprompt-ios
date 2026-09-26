@@ -1,0 +1,23 @@
+{
+  "ratificationVersion": "paceprompt-host-eval-ratification/issue145-11model-together-r4-r1",
+  "status": "profile-and-cap-ratified-live-run-not-authorized",
+  "source": "operator confirmed the exact Together r4 profile and USD 300 cap in the 2026-09-25 Codex conversation",
+  "preparedRunID": "issue145-11model-together-profile-r4-20260925-01",
+  "profileSha256": "913620ebed0f69398d9530630ecd2ee4ba110b534cc3e554ea73b5b6210d968c",
+  "profileEvidenceTreeSha256": "5329b255e0c6b5781f265b52ba703ec68447f64d0efef7b628daf77c1c7269d0",
+  "preparationSourceTreeSha256": "10db3fcb72384275a97675545aaa0720e0629263533914133952fb42e74d1dc8",
+  "proposedRootRunID": "issue145-11model-together-matrix-20260925-01",
+  "queueSha256": "1c0d4ce6c43c40919afc8ac7d420403bc18f67773bcf355b9c93439f0a76ea05",
+  "cumulativeHardLimitUSD": "300.00",
+  "currency": "USD",
+  "warmupLogicalPositions": 11,
+  "scoredLogicalPositions": 3597,
+  "maximumPhysicalSends": 10824,
+  "liveAuthorization": null,
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false
+  }
+}

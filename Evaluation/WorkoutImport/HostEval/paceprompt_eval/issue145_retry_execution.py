@@ -33,7 +33,7 @@ _WIRE_STATES = frozenset({
 })
 _POSITION_STATES = frozenset({
     "inProgress", "terminalPossiblySent", "terminalBudgetStop",
-    "terminalComplete", "terminalFailure",
+    "terminalComplete", "terminalFailure", "terminalSkipped",
 })
 
 
@@ -152,6 +152,21 @@ class RetryingWireExecutor:
                 or self.ledger_path.is_symlink()):
             raise ValueError("wire journal path became symlinked")
         _atomic_json(self.ledger_path, self.ledger)
+
+    def skip_position(self, *, logical_id: str, reason: str) -> dict[str, Any]:
+        """Record a policy-blocked position in place without a physical send."""
+        positions = self.ledger["positions"]
+        planned = self.ledger["plannedPositionIDs"]
+        if (len(positions) >= len(planned) or logical_id != planned[len(positions)]
+                or any(item["state"] == "inProgress" for item in positions)
+                or not isinstance(reason, str)
+                or reason not in {"prerequisiteMismatch", "rateLimited"}):
+            raise ValueError("skip is not the next frozen policy-blocked position")
+        position = {"logicalID": logical_id, "requestSha256": None,
+                    "state": "terminalSkipped", "reasonCategory": reason, "wires": []}
+        positions.append(position)
+        self._persist()
+        return position
 
     async def run_position(
         self, *, logical_id: str, request_body: bytes, worst_case_usd: str
@@ -336,6 +351,10 @@ def _lineage_attempts(ledger: dict[str, Any]) -> list[dict[str, Any]]:
         wires = position["wires"]
         # The position journal precedes the first possibly-sent wire marker.
         # An interruption in that gap cannot have reached send_once.
+        if position["state"] == "terminalSkipped":
+            attempts.append({"attemptID": logical_id, "state": "skipped",
+                             "reservedWorstCaseUSD": None, "actualUSD": None})
+            continue
         if not wires:
             attempts.append({"attemptID": logical_id, "state": "notStarted",
                              "reservedWorstCaseUSD": None, "actualUSD": None})
@@ -437,8 +456,15 @@ def verify_wire_ledger(
         if not isinstance(wires, list) or len(wires) > 3:
             errors.append(f"wire list invalid: {index}")
             continue
-        if not wires and position.get("state") not in {"inProgress", "terminalPossiblySent"}:
+        if not wires and position.get("state") not in {
+            "inProgress", "terminalPossiblySent", "terminalSkipped"
+        }:
             errors.append(f"unsent position state invalid: {index}")
+        if position.get("state") == "terminalSkipped" and (
+            wires or position.get("requestSha256") is not None
+            or position.get("reasonCategory") not in {"prerequisiteMismatch", "rateLimited"}
+        ):
+            errors.append(f"skipped position contract invalid: {index}")
         for number, wire in enumerate(wires, start=1):
             if not isinstance(wire, dict):
                 errors.append(f"wire invalid: {index}/{number}")

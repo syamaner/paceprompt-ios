@@ -186,6 +186,30 @@ class RetryingWireExecutorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(executor.ledger["chargedUSD"], "0.01")
         self.assertEqual(self.audit(executor)["status"], "valid")
 
+    async def test_policy_skip_is_terminal_unsent_and_cannot_be_replayed(self) -> None:
+        executor = self.executor()
+        first = executor.skip_position(logical_id="one", reason="prerequisiteMismatch")
+        self.assertEqual(first["state"], "terminalSkipped")
+        self.assertEqual(executor.ledger["chargedUSD"], "0")
+        self.assertEqual(self.audit(executor)["status"], "valid")
+        self.assertEqual(executor.lineage_attempts()[0]["state"], "skipped")
+        with self.assertRaisesRegex(ValueError, "next frozen"):
+            await executor.run_position(logical_id="one", request_body=BODY,
+                                        worst_case_usd="0.01")
+        with self.assertRaisesRegex(ValueError, "prefix"):
+            admit_child(
+                root_run_id=self.run_dir.name, profile_sha256=PROFILE,
+                queue_ids=["one", "two"], hard_limit_usd="0.03",
+                parents=[{
+                    "runID": self.run_dir.name, "rootRunID": self.run_dir.name,
+                    "profileSha256": PROFILE, "lineageHardLimitUSD": "0.03",
+                    "parentRunID": None, "parentEvidenceSha256": None,
+                    "verifiedEvidenceTreeSha256": evidence_tree_sha256(self.run_dir),
+                    "attempts": executor.lineage_attempts(),
+                }], child_run_id="child", child_queue_ids=["one"],
+                child_worst_case_usd={"one": "0.01"},
+            )
+
     async def test_third_transient_response_exhausts_send_limit(self) -> None:
         self.responses = [self.response(503), self.response(429), self.response(529)]
         executor = self.executor(cap="0.06")

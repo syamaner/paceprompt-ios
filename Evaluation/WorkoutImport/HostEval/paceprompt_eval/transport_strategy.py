@@ -396,6 +396,20 @@ ISSUE145_R3_ROUTE_STRATEGIES: Mapping[
 )
 
 
+ISSUE145_R4_REGISTRY_ID = "strategyRegistryIssue145TogetherR4"
+ISSUE145_R4_ROUTE_STRATEGIES: Mapping[
+    ProviderRoute, TransportStrategyID
+] = MappingProxyType(
+    {
+        ProviderRoute(
+            "minimax/minimax-m3",
+            "minimax/minimax-m3-20260531",
+            "together",
+        ): TransportStrategyID.NESTED_V2_3,
+    }
+)
+
+
 ROUTE_STRATEGY_REGISTRIES: Mapping[
     str, Mapping[ProviderRoute, TransportStrategyID]
 ] = MappingProxyType(
@@ -406,6 +420,7 @@ ROUTE_STRATEGY_REGISTRIES: Mapping[
         V4_OPEN_WEIGHT_REGISTRY_ID: V4_OPEN_WEIGHT_ROUTE_STRATEGIES,
         ISSUE145_V5_REGISTRY_ID: ISSUE145_V5_ROUTE_STRATEGIES,
         ISSUE145_R3_REGISTRY_ID: ISSUE145_R3_ROUTE_STRATEGIES,
+        ISSUE145_R4_REGISTRY_ID: ISSUE145_R4_ROUTE_STRATEGIES,
     }
 )
 

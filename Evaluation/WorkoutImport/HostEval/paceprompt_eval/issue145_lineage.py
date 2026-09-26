@@ -11,7 +11,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 
-TERMINAL_STATES = frozenset({"completed", "failed", "possiblySent", "notStarted"})
+TERMINAL_STATES = frozenset({"completed", "failed", "possiblySent", "skipped", "notStarted"})
 SENT_STATES = frozenset({"completed", "failed", "possiblySent"})
 
 
@@ -52,7 +52,7 @@ def admit_child(
         raise ValueError("frozen queue has missing or duplicate IDs")
     queue_position = {item: index for index, item in enumerate(queue_ids)}
     seen_runs: set[str] = set()
-    sent: set[str] = set()
+    terminal: set[str] = set()
     charged = Decimal("0")
     predecessor_id: str | None = None
     predecessor_hash: str | None = None
@@ -81,10 +81,11 @@ def admit_child(
             state = attempt.get("state")
             if attempt_id not in queue_position or state not in TERMINAL_STATES:
                 raise ValueError("lineage contains an unknown or non-terminal position")
+            if state != "notStarted":
+                if attempt_id in terminal:
+                    raise ValueError("lineage replays a terminal position")
+                terminal.add(attempt_id)
             if state in SENT_STATES:
-                if attempt_id in sent:
-                    raise ValueError("lineage replays a possibly sent position")
-                sent.add(attempt_id)
                 worst = usd(attempt.get("reservedWorstCaseUSD"))
                 actual = attempt.get("actualUSD")
                 if state == "possiblySent" and actual is not None:
@@ -94,7 +95,7 @@ def admit_child(
                     raise ValueError("actual charge exceeds the reserved bound")
                 charged += charge
             elif attempt.get("actualUSD") is not None or attempt.get("reservedWorstCaseUSD") is not None:
-                raise ValueError("not-started position cannot carry a charge")
+                raise ValueError("unsent position cannot carry a charge")
         seen_runs.add(run_id)
         predecessor_id = run_id
         predecessor_hash = evidence_hash
@@ -106,7 +107,7 @@ def admit_child(
         raise ValueError("child plan must be finite, non-empty and unique")
     if set(child_queue_ids) != set(child_worst_case_usd):
         raise ValueError("child plan lacks per-call worst-case reservations")
-    remaining_ids = [item for item in queue_ids if item not in sent]
+    remaining_ids = [item for item in queue_ids if item not in terminal]
     if child_queue_ids != remaining_ids[: len(child_queue_ids)]:
         raise ValueError("child plan must be a prefix of never-sent frozen positions")
     reservations: dict[str, str] = {}

@@ -1,0 +1,23 @@
+{
+  "ratificationVersion": "paceprompt-host-eval-ratification/issue145-11model-r3-r1",
+  "status": "profile-and-cap-ratified-live-run-not-authorized",
+  "source": "operator exact ratification on 2026-09-25",
+  "preparedRunID": "issue145-11model-profile-r3-20260925-02",
+  "profileSha256": "ac3bd1269e1b6f219f5624bdef3978a18bb17b6fec3eb7f80e9ed1bee9246bfe",
+  "profileEvidenceTreeSha256": "1c1416717f9797ace355957ec4e7627133eb72c307f83ac534ee55be54a5e40e",
+  "preparationSourceTreeSha256": "168276a1bacde64d75c69815fd51491d5a87fa97e2eb819b040f2f3f97b63bfc",
+  "proposedRootRunID": "issue145-11model-matrix-20260925-01",
+  "queueSha256": "1c0d4ce6c43c40919afc8ac7d420403bc18f67773bcf355b9c93439f0a76ea05",
+  "cumulativeHardLimitUSD": "300.00",
+  "currency": "USD",
+  "warmupLogicalPositions": 11,
+  "scoredLogicalPositions": 3597,
+  "maximumPhysicalSends": 10824,
+  "liveAuthorization": null,
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false
+  }
+}

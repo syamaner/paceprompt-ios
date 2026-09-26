@@ -17,6 +17,14 @@ hard safety gate or decision rule is authorised.
 
 Reviewed summaries:
 
+- [`issue145-together-matrix-2026-09-26.md`](issue145-together-matrix-2026-09-26.md)
+  records the accepted amended eleven-model Together lineage, including
+  admission failures, rate-limit pauses and uncertain sends. The additive
+  aggregate, token/cost coverage supplement and mechanical audit are bound by
+  [`issue145-together-matrix-publication-manifest.json`](issue145-together-matrix-publication-manifest.json).
+  All fixed denominators and unchanged gate results are retained; no production
+  model is selected and raw evidence remains ignored.
+
 - [`consolidated-evaluation-2026-09-06.md`](consolidated-evaluation-2026-09-06.md)
   brings together the v3/v4 decision evidence, historical v2.9 screening,
   front-loaded classification metrics and deterministic-scoring methodology,
