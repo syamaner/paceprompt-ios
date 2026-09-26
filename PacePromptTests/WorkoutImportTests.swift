@@ -31,6 +31,9 @@ final class WorkoutImportTests: XCTestCase {
         let fixture = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixtureURL)) as? NSDictionary)
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.httpBody!) as? [String: Any])
         XCTAssertEqual(body as NSDictionary, fixture)
+        XCTAssertEqual(WorkoutImportContract.model, "openai/gpt-6-sol")
+        XCTAssertEqual(WorkoutImportContract.revision, "openai/gpt-6-sol-20260922")
+        XCTAssertEqual(body["model"] as? String, "openai/gpt-6-sol")
 
         let messages = try XCTUnwrap(body["messages"] as? [[String: String]])
         XCTAssertEqual(messages.count, 24)
@@ -253,7 +256,7 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         let valid = try json(envelope())
         var missingModel = valid; missingModel.removeValue(forKey: "model")
         XCTAssertEqual(try failure(missingModel), .identityModelMissing)
-        var unqualifiedRevision = valid; unqualifiedRevision["model"] = "gpt-5.6-sol-20260709"
+        var unqualifiedRevision = valid; unqualifiedRevision["model"] = "gpt-6-sol-20260922"
         XCTAssertEqual(try failure(unqualifiedRevision), .identityModelRevisionWithoutProvider)
         var nonStringModel = valid; nonStringModel["model"] = 56
         XCTAssertEqual(try failure(nonStringModel), .identityModelNonString)
@@ -277,6 +280,18 @@ final class WorkoutImportBoundaryTests: XCTestCase {
                      .identityProviderMissing, .identityProviderMismatch,
                      .identityServiceTier, .identityMessageModel] {
             XCTAssertFalse(code.rawValue.contains("synthetic-secret"))
+        }
+    }
+
+    func testSelectedRevisionRejectsPreviousModelAndRevisionDrift() throws {
+        let valid = try json(envelope())
+        for model in ["openai/gpt-5.6-sol", "openai/gpt-5.6-sol-20260709",
+                      "openai/gpt-6-sol-20990101"] {
+            var object = valid
+            object["model"] = model
+            XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(data(object))) { error in
+                XCTAssertEqual(error as? ImportFailure, .identityModelMismatch)
+            }
         }
     }
 
