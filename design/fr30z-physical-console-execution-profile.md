@@ -56,7 +56,7 @@ These changes adapt the accepted design language to the characterised FR30z. Nec
 
 The production profile may arm only when every current-connection condition below is true:
 
-1. The user explicitly selected the currently connected CoreBluetooth peripheral. Its transient local identity and name bind the current connection epoch and are never committed or exported.
+1. The user explicitly selected the currently connected CoreBluetooth peripheral. Its transient local identity and name bind the current connection epoch and are never committed or exported. The future [saved planning profile contract](saved-treadmill-planning-profile-contract.md) permits only a protected, backup-excluded installation-local opaque token derived from that identity for historical-profile uniqueness; no raw peer ID/name enters that new store. The token is never committed to Git, exported, logged, sent to a provider or accepted as a live profile match. This exception does not change current execution-checkpoint semantics or grant connection/control authority.
 2. Fitness Machine Service `0x1826` is present.
 3. The required characteristic inventory and properties match:
    - `0x2ACC` Read;
