@@ -37,6 +37,15 @@ struct PacePromptApp: App {
       resolvedPlans = PlansViewModel()
       workoutCapabilitiesOverride = nil
     #endif
+    #if DEBUG
+      let uiTesting = ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("--paceprompt-") && $0.hasSuffix("-ui-testing") }
+      let profiles = PlanningProfileUITestSupport.enabled ? PlanningProfileUITestSupport.model()
+        : PlanningProfilesViewModel(repository: uiTesting ? MemoryPlanningProfileRepository() : FilePlanningProfileRepository(), identity: LocalPlanningProfileIdentity())
+      resolvedTreadmill.attachPlanningProfiles(profiles, discoveryEnabled: !uiTesting)
+    #else
+      let profiles = PlanningProfilesViewModel(repository: FilePlanningProfileRepository(), identity: LocalPlanningProfileIdentity())
+      resolvedTreadmill.attachPlanningProfiles(profiles)
+    #endif
     guard let binding = resolvedTreadmill.executionBinding else {
       preconditionFailure("The production treadmill composition must include workout execution")
     }

@@ -20,6 +20,7 @@ This version contains:
 - a newest-100 on-screen packet log plus a 10,000-record, read-only measurement capture with wall-clock and monotonic timing, `0x2ACD` intervals, field presence, initial-read or notification provenance, raw hexadecimal bytes, decoded values, app-lifecycle markers and explicitly human-entered observation markers;
 - deliberate copy and system-share actions, with no automatic persistence or transmission;
 - pure FTMS parsers tested with synthetic payloads;
+- versioned local saved treadmill profiles with opaque identity, protected atomic storage, complete-read discovery, capability-change review, detail-only rename and confirmed deletion; see the [setup and recovery runbook](docs/saved-treadmill-profile-runbook.md);
 - a versioned, Codable workout-plan schema with ordered warm-up, interval, recovery and cool-down steps, explicit seconds, kilometres-per-hour and percent units;
 - a pure deterministic validator that returns a validated-plan wrapper only after structural and known-capability range checks succeed;
 - an accepted [local workout storage and history contract](design/local-workout-storage-and-history-contract.md);

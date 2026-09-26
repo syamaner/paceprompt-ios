@@ -16,6 +16,14 @@ final class TreadmillSetupViewModel: ObservableObject {
     @Published private(set) var applicationActivity: FTMSApplicationActivity = .unknown
     @Published private(set) var lastError: String?
 
+    private(set) var planningProfiles: PlanningProfilesViewModel?
+    private var profileDiscovery: PlanningProfileDiscovery?
+
+    func attachPlanningProfiles(_ profiles: PlanningProfilesViewModel, discoveryEnabled: Bool = true) {
+        planningProfiles = profiles
+        profileDiscovery = discoveryEnabled ? PlanningProfileDiscovery(profiles: profiles) : nil
+    }
+
     private let client: any FTMSClientProtocol
     private(set) var executionBinding: ProductionWorkoutExecutionBinding?
     private let now: () -> Date
@@ -380,6 +388,10 @@ final class TreadmillSetupViewModel: ObservableObject {
 
     func setProtectedDataAvailable(_ available: Bool) {
         executionBinding?.setProtectedDataAvailable(available)
+        if available { planningProfiles?.reload() } else {
+            planningProfiles?.protectedDataLost()
+            profileDiscovery?.receive(.connection(.idle), peerIdentifier: nil)
+        }
     }
 
     #if DEBUG
@@ -687,6 +699,7 @@ extension TreadmillSetupViewModel: FTMSClientDelegate {
             lastError = message
             appendCaptureMarker(.valueError(uuid: uuid, source: source, message: message))
         }
+        profileDiscovery?.receive(event, peerIdentifier: client.connectedPeripheralIdentifier)
         executionBinding?.receive(event)
     }
 }
