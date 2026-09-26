@@ -7,9 +7,43 @@ team key as the Account Holder or an Admin and give it the **App Manager** role.
 Apple team keys apply to every app on the team; they cannot be restricted to
 PacePrompt alone.
 
-Before starting, install Xcode and GitHub CLI, authenticate `gh` to
-`syamaner/paceprompt-ios` with repository-admin access, and confirm that the
-existing Apple Developer and App Store Connect agreements are active.
+Before starting, install Xcode, Python 3.10 or newer, GitHub CLI, `actionlint`,
+`shellcheck`, `ripgrep` and `uv`. Authenticate
+`gh` to `syamaner/paceprompt-ios` with repository-admin access, and confirm that
+the existing Apple Developer and App Store Connect agreements are active.
+Run repository commands from a current checkout of this repository's root.
+The credential-entry examples use macOS **zsh**; `read -s 'NAME?prompt'` is
+zsh syntax, not portable bash syntax. Keep shell tracing disabled (`set +x`).
+
+Check the local prerequisites without changing Apple or GitHub:
+
+```sh
+git rev-parse --show-toplevel
+git remote get-url origin
+gh auth status
+python3 --version
+python3 -c 'import sys; assert sys.version_info >= (3, 10), "Python 3.10+ required"'
+rg --version
+uv --version
+actionlint -version
+shellcheck --version
+xcodebuild -version
+gh api repos/syamaner/paceprompt-ios --jq '.permissions.admin'
+```
+
+The remote must be `syamaner/paceprompt-ios`, and the final command must print
+`true`. The workflow currently requires hosted Xcode **26.6 (17F113)** at
+`/Applications/Xcode_26.6.app/Contents/Developer`, with iOS Simulator SDK 26.5.
+A different local Xcode version does not validate that hosted toolchain.
+Read the checked-in workflows before changing any toolchain pin. The complete
+local gate also supports Xcode 27.0 (27A266a) with Simulator SDK 27.0, and uses
+`uv` to run the locked HostEval tests with Python 3.13. Complete Xcode's first
+launch, required component installation and licence prompts before validation.
+
+Use existing valid credentials and the existing environment when already set
+up; do not create a second certificate, API key or tester group unnecessarily.
+Verify their configuration using the checks below. GitHub cannot return stored
+secret values; listing a secret name does not establish that its value is valid.
 
 Primary references:
 
@@ -65,7 +99,7 @@ Do not add these exports to a shell profile or repository file.
 
 On the Mac that will create the signing identity:
 
-1. Open **Keychain Access** from `/Applications/Utilities`.
+1. Open **Keychain Access** using Spotlight.
 2. Choose **Keychain Access → Certificate Assistant → Request a Certificate
    from a Certificate Authority**.
 3. Enter the Apple Developer account email and a clear common name such as
@@ -113,9 +147,11 @@ Apple asks to change the App ID or HealthKit capability.
 Inspect the profile locally without committing its decoded content:
 
 ```sh
+umask 077
 PROFILE_PATH="$HOME/path/to/PacePrompt_CI_App_Store.mobileprovision"
-security cms -D -i "$PROFILE_PATH" > /private/tmp/paceprompt-profile.plist
-plutil -p /private/tmp/paceprompt-profile.plist | less
+PROFILE_INSPECTION_DIR="$(mktemp -d "${TMPDIR:-/private/tmp}/paceprompt-profile.XXXXXX")"
+security cms -D -i "$PROFILE_PATH" > "$PROFILE_INSPECTION_DIR/profile.plist"
+plutil -p "$PROFILE_INSPECTION_DIR/profile.plist" | less
 ```
 
 Confirm:
@@ -124,13 +160,16 @@ Confirm:
 - `application-identifier` ends with `.com.otherweather.PromptPace`;
 - `com.apple.developer.healthkit` is true;
 - `get-task-allow` is false;
+- `beta-reports-active` is true;
+- `keychain-access-groups` grants the app ID or the expected team wildcard;
 - there is no `ProvisionedDevices` or `ProvisionsAllDevices` entry;
 - the profile is not expired.
 
 Remove the decoded inspection file when finished:
 
 ```sh
-rm -f /private/tmp/paceprompt-profile.plist
+rm -rf "$PROFILE_INSPECTION_DIR"
+unset PROFILE_INSPECTION_DIR
 ```
 
 The repository guard performs the same fail-closed checks during release.
@@ -160,6 +199,8 @@ if groups.get('links', {}).get('next'):
 for group in groups['data']:
     detail = api.request(f"/betaGroups/{group['id']}")['data']['attributes']
     testers = api.request(f"/betaGroups/{group['id']}/betaTesters?limit=200")
+    if testers.get('links', {}).get('next'):
+        raise SystemExit('Tester result is paginated; cannot prove sole membership')
     tester_ids = [tester['id'] for tester in testers['data']]
     print({
         'group_id': group['id'],
@@ -181,7 +222,7 @@ values.
 ## 6. Create and protect the GitHub environment
 
 In GitHub, open **Repository → Settings → Environments → New environment** and
-name it `internal-testflight`.
+name it `internal-testflight`. If it exists, open and verify it instead.
 
 Configure:
 
@@ -217,22 +258,24 @@ Use protected temporary files and stdin so credential values do not appear in
 shell history. Substitute real paths locally:
 
 ```sh
+set +x
 umask 077
+SECRET_SETUP_DIR="$(mktemp -d "${TMPDIR:-/private/tmp}/paceprompt-secrets.XXXXXX")"
 P8_PATH="$HOME/path/to/AuthKey_<KEY_ID>.p8"
 P12_PATH="$HOME/path/to/PacePrompt-CI.p12"
 PROFILE_PATH="$HOME/path/to/PacePrompt_CI_App_Store.mobileprovision"
 
-base64 -i "$P8_PATH" -o /private/tmp/paceprompt-p8.b64
+base64 -i "$P8_PATH" -o "$SECRET_SETUP_DIR/p8.b64"
 gh secret set ASC_API_KEY_P8_B64 --env internal-testflight \
-  < /private/tmp/paceprompt-p8.b64
+  < "$SECRET_SETUP_DIR/p8.b64"
 
-base64 -i "$P12_PATH" -o /private/tmp/paceprompt-p12.b64
+base64 -i "$P12_PATH" -o "$SECRET_SETUP_DIR/p12.b64"
 gh secret set DIST_P12_B64 --env internal-testflight \
-  < /private/tmp/paceprompt-p12.b64
+  < "$SECRET_SETUP_DIR/p12.b64"
 
-base64 -i "$PROFILE_PATH" -o /private/tmp/paceprompt-profile.b64
+base64 -i "$PROFILE_PATH" -o "$SECRET_SETUP_DIR/profile.b64"
 gh secret set DIST_PROFILE_B64 --env internal-testflight \
-  < /private/tmp/paceprompt-profile.b64
+  < "$SECRET_SETUP_DIR/profile.b64"
 
 printf '%s' '<key-id>' | gh secret set ASC_KEY_ID --env internal-testflight
 printf '%s' '<issuer-uuid>' | gh secret set ASC_ISSUER_ID --env internal-testflight
@@ -241,8 +284,20 @@ printf '\n'
 printf '%s' "$P12_PASSWORD" | \
   gh secret set DIST_P12_PASSWORD --env internal-testflight
 unset P12_PASSWORD
-rm -f /private/tmp/paceprompt-p8.b64 \
-  /private/tmp/paceprompt-p12.b64 /private/tmp/paceprompt-profile.b64
+rm -rf "$SECRET_SETUP_DIR"
+unset SECRET_SETUP_DIR
+```
+
+Run each `gh secret set` successfully before continuing. If any command fails,
+stop, remove the temporary directory and unset the password before diagnosing;
+do not echo or paste the failed secret. To clean up an interrupted setup shell:
+
+```sh
+unset P12_PASSWORD
+if [ -n "${SECRET_SETUP_DIR:-}" ] && [ -d "$SECRET_SETUP_DIR" ]; then
+  rm -rf "$SECRET_SETUP_DIR"
+fi
+unset SECRET_SETUP_DIR
 ```
 
 Do not use literal placeholders as real values. Confirm secret names without
@@ -262,6 +317,7 @@ Store these under **Environment variables**:
 | `ASC_INTERNAL_GROUP_ID` | Existing explicit-assignment internal group ID |
 | `ASC_INTERNAL_TESTER_ID` | Sole authorised tester ID |
 | `EXPORT_COMPLIANCE_TAG` | Exact authorised release tag; update per release |
+| `RELEASE_TOOLS_SHA` | Reviewed full 40-character commit SHA containing the trusted release tools; update only when those tools are deliberately upgraded |
 
 In the GitHub UI, click **Add environment variable** for each name and value.
 These identifiers and the release tag are configuration, not credentials;
@@ -277,6 +333,68 @@ gh variable set ASC_INTERNAL_TESTER_ID --env internal-testflight --body '<tester
 Set `EXPORT_COMPLIANCE_TAG` only during a release after the operator has
 confirmed the export-compliance decision for that exact candidate. See
 [`release.md`](release.md).
+
+### Bootstrap and upgrade the trusted signing tools
+
+The split pipeline requires a tools pin before its first release. After this
+change has been independently reviewed, validated and merged to protected
+`main`, choose that full merge SHA. Older commits that lack
+`scripts/testflight_handoff.py` or `scripts/testflight_release.sh` cannot serve
+as the bootstrap pin. Do not set `main`, a branch name, a tag, an abbreviated
+SHA or a placeholder as the pin. Do not update it automatically for every app
+release: it identifies the trusted signing implementation, separately from
+the candidate app source.
+
+From a current, clean checkout, verify the selected tools commit locally:
+
+```sh
+TOOLS_SHA='<reviewed-40-character-tools-commit-sha>'
+(
+  set -e
+  [[ "$TOOLS_SHA" =~ ^[0-9a-f]{40}$ ]]
+  git fetch origin main
+  git cat-file -e "$TOOLS_SHA^{commit}"
+  git merge-base --is-ancestor "$TOOLS_SHA" origin/main
+  for file in scripts/testflight_release.sh scripts/testflight_handoff.py \
+    scripts/testflight_guard.py scripts/testflight_signing.py scripts/testflight_api.py; do
+    git cat-file -e "$TOOLS_SHA:$file"
+  done
+)
+```
+
+Every check must succeed. Independently review the exact tools code and the
+candidate workflow before changing the pin. File existence and ancestry are
+not proof of review. Use a separate checkout of the selected SHA to run the
+release-tool tests and lint checks described in `release.md`; running tests
+from a different checkout would not validate this pin.
+
+Then set the protected environment variable and verify the stored value:
+
+```sh
+gh variable set RELEASE_TOOLS_SHA --repo syamaner/paceprompt-ios \
+  --env internal-testflight --body "$TOOLS_SHA"
+test "$(gh variable get RELEASE_TOOLS_SHA --repo syamaner/paceprompt-ios \
+  --env internal-testflight --json value --jq '.value')" = "$TOOLS_SHA"
+```
+
+A missing or malformed pin fails before the trusted-tools checkout. The signer
+checks that checkout's HEAD equals the pin, then executes only its tools. The
+candidate checkout is used for Git/source metadata and privacy-manifest checks;
+its scripts, project and scheme are not executed in the signing job. Builds
+run on a separate runner with no Apple environment or credentials.
+
+The artifact handoff supports the current single arm64 iOS app and its dSYM.
+It rejects symlinks, nested app/extension/framework/dylib content, signed profile
+content, unsafe or duplicate paths and oversized archives. New nested code or
+entitlements require a deliberate reviewed tools update rather than relaxing
+checks during a release. Candidate-specific purpose strings or identity changes
+may also require updating the trusted guard and its pin.
+
+The tag's workflow still defines secret access and can be edited in a candidate.
+A tools pin is not protection against an approved malicious workflow that
+removes these checks. Review workflow changes and the exact candidate SHA before
+every environment approval. SHA-256 binds a transfer to its build output; it
+does not prove that the app's behaviour is benign.
 
 ## 7. Protect release tags
 
@@ -304,10 +422,63 @@ gh api repos/syamaner/paceprompt-ios/environments/internal-testflight/deployment
   --jq '.branch_policies[] | {name,type}'
 ```
 
-## 8. Rotate or revoke credentials
+## 8. Protect main and verify the complete GitHub setup
 
-Rotate before certificate/profile expiry or immediately after suspected
-exposure:
+In **Settings → Rules → Rulesets**, verify or create the active branch ruleset
+`Main: PRs and required CI`, targeting `refs/heads/main`:
+
+- no bypass actors, including administrators;
+- restrict deletions and block force pushes;
+- require a pull request and resolve review conversations;
+- allow merge commits only, because the release guard requires a two-parent
+  merge commit;
+- require **Fast repository checks**, with **GitHub Actions** as the expected
+  source, and require the branch to be up to date before merging;
+- required approving reviews: **0** for the current single-maintainer setup.
+  Independent review remains a manual release requirement. The commit-message
+  review marker is an operator attestation, not authenticated review evidence.
+
+Do not require the manual full-validation or Codecov jobs for each PR: the
+current CI deliberately skips those jobs on PR events.
+
+Read back effective protection rather than relying on the ruleset's name:
+
+```sh
+gh api repos/syamaner/paceprompt-ios/branches/main --jq '.protected'
+gh api repos/syamaner/paceprompt-ios/rules/branches/main \
+  --jq '.[] | {type,parameters,ruleset_id}'
+gh api repos/syamaner/paceprompt-ios/actions/permissions/workflow
+gh secret list --repo syamaner/paceprompt-ios
+gh secret list --repo syamaner/paceprompt-ios --env internal-testflight
+```
+
+Expect `true`, active deletion/force-push/PR/status-check rules, a fast-check
+context bound to GitHub Actions (integration ID `15368`), default token
+permissions `read`, and `can_approve_pull_request_reviews=false`. Expect no
+repository Actions secrets and all six named Apple/signing secrets in the
+environment. Read each ruleset's detail (`gh api
+repos/syamaner/paceprompt-ios/rulesets/<id>`) to confirm conditions and bypass
+actors; the ruleset list alone does not establish tag immutability or admin-only
+creation. Environment readback must show required reviewer `syamaner`,
+`can_admins_bypass=false`, and the tag-only `testflight/*` deployment policy.
+
+These checks establish GitHub configuration only. Credential values, Apple
+permissions, certificate validity and actual upload compatibility require the
+separate local/Apple checks and an explicitly authorised fresh release. The
+build runner has no Apple secrets. The signing runner uses the independently
+pinned tools; it never rebuilds the candidate project. Apple tools still parse
+and sign candidate binaries/data, so this does not claim isolation from defects
+in Xcode, codesign or archive parsers.
+
+## 9. Rotate or revoke credentials
+
+For suspected exposure, revoke the affected Apple API key or certificate
+**immediately** and stop releases. Do not wait for a replacement release to
+succeed. Replace the affected secrets and investigate before authorising a new
+release. Apple documents immediate API-key revocation in its
+[API-key guidance](https://developer.apple.com/documentation/AppStoreConnectAPI/creating-api-keys-for-app-store-connect-api).
+
+For planned rotation before expiry, with no suspected exposure:
 
 1. Create and validate the replacement API key or certificate/profile locally.
 2. Replace all related environment secrets together.

@@ -274,12 +274,34 @@ class ReleaseGuardTests(unittest.TestCase):
         self.assertNotIn("secrets.ASC_", source_job)
         self.assertNotIn("secrets.DIST_", source_job)
         self.assertNotIn("altool", source_job)
-        self.assertNotIn("upload-artifact", workflow)
-        self.assertIn("testFlightInternalTestingOnly': True", workflow)
-        self.assertIn("manageAppVersionAndBuildNumber': False", workflow)
+        self.assertIn("CODE_SIGNING_ALLOWED=NO", source_job)
+        self.assertIn("needs: [source, build]", workflow)
+        signer = (ROOT / "scripts/testflight_release.sh").read_text()
+        self.assertNotIn("-project", signer)
+        self.assertNotIn("-scheme", signer)
+        self.assertNotIn("secrets.", source_job)
+        self.assertIn("ref: ${{ env.RELEASE_TOOLS_SHA }}", workflow)
+        self.assertIn('[[ "$RELEASE_TOOLS_SHA" =~ ^[0-9a-f]{40}$ ]]', workflow)
+        self.assertIn("testFlightInternalTestingOnly': True", signer)
+        self.assertIn("manageAppVersionAndBuildNumber': False", signer)
         self.assertIn('test "$GITHUB_RUN_ATTEMPT" = 1', workflow)
-        self.assertIn("'signingStyle': 'manual'", workflow)
+        self.assertIn("'signingStyle': 'manual'", signer)
         self.assertNotIn("-allowProvisioningUpdates", workflow)
+
+    def test_unsigned_guard_checks_device_load_command_not_only_plist_platform(self):
+        info = {"CFBundleExecutable": "PacePrompt", "DTPlatformName": "iphoneos"}
+        with patch.object(guard, "check_tag", return_value=("1.0.1", "10")), \
+             patch.object(guard, "metadata"), patch.object(guard, "plist", return_value=info):
+            for architecture, platform in [("arm64", "IOS"), ("arm64", "IOSSIMULATOR"),
+                                            ("x86_64", "IOS"), ("arm64", "MACOS")]:
+                with self.subTest(architecture=architecture, platform=platform), \
+                     patch.object(guard.subprocess, "check_output",
+                                  side_effect=[architecture, f" platform {platform}\n"]):
+                    if architecture == "arm64" and platform == "IOS":
+                        guard.unsigned(Path("Synthetic.app"), "testflight/1.0.1-b10")
+                    else:
+                        with self.assertRaises(ValueError):
+                            guard.unsigned(Path("Synthetic.app"), "testflight/1.0.1-b10")
 
     def test_source_rejects_missing_exact_head_review(self):
         sha = "a" * 40

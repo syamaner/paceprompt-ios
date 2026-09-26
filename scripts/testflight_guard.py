@@ -14,7 +14,9 @@ import urllib.request
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+# A trusted signer reads candidate metadata as data; it never imports candidate code.
+ROOT = Path(os.environ.get("PACEPROMPT_RELEASE_SOURCE_ROOT",
+                           str(Path(__file__).resolve().parents[1]))).resolve()
 PROJECT = ROOT / "PacePrompt.xcodeproj/project.pbxproj"
 TAG = re.compile(r"testflight/(\d+\.\d+(?:\.\d+)?)-b([1-9]\d*)\Z")
 BUNDLE_ID = "com.otherweather.PromptPace"
@@ -137,6 +139,25 @@ def metadata(info: dict, version: str, build: str) -> None:
             fail(f"Unexpected or missing {key}")
 
 
+def unsigned(app: Path, tag: str) -> None:
+    version, build = check_tag(tag, PROJECT.read_text())
+    info = plist(app / "Info.plist")
+    metadata(info, version, build)
+    if info.get("CFBundleExecutable") != "PacePrompt" or info.get("DTPlatformName") != "iphoneos":
+        fail("Unsigned app is not the production device executable")
+    if plist(app / "PrivacyInfo.xcprivacy") != plist(ROOT / "PacePrompt/PrivacyInfo.xcprivacy"):
+        fail("Unsigned app privacy manifest differs from candidate source")
+    architectures = subprocess.check_output(
+        ["xcrun", "lipo", "-archs", str(app / "PacePrompt")], text=True).split()
+    if architectures != ["arm64"]:
+        fail("Unsigned app must contain only device arm64 code")
+    load_commands = subprocess.check_output(
+        ["xcrun", "vtool", "-show-build", str(app / "PacePrompt")], text=True)
+    if re.findall(r"^\s*platform (\S+)$", load_commands, re.MULTILINE) != ["IOS"]:
+        fail("Unsigned executable is not built for device iOS")
+    print(f"PASS: unsigned device artifact {BUNDLE_ID} {version} ({build})")
+
+
 def verify_signing_leaf(app: Path, certificate_sha1: str) -> None:
     with tempfile.TemporaryDirectory(prefix="paceprompt-signature-") as temporary:
         prefix = str(Path(temporary) / "certificate")
@@ -220,10 +241,15 @@ def main() -> None:
     art.add_argument("--tag", required=True)
     art.add_argument("--team", required=True)
     art.add_argument("--certificate-sha1", required=True)
+    uns = commands.add_parser("unsigned")
+    uns.add_argument("--app", type=Path, required=True)
+    uns.add_argument("--tag", required=True)
     args = parser.parse_args()
     try:
         if args.command == "source":
             source(args.tag, args.sha)
+        elif args.command == "unsigned":
+            unsigned(args.app, args.tag)
         else:
             artifact(args.app, args.tag, args.team, args.certificate_sha1)
     except (ValueError, KeyError, subprocess.CalledProcessError, OSError) as error:
