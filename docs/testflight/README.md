@@ -82,3 +82,39 @@ release tests and lint checks also passed from that exact merged checkout.
 This activation did not create a release tag or exercise Apple signing/upload;
 a fresh build is required because 1.0.1 (10) was already uploaded by the prior
 workflow.
+
+### Hosted split-pipeline validation: 1.0.1 (11)
+
+On 26 September 2026, the operator authorised internal build 1.0.1 (11).
+[PR #166](https://github.com/syamaner/paceprompt-ios/pull/166) merged the reviewed
+candidate at `4a59bf38e1176309049d2881e5d5ba8cf30b90d3`. The lightweight immutable
+tag `testflight/1.0.1-b11` points to that merge; the trusted-tools pin remains
+`2050f1dee6763297fc784f80aaf59c317b2d7e29`.
+
+[Release run 36272300449](https://github.com/syamaner/paceprompt-ios/actions/runs/36272300449)
+completed successfully on attempt 1. It verified protected source and exact-main
+CI, built the unsigned archive on the credential-free runner, verified the
+same-run archive handoff with pinned tools, passed Apple app/group/tester and
+fresh-build preflight, validated the certificate/profile, signed without
+rebuilding candidate code, exported internal-only, and verified the signed
+artifact. Apple accepted the one upload, processed the build, and the API check
+confirmed internal-only status and assignment to the unchanged sole-tester
+group. Only the unsigned archive was retained as an Actions artifact; no signed
+IPA or signing asset was retained there. Environment approval was submitted on
+the operator's behalf using their explicit authorisation for this exact internal
+version/build and unchanged encryption declaration.
+
+The candidate's full local gate passed on a fresh iPhone 17 Pro/iOS 26.5
+simulator: 388 production tests, 16 evaluation tests, Release build and static
+analysis. Two earlier runs stopped on CoreSimulator Mach `-308` launch-service
+errors; the affected tests passed in isolation and the final full gate. One
+initial isolated plan test failed tab navigation before explicit boot; no
+app/test repairs were made. Evidence remains under the build11 paths in
+`/private/tmp`, with the final gate at
+`/private/tmp/paceprompt-build11-fresh-full-gate`.
+
+This run validates hosted signing/export, Apple acceptance and internal-group
+assignment. It does not prove that the tester installed or opened the build,
+or establish physical Bluetooth, treadmill or HealthKit acceptance. Follow
+release.md's separate tester checks for those claims. Future candidates still
+require source/workflow review and explicit release authorisation.
