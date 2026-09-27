@@ -47,6 +47,42 @@ final class PlanningProfileFlowUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Saved treadmills"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["No treadmill selected"].exists)
     }
+    func testExistingDetailSelectionUpdatesCollectionAndAuthoring() {
+        launch("unselected"); manage()
+        XCTAssertEqual(app.staticTexts["profiles.selection"].label, "No treadmill selected")
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "profiles.record.")).firstMatch
+        row.tap()
+        app.buttons["profiles.select"].tap()
+        XCTAssertTrue(app.staticTexts["profiles.selected"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["profiles.select"].exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(row.label.contains("Selected for planning"))
+        XCTAssertTrue(app.staticTexts["profiles.selection"].label.contains("Synthetic treadmill"))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.tabBars.buttons["Plans"].tap()
+        XCTAssertTrue(activeSelector.label.contains("Synthetic treadmill"))
+    }
+    func testUnselectedDetailActionAtLargeText() {
+        launch("unselected", large: true); manage()
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "profiles.record.")).firstMatch
+        for _ in 0..<12 where !row.isHittable { app.swipeUp() }
+        row.tap()
+        let select = app.buttons["profiles.select"]
+        for _ in 0..<12 where !select.isHittable { app.swipeUp() }
+        XCTAssertTrue(select.isHittable); select.tap()
+        XCTAssertTrue(app.staticTexts["profiles.selected"].waitForExistence(timeout: 3))
+    }
+    func testAlreadySelectedDetailAtLargeText() {
+        launch("populated", large: true); manage()
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "profiles.record.")).firstMatch
+        for _ in 0..<12 where !row.isHittable { app.swipeUp() }
+        row.tap()
+        let selected = app.staticTexts["profiles.selected"]
+        for _ in 0..<12 where !selected.isHittable { app.swipeUp() }
+        XCTAssertTrue(selected.isHittable)
+        XCTAssertFalse(app.buttons["profiles.select"].exists)
+    }
     func testCreatedProfileUsesPersistedSelection() {
         launch("created")
         XCTAssertTrue(app.staticTexts["Treadmill profile saved"].waitForExistence(timeout: 3))
@@ -94,6 +130,19 @@ final class PlanningProfileFlowUITests: XCTestCase {
         XCTAssertTrue(element.waitForExistence(timeout: 3))
         XCTAssertTrue(element.isHittable); element.tap()
     }
+    func testPickerManagementCannotBypassDoneCancel() {
+        launchAuthoring("unselected")
+        activeSelector.tap()
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "planning.picker.profile.")).firstMatch.tap()
+        tapAuthoring(app.buttons["Manage saved profiles"])
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "profiles.record.")).firstMatch.tap()
+        XCTAssertFalse(app.buttons["profiles.select"].exists)
+        XCTAssertTrue(app.staticTexts["Return to the picker to choose this profile, then tap Done."].exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars["Treadmill profile"].buttons["Cancel"].tap()
+        XCTAssertTrue(activeSelector.label.contains("No treadmill selected"))
+    }
     func testSharedSelectorDoneCancelAndManualDraftRetention() {
         launchAuthoring("populated")
         let selector = activeSelector
@@ -121,7 +170,7 @@ final class PlanningProfileFlowUITests: XCTestCase {
         app.buttons["plans.import"].tap()
         let text = app.textViews["import.text"]
         XCTAssertTrue(text.waitForExistence(timeout: 3)); text.tap(); text.typeText("Synthetic fixed workout")
-        app.swipeDown()
+        XCTAssertTrue(app.navigationBars["Import workout"].exists)
         tapAuthoring(activeSelector)
         app.navigationBars["Treadmill profile"].buttons["Cancel"].tap()
         XCTAssertEqual(text.value as? String, "Synthetic fixed workout")
