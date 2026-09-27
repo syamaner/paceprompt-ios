@@ -64,6 +64,54 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
     }
   }
 
+  func testLandscapeRegionsContainTheirAccessibleActions() {
+    for (scenario, region, identifier) in [
+      ("running", "exercise.landscape.left", "exercise.plan.open"),
+      ("paused", "exercise.landscape.actions", "exercise.end"),
+      ("checking", "exercise.landscape.actions", "exercise.confirm-stationary"),
+    ] {
+      launch(scenario: scenario, orientation: .landscapeLeft)
+      let action = app.otherElements[region].buttons[identifier]
+      XCTAssertTrue(action.exists, identifier)
+      XCTAssertTrue(action.isHittable, identifier)
+    }
+  }
+
+  func testLandscapeConfirmationCancellationKeepsOriginalState() {
+    for (scenario, identifier, confirmation, title) in [
+      ("paused", "exercise.end", "End and save local attempt",
+       "Workout paused — press Start on the treadmill to resume"),
+      ("checking", "exercise.confirm-stationary", "Confirm treadmill is stationary",
+       "Checking treadmill"),
+    ] {
+      launch(scenario: scenario, orientation: .landscapeLeft)
+      let action = app.buttons[identifier]
+      action.tap()
+      XCTAssertTrue(app.buttons[confirmation].waitForExistence(timeout: 2))
+      // A passthrough would open the plan sheet, a distinct observable side effect.
+      app.buttons["exercise.plan.open"]
+        .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+      XCTAssertFalse(element("exercise.plan.sheet").exists)
+      XCTAssertTrue(app.buttons[confirmation].exists)
+      XCTAssertTrue(app.staticTexts[title].exists)
+      app.buttons["Cancel"].tap()
+      XCTAssertTrue(app.buttons[confirmation].waitForNonExistence(timeout: 2))
+      XCTAssertTrue(app.staticTexts[title].exists)
+      XCTAssertTrue(action.isHittable)
+    }
+  }
+
+  func testLandscapeFullPlanOpensUsingAccessibleButton() {
+    launch(scenario: "running", orientation: .landscapeLeft)
+    let fullPlan = app.buttons["exercise.plan.open"]
+    XCTAssertTrue(fullPlan.isHittable)
+    fullPlan.tap()
+    XCTAssertTrue(element("exercise.plan.sheet").waitForExistence(timeout: 2))
+    for index in 0..<3 {
+      XCTAssertTrue(element("exercise.plan.step.\(index)").exists)
+    }
+  }
+
   func testLandscapeReferenceSizeUsesFixedTwoColumnGeometryWithoutScrolling() {
     launch(scenario: "running", orientation: .landscapeLeft)
 
