@@ -57,7 +57,7 @@ No automatic reconnect state exists. An event from an old epoch cannot mutate cu
 | `inactive` | A transient presentation or protected-data transition. It preserves the same attempt and link but disables interactive actions. |
 | `background` | The same process and link may consume CoreBluetooth events. Only a fresh Treadmill Data wake can authorise one due planned transition. |
 
-Continuity additionally requires the same selected peripheral, live connection, connection epoch, held control permission, matched FR30z profile, resolved subscriptions and frozen session ceilings. A lifecycle transition does not manufacture any of those facts. Foreground return reconciles them, the pending procedure and telemetry freshness before controls become available.
+Continuity additionally requires the same selected peripheral, live connection, connection epoch, held control permission, matched FR30z profile, resolved subscriptions and immutable current capability bounds. A lifecycle transition does not manufacture any of those facts. Foreground return reconciles them, the pending procedure and telemetry freshness before controls become available.
 
 ### Control permission
 
@@ -122,7 +122,7 @@ Overrides survive pause/resume and clear on the next planned segment. An adjustm
 | State | Meaning |
 | --- | --- |
 | `idle` | No attempt exists. |
-| `armed(plan, capabilities, ceilings, profile)` | Immutable reviewed inputs are ready. |
+| `armed(plan, capabilities, profile)` | Immutable reviewed inputs are ready. |
 | `acquiringControl` | Request Control is in flight. |
 | `waitingForPhysicalStart` | The app attempt is active and the UI instructs the operator to press physical Start. Before the first movement report, control is not held and no procedure has been sent. |
 | `applyingTargets(step, phase)` | Speed then inclination procedures/observations are being applied. |
@@ -139,7 +139,7 @@ Overrides survive pause/resume and clear on the next planned segment. An adjustm
 
 ```mermaid
 flowchart TD
-    IDLE[Idle] -->|Review validated plan and ceilings| ARMED[Armed]
+    IDLE[Idle] -->|Review validated plan and live capabilities| ARMED[Armed]
     ARMED -->|Begin workout; no procedure| WAIT[Press Start on treadmill]
     WAIT -->|Fresh speed above zero| CONTROL[Request Control]
     CONTROL -->|ATT plus matching FTMS success and fresh movement| APPLY[Apply effective targets]
@@ -166,7 +166,7 @@ flowchart TD
 
 ### Arm and Begin workout
 
-Arming requires a validated immutable plan, exact current profile match, explicit session speed, inclination and maximum interval-change ceilings covering the complete plan, foreground activity, current connection readiness and no adverse evidence. A confirmed Treadmill Data subscription is required; a stationary packet is not.
+Arming requires a validated immutable plan, exact current profile match, fresh complete current capability ranges and increments covering every exact plan target, foreground activity, current connection readiness and no adverse evidence. A confirmed Treadmill Data subscription is required; a stationary packet is not.
 
 Begin workout is accepted only from `armed`. It creates the local attempt, initialises the first segment and moves to `waitingForPhysicalStart` without emitting any procedure, motion or target effect.
 
@@ -195,11 +195,11 @@ The segment duration is evaluated only while processing accepted moving telemetr
 - if another segment exists, clear current-segment overrides and apply the next segment's planned targets;
 - if it was final, enter `awaitingPhysicalStopForCompletion`, emit no treadmill Stop and instruct the operator to press physical Stop.
 
-While backgrounded, the fresh telemetry callback that reaches one boundary may submit that one transition through the existing target-only path if every connection, epoch, permission, capability, subscription, ceiling, freshness and one-procedure guard still passes immediately before the write. An acknowledgement callback may settle the current axis but cannot submit the next axis while backgrounded; another fresh telemetry notification is required. Missed execution opportunities delay progress. Multiple missed steps and wall-clock catch-up sequences do not exist.
+While backgrounded, the fresh telemetry callback that reaches one boundary may submit that one transition through the existing target-only path if every connection, epoch, permission, capability, subscription, capability-bound, freshness and one-procedure guard still passes immediately before the write. An acknowledgement callback may settle the current axis but cannot submit the next axis while backgrounded; another fresh telemetry notification is required. Missed execution opportunities delay progress. Multiple missed steps and wall-clock catch-up sequences do not exist.
 
 ### Manual override
 
-While the attempt is active, the user may increment/decrement speed or inclination inside current capability and selected session ceilings. Reject invalid values without rounding or clamping.
+While the attempt is active, the user may increment/decrement speed or inclination inside current inclusive capability ranges and exact increments. Reject invalid values without rounding or clamping.
 
 - From `runningStep`, update that axis's current-segment override and emit only the changed target procedure.
 - Preserve the segment's accumulated active time; do not restart its duration.
@@ -252,7 +252,7 @@ The first matching rule wins:
 | Bluetooth loss, powered-off state or transport failure | `interrupted`; connection/control/telemetry invalidated; no reconnect or write. |
 | App resigns active, backgrounds, locks or unlocks | Preserve the same attempt and link; disable interactive actions; reconcile on foreground return. |
 | Process termination, crash or device restart | Persisted `inProgress` attempt becomes interrupted on relaunch; no scan, reconnect, Request Control, target restoration, retry or resume. |
-| Capability/profile/ceiling mismatch | Invalidate arming or interrupt active attempt; no in-place adaptation. |
+| Capability/profile mismatch | Invalidate arming or interrupt active attempt; no in-place adaptation. |
 | ATT error, negative/malformed/mismatched/duplicate response or correlation failure | Fail procedure, invalidate control, interrupt, no retry. |
 | FTMS indication timeout | `timedOutUnknown`; require a new user-created attempt/link for later work. |
 | Target-observation timeout | Target not confirmed; interrupt; no retry/compensation. |
@@ -299,4 +299,6 @@ No implementation slice inherits physical-session authority from this document.
 
 ## Historical planning-profile separation (#140)
 
-The [saved planning profile contract](saved-treadmill-planning-profile-contract.md) adds future local historical planning only. A selected profile, matching opaque identity token, recorded capability, age warning or authoring-valid plan is not a readiness/control token and cannot satisfy a current-connection guard. Live preflight must re-read complete capability and retain the accepted FR30z profile/epoch/subscription/ceiling/permission/acknowledgement/observation boundaries. Profile rename/deletion or selection cannot mutate an active immutable execution attempt, trigger a command or reconnect. No planning-profile fields are added to execution checkpoints or History by this amendment; existing checkpoint persistence remains governed by its own accepted contract. No app implementation or new command semantics are authorised here.
+The [saved planning profile contract](saved-treadmill-planning-profile-contract.md) adds future local historical planning only. A selected profile, matching opaque identity token, recorded capability, age warning or authoring-valid plan is not a readiness/control token and cannot satisfy a current-connection guard. Live preflight must re-read complete capability and retain the accepted FR30z profile/epoch/subscription/capability-bound/permission/acknowledgement/observation boundaries. Profile rename/deletion or selection cannot mutate an active immutable execution attempt, trigger a command or reconnect. No planning-profile fields are added to execution checkpoints or History by this amendment; existing checkpoint persistence remains governed by its own accepted contract. No app implementation or new command semantics are authorised here.
+
+Issue #177 removes the separate session-limit concept and adjacent-plan maximum interval-change guard; the [execution profile](fr30z-physical-console-execution-profile.md#live-capability-target-bounds-issue-177) defines the resulting target contract. Fresh Continue/Begin reads, immutable evidence, exact targets and all transport/observation guards remain required.

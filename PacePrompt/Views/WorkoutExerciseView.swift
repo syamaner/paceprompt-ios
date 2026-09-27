@@ -522,7 +522,7 @@ struct WorkoutExerciseView: View {
     .disabled(target == nil)
     .accessibilityLabel(label)
     .accessibilityHint(
-      "Changes only the current segment effective target within the machine increment and session ceiling."
+      "Changes only the current segment effective target within the current live machine range and increment."
     )
     .accessibilityIdentifier(
       "exercise.\(speed ? "speed" : "inclination").\(symbol)"

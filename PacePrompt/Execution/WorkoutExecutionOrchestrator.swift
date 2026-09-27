@@ -29,7 +29,6 @@ struct FrozenWorkoutAttemptInputs: Equatable {
   let sourcePlanID: UUID?
   let plan: WorkoutPlanValidator.ValidatedPlan
   let capability: FR30zCapabilitySnapshot
-  let ceilings: WorkoutSessionCeilings
   let profile: FR30zExecutionProfile
   let executionProfileIdentity: String
   let attemptedAt: Date
@@ -153,12 +152,11 @@ final class WorkoutExecutionOrchestrator {
   @discardableResult
   func arm(
     plan: WorkoutPlanValidator.ValidatedPlan,
-    ceilings: WorkoutSessionCeilings,
     profile: FR30zExecutionProfile,
     sourcePlanID: UUID?
   ) -> WorkoutOrchestrationResult {
     process(
-      .arm(plan: plan, ceilings: ceilings, profile: profile),
+      .arm(plan: plan, profile: profile),
       preparedInputs: .init(sourcePlanID: sourcePlanID)
     )
   }
@@ -297,7 +295,6 @@ final class WorkoutExecutionOrchestrator {
         sourcePlanID: preparedInputs?.sourcePlanID,
         plan: armed.plan,
         capability: armed.capability,
-        ceilings: armed.ceilings,
         profile: armed.profile,
         executionProfileIdentity: FR30zExecutionProfile.identity,
         attemptedAt: attemptedAt

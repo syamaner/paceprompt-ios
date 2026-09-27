@@ -145,15 +145,17 @@ final class ProductionWorkoutTargetControlTransport: WorkoutTargetControlTranspo
       guard case .held(epoch, _) = transport.state.permission else {
         return "Control permission is not held"
       }
-      guard speed.value <= attempt.ceilings.maximumSpeed.value else {
-        return "The speed target exceeds the frozen session ceiling"
+      guard case .supported(let range) = attempt.capability.planCapabilities.speed,
+        WorkoutPlanValidator.accepts(speed, in: range) else {
+        return "The speed target exceeds the current capability range or increment"
       }
     case .setTargetInclination(let inclination):
       guard case .held(epoch, _) = transport.state.permission else {
         return "Control permission is not held"
       }
-      guard inclination.value <= attempt.ceilings.maximumInclination.value else {
-        return "The inclination target exceeds the frozen session ceiling"
+      guard case .supported(let range) = attempt.capability.planCapabilities.inclination,
+        WorkoutPlanValidator.accepts(inclination, in: range) else {
+        return "The inclination target exceeds the current capability range or increment"
       }
     }
     return nil
@@ -374,13 +376,11 @@ final class ProductionWorkoutExecutionBinding {
   @discardableResult
   func arm(
     plan: WorkoutPlanValidator.ValidatedPlan,
-    ceilings: WorkoutSessionCeilings,
     sourcePlanID: UUID?
   ) -> WorkoutOrchestrationResult? {
     guard canExposeArming, let profile = executionProfile else { return nil }
     return orchestrator.arm(
       plan: plan,
-      ceilings: ceilings,
       profile: profile,
       sourcePlanID: sourcePlanID
     )

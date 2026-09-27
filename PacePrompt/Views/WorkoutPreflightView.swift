@@ -125,7 +125,7 @@ struct WorkoutPreflightView: View {
 
     private var ceilingsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Enforced this session")
+            Text("Live treadmill bounds")
                 .font(.caption.weight(.bold))
                 .tracking(1.2)
                 .foregroundStyle(WorkoutPreflightPalette.muted)
@@ -135,20 +135,18 @@ struct WorkoutPreflightView: View {
                 HStack(alignment: .top, spacing: 12) {
                     ceiling(title: "Speed ceiling", value: presentation.speedCeiling, tint: .yellow)
                     ceiling(title: "Incline ceiling", value: presentation.inclinationCeiling, tint: .cyan)
-                    ceiling(title: "Max step", value: presentation.maximumStepSpeedChange, tint: .white)
                 }
                 VStack(alignment: .leading, spacing: 14) {
                     ceiling(title: "Speed ceiling", value: presentation.speedCeiling, tint: .yellow)
                     ceiling(title: "Incline ceiling", value: presentation.inclinationCeiling, tint: .cyan)
-                    ceiling(title: "Max interval speed change", value: presentation.maximumStepSpeedChange, tint: .white)
                 }
             }
         }
         .preflightCard()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Conservative session ceilings")
+        .accessibilityLabel("Current treadmill capability ceilings")
         .accessibilityValue(
-            "Speed \(presentation.speedCeiling), inclination \(presentation.inclinationCeiling), maximum interval speed change \(presentation.maximumStepSpeedChange)"
+            "Speed \(presentation.speedCeiling), inclination \(presentation.inclinationCeiling)"
         )
         .accessibilityIdentifier("preflight.ceilings")
     }

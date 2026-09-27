@@ -19,7 +19,6 @@ final class WorkoutExecutionOrchestratorTests: XCTestCase {
     XCTAssertEqual(h.orchestrator.frozenAttempt?.sourcePlanID, sourcePlanID)
     XCTAssertEqual(h.orchestrator.frozenAttempt?.plan, h.plan)
     XCTAssertEqual(h.orchestrator.frozenAttempt?.capability, h.capability)
-    XCTAssertEqual(h.orchestrator.frozenAttempt?.ceilings, h.ceilings)
     XCTAssertEqual(
       h.orchestrator.frozenAttempt?.executionProfileIdentity,
       FR30zExecutionProfile.identity
@@ -723,7 +722,7 @@ extension WorkoutExecutionOrchestratorTests {
     let lifecycleCheckpoints = RecordingLifecycleCheckpointRepository()
     let attemptIDs: FixedAttemptIDSource
     let capability: FR30zCapabilitySnapshot
-    let ceilings: WorkoutSessionCeilings
+
     let profile: FR30zExecutionProfile
     let plan: WorkoutPlanValidator.ValidatedPlan
     let orchestrator: WorkoutExecutionOrchestrator
@@ -753,11 +752,6 @@ extension WorkoutExecutionOrchestratorTests {
         controlPointIndicationsEnabled: true,
         optionalSubscriptionOutcomesResolved: true,
         planCapabilities: capabilities
-      )
-      ceilings = .init(
-        maximumSpeed: Self.speed("10"),
-        maximumInclination: Self.inclination("6"),
-        maximumStepSpeedChange: Self.speed("3")
       )
       profile = .init(
         peripheralIdentity: capability.peripheralIdentity,
@@ -811,7 +805,6 @@ extension WorkoutExecutionOrchestratorTests {
       )
       let armed = orchestrator.arm(
         plan: plan,
-        ceilings: ceilings,
         profile: profile,
         sourcePlanID: sourcePlanID
       )

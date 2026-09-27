@@ -70,9 +70,7 @@ final class PlansFlowUITests: XCTestCase {
         for edit in [true, false] {
             launch(capabilities: "known", draft: "valid", repository: "populated", workoutReady: true, liveMismatch: true)
             app.buttons["plans.run.00000000-0000-0000-0000-000000000010"].tap()
-            for (field, value) in [("maximum-speed", "11"), ("maximum-inclination", "2"), ("maximum-step-change", "6")] {
-                let input = app.textFields["workout.prepare.\(field)"]; input.tap(); input.typeText(value)
-            }
+            XCTAssertFalse(app.textFields["workout.prepare.maximum-speed"].exists)
             tapWhenVisible(app.buttons["workout.prepare.continue"])
             XCTAssertTrue(app.descendants(matching: .any)["preflight.live-failure"].waitForExistence(timeout: 3))
             XCTAssertFalse(app.buttons["preflight.begin"].exists)
@@ -108,13 +106,10 @@ final class PlansFlowUITests: XCTestCase {
         )
         XCTAssertFalse(app.buttons["Authorise this exact connection"].exists)
         XCTAssertFalse(app.buttons["Arm reviewed fixed plan"].exists)
+        for field in ["maximum-speed", "maximum-inclination", "maximum-step-change"] {
+            XCTAssertFalse(app.textFields["workout.prepare.\(field)"].exists)
+        }
 
-        app.textFields["workout.prepare.maximum-speed"].tap()
-        app.textFields["workout.prepare.maximum-speed"].typeText("11")
-        app.textFields["workout.prepare.maximum-inclination"].tap()
-        app.textFields["workout.prepare.maximum-inclination"].typeText("2")
-        app.textFields["workout.prepare.maximum-step-change"].tap()
-        app.textFields["workout.prepare.maximum-step-change"].typeText("6")
         tapWhenVisible(app.buttons["workout.prepare.continue"])
 
         XCTAssertTrue(app.staticTexts["Preflight"].waitForExistence(timeout: 2))

@@ -120,7 +120,7 @@ final class WorkoutExercisePresentationTests: XCTestCase {
     XCTAssertTrue(presentation.canReturnToPlan)
   }
 
-  func testMachineIncrementAndSessionCeilingProduceExactTypedAdjustmentTargets() {
+  func testMachineRangeAndIncrementProduceExactTypedAdjustmentTargets() {
     let presentation = makePresentation(.running)
 
     XCTAssertEqual(presentation.speed.decrementTarget, Decimal(69) / 10)

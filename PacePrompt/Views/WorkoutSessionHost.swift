@@ -28,48 +28,10 @@ struct WorkoutDisplayWakePolicy {
   }
 }
 
-struct WorkoutSessionLimitDraft: Equatable {
-  var maximumSpeed = ""
-  var maximumInclination = ""
-  var maximumStepSpeedChange = ""
-
-  func ceilings(locale: Locale = .autoupdatingCurrent) -> WorkoutSessionCeilings? {
-    guard let speed = Self.decimal(maximumSpeed, locale: locale),
-      let inclination = Self.decimal(maximumInclination, locale: locale),
-      let stepChange = Self.decimal(maximumStepSpeedChange, locale: locale)
-    else { return nil }
-    return .init(
-      maximumSpeed: .init(value: speed, unit: .kilometresPerHour),
-      maximumInclination: .init(value: inclination, unit: .percent),
-      maximumStepSpeedChange: .init(value: stepChange, unit: .kilometresPerHour)
-    )
-  }
-
-  private static func decimal(_ text: String, locale: Locale) -> Decimal? {
-    var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !value.isEmpty else { return nil }
-    if let grouping = locale.groupingSeparator,
-      !grouping.isEmpty,
-      grouping != locale.decimalSeparator,
-      value.contains(grouping)
-    {
-      return nil
-    }
-    if let separator = locale.decimalSeparator, separator != ".", !separator.isEmpty {
-      value = value.replacingOccurrences(of: separator, with: ".")
-    }
-    guard value.allSatisfy({ $0.isNumber || $0 == "." || $0 == "+" || $0 == "-" }) else {
-      return nil
-    }
-    return Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))
-  }
-}
-
 @MainActor
 final class WorkoutSessionCoordinator: ObservableObject {
   @Published private(set) var stage: WorkoutSessionStage = .inactive
   @Published private(set) var selectedPlan: SavedPlanRecord?
-  @Published var limits = WorkoutSessionLimitDraft()
   @Published private(set) var notice: String?
   @Published private(set) var revision = 0
   @Published private(set) var liveFailure: LivePreflightFailure?
@@ -103,7 +65,6 @@ final class WorkoutSessionCoordinator: ObservableObject {
   var preflightPresentation: WorkoutPreflightPresentation? {
     guard liveFailure == nil, pendingRead == nil, let record = selectedPlan,
       let profile = binding.executionProfile,
-      let ceilings = limits.ceilings(),
       case .success(let plan) = WorkoutPlanValidator.validate(
         record.plan,
         against: binding.currentCapability?.planCapabilities ?? .unavailable
@@ -112,7 +73,6 @@ final class WorkoutSessionCoordinator: ObservableObject {
     return .init(
       context: .init(
         validatedPlan: plan,
-        ceilings: ceilings,
         profile: profile,
         executionState: binding.orchestrator.state
       ),
@@ -132,7 +92,6 @@ final class WorkoutSessionCoordinator: ObservableObject {
   func begin(_ record: SavedPlanRecord) {
     guard stage == .inactive else { return }
     selectedPlan = record
-    limits = .init()
     notice = nil
     stage = .preparation
   }
@@ -152,9 +111,6 @@ final class WorkoutSessionCoordinator: ObservableObject {
 
   func prepareWorkout() {
     guard stage == .preparation, selectedPlan != nil else { return }
-    guard limits.ceilings() != nil else {
-      notice = "Enter all three session limits as exact numbers."; return
-    }
     notice = nil
     stage = .preflight
     requestCapabilityRead(.preparation)
@@ -183,10 +139,10 @@ final class WorkoutSessionCoordinator: ObservableObject {
       if liveFailure == nil, let action {
         switch action {
         case .preparation:
-          guard let capability = binding.currentCapability, let ceilings = limits.ceilings(),
+          guard let capability = binding.currentCapability,
             case .success(let plan) = WorkoutPlanValidator.validate(record.plan, against: capability.planCapabilities),
-            let result = binding.arm(plan: plan, ceilings: ceilings, sourcePlanID: record.id), result.reducerDisposition == .accepted else {
-              liveFailure = .init(plan: record.plan, reason: "The current plan or session limits fail the accepted range, increment or maximum interval-change guards.", issues: [], readComplete: true)
+            let result = binding.arm(plan: plan, sourcePlanID: record.id), result.reducerDisposition == .accepted else {
+              liveFailure = .init(plan: record.plan, reason: "The exact plan fails current capability range or increment validation.", issues: [], readComplete: true)
               revision &+= 1; return
           }
         case .begin:
@@ -213,11 +169,9 @@ final class WorkoutSessionCoordinator: ObservableObject {
   func chooseAnotherTreadmill() {
     guard stage == .preflight else { return }
     let record = selectedPlan
-    let previousLimits = limits
     cancelBeforeExercise()
     guard stage == .inactive, let record else { return }
     begin(record)
-    limits = previousLimits
     notice = "Choose and connect a treadmill explicitly, then Continue for a fresh read."
   }
 
@@ -265,7 +219,6 @@ final class WorkoutSessionCoordinator: ObservableObject {
     pendingRead = nil
     liveFailure = nil
     selectedPlan = nil
-    limits = .init()
     notice = nil
     synchronizeDisplayWakePolicy()
     revision &+= 1
@@ -358,31 +311,8 @@ struct WorkoutSessionHost: View {
           .accessibilityIdentifier("workout.prepare.connection-status")
         }
 
-        Section {
-          limitField(
-            "Maximum speed",
-            value: $coordinator.limits.maximumSpeed,
-            prompt: "km/h",
-            identifier: "workout.prepare.maximum-speed"
-          )
-          limitField(
-            "Maximum inclination",
-            value: $coordinator.limits.maximumInclination,
-            prompt: "%",
-            identifier: "workout.prepare.maximum-inclination"
-          )
-          limitField(
-            "Maximum interval speed change",
-            value: $coordinator.limits.maximumStepSpeedChange,
-            prompt: "km/h",
-            identifier: "workout.prepare.maximum-step-change"
-          )
-        } header: {
-          Text("Session limits")
-        } footer: {
-          Text(
-            "These exact limits must contain the complete plan and define the available manual adjustments. PacePrompt never substitutes the treadmill's advertised maximums."
-          )
+        Section("Live capability bounds") {
+          Text("Continue reads current treadmill ranges and increments. Every exact plan target and manual adjustment must fit that evidence.")
         }
 
         if let notice = coordinator.notice {
@@ -446,20 +376,4 @@ struct WorkoutSessionHost: View {
     }
   }
 
-  private func limitField(
-    _ title: String,
-    value: Binding<String>,
-    prompt: String,
-    identifier: String
-  ) -> some View {
-    HStack {
-      Text(title)
-      Spacer(minLength: 12)
-      TextField(prompt, text: value)
-        .multilineTextAlignment(.trailing)
-        .keyboardType(.decimalPad)
-        .frame(maxWidth: 110)
-        .accessibilityIdentifier(identifier)
-    }
-  }
 }

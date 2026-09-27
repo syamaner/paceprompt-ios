@@ -32,7 +32,7 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         XCTAssertTrue((element("preflight.plan").value as? String)?.contains("18:00") == true)
         XCTAssertTrue(statusValue().hasPrefix("Ready to begin."))
         XCTAssertTrue(element("preflight.ceilings").exists)
-        XCTAssertTrue((element("preflight.ceilings").value as? String)?.contains("10.0 km/h") == true)
+        XCTAssertTrue((element("preflight.ceilings").value as? String)?.contains("20.0 km/h") == true)
         XCTAssertTrue(element("preflight.health").exists)
     XCTAssertTrue(
       app.staticTexts[

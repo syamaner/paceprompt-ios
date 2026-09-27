@@ -32,7 +32,6 @@ enum WorkoutPreflightIntent: Equatable {
 
 struct WorkoutPreflightContext: Equatable {
     let validatedPlan: WorkoutPlanValidator.ValidatedPlan
-    let ceilings: WorkoutSessionCeilings
     let profile: FR30zExecutionProfile
     let executionState: WorkoutExecutionState
 }
@@ -46,7 +45,6 @@ struct WorkoutPreflightPresentation: Equatable {
     let activitySymbol: String
     let speedCeiling: String
     let inclinationCeiling: String
-    let maximumStepSpeedChange: String
     let initialStepLabel: String
     let initialSpeed: String
     let initialInclination: String
@@ -76,21 +74,15 @@ struct WorkoutPreflightPresentation: Equatable {
             activity = "Indoor running"
             activitySymbol = "figure.run"
         }
-        speedCeiling = Self.measurement(
-            context.ceilings.maximumSpeed.value,
-            unit: "km/h",
-            locale: locale
-        )
-        inclinationCeiling = Self.measurement(
-            context.ceilings.maximumInclination.value,
-            unit: "%",
-            locale: locale
-        )
-        maximumStepSpeedChange = Self.measurement(
-            context.ceilings.maximumStepSpeedChange.value,
-            unit: "km/h",
-            locale: locale
-        )
+        if let armed = context.executionState.armedWorkout,
+          case .supported(let speed) = armed.capability.planCapabilities.speed,
+          case .supported(let inclination) = armed.capability.planCapabilities.inclination {
+          speedCeiling = Self.measurement(speed.maximum.value, unit: "km/h", locale: locale)
+          inclinationCeiling = Self.measurement(inclination.maximum.value, unit: "%", locale: locale)
+        } else {
+          speedCeiling = "Unavailable"
+          inclinationCeiling = "Unavailable"
+        }
         initialStepLabel = initialStep.label
         initialSpeed = Self.measurement(initialStep.targetSpeed.value, unit: "km/h", locale: locale)
         initialInclination = Self.measurement(
@@ -189,7 +181,6 @@ struct WorkoutPreflightPresentation: Equatable {
             return false
         }
         return armed.plan == context.validatedPlan
-            && armed.ceilings == context.ceilings
             && armed.profile == context.profile
             && armed.capability == capability
     }
@@ -206,7 +197,6 @@ struct WorkoutPreflightPresentation: Equatable {
             state,
             .arm(
                 plan: context.validatedPlan,
-                ceilings: context.ceilings,
                 profile: context.profile
             ),
             at: now

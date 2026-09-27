@@ -35,9 +35,8 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
         XCTAssertEqual(presentation.planName, "Synthetic progression")
         XCTAssertEqual(presentation.planTotals, "18:00 · 1.7 km est. · 3 segments")
         XCTAssertEqual(presentation.activity, "Indoor running")
-        XCTAssertEqual(presentation.speedCeiling, "10.0 km/h")
-        XCTAssertEqual(presentation.inclinationCeiling, "6.0 %")
-        XCTAssertEqual(presentation.maximumStepSpeedChange, "2.0 km/h")
+        XCTAssertEqual(presentation.speedCeiling, "20.0 km/h")
+        XCTAssertEqual(presentation.inclinationCeiling, "15.0 %")
         XCTAssertEqual(presentation.initialStepLabel, "Warm-up")
         XCTAssertEqual(presentation.initialSpeed, "5.0 km/h")
         XCTAssertEqual(presentation.initialInclination, "0.0 %")
@@ -146,11 +145,6 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
         )
         procedureBusy.procedure = .intentCreated(record)
 
-        let invalidCeilings = WorkoutSessionCeilings(
-            maximumSpeed: harness.speed(4),
-            maximumInclination: harness.inclination(6),
-            maximumStepSpeedChange: harness.speed(2)
-        )
 
         var wrongArmedPlan = preflight
         wrongArmedPlan.armedWorkout = nil
@@ -160,7 +154,6 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
             harness.presentation(state: heldWithoutWaiting),
             harness.presentation(state: procedureBusy),
             harness.presentation(state: wrongArmedPlan),
-            harness.presentation(state: preflight, ceilings: invalidCeilings),
         ]
         for presentation in blocked {
             XCTAssertEqual(presentation.stage, .lockedOrUnknown)
@@ -211,23 +204,13 @@ private struct Harness {
         )
     }
 
-    var ceilings: WorkoutSessionCeilings {
-        .init(
-            maximumSpeed: speed(10),
-            maximumInclination: inclination(6),
-            maximumStepSpeedChange: speed(2)
-        )
-    }
-
     func presentation(
         state: WorkoutExecutionState,
-        ceilings: WorkoutSessionCeilings? = nil,
         now: TimeInterval = 4.1
     ) -> WorkoutPreflightPresentation {
         .init(
             context: .init(
                 validatedPlan: validatedPlan,
-                ceilings: ceilings ?? self.ceilings,
                 profile: profile,
                 executionState: state
             ),
@@ -275,7 +258,7 @@ private struct Harness {
     state =
       reduce(
             state,
-            .arm(plan: validatedPlan, ceilings: ceilings, profile: profile),
+            .arm(plan: validatedPlan, profile: profile),
             at: 3
         ).state
     state =

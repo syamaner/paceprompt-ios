@@ -73,7 +73,7 @@ The production profile may arm only when every current-connection condition belo
 5. The `0x2ACD` subscription and `0x2AD9` indication subscription are confirmed for this connection. Outcomes for `0x2AD3` and `0x2ADA` are recorded but their notifications are not required for progress.
 6. The app is foreground-active for arming, one connection epoch is current, and no failure or delivery uncertainty has invalidated it.
 
-Any identity, characteristic, property, byte, range, increment, subscription, epoch or foreground mismatch blocks arming. After the attempt begins, background continuity is limited to that same process, selected peripheral, live connection, epoch, held permission, matched profile, resolved subscriptions and frozen ceilings. The profile does not claim support for another FR30z, dongle or firmware revision.
+Any identity, characteristic, property, byte, range, increment, subscription, epoch or foreground mismatch blocks arming. After the attempt begins, background continuity is limited to that same process, selected peripheral, live connection, epoch, held permission, matched profile, resolved subscriptions and immutable capability bounds. The profile does not claim support for another FR30z, dongle or firmware revision.
 
 Confirmed `0x2ACD` subscription is required for preparation, but receipt of a packet is not. The characterised FR30z may remain silent while stationary. Before Begin, a current malformed, contradictory or non-zero packet blocks progress. Begin is the user's deliberate intent to start the app attempt; it emits no procedure and waits for fresh physical-Start movement.
 
@@ -97,20 +97,18 @@ Production prohibits:
 
 The production codec rejects prohibited response opcodes and exposes no Start, Stop or Pause intent. No production adapter, reducer effect or enabled UI action can represent or reach those commands.
 
-## Session targets and ceilings
+## Live capability target bounds (issue #177)
 
-Before Begin workout, the user selects a session speed ceiling, inclination ceiling and maximum interval speed change. The app provides no advertised-range default.
+Continue and Begin each require a fresh, complete read from the current connection. There are no user-entered session ceilings or maximum interval speed change. Historical saved profiles remain planning evidence only.
 
-- Speed targets must be 0.50–20.00 km/h, align exactly to 0.10 km/h and not exceed the selected session ceiling.
-- Inclination targets must be 0.0–15.0%, align exactly to 1.0% and not exceed the selected session ceiling.
-- The maximum interval speed change must be positive, align exactly to 0.10 km/h and be no greater than 19.50 km/h. It applies to the absolute speed difference between adjacent planned segments; there is no preselected value.
-- The complete validated plan must fit both current capability ranges, both selected ceilings and the selected maximum interval speed change before arming.
-- Manual adjustment uses the same increments and ceilings.
-- Do not clamp, round or silently replace a value. An invalid value is rejected before any effect.
+- Every exact plan target and manual adjustment must fit the current inclusive advertised speed/inclination ranges and align to their increments. The accepted profile currently matches 0.50–20.00 km/h at 0.10 km/h and 0.0–15.0% at 1.0%; these values describe the matched evidence, not fallback constants.
+- Do not clamp, round, rewrite targets or derive ceilings from the plan. Unknown, incomplete, unsupported, malformed, stale or changed evidence blocks execution.
+- The complete plan is revalidated before arming. Its capability snapshot is immutable; changed connection/profile/range/increment evidence invalidates preparation or interrupts execution, without adapting in place.
+- Manual controls and the final write edge validate inclusive ranges and exact increments against the same accepted current capability evidence.
+- The former maximum interval-change guard applied only to adjacent planned segment speeds. Issue #177 explicitly removes that separate operator-selected policy alongside all three inputs. No replacement delta bound is invented. Both endpoints must remain valid exact targets; one-procedure sequencing, fresh telemetry, protocol acknowledgement and later exact joint observation still govern transitions.
+- Physical Start, pause/resume restoration, foreground/protected-data, connection/epoch and control guards retain their existing semantics. There are no new opcodes or automatic reconnect/resume paths.
 
-The interval-change limit validates planned segment boundaries. It does not reinterpret the console's physical start speed, pause/resume restoration or individual 0.10 km/h manual adjustments as new plan intervals.
-
-The low-value physical characterisation covered speed 0.50–0.70 km/h and inclination 0.0–1.0%. Higher values are permitted only as explicit user-selected plan/session values inside the decoded machine range; the profile does not claim they were physically characterised.
+The low-value physical characterisation covered speed 0.50–0.70 km/h and inclination 0.0–1.0%. Larger values and deltas inside the matched capability range have not thereby been physically characterised. Issue #177 software validation is not physical execution acceptance.
 
 ## Telemetry policy
 
