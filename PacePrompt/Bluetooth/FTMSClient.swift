@@ -16,6 +16,7 @@ protocol FTMSClientProtocol: AnyObject {
     var requestControlDiagnosticJournalRecords: [RequestControlDiagnosticJournalEntry] { get }
 #endif
 
+    func refreshCapabilitiesForPreflight() -> Bool
     func startScan()
     func stopScan()
     func connect(to identifier: UUID)
@@ -23,6 +24,7 @@ protocol FTMSClientProtocol: AnyObject {
 }
 
 extension FTMSClientProtocol {
+    func refreshCapabilitiesForPreflight() -> Bool { false }
     var connectedPeripheralIdentifier: UUID? { nil }
     var connectedPeripheralName: String? { nil }
     var controlPointLink: (any FTMSControlPointLink)? { nil }
@@ -44,6 +46,7 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
     private var currentPeripheral: CBPeripheral?
     private var currentName = "Treadmill"
     private var pendingInitialReads: Set<String> = []
+    private var pendingPreflightReads: Set<String> = []
     private var currentCharacteristics: [String: CBCharacteristic] = [:]
     private var deferredNotificationCharacteristics: [String: CBCharacteristic] = [:]
     private var retainedControlPointLink: CoreBluetoothFTMSControlPointLink?
@@ -76,6 +79,18 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
         retainedRequestControlJournalRecords
     }
 #endif
+
+    func refreshCapabilitiesForPreflight() -> Bool {
+        let required = [FTMSUUID.fitnessMachineFeature, FTMSUUID.supportedSpeedRange, FTMSUUID.supportedInclinationRange]
+        guard let peripheral = currentPeripheral, peripheral.state == .connected,
+              pendingInitialReads.isEmpty, pendingPreflightReads.isEmpty,
+              required.allSatisfy({ currentCharacteristics[$0]?.properties.contains(.read) == true }) else { return false }
+        pendingPreflightReads = Set(required)
+        for uuid in required {
+            if let characteristic = currentCharacteristics[uuid] { peripheral.readValue(for: characteristic) }
+        }
+        return true
+    }
 
     func startScan() {
         guard centralManager.state == .poweredOn else {
@@ -152,6 +167,7 @@ final class FTMSClient: NSObject, FTMSClientProtocol {
 
     private func resetPendingOperations() {
         pendingInitialReads.removeAll()
+        pendingPreflightReads.removeAll()
         currentCharacteristics.removeAll()
         deferredNotificationCharacteristics.removeAll()
     }
@@ -360,9 +376,8 @@ extension FTMSClient: @MainActor CBPeripheralDelegate {
             return
         }
         let wasInitialRead = pendingInitialReads.remove(uuid) != nil
-        let source: FTMSValueSource = wasInitialRead
-            ? .initialRead
-            : .notification
+        let wasPreflightRead = pendingPreflightReads.remove(uuid) != nil
+        let source: FTMSValueSource = wasInitialRead ? .initialRead : (wasPreflightRead ? .preflightRead : .notification)
         if wasInitialRead,
            let deferredCharacteristic = deferredNotificationCharacteristics.removeValue(forKey: uuid) {
             peripheral.setNotifyValue(true, for: deferredCharacteristic)

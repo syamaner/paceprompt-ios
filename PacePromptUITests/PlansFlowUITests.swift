@@ -66,6 +66,30 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertEqual(app.textFields["plan.step.0.duration"].value as? String, "360 s")
     }
 
+    func testLiveMismatchRecoveryOpensExactEditorAndExplicitTreadmillSetup() {
+        for edit in [true, false] {
+            launch(capabilities: "known", draft: "valid", repository: "populated", workoutReady: true, liveMismatch: true)
+            app.buttons["plans.run.00000000-0000-0000-0000-000000000010"].tap()
+            for (field, value) in [("maximum-speed", "11"), ("maximum-inclination", "2"), ("maximum-step-change", "6")] {
+                let input = app.textFields["workout.prepare.\(field)"]; input.tap(); input.typeText(value)
+            }
+            tapWhenVisible(app.buttons["workout.prepare.continue"])
+            XCTAssertTrue(app.descendants(matching: .any)["preflight.live-failure"].waitForExistence(timeout: 3))
+            XCTAssertFalse(app.buttons["preflight.begin"].exists)
+            tapWhenVisible(app.buttons[edit ? "preflight.edit-plan" : "preflight.choose-treadmill"])
+            if edit {
+                XCTAssertTrue(app.navigationBars["Edit plan"].waitForExistence(timeout: 3))
+                XCTAssertEqual(app.textFields["plan.name"].value as? String, "Synthetic progression")
+            } else {
+                XCTAssertTrue(app.navigationBars["Treadmill"].waitForExistence(timeout: 3))
+                app.buttons["Done"].tap()
+                XCTAssertTrue(app.navigationBars["Prepare workout"].waitForExistence(timeout: 3))
+                XCTAssertFalse(app.buttons["preflight.begin"].exists)
+            }
+            app.terminate()
+        }
+    }
+
     func testSavedPlanRunsThroughNormalPreparationAndPreflightWithoutProofCeremony() {
         launch(
             capabilities: "known",
@@ -393,7 +417,8 @@ final class PlansFlowUITests: XCTestCase {
         capabilities: String,
         draft: String,
         repository: String = "empty",
-        workoutReady: Bool = false
+        workoutReady: Bool = false,
+        liveMismatch: Bool = false
     ) {
         app = XCUIApplication()
         app.launchArguments = ["--paceprompt-ui-testing"]
@@ -408,6 +433,7 @@ final class PlansFlowUITests: XCTestCase {
         if workoutReady {
             app.launchEnvironment["PACEPROMPT_HOME_SCENARIO"] = "workout-ready"
         }
+        if liveMismatch { app.launchEnvironment["PACEPROMPT_PREFLIGHT_READ_MISMATCH"] = "1" }
         app.launch()
         app.tabBars.buttons["Plans"].tap()
     }

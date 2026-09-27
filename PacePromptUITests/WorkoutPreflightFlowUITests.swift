@@ -9,6 +9,22 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         super.tearDown()
     }
 
+    func testLiveFailuresRemoveBeginAndKeepLargeTextRecoveryOperable() {
+        for scenario in ["live-speed", "live-incline", "live-combined", "live-unknown"] {
+            launch(scenario: scenario)
+            XCTAssertTrue(element("preflight.live-failure").exists)
+            XCTAssertFalse(app.buttons["preflight.begin"].exists)
+            XCTAssertTrue(app.staticTexts["Your saved plan has not been altered."].exists)
+            let action = app.buttons[scenario == "live-speed" ? "preflight.edit-plan" : "preflight.choose-treadmill"]
+            scrollTo(action)
+            XCTAssertTrue(action.isHittable)
+            XCTAssertGreaterThanOrEqual(action.frame.height, 44)
+            action.tap()
+            XCTAssertTrue(element("preflight.test-recovery").waitForExistence(timeout: 3))
+            app.terminate()
+        }
+    }
+
     func testReadyPreflightPresentsDesignHierarchyAndMovesToPhysicalStartWaiting() {
         launch(scenario: "ready-to-begin")
 
@@ -140,6 +156,7 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         XCTAssertTrue(
             element("preflight.screen").waitForExistence(timeout: 3)
                 || element("preflight.waiting.screen").waitForExistence(timeout: 3)
+                || element("preflight.live-failure.screen").waitForExistence(timeout: 3)
         )
     }
 

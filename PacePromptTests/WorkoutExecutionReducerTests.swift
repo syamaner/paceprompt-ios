@@ -3,6 +3,16 @@ import XCTest
 @testable import PacePrompt
 
 final class WorkoutExecutionReducerTests: XCTestCase {
+  func testCapabilityChangeDuringPreflightRejectsBeginWithNoCommandEffects() throws {
+    let h = Harness()
+    let preflight = try h.preflightState()
+    let changed = h.send(preflight, .capabilityChanged(epoch: h.epoch, capability: h.capabilityReplacingFeatureEvidence(.unavailable)))
+    XCTAssertFalse(changed.effects.containsTargetSubmission)
+    let begin = h.send(changed.state, .beginWorkout(epoch: h.epoch))
+    XCTAssertNotEqual(begin.disposition, .accepted, "Changed current evidence must block Begin")
+    XCTAssertTrue(begin.effects.isEmpty)
+  }
+
   func testExactProfileAndCeilingsGatePreflight() throws {
     let h = Harness()
     var state = h.connectingState()
