@@ -363,14 +363,14 @@ private final class ExportRepositoryDouble: SavedPlanRepositoryProtocol {
         )
     }
 
-    func create(_ validatedPlan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord {
+    func create(_ validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord {
         mutationCount += 1
         throw ExportTestError.failed
     }
 
     func replace(
         id: UUID,
-        with validatedPlan: WorkoutPlanValidator.ValidatedPlan
+        with validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan
     ) throws -> SavedPlanRecord {
         mutationCount += 1
         throw ExportTestError.failed

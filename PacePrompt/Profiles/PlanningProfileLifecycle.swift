@@ -38,6 +38,29 @@ final class PlanningProfilesViewModel: ObservableObject {
         if store == nil && failure != nil { return "Saved profiles unavailable" }
         return records.first { $0.id == store?.lastSelectedProfileID }?.name ?? "No treadmill selected"
     }
+    @Published private(set) var deliberateNoProfile = false
+    var selectedProfile: PlanningProfile? {
+        guard !deliberateNoProfile else { return nil }
+        return records.first { $0.id == store?.lastSelectedProfileID }
+    }
+    var authoringSelectionName: String {
+        if store == nil, failure != nil, !deliberateNoProfile { return "Saved profiles unavailable" }
+        return selectedProfile?.name ?? "No treadmill selected"
+    }
+    @discardableResult
+    func commitAuthoringSelection(_ id: String?) -> Bool {
+        if id == nil, store == nil {
+            // No profile authoring remains available without touching blocked or absent storage.
+            deliberateNoProfile = true
+            return true
+        }
+        let success = mutate { replacement in
+            if let id, !replacement.records.contains(where: { $0.id == id }) { throw PlanningProfileFailure.conflict }
+            replacement.lastSelectedProfileID = id
+        }
+        if success { deliberateNoProfile = id == nil }
+        return success
+    }
     func warning(_ snapshot: PlanningProfileSnapshot) -> String? { snapshot.ageWarning(at: now()) }
     func reload() {
         do { store = try repository.load(); failure = nil }
@@ -148,10 +171,7 @@ final class PlanningProfilesViewModel: ObservableObject {
     }
     @discardableResult
     func selectCreated(_ id: String) -> Bool {
-        mutate { replacement in
-            guard replacement.records.contains(where: { $0.id == id }) else { throw PlanningProfileFailure.conflict }
-            replacement.lastSelectedProfileID = id
-        }
+        commitAuthoringSelection(id)
     }
     private func mutate(_ operation: (inout PlanningProfileStore) throws -> Void) -> Bool {
         do {

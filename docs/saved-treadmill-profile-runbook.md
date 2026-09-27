@@ -1,6 +1,6 @@
 # Saved treadmill profiles: setup and recovery
 
-Issue #141 implements screens 4i–4l of the [accepted v1 contract](../design/saved-treadmill-planning-profile-contract.md). This is local historical capability storage. Plan authoring integration and live preflight changes belong to #142–#144; selecting **Use for planning** currently persists the selection only. It does not change plan validation or provider requests.
+Issues #141 and #142 implement lifecycle screens 4i–4l and the shared authoring selector 4a–4e of the [accepted v1 contract](../design/saved-treadmill-planning-profile-contract.md). This is local historical capability storage. Compatibility-result UI and live preflight changes remain in #143–#144. Selection is shared authoring state and never enters a saved plan or provider request.
 
 ## Setup and normal use
 
@@ -12,6 +12,16 @@ Issue #141 implements screens 4i–4l of the [accepted v1 contract](../design/sa
 6. **Delete profile** requires a confirmation naming the profile. Deleting a selected profile returns selection to **No treadmill selected**. Plans, history, connection and an active workout are unaffected. A late repeated read cannot recreate it in that generation; a later explicit connection may discover it again with a new profile ID.
 
 Saved rows remain historical even when a separate **Current treadmill** badge indicates a complete current connection read. At 30 days, an age warning appears without expiring the record. A future confirmation date shows **Confirmation date cannot be verified**. Neither establishes readiness to execute.
+
+## Authoring with or without a profile
+
+Open Plans and use the **Treadmill profile** row before **New plan** or **AI import**. The same row appears above manual fields and import text. Select a historical row or **No treadmill selected**, then tap **Done**. Cancel or swipe dismissal preserves selection. Done rechecks that a selected record still exists before persisting it. A deleted selection falls back to none. A separate mint **Current treadmill** badge means complete current connection evidence; historical selection itself remains neutral. Stale or uncertain dates show a separate warning without disabling authoring.
+
+If profile storage is unavailable, the row explains that failure. Deliberately choosing **No treadmill selected** allows authoring without rewriting or resetting blocked storage. That deliberate no-profile session choice survives successful recovery; if Done occurred while storage was blocked, it remains process-only until Done can safely persist it. A fresh launch restores the last successfully persisted selection. Profile management is available from the picker; an empty collection explains how to close the picker and return to Home → **Set up treadmill**. No picker action scans or connects.
+
+Selection does not edit draft values or import text. Manual increment buttons use the selected profile's increments; no-profile controls use 0.01 km/h and 0.1 %. Direct exact editing remains available beyond recorded ranges; nothing is clamped. Invalid or unrepresentable decimal text is rejected. Manual and mapped AI proposals use canonical authoring validation independently of equipment: structure, positive durations, finite exact targets and non-negative speed; signed inclination is allowed. This authoring token cannot establish live execution readiness. Extreme targets can make the distance estimate unavailable while preserving the exact plan.
+
+A canonical-valid plan can be previewed and deliberately saved while disconnected; the plan repository must still be writable. Historical compatibility verdicts and mismatch UI are deferred to #143. Run preparation still uses the existing live capability validator. AI import still requires a stored provider credential, per-request remote-send disclosure and affirmative consent. Existing live support-state vocabulary is sent; saved identity, name, equipment and ranges are excluded. Changing a selection never authorises a request or changes those transmitted fields.
 
 ## Storage and failure handling
 
@@ -36,6 +46,6 @@ xcodebuild -project PacePrompt.xcodeproj -scheme PacePrompt \
 scripts/validate_local.sh
 ```
 
-CI and the complete local gate run `scripts/verify_planning_profile_boundaries.py` to check for infrastructure types in profile domain/presentation, prohibited profile side effects, and #141 dependencies in excluded provider/plan/history/Health/execution subsystems. The check must be revised deliberately with a later authorised slice.
+CI and the complete local gate run `scripts/verify_planning_profile_boundaries.py` to check for infrastructure types in profile domain/presentation, prohibited profile side effects, and profile dependencies in domain/provider-transport/plan/history/Health/execution subsystems (the import presentation row is allowed). The check must be revised deliberately with a later authorised slice.
 
 Tests use synthetic identities and an isolated memory repository for UI scenarios. Shared memory/file contracts exercise revisions and selection; fault injection exercises pre/post-replacement truth; Foundation seam tests confirm trusted aliases/owned symlink handling, backup exclusion and rejection of unavailable protection metadata on the simulator; they do not bypass that check to write private bytes. Successful persistence semantics use the injected file adapter contract. Signed-device observation is still required to confirm actual lock-time Data Protection and backup behaviour. These tests do not prove physical Bluetooth behaviour. No device, release upload, distribution or provider call is authorised by this runbook.

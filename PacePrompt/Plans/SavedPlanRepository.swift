@@ -191,12 +191,21 @@ struct SavedPlanJSONCodec: SavedPlanStoreCoding {
 
 protocol SavedPlanRepositoryProtocol {
     func list() -> SavedPlanRepositoryStatus
-    func create(_ validatedPlan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord
+    func create(_ validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord
     func replace(
         id: UUID,
-        with validatedPlan: WorkoutPlanValidator.ValidatedPlan
+        with validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan
     ) throws -> SavedPlanRecord
     func delete(id: UUID) throws
+}
+
+extension SavedPlanRepositoryProtocol {
+    func create(_ plan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord {
+        try create(CanonicalWorkoutAuthoringValidator.validate(plan.plan).get())
+    }
+    func replace(id: UUID, with plan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord {
+        try replace(id: id, with: CanonicalWorkoutAuthoringValidator.validate(plan.plan).get())
+    }
 }
 
 final class SavedPlanRepository: SavedPlanRepositoryProtocol {
@@ -260,7 +269,7 @@ final class SavedPlanRepository: SavedPlanRepositoryProtocol {
     }
 
     @discardableResult
-    func create(_ validatedPlan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord {
+    func create(_ validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord {
         var records = try recordsForMutation()
         let timestamp = now()
         let record = SavedPlanRecord(
@@ -277,7 +286,7 @@ final class SavedPlanRepository: SavedPlanRepositoryProtocol {
     @discardableResult
     func replace(
         id: UUID,
-        with validatedPlan: WorkoutPlanValidator.ValidatedPlan
+        with validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan
     ) throws -> SavedPlanRecord {
         var records = try recordsForMutation()
         guard let index = records.firstIndex(where: { $0.id == id }) else {

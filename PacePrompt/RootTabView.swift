@@ -59,6 +59,7 @@ struct RootTabView: View {
                 PlansView(
                     viewModel: plans,
                     capabilities: capabilities,
+                    profiles: treadmill.planningProfiles,
                     beginImport: { importer.begin(capabilities: capabilities) },
                     beginWorkout: workoutSession.begin
                 )
@@ -85,7 +86,7 @@ struct RootTabView: View {
             }
         }
         .sheet(isPresented: Binding(get: { importer.isPresented }, set: { if !$0 { importer.cancel() } })) {
-            WorkoutImportView(model: importer, plans: plans)
+            WorkoutImportView(model: importer, plans: plans, profiles: treadmill.planningProfiles)
         }
         .fullScreenCover(
             isPresented: Binding(

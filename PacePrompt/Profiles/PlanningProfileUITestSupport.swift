@@ -5,6 +5,9 @@ import Foundation
 enum PlanningProfileUITestSupport {
     static let enabled = ProcessInfo.processInfo.arguments.contains("--paceprompt-profile-ui-testing")
     static func model() -> PlanningProfilesViewModel {
+        if ProcessInfo.processInfo.environment["PACEPROMPT_PROFILE_SCENARIO"] == "unavailable" {
+            return PlanningProfilesViewModel(repository: UnavailableProfileUITestRepository(), identity: LocalPlanningProfileIdentity())
+        }
         let repository = MemoryPlanningProfileRepository()
         let model = PlanningProfilesViewModel(repository: repository, identity: LocalPlanningProfileIdentity())
         let scenario = ProcessInfo.processInfo.environment["PACEPROMPT_PROFILE_SCENARIO"] ?? "populated"
@@ -32,5 +35,10 @@ enum PlanningProfileUITestSupport {
         }
         return model
     }
+}
+@MainActor
+private final class UnavailableProfileUITestRepository: PlanningProfileRepository {
+    func load() throws -> PlanningProfileStore? { throw PlanningProfileFailure.readFailure }
+    func commit(_ replacement: PlanningProfileStore, expectedRevision: Int?) throws { throw PlanningProfileFailure.writeFailure }
 }
 #endif

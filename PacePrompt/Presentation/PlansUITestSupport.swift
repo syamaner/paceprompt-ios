@@ -60,8 +60,8 @@ struct PlansUITestConfiguration {
             ]
         )
         if scenario == "invalid" {
-            draft.steps[1].speedKilometresPerHour = "20.1"
-            draft.steps[1].inclinationPercent = "1.2"
+            draft.steps[1].speedKilometresPerHour = "not-a-number"
+            draft.steps[1].inclinationPercent = "not-a-number"
         }
         if scenario == "long" {
             var steps: [ManualWorkoutStepDraft] = [
@@ -166,7 +166,7 @@ private final class PlansUITestRepository: SavedPlanRepositoryProtocol {
         }
     }
 
-    func create(_ validatedPlan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord {
+    func create(_ validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord {
         if scenario == "save-failure" {
             throw SavedPlanMutationFailure.writeFailed(.atomicReplacement)
         }
@@ -183,7 +183,7 @@ private final class PlansUITestRepository: SavedPlanRepositoryProtocol {
 
     func replace(
         id: UUID,
-        with validatedPlan: WorkoutPlanValidator.ValidatedPlan
+        with validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan
     ) throws -> SavedPlanRecord {
         if scenario == "edit-failure" {
             throw SavedPlanMutationFailure.recordNotFound(id)

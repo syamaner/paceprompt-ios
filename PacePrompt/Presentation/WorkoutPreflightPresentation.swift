@@ -342,12 +342,12 @@ struct WorkoutPreflightPresentation: Equatable {
       hours > 0
             ? String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
             : String(format: "%d:%02d", minutes, remainingSeconds)
-        let distance = PlanValueFormatter.estimatedDistanceText(
+        let distance = PlanValueFormatter.estimatedDistanceSummary(
             preview.estimatedDistanceKilometres,
             locale: locale
         )
         let count = preview.plan.steps.count
-        return "\(duration) · \(distance) km est. · \(count) \(count == 1 ? "segment" : "segments")"
+        return "\(duration) · \(distance) est. · \(count) \(count == 1 ? "segment" : "segments")"
     }
 
     private static func measurement(_ value: Decimal, unit: String, locale: Locale) -> String {
