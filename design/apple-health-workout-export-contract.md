@@ -392,3 +392,7 @@ Issue [#64](https://github.com/syamaner/paceprompt-ios/issues/64) must verify th
 ## Exclusions
 
 This issue adds no entitlement or executable code, permission prompt, HealthKit call, HealthKit read access, Apple Watch target, WatchConnectivity, heart-rate or energy data, speed or inclination quantity samples, raw telemetry persistence, command evidence, peripheral identity, diagnostic export, background delivery, physical treadmill operation, provider call, analytics or cloud storage.
+
+## Post-MVP Watch ownership boundary
+
+The [Watch-primary contract v1](watch-primary-health-interchange-contract.md) governs only newly reserved Watch-assisted attempts after #115 implementation. It suppresses the iPhone save from reservation onward, including ambiguous outcomes; the iPhone retry/replacement rules here must never be used as Watch fallback. Historical iPhone-only records and this timeline metadata mapping remain unchanged. #114 is specification evidence only.

@@ -211,3 +211,7 @@ On 11 September, low-value speed and inclination targets were separately submitt
 ## Repository guidance
 
 Product and design sources stay under `design/`. Project-wide safety and slice rules are in `AGENTS.md`; repository-local skills are maintained under `.agents/skills`. Per-commit Codex token measurements and API-equivalent estimates are recorded in `DEVELOPMENT_NOTES.md`.
+
+## Watch-primary specification
+
+The [Watch-primary Health interchange contract](design/watch-primary-health-interchange-contract.md), [synthetic fixtures](docs/fixtures/watch-health-v1/README.md) and [acceptance runbook](docs/watch-health-interchange-runbook.md) freeze issue #114. Watch implementation #115, WeeklyHealthReport #80 and paired-device/FR30z acceptance #116 remain unimplemented by this specification. Parent #7 remains open. Existing iPhone-only Health saving is unchanged.
