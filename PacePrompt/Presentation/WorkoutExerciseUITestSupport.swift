@@ -144,11 +144,6 @@
     ) -> WorkoutExerciseContext {
       let plan = validatedPlan(activity: activity)
       let capability = capabilitySnapshot()
-      let ceilings = WorkoutSessionCeilings(
-        maximumSpeed: .init(value: 10, unit: .kilometresPerHour),
-        maximumInclination: .init(value: 6, unit: .percent),
-        maximumStepSpeedChange: .init(value: 2, unit: .kilometresPerHour)
-      )
       let profile = FR30zExecutionProfile(
         peripheralIdentity: "synthetic-peripheral",
         equipmentIdentity: "synthetic-fr30z"
@@ -160,7 +155,6 @@
       state.armedWorkout = .init(
         plan: plan,
         capability: capability,
-        ceilings: ceilings,
         profile: profile
       )
       state.currentSegment = .init(
@@ -285,7 +279,6 @@
         sourcePlanID: UUID(uuidString: "00000000-0000-0000-0000-000000000061"),
         plan: plan,
         capability: capability,
-        ceilings: ceilings,
         profile: profile,
         executionProfileIdentity: FR30zExecutionProfile.identity,
         attemptedAt: Date(timeIntervalSince1970: 1_789_120_000)

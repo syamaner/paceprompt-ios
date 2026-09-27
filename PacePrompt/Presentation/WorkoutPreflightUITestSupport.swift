@@ -103,7 +103,6 @@ struct WorkoutPreflightUITestHost: View {
       now = now.advanced(by: 0.1)
         context = .init(
             validatedPlan: context.validatedPlan,
-            ceilings: context.ceilings,
             profile: context.profile,
             executionState: transition.state
         )
@@ -122,11 +121,6 @@ private enum WorkoutPreflightFixtures {
             peripheralIdentity: "synthetic-local-peripheral",
             equipmentIdentity: "synthetic-fr30z-profile"
         )
-        let ceilings = WorkoutSessionCeilings(
-            maximumSpeed: speed(10),
-            maximumInclination: inclination(6),
-            maximumStepSpeedChange: speed(2)
-        )
         let capability = matchingCapability()
 
         var state = WorkoutExecutionState()
@@ -143,7 +137,6 @@ private enum WorkoutPreflightFixtures {
             state = WorkoutExecutionState()
             return make(
                 plan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 state: state,
                 now: 1
@@ -152,7 +145,6 @@ private enum WorkoutPreflightFixtures {
         if scenario == .preparing {
             return make(
                 plan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 state: state,
                 now: 1.1
@@ -173,7 +165,6 @@ private enum WorkoutPreflightFixtures {
         if scenario == .unsupported {
             return make(
                 plan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 state: state,
                 now: 2.1
@@ -183,7 +174,7 @@ private enum WorkoutPreflightFixtures {
       state =
         reducer.reduce(
             state,
-            .arm(plan: plan, ceilings: ceilings, profile: profile),
+            .arm(plan: plan, profile: profile),
             at: .init(seconds: 3)
         ).state
       state =
@@ -237,7 +228,6 @@ private enum WorkoutPreflightFixtures {
           ).state
             return make(
                 plan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 state: state,
           now: 6.4
@@ -251,7 +241,6 @@ private enum WorkoutPreflightFixtures {
             ).state
             return make(
                 plan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 state: state,
                 now: 4.2
@@ -259,7 +248,6 @@ private enum WorkoutPreflightFixtures {
         case .readyToBegin, .liveSpeed, .liveIncline, .liveCombined, .liveUnknown:
             return make(
                 plan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 state: state,
                 now: 4.1
@@ -273,7 +261,6 @@ private enum WorkoutPreflightFixtures {
         if scenario == .waitingForPhysicalStart {
                 return make(
                     plan: plan,
-                    ceilings: ceilings,
                     profile: profile,
                     state: transition.state,
                     now: 4.2
@@ -289,7 +276,6 @@ private enum WorkoutPreflightFixtures {
             )
             return make(
                 plan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 state: transition.state,
           now: 4.3
@@ -303,7 +289,6 @@ private enum WorkoutPreflightFixtures {
             ).state
             return make(
                 plan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 state: state,
                 now: 4.2
@@ -315,7 +300,6 @@ private enum WorkoutPreflightFixtures {
 
     private static func make(
         plan: WorkoutPlanValidator.ValidatedPlan,
-        ceilings: WorkoutSessionCeilings,
         profile: FR30zExecutionProfile,
         state: WorkoutExecutionState,
         now: TimeInterval
@@ -323,7 +307,6 @@ private enum WorkoutPreflightFixtures {
         .init(
             context: .init(
                 validatedPlan: plan,
-                ceilings: ceilings,
                 profile: profile,
                 executionState: state
             ),

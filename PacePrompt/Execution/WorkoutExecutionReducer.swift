@@ -39,12 +39,6 @@ struct FR30zCapabilitySnapshot: Equatable {
   let planCapabilities: WorkoutPlanCapabilities
 }
 
-struct WorkoutSessionCeilings: Equatable {
-  let maximumSpeed: WorkoutSpeed
-  let maximumInclination: WorkoutInclination
-  let maximumStepSpeedChange: WorkoutSpeed
-}
-
 /// The immutable issue #57 product policy. It deliberately has no Start, Stop,
 /// Pause, retry, reconnect, or control-reacquisition option.
 struct FR30zExecutionProfile: Equatable {
@@ -52,7 +46,6 @@ struct FR30zExecutionProfile: Equatable {
   static let telemetryFreshnessInterval: TimeInterval = 2
   static let targetObservationInterval: TimeInterval = 30
   static let procedureResponseInterval: TimeInterval = 30
-
   let peripheralIdentity: String
   let equipmentIdentity: String
 
@@ -246,7 +239,6 @@ enum WorkoutObservedMachineState: Equatable {
 struct ArmedWorkout: Equatable {
   let plan: WorkoutPlanValidator.ValidatedPlan
   let capability: FR30zCapabilitySnapshot
-  let ceilings: WorkoutSessionCeilings
   let profile: FR30zExecutionProfile
 }
 
@@ -389,7 +381,7 @@ enum WorkoutExecutionEvent: Equatable {
   case userStartsConnection(ConnectionEpoch)
   case connectionBecomesReady(epoch: ConnectionEpoch, capability: FR30zCapabilitySnapshot)
   case arm(
-    plan: WorkoutPlanValidator.ValidatedPlan, ceilings: WorkoutSessionCeilings,
+    plan: WorkoutPlanValidator.ValidatedPlan,
     profile: FR30zExecutionProfile)
   case cancelPreflight(epoch: ConnectionEpoch)
   case beginWorkout(epoch: ConnectionEpoch)
@@ -437,7 +429,7 @@ enum WorkoutGuardRejection: Equatable {
   case staleEpoch
   case connectionNotReady
   case incompleteCapabilityEvidence
-  case invalidPlanOrCeilings
+  case invalidPlan
   case incompleteOrMismatchedProfile
   case controlNotHeld
   case procedureBusy
@@ -515,7 +507,7 @@ struct WorkoutExecutionReducer {
       }
       state.connection = .ready(epoch: epoch, capability: capability)
 
-    case .arm(let plan, let ceilings, let profile):
+    case .arm(let plan, let profile):
       guard case .ready(_, let capability) = state.connection,
         case .idle = state.execution,
         state.isForegroundActive
@@ -523,11 +515,11 @@ struct WorkoutExecutionReducer {
       guard profile.matches(capability) else {
         return rejected(original, .incompleteOrMismatchedProfile)
       }
-      guard planAndCeilingsAreValid(plan, capability: capability, ceilings: ceilings) else {
-        return rejected(original, .invalidPlanOrCeilings)
+      guard planIsValid(plan, capability: capability) else {
+        return rejected(original, .invalidPlan)
       }
       state.armedWorkout = .init(
-        plan: plan, capability: capability, ceilings: ceilings, profile: profile)
+        plan: plan, capability: capability, profile: profile)
       state.telemetry = .unavailable("Awaiting current attempt telemetry")
       state.observedMachine = .unknown
       state.execution = .preflight
@@ -855,60 +847,14 @@ extension WorkoutExecutionReducer {
       && capability.supportedInclinationRangeEvidence != .unavailable
   }
 
-  fileprivate func planAndCeilingsAreValid(
+  fileprivate func planIsValid(
     _ validated: WorkoutPlanValidator.ValidatedPlan,
-    capability: FR30zCapabilitySnapshot,
-    ceilings: WorkoutSessionCeilings
+    capability: FR30zCapabilitySnapshot
   ) -> Bool {
-    guard
-      case .success(let revalidated) = WorkoutPlanValidator.validate(
-        validated.plan, against: capability.planCapabilities),
-      revalidated == validated,
-      case .supported(let speedRange) = capability.planCapabilities.speed,
-      case .supported(let inclinationRange) = capability.planCapabilities.inclination,
-      value(ceilings.maximumSpeed, isWithin: speedRange, ceiling: speedRange.maximum),
-      value(
-        ceilings.maximumInclination, isWithin: inclinationRange, ceiling: inclinationRange.maximum),
-      ceilings.maximumStepSpeedChange.value > 0,
-      ceilings.maximumStepSpeedChange.value <= speedRange.maximum.value - speedRange.minimum.value,
-      isAligned(
-        ceilings.maximumStepSpeedChange.value, minimum: 0, increment: speedRange.increment.value)
+    guard case .success(let revalidated) = WorkoutPlanValidator.validate(
+      validated.plan, against: capability.planCapabilities)
     else { return false }
-
-    for (index, step) in validated.plan.steps.enumerated() {
-      guard step.targetSpeed.value <= ceilings.maximumSpeed.value,
-        step.targetInclination.value <= ceilings.maximumInclination.value
-      else { return false }
-      if index > 0 {
-        let previous = validated.plan.steps[index - 1].targetSpeed.value
-        guard absolute(step.targetSpeed.value - previous) <= ceilings.maximumStepSpeedChange.value
-        else {
-          return false
-        }
-      }
-    }
-    return true
-  }
-
-  fileprivate func value(
-    _ value: WorkoutSpeed, isWithin range: WorkoutSpeedRange, ceiling: WorkoutSpeed
-  ) -> Bool {
-    value.value.isFinite
-      && value.unit == range.minimum.unit
-      && value.value >= range.minimum.value
-      && value.value <= ceiling.value
-      && isAligned(value.value, minimum: range.minimum.value, increment: range.increment.value)
-  }
-
-  fileprivate func value(
-    _ value: WorkoutInclination, isWithin range: WorkoutInclinationRange,
-    ceiling: WorkoutInclination
-  ) -> Bool {
-    value.value.isFinite
-      && value.unit == range.minimum.unit
-      && value.value >= range.minimum.value
-      && value.value <= ceiling.value
-      && isAligned(value.value, minimum: range.minimum.value, increment: range.increment.value)
+    return revalidated == validated
   }
 
   fileprivate func beginRejection(_ state: WorkoutExecutionState) -> WorkoutGuardRejection {
@@ -1962,7 +1908,7 @@ extension WorkoutExecutionReducer {
     guard let armed = state.armedWorkout,
       case .supported(let range) = armed.capability.planCapabilities.speed
     else { return false }
-    return value(speed, isWithin: range, ceiling: armed.ceilings.maximumSpeed)
+    return WorkoutPlanValidator.accepts(speed, in: range)
   }
 
   fileprivate func validInclinationAdjustment(
@@ -1971,7 +1917,7 @@ extension WorkoutExecutionReducer {
     guard let armed = state.armedWorkout,
       case .supported(let range) = armed.capability.planCapabilities.inclination
     else { return false }
-    return value(inclination, isWithin: range, ceiling: armed.ceilings.maximumInclination)
+    return WorkoutPlanValidator.accepts(inclination, in: range)
   }
 
   fileprivate func completionContext(
@@ -2036,17 +1982,5 @@ extension WorkoutExecutionReducer {
     return state.completedActiveSeconds + current
   }
 
-  fileprivate func isAligned(_ value: Decimal, minimum: Decimal, increment: Decimal) -> Bool {
-    guard value.isFinite, minimum.isFinite, increment.isFinite, increment > 0 else { return false }
-    var quotient = (value - minimum) / increment
-    var rounded = Decimal()
-    NSDecimalRound(&rounded, &quotient, 0, .plain)
-    return quotient == rounded
-  }
 
-  fileprivate func absolute(_ value: Decimal) -> Decimal { value < 0 ? -value : value }
-}
-
-extension Decimal {
-  fileprivate var isFinite: Bool { !isNaN }
 }

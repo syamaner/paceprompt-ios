@@ -483,7 +483,7 @@ struct WorkoutExercisePresentation: Equatable {
       }
       return .init(
         minimum: range.minimum.value,
-        maximum: min(range.maximum.value, armed.ceilings.maximumSpeed.value),
+        maximum: range.maximum.value,
         increment: range.increment.value
       )
     }
@@ -492,7 +492,7 @@ struct WorkoutExercisePresentation: Equatable {
     }
     return .init(
       minimum: range.minimum.value,
-      maximum: min(range.maximum.value, armed.ceilings.maximumInclination.value),
+      maximum: range.maximum.value,
       increment: range.increment.value
     )
   }

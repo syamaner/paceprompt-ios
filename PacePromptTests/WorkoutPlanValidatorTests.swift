@@ -3,6 +3,20 @@ import XCTest
 @testable import PacePrompt
 
 final class WorkoutPlanValidatorTests: XCTestCase {
+    func testSharedTargetContractUsesInclusiveRangeAndExactIncrement() {
+        let speedRange = WorkoutSpeedRange(minimum: .init(value: Decimal(string: "0.5")!, unit: .kilometresPerHour),
+            maximum: .init(value: 20, unit: .kilometresPerHour), increment: .init(value: Decimal(string: "0.1")!, unit: .kilometresPerHour))
+        for (value, expected) in [("0.5", true), ("10.1", true), ("20", true), ("0.4", false), ("20.1", false), ("19.95", false)] {
+            XCTAssertEqual(WorkoutPlanValidator.accepts(.init(value: Decimal(string: value)!, unit: .kilometresPerHour), in: speedRange), expected)
+        }
+        XCTAssertFalse(WorkoutPlanValidator.accepts(.init(value: .nan, unit: .kilometresPerHour), in: speedRange))
+        let inclinationRange = WorkoutInclinationRange(minimum: .init(value: 0, unit: .percent),
+            maximum: .init(value: 15, unit: .percent), increment: .init(value: 1, unit: .percent))
+        for (value, expected) in [("0", true), ("7", true), ("15", true), ("-1", false), ("16", false), ("14.5", false)] {
+            XCTAssertEqual(WorkoutPlanValidator.accepts(.init(value: Decimal(string: value)!, unit: .percent), in: inclinationRange), expected)
+        }
+    }
+
     func testSchemaDecodesExplicitUnitsAndPreservesStepOrder() throws {
         let json = #"""
         {

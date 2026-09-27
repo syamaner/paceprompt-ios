@@ -94,7 +94,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
   func testEndToEndPhysicalStartThenRequestControlSequencesOnlySpeedAndInclination() throws {
     let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
-    XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
+    XCTAssertNotNil(h.binding.arm(plan: h.plan, sourcePlanID: nil))
 
     XCTAssertNotNil(h.binding.beginWorkout())
     XCTAssertTrue(h.link.writes.isEmpty)
@@ -134,7 +134,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
   func testPhysicalStartRampBelowMinimumTargetPermitsRequestControl() throws {
     let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
-    XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
+    XCTAssertNotNil(h.binding.arm(plan: h.plan, sourcePlanID: nil))
     XCTAssertNotNil(h.binding.beginWorkout())
 
     h.publishTelemetry(speedRaw: 10)
@@ -174,7 +174,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
   func testInactiveBackgroundAndScreenLockLifecyclePreserveSameAttemptAndLink() throws {
     let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
-    XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
+    XCTAssertNotNil(h.binding.arm(plan: h.plan, sourcePlanID: nil))
     _ = h.binding.beginWorkout()
     let attemptID = h.binding.orchestrator.frozenAttempt?.attemptID
     XCTAssertTrue(h.link.writes.isEmpty)
@@ -290,7 +290,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
   func testExplicitReconnectCanPrepareAnotherSequence() {
     let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
-    XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
+    XCTAssertNotNil(h.binding.arm(plan: h.plan, sourcePlanID: nil))
 
     h.binding.receive(.connection(.disconnected(message: "Synthetic explicit disconnect")))
     guard case .interrupted = h.binding.orchestrator.state.execution else {
@@ -300,7 +300,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     h.makeReadyWithFreshStationaryTelemetry()
 
     XCTAssertTrue(h.binding.canExposeArming)
-    XCTAssertNotNil(h.binding.arm(plan: h.plan, ceilings: h.ceilings, sourcePlanID: nil))
+    XCTAssertNotNil(h.binding.arm(plan: h.plan, sourcePlanID: nil))
     XCTAssertEqual(h.binding.orchestrator.state.execution, .preflight)
     XCTAssertTrue(h.link.writes.isEmpty)
   }
@@ -324,11 +324,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(displayWake.values, [false])
 
     coordinator.begin(record)
-    coordinator.limits = .init(
-      maximumSpeed: "10.0",
-      maximumInclination: "6",
-      maximumStepSpeedChange: "3.0"
-    )
     coordinator.prepareWorkout()
 
     XCTAssertEqual(coordinator.stage, .preflight)
@@ -362,9 +357,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     )
 
     coordinator.begin(record)
-    coordinator.limits = .init(
-      maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3"
-    )
     coordinator.prepareWorkout()
     coordinator.cancelBeforeExercise()
 
@@ -376,9 +368,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
 
     coordinator.begin(record)
-    coordinator.limits = .init(
-      maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3"
-    )
     coordinator.prepareWorkout()
     XCTAssertEqual(coordinator.stage, .preflight)
     XCTAssertTrue(h.link.writes.isEmpty)
@@ -399,9 +388,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       displayWakeController: displayWake
     )
     coordinator.begin(record)
-    coordinator.limits = .init(
-      maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3"
-    )
     coordinator.prepareWorkout()
     coordinator.handlePreflight(.beginWorkout)
 
@@ -453,7 +439,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
     let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController())
     let record = SavedPlanRecord(id: UUID(), createdAt: Date(timeIntervalSince1970: 0), modifiedAt: Date(timeIntervalSince1970: 0), plan: h.plan.plan)
-    c.begin(record); c.limits = .init(maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3")
+    c.begin(record)
     c.prepareWorkout()
     XCTAssertTrue(try XCTUnwrap(c.preflightPresentation).canBeginWorkout)
     h.client.onRead = { [weak binding = h.binding] in
@@ -477,7 +463,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     h.client.onRead = {}
     let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController())
     let record = SavedPlanRecord(id: UUID(), createdAt: Date(timeIntervalSince1970: 0), modifiedAt: Date(timeIntervalSince1970: 0), plan: h.plan.plan)
-    c.begin(record); c.limits = .init(maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3")
+    c.begin(record)
     c.prepareWorkout(); XCTAssertNil(h.binding.orchestrator.state.armedWorkout)
     h.clock.advance(by: 10); c.refresh()
     XCTAssertTrue(try XCTUnwrap(c.liveFailure).reason.contains("disconnect and reconnect"))
@@ -492,18 +478,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
-  func testSessionLimitDraftParsesExactLocaleDecimalWithoutInventingDefaults() {
-    XCTAssertNil(WorkoutSessionLimitDraft().ceilings())
-    let parsed = WorkoutSessionLimitDraft(
-      maximumSpeed: "0,70",
-      maximumInclination: "1",
-      maximumStepSpeedChange: "0,10"
-    ).ceilings(locale: Locale(identifier: "de_DE"))
-
-    XCTAssertEqual(parsed?.maximumSpeed.value, Decimal(string: "0.70"))
-    XCTAssertEqual(parsed?.maximumInclination.value, 1)
-    XCTAssertEqual(parsed?.maximumStepSpeedChange.value, Decimal(string: "0.10"))
-  }
 
   func testDisplayWakePolicyKeepsOnlyNonterminalExerciseStagesAwake() {
     let activeStages: [WorkoutExerciseStage] = [
@@ -597,7 +571,6 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       sourcePlanID: nil,
       plan: h.plan,
       capability: capability,
-      ceilings: h.ceilings,
       profile: profile,
       executionProfileIdentity: FR30zExecutionProfile.identity,
       attemptedAt: h.clock.read().wallClock
@@ -661,7 +634,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     let targetID = ProcedureID(epoch: epoch, sequence: 42)
     let targetRecord = WorkoutProcedureRecord(
       id: targetID,
-      intent: .setTargetSpeed(.init(value: 11, unit: .kilometresPerHour)),
+      intent: .setTargetSpeed(.init(value: 21, unit: .kilometresPerHour)),
       stepIndex: 0,
       createdAt: h.clock.read().monotonic
     )
@@ -671,7 +644,26 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     ceilingContext.expectedProcedureID = targetID
     ceilingAdapter.contextProvider = { ceilingContext }
     ceilingAdapter.perform(.submit(targetRecord))
-    XCTAssertTrue(ceilingRaw.submissions.isEmpty, "Frozen ceilings must be rechecked")
+    XCTAssertTrue(ceilingRaw.submissions.isEmpty, "Capability bounds must be rechecked")
+
+    let targets: [(WorkoutControlPointIntent, Bool)] = [
+      (.setTargetSpeed(.init(value: Decimal(string: "0.4")!, unit: .kilometresPerHour)), false),
+      (.setTargetSpeed(.init(value: Decimal(string: "19.95")!, unit: .kilometresPerHour)), false),
+      (.setTargetSpeed(.init(value: .nan, unit: .kilometresPerHour)), false),
+      (.setTargetSpeed(.init(value: 20, unit: .kilometresPerHour)), true),
+      (.setTargetInclination(.init(value: -1, unit: .percent)), false),
+      (.setTargetInclination(.init(value: Decimal(string: "14.5")!, unit: .percent)), false),
+      (.setTargetInclination(.init(value: 16, unit: .percent)), false),
+      (.setTargetInclination(.init(value: 15, unit: .percent)), true),
+    ]
+    for (intent, accepted) in targets {
+      let raw = BindingRawTransport(epoch: epoch, permissionHeld: true)
+      let adapter = ProductionWorkoutTargetControlTransport(transport: raw)
+      adapter.contextProvider = { ceilingContext }
+      adapter.perform(.submit(.init(id: targetID, intent: intent, stepIndex: 0,
+        createdAt: h.clock.read().monotonic)))
+      XCTAssertEqual(raw.submissions.count, accepted ? 1 : 0, "Exact live range/increment at write edge: \(intent)")
+    }
 
     let permittedTarget = WorkoutProcedureRecord(
       id: targetID,
@@ -711,11 +703,6 @@ extension ProductionWorkoutExecutionBindingTests {
     let lifecycleCheckpoints = BindingLifecycleCheckpoints()
     let binding: ProductionWorkoutExecutionBinding
     let plan: WorkoutPlanValidator.ValidatedPlan
-    let ceilings = WorkoutSessionCeilings(
-      maximumSpeed: .init(value: 10, unit: .kilometresPerHour),
-      maximumInclination: .init(value: 6, unit: .percent),
-      maximumStepSpeedChange: .init(value: 3, unit: .kilometresPerHour)
-    )
 
     init() {
       client.connectedPeripheralIdentifier = Self.peripheralID
@@ -796,7 +783,7 @@ extension ProductionWorkoutExecutionBindingTests {
 
     func reachRunning() {
       makeReadyWithFreshStationaryTelemetry()
-      XCTAssertNotNil(binding.arm(plan: plan, ceilings: ceilings, sourcePlanID: nil))
+      XCTAssertNotNil(binding.arm(plan: plan, sourcePlanID: nil))
       _ = binding.beginWorkout()
       publishTelemetry(speedRaw: 50)
       link.send(.writeAccepted)

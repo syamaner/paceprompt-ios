@@ -353,6 +353,23 @@ enum WorkoutPlanValidator {
         }
     }
 
+    // Shared exact target contract for plan execution, manual overrides and the write edge.
+    static func accepts(_ target: WorkoutSpeed, in range: WorkoutSpeedRange) -> Bool {
+        target.unit == range.minimum.unit && accepts(target.value,
+            minimum: range.minimum.value, maximum: range.maximum.value, increment: range.increment.value)
+    }
+
+    static func accepts(_ target: WorkoutInclination, in range: WorkoutInclinationRange) -> Bool {
+        target.unit == range.minimum.unit && accepts(target.value,
+            minimum: range.minimum.value, maximum: range.maximum.value, increment: range.increment.value)
+    }
+
+    private static func accepts(_ value: Decimal, minimum: Decimal, maximum: Decimal, increment: Decimal) -> Bool {
+        guard !value.isNaN, !minimum.isNaN, !maximum.isNaN, !increment.isNaN,
+            minimum <= maximum, increment > 0, value >= minimum, value <= maximum else { return false }
+        return isAligned(value, to: increment, from: minimum)
+    }
+
     private static func isAligned(_ value: Decimal, to increment: Decimal, from minimum: Decimal) -> Bool {
         var quotient = (value - minimum) / increment
         var rounded = Decimal()

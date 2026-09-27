@@ -13,19 +13,55 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     XCTAssertTrue(begin.effects.isEmpty)
   }
 
-  func testExactProfileAndCeilingsGatePreflight() throws {
+  func testExactProfileAndCapabilityBoundsGatePreflight() throws {
     let h = Harness()
     var state = h.connectingState()
     let mismatch = h.capabilityReplacingFeatureEvidence(.mismatch)
     state =
       h.accept(h.send(state, .connectionBecomesReady(epoch: h.epoch, capability: mismatch))).state
-    let rejected = h.send(state, .arm(plan: h.plan, ceilings: h.ceilings, profile: h.profile))
+    let rejected = h.send(state, .arm(plan: h.plan, profile: h.profile))
     XCTAssertEqual(rejected.disposition, .rejected(.incompleteOrMismatchedProfile))
     XCTAssertEqual(rejected.state, state)
 
     XCTAssertEqual(try Harness().preflightState().execution, .preflight)
     XCTAssertEqual(FR30zExecutionProfile.telemetryFreshnessInterval, 2)
     XCTAssertEqual(FR30zExecutionProfile.targetObservationInterval, 30)
+  }
+
+  func testPlanSpanningLiveRangeArmsWithoutSeparateIntervalDeltaLimit() throws {
+    let h = Harness()
+    let plan = WorkoutPlan(schemaVersion: WorkoutPlanSchema.currentVersion,
+      suggestedName: "Full live range", activity: .indoorRunning, steps: [
+        Harness.step(.warmUp, "Low", 5, "0.5", "0"),
+        Harness.step(.interval, "High", 5, "20", "15"),
+        Harness.step(.coolDown, "Low", 5, "0.5", "0"),
+      ])
+    let validated = try WorkoutPlanValidator.validate(plan, against: h.capability.planCapabilities).get()
+    let ready = h.accept(h.send(h.connectingState(), .connectionBecomesReady(epoch: h.epoch, capability: h.capability))).state
+    let armed = h.send(ready, .arm(plan: validated, profile: h.profile))
+    XCTAssertEqual(armed.disposition, .accepted)
+    XCTAssertEqual(armed.state.armedWorkout?.plan.plan, plan)
+    XCTAssertTrue(armed.effects.isEmpty)
+  }
+
+  func testManualTargetsUseFullInclusiveLiveCapabilityBounds() throws {
+    let h = Harness()
+    let waiting = try h.waitingState()
+    for value in ["0.5", "10.1", "20"] {
+      let t = h.send(waiting, .setSpeedOverride(epoch: h.epoch, Harness.speed(value)))
+      XCTAssertEqual(t.disposition, .accepted)
+      XCTAssertTrue(t.effects.isEmpty)
+    }
+    for value in ["0", "7", "15"] {
+      let t = h.send(waiting, .setInclinationOverride(epoch: h.epoch, Harness.inclination(value)))
+      XCTAssertEqual(t.disposition, .accepted)
+      XCTAssertTrue(t.effects.isEmpty)
+    }
+    for value in ["0.4", "20.1", "19.95"] {
+      let t = h.send(waiting, .setSpeedOverride(epoch: h.epoch, Harness.speed(value)))
+      XCTAssertEqual(t.disposition, .rejected(.invalidAdjustment))
+      XCTAssertEqual(t.state, waiting)
+    }
   }
 
   func testBeginWaitsForPhysicalStartWithoutAProcedure() throws {
@@ -767,9 +803,9 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     let invalidState = try invalidHarness.runningState()
     for event in [
       WorkoutExecutionEvent.setSpeedOverride(epoch: invalidHarness.epoch, Harness.speed("5.55")),
-      .setSpeedOverride(epoch: invalidHarness.epoch, Harness.speed("10.1")),
+      .setSpeedOverride(epoch: invalidHarness.epoch, Harness.speed("20.1")),
       .setInclinationOverride(epoch: invalidHarness.epoch, Harness.inclination("1.5")),
-      .setInclinationOverride(epoch: invalidHarness.epoch, Harness.inclination("7")),
+      .setInclinationOverride(epoch: invalidHarness.epoch, Harness.inclination("16")),
     ] {
       let rejected = invalidHarness.send(invalidState, event)
       XCTAssertEqual(rejected.disposition, .rejected(.invalidAdjustment))
@@ -1301,7 +1337,7 @@ extension WorkoutExecutionReducerTests {
     let reducer = WorkoutExecutionReducer()
     let epoch: ConnectionEpoch
     let capability: FR30zCapabilitySnapshot
-    let ceilings: WorkoutSessionCeilings
+
     let profile: FR30zExecutionProfile
     let plan: WorkoutPlanValidator.ValidatedPlan
     private(set) var now: TimeInterval = 10
@@ -1330,11 +1366,6 @@ extension WorkoutExecutionReducerTests {
         controlPointIndicationsEnabled: true,
         optionalSubscriptionOutcomesResolved: true,
         planCapabilities: capabilities
-      )
-      ceilings = .init(
-        maximumSpeed: Self.speed("10"),
-        maximumInclination: Self.inclination("6"),
-        maximumStepSpeedChange: Self.speed("3")
       )
       profile = .init(
         peripheralIdentity: capability.peripheralIdentity,
@@ -1390,7 +1421,7 @@ extension WorkoutExecutionReducerTests {
       var state = connectingState()
       state =
         accept(send(state, .connectionBecomesReady(epoch: epoch, capability: capability))).state
-      return accept(send(state, .arm(plan: plan, ceilings: ceilings, profile: profile))).state
+      return accept(send(state, .arm(plan: plan, profile: profile))).state
     }
 
     func waitingState() throws -> WorkoutExecutionState {

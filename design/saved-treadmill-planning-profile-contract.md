@@ -28,7 +28,7 @@ Dependencies point inward. CoreBluetooth objects/UUID types, filesystem URLs, Cr
 4. No raw CoreBluetooth peer identifier or Bluetooth name is persisted by the new profile subsystem. Only its installation-local opaque token is retained for deduplication. User-chosen names are private local data, not proof of identity.
 5. Unknown, unavailable, incomplete, invalid and unsupported capability evidence are distinct. None becomes a usable recorded snapshot by defaulting to zero or inferring support from a characteristic's presence.
 6. A profile comparison never clamps, rounds, edits or substitutes a plan target. Historical compatibility and age are separate verdicts.
-7. Every execution uses freshly read, complete current-connection evidence and all existing FR30z profile, connection epoch, subscription, permission, ceiling, acknowledgement and observation guards. A saved snapshot is never a fallback.
+7. Every execution uses freshly read, complete current-connection evidence and all existing FR30z profile, connection epoch, subscription, permission, capability-bound, acknowledgement and observation guards. A saved snapshot is never a fallback.
 8. No new opcode, Start/Stop/Pause route, automatic reconnection, control reacquisition, automatic continuation or background profile work is authorised.
 
 ## Explicit product decisions
@@ -162,7 +162,7 @@ These are acceptance specifications for later implementation, not tests executed
 | P11 | #143 | Speed-only/inclination-only/combined mismatch, every affected step, inclusive boundaries, exact minimum-origin increment alignment, no-profile, stale and clock-rollback; no target repair |
 | P12 | #143 | 30-day boundary just below/equal/above; changed profile/draft clears prior verdict/Save-anyway acknowledgement; corrupt/unavailable store never produces historical success |
 | P13 | #144 | Fresh live compatible pass, speed/inclination/combined mismatch, unknown/unsupported/incomplete/stale/epoch-change evidence, disconnected equipment and changed capability fail closed |
-| P14 | #144 | Saved profile compatible but current machine incompatible remains blocked; different selected profile cannot override live evidence; every existing FR30z ceiling/permission/acknowledgement/observation guard retained |
+| P14 | #144 | Saved profile compatible but current machine incompatible remains blocked; different selected profile cannot override live evidence; every existing FR30z capability-bound/permission/acknowledgement/observation guard retained |
 | P15 | #141–#144 | 4a–4m navigation/copy/colour/glyphs, VoiceOver order/announcements, Dynamic Type, reduced motion, 44 pt targets, long names and non-colour statuses |
 
 Negative privacy assertions must inspect saved-plan/history/export bytes, outbound requests and diagnostic/crash logging adapters for profile-derived fields, tokens/names/ranges/secret. Use distinctive synthetic profile values and compare outputs while holding permitted live evidence and user text fixed; coincidentally equal live values are not evidence of a profile leak. Existing deliberate live diagnostics retain their separately accepted scope. Test profile repository persistence separately: it intentionally contains those private local fields. Signed-device checks for protection/backup and later physical live-preflight acceptance require separate operator authority. Documentation, synthetic tests and SDK references cannot establish physical machine uniqueness, runtime Data Protection or FTMS behaviour.
