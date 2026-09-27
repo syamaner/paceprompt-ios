@@ -111,15 +111,16 @@ final class WorkoutImportViewModel: ObservableObject {
             }
         }
     }
-    func confirmSave() {
+    func confirmSave(acknowledging mismatch: HistoricalPlanCompatibility? = nil) {
         guard foreground, protectedDataAvailable, previewCapabilities == capabilities,
               plans.preview != nil else { requestChanged(); return }
-        plans.confirmSave()
+        plans.confirmSave(acknowledging: mismatch)
         if let error = plans.saveError {
 #if DEBUG
             diagnostics.record(.terminal(.saveFailure))
 #endif
-            terminal(error)
+            if plans.saveRequiresHistoricalReview { feedback = error }
+            else { terminal(error) }
         } else if plans.preview == nil {
 #if DEBUG
             diagnostics.record(.terminal(.saved))

@@ -160,3 +160,132 @@ struct PlanningProfileManualIncrementControls: View {
             .disabled(ManualWorkoutDraftParser.incrementText(value.wrappedValue, by: increment) == nil)
     }
 }
+
+
+extension HistoricalPlanCompatibility.Mismatch {
+        var message: String {
+            "Step \(stepIndex + 1) \(target): \(PlanValueFormatter.domainText(value)) \(unit). Saved range \(PlanValueFormatter.domainText(minimum))–\(PlanValueFormatter.domainText(maximum)) \(unit); increment \(PlanValueFormatter.domainText(increment)) \(unit), starting at \(PlanValueFormatter.domainText(minimum)) \(unit). \(outOfRange ? "Outside saved range." : "Not aligned with saved increment.")"
+        }
+        var unit: String { target == "speed" ? "km/h" : "%" }
+}
+
+struct HistoricalPlanCompatibilityCard: View {
+    @ObservedObject var plans: PlansViewModel
+    let profiles: PlanningProfilesViewModel?
+    @AccessibilityFocusState private var verdictFocused: Bool
+    @State private var choosingProfile = false
+    @Environment(\.dynamicTypeSize) private var typeSize
+    var body: some View {
+        if let review = plans.historicalReview {
+            VStack(alignment: .leading, spacing: 12) {
+                Label(review.title, systemImage: review.isMismatch ? "exclamationmark.triangle" : (review.profile == nil ? "questionmark.circle" : "checkmark.circle"))
+                    .font(.headline).foregroundStyle(review.isMismatch ? Color.orange : Color.primary)
+                    .accessibilityIdentifier("planning.compatibility.verdict")
+                    .accessibilityFocused($verdictFocused)
+                if let profile = review.profile {
+                    Text("Checked against \(profile.name). Live capability has not been checked.")
+                    Text("Last confirmed \(PlanningProfileSnapshot.date(profile.snapshot.observedAt)?.formatted(date: .long, time: .omitted) ?? "date unavailable")")
+                } else {
+                    Text("Connect a treadmill before execution to verify speed and inclination targets.")
+                    if case .unavailable(let message) = review.selection {
+                        Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                    }
+                    if profiles != nil {
+                        Button("Choose a treadmill profile") { choosingProfile = true }
+                            .frame(minHeight: 44).accessibilityIdentifier("planning.preview.choose-profile")
+                    }
+                }
+                Text("Live compatibility will be checked before execution.").font(.footnote)
+                if let warning = review.ageWarning {
+                    Label(warning, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                }
+                ForEach(review.mismatches) { issue in
+                    VStack(alignment: .leading, spacing: 8) {
+                        let step = review.plan.steps[issue.stepIndex]
+                        Text("Step \(issue.stepIndex + 1) · \(step.kind.displayName) · \(step.duration.value) seconds").font(.subheadline.weight(.semibold))
+                        Text(issue.message).accessibilityIdentifier("planning.compatibility.\(issue.id)")
+                    }.accessibilityElement(children: .contain)
+                }
+                ForEach(Array(Set(review.mismatches.map(\.stepIndex))).sorted(), id: \.self) { index in
+                    Button("Edit step \(index + 1)") { plans.editHistoricalStep(index) }
+                        .frame(maxWidth: .infinity, minHeight: 44).buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("planning.edit-step.\(index)")
+                }
+            }.fixedSize(horizontal: false, vertical: true).padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                .overlay { RoundedRectangle(cornerRadius: 14).stroke(review.isMismatch ? Color.orange : Color.secondary.opacity(0.3)) }
+                .accessibilityElement(children: .contain)
+                .onAppear { if review.isMismatch { verdictFocused = true } }
+                .onChange(of: review) { _, value in if value.isMismatch { verdictFocused = true } }
+                .sheet(isPresented: $choosingProfile) {
+                    if let profiles {
+                        PlanningProfilePicker(model: profiles)
+                            .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
+                    }
+                }
+        }
+    }
+}
+
+struct HistoricalPlanSaveButton: View {
+    @ObservedObject var plans: PlansViewModel
+    var onConfirm: ((HistoricalPlanCompatibility?) -> Void)? = nil
+    @State private var acknowledgement: HistoricalPlanCompatibility?
+    @State private var confirmingMismatch = false
+    private var mismatch: Bool { plans.historicalReview?.isMismatch == true }
+    var body: some View {
+        Group {
+            if mismatch { actionButton.buttonStyle(.bordered) }
+            else { actionButton.buttonStyle(.borderedProminent) }
+        }.disabled(!plans.canMutate)
+            .confirmationDialog("Confirm exact plan despite historical mismatch", isPresented: $confirmingMismatch, titleVisibility: .visible) {
+                Button("Confirm and save exact plan") { save(acknowledgement); acknowledgement = nil }
+                Button("Cancel", role: .cancel) { acknowledgement = nil }
+            } message: {
+                Text((acknowledgement?.mismatches.map(\.message).joined(separator: "\n") ?? "") + "\nSaving does not change any target. The plan cannot begin until a live check passes.")
+            }
+    }
+    private var actionButton: some View {
+        Button(mismatch ? "Save plan anyway" : (plans.editingRecordID == nil ? "Confirm and save" : "Confirm and update")) {
+            if mismatch {
+                acknowledgement = plans.historicalReview
+                confirmingMismatch = true
+            } else { save(nil) }
+        }.font(.headline).frame(maxWidth: .infinity, minHeight: 50)
+            .accessibilityIdentifier("plan.confirm-save")
+            .accessibilityHint(mismatch ? "Review exact affected targets before acknowledging this historical mismatch" : "Writes this exact canonical plan to local storage")
+    }
+    private func save(_ acknowledgement: HistoricalPlanCompatibility?) {
+        if let onConfirm { onConfirm(acknowledgement) } else { plans.confirmSave(acknowledging: acknowledgement) }
+    }
+}
+
+
+struct HistoricalPlanPeakSummary: View {
+    let review: HistoricalPlanCompatibility?
+    var body: some View {
+        if let review, let profile = review.profile, !review.isMismatch {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 12) { speed(review, profile); inclination(review, profile) }
+                VStack(alignment: .leading, spacing: 12) { speed(review, profile); inclination(review, profile) }
+            }
+        }
+    }
+    private func speed(_ review: HistoricalPlanCompatibility, _ profile: PlanningProfile) -> some View {
+        fact("Peak speed", value: review.plan.steps.map(\.targetSpeed.value).max() ?? 0, unit: "km/h",
+             minimum: Decimal(profile.snapshot.speed.minimumHundredthsKph) / 100, maximum: Decimal(profile.snapshot.speed.maximumHundredthsKph) / 100)
+    }
+    private func inclination(_ review: HistoricalPlanCompatibility, _ profile: PlanningProfile) -> some View {
+        fact("Peak inclination", value: review.plan.steps.map(\.targetInclination.value).max() ?? 0, unit: "%",
+             minimum: Decimal(profile.snapshot.inclination.minimumTenthsPercent) / 10, maximum: Decimal(profile.snapshot.inclination.maximumTenthsPercent) / 10)
+    }
+    private func fact(_ title: String, value: Decimal, unit: String, minimum: Decimal, maximum: Decimal) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text("\(PlanValueFormatter.localizedText(value)) \(unit)").font(.headline)
+            Text("Within saved \(PlanValueFormatter.localizedText(minimum))–\(PlanValueFormatter.localizedText(maximum)) \(unit)").font(.footnote)
+        }.fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12)).accessibilityElement(children: .combine)
+    }
+}

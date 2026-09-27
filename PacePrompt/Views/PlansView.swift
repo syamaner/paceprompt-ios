@@ -508,7 +508,7 @@ private struct PlanEditorView: View {
         NavigationStack {
             Group {
                 if let preview = viewModel.preview {
-                    ManualPlanReviewView(viewModel: viewModel, preview: preview)
+                    ManualPlanReviewView(viewModel: viewModel, preview: preview, profiles: profiles)
                 } else {
                     PlanEntryView(viewModel: viewModel, capabilities: capabilities, profiles: profiles)
                 }
@@ -547,11 +547,12 @@ private struct PlanEditorView: View {
     }
 }
 
-private struct PlanEntryView: View {
+struct PlanEntryView: View {
     @ObservedObject var viewModel: PlansViewModel
     let capabilities: WorkoutPlanCapabilities
     let profiles: PlanningProfilesViewModel?
     @Environment(\.editMode) private var editMode
+    @AccessibilityFocusState private var focusedStep: Int?
 
     private var draft: Binding<ManualWorkoutDraft> {
         Binding(
@@ -574,165 +575,175 @@ private struct PlanEntryView: View {
     }
 
     var body: some View {
-        List {
-            Section { OptionalPlanningProfileSelector(model: profiles) }
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Plan name")
-                            .font(.caption.weight(.semibold))
-                            .textCase(.uppercase)
-                            .foregroundStyle(presentation.planNameHasProblem ? .red : .secondary)
-                        TextField("Plan name", text: draft.suggestedName)
-                            .font(.headline)
-                            .textInputAutocapitalization(.sentences)
-                            .accessibilityLabel("Plan name")
-                            .accessibilityHint("Enter a name for this manual plan")
-                            .accessibilityIdentifier("plan.name")
-                    }
-                    Divider()
-                    Picker("Indoor activity", selection: draft.activity) {
-                        ForEach(WorkoutActivity.allCases, id: \.self) { activity in
-                            Text(activity.displayName).tag(activity)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityLabel("Indoor activity")
-                    .accessibilityValue(presentation.activity)
-                    .accessibilityHint("Choose indoor walking or indoor running")
-                    .accessibilityIdentifier("plan.activity")
-                }
-                .padding(16)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(
-                            presentation.planNameHasProblem ? Color.red : Color.secondary.opacity(0.2),
-                            lineWidth: 1
-                        )
-                }
-                .accessibilityElement(children: .contain)
-            }
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-
-            Section {
-                ForEach(Array(draft.wrappedValue.steps.indices), id: \.self) { index in
-                    StepEntryView(
-                        presentation: presentation.steps[index],
-                        step: draft.steps[index],
-                        profiles: profiles,
-                        isReordering: isReordering,
-                        moveUp: {
-                            viewModel.moveSteps(from: IndexSet(integer: index), to: index - 1)
-                        },
-                        moveDown: {
-                            viewModel.moveSteps(from: IndexSet(integer: index), to: index + 2)
-                        },
-                        delete: {
-                            viewModel.deleteSteps(at: IndexSet(integer: index))
-                        }
-                    )
-                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-                .onDelete(perform: viewModel.deleteSteps)
-                .onMove(perform: viewModel.moveSteps)
-
-                Button {
-                    viewModel.addStep()
-                } label: {
-                    Label("Add step", systemImage: "plus")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.bordered)
-                .accessibilityHint("Adds a new ordered step without changing existing values")
-                .accessibilityIdentifier("plan.add-step")
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            } header: {
-                HStack {
-                    Text(presentation.orderedStepCount)
-                    Spacer()
-                    Button(isReordering ? "Done" : "Reorder") {
-                        editMode?.wrappedValue = isReordering ? .inactive : .active
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .textCase(nil)
-                    .accessibilityHint(
-                        isReordering
-                            ? "Finishes reordering steps"
-                            : "Shows controls to move or delete ordered steps"
-                    )
-                    .accessibilityIdentifier("plan.reorder")
-                }
-            }
-
-            if !presentation.issues.isEmpty {
+        ScrollViewReader { proxy in
+            List {
+                Section { OptionalPlanningProfileSelector(model: profiles) }
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
-                        Label("Fix before preview · \(presentation.issues.count)", systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption.weight(.bold))
-                            .textCase(.uppercase)
-                            .foregroundStyle(.red)
-                        ForEach(Array(presentation.issues.enumerated()), id: \.offset) { index, issue in
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(issue.context)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.red)
-                                Text(issue.message)
-                                    .font(.subheadline)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityLabel("\(issue.context). \(issue.message)")
-                            .accessibilityIdentifier("plan.validation.issue.\(index)")
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Plan name")
+                                .font(.caption.weight(.semibold))
+                                .textCase(.uppercase)
+                                .foregroundStyle(presentation.planNameHasProblem ? .red : .secondary)
+                            TextField("Plan name", text: draft.suggestedName)
+                                .font(.headline)
+                                .textInputAutocapitalization(.sentences)
+                                .accessibilityLabel("Plan name")
+                                .accessibilityHint("Enter a name for this manual plan")
+                                .accessibilityIdentifier("plan.name")
                         }
-                        Text("Invalid values are rejected. PacePrompt never clamps, repairs or replaces a target for you.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        Divider()
+                        Picker("Indoor activity", selection: draft.activity) {
+                            ForEach(WorkoutActivity.allCases, id: \.self) { activity in
+                                Text(activity.displayName).tag(activity)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityLabel("Indoor activity")
+                        .accessibilityValue(presentation.activity)
+                        .accessibilityHint("Choose indoor walking or indoor running")
+                        .accessibilityIdentifier("plan.activity")
                     }
                     .padding(16)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
                     .overlay {
                         RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.red.opacity(0.8), lineWidth: 1)
+                            .stroke(
+                                presentation.planNameHasProblem ? Color.red : Color.secondary.opacity(0.2),
+                                lineWidth: 1
+                            )
                     }
                     .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("plan.validation-errors")
+                }
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                Section {
+                    ForEach(Array(draft.wrappedValue.steps.indices), id: \.self) { index in
+                        StepEntryView(
+                            presentation: presentation.steps[index],
+                            step: draft.steps[index],
+                            profiles: profiles,
+                            isReordering: isReordering,
+                            moveUp: {
+                                viewModel.moveSteps(from: IndexSet(integer: index), to: index - 1)
+                            },
+                            moveDown: {
+                                viewModel.moveSteps(from: IndexSet(integer: index), to: index + 2)
+                            },
+                            delete: {
+                                viewModel.deleteSteps(at: IndexSet(integer: index))
+                            }
+                        )
+                        .id(index)
+                        .accessibilityFocused($focusedStep, equals: index)
+                        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                    .onDelete(perform: viewModel.deleteSteps)
+                    .onMove(perform: viewModel.moveSteps)
+
+                    Button {
+                        viewModel.addStep()
+                    } label: {
+                        Label("Add step", systemImage: "plus")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityHint("Adds a new ordered step without changing existing values")
+                    .accessibilityIdentifier("plan.add-step")
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                } header: {
+                    HStack {
+                        Text(presentation.orderedStepCount)
+                        Spacer()
+                        Button(isReordering ? "Done" : "Reorder") {
+                            editMode?.wrappedValue = isReordering ? .inactive : .active
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .textCase(nil)
+                        .accessibilityHint(
+                            isReordering
+                                ? "Finishes reordering steps"
+                                : "Shows controls to move or delete ordered steps"
+                        )
+                        .accessibilityIdentifier("plan.reorder")
+                    }
+                }
+
+                if !presentation.issues.isEmpty {
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Fix before preview · \(presentation.issues.count)", systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption.weight(.bold))
+                                .textCase(.uppercase)
+                                .foregroundStyle(.red)
+                            ForEach(Array(presentation.issues.enumerated()), id: \.offset) { index, issue in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(issue.context)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.red)
+                                    Text(issue.message)
+                                        .font(.subheadline)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .accessibilityElement(children: .combine)
+                                .accessibilityLabel("\(issue.context). \(issue.message)")
+                                .accessibilityIdentifier("plan.validation.issue.\(index)")
+                            }
+                            Text("Invalid values are rejected. PacePrompt never clamps, repairs or replaces a target for you.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(16)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.red.opacity(0.8), lineWidth: 1)
+                        }
+                        .accessibilityElement(children: .contain)
+                        .accessibilityIdentifier("plan.validation-errors")
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+
+                Section {
+                    Button("Review exact plan") {
+                        viewModel.reviewForAuthoring()
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!presentation.reviewActionEnabled)
+                    .accessibilityHint("Validates the draft without saving or contacting the treadmill")
+                    .accessibilityIdentifier("plan.review")
+                } footer: {
+                    Text(presentation.reviewFooter)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
-
-            Section {
-                Button("Review exact plan") {
-                    viewModel.reviewForAuthoring()
+            .listStyle(.plain)
+            .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                if let index = viewModel.focusedStepIndex {
+                    proxy.scrollTo(index, anchor: .center)
+                    focusedStep = index
                 }
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .buttonStyle(.borderedProminent)
-                .disabled(!presentation.reviewActionEnabled)
-                .accessibilityHint("Validates the draft without saving or contacting the treadmill")
-                .accessibilityIdentifier("plan.review")
-            } footer: {
-                Text(presentation.reviewFooter)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
         }
-        .listStyle(.plain)
-        .scrollDismissesKeyboard(.interactively)
         .onChange(of: viewModel.draft) { _, _ in
             viewModel.draftDidChange()
         }
@@ -962,6 +973,7 @@ private struct ValidationIssueRow: View {
 private struct ManualPlanReviewView: View {
     @ObservedObject var viewModel: PlansViewModel
     let preview: WorkoutPlanPreview
+    let profiles: PlanningProfilesViewModel?
 
     private var presentation: ManualPlanReviewPresentation {
         viewModel.reviewPresentation ?? ManualPlanReviewPresentation(
@@ -974,6 +986,7 @@ private struct ManualPlanReviewView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
+                HistoricalPlanCompatibilityCard(plans: viewModel, profiles: profiles)
                 VStack(alignment: .leading, spacing: 8) {
                     Text(presentation.name)
                         .font(.largeTitle.weight(.semibold))
@@ -1009,6 +1022,8 @@ private struct ManualPlanReviewView: View {
                     ManualPlanReviewStepCard(step: step)
                 }
 
+                HistoricalPlanPeakSummary(review: viewModel.historicalReview)
+
                 if let saveError = viewModel.saveError {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Save failed", systemImage: "exclamationmark.triangle.fill")
@@ -1028,15 +1043,7 @@ private struct ManualPlanReviewView: View {
                     .accessibilityIdentifier("plan.save-error")
                 }
 
-                Button(presentation.confirmationTitle) {
-                    viewModel.confirmSave()
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .buttonStyle(.borderedProminent)
-                .disabled(!presentation.confirmationEnabled)
-                .accessibilityHint("Writes this exact validated plan to local storage")
-                .accessibilityIdentifier("plan.confirm-save")
+                HistoricalPlanSaveButton(plans: viewModel)
 
                 Text(presentation.confirmationFooter)
                     .font(.caption)
@@ -1123,11 +1130,13 @@ private struct ManualPlanReviewStepCard: View {
 struct PlanPreviewView: View {
     @ObservedObject var viewModel: PlansViewModel
     let preview: WorkoutPlanPreview
-    var onConfirm: (() -> Void)? = nil
+    var profiles: PlanningProfilesViewModel? = nil
+    var onConfirm: ((HistoricalPlanCompatibility?) -> Void)? = nil
     var onBack: (() -> Void)? = nil
 
     var body: some View {
         Form {
+            Section { HistoricalPlanCompatibilityCard(plans: viewModel, profiles: profiles) }
             Section("Complete plan") {
                 LabeledContent("Plan format", value: "Version \(preview.plan.schemaVersion)")
                 LabeledContent("Name", value: preview.plan.suggestedName)
@@ -1158,6 +1167,9 @@ struct PlanPreviewView: View {
                 }
             }
 
+            if viewModel.historicalReview?.profile != nil && viewModel.historicalReview?.isMismatch == false {
+                Section { HistoricalPlanPeakSummary(review: viewModel.historicalReview) }
+            }
             if let saveError = viewModel.saveError {
                 Section("Save failed") {
                     ValidationIssueRow(message: saveError)
@@ -1168,12 +1180,7 @@ struct PlanPreviewView: View {
             Section {
                 Button("Back to edit") { if let onBack { onBack() } else { viewModel.returnToEditing() } }
                     .accessibilityIdentifier("plan.back-to-edit")
-                Button(viewModel.editingRecordID == nil ? "Confirm and save" : "Confirm and update") {
-                    if let onConfirm { onConfirm() } else { viewModel.confirmSave() }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.canMutate)
-                .accessibilityIdentifier("plan.confirm-save")
+                HistoricalPlanSaveButton(plans: viewModel, onConfirm: onConfirm)
             } footer: {
                 Text("Only this separate confirmation action writes the validated plan to local storage.")
             }

@@ -456,6 +456,103 @@ final class PlanningProfileTests: XCTestCase {
         XCTAssertEqual(plans.preview?.plan, exact); XCTAssertEqual(plans.draft, draft)
     }
 
+    private func historicalPlan(speed: Decimal = 1, inclination: Decimal = 0) -> WorkoutPlan {
+        .init(schemaVersion: 1, suggestedName: "Synthetic historical plan", activity: .indoorWalking,
+              steps: [WorkoutStepKind.warmUp, .interval, .coolDown].map {
+            .init(kind: $0, label: "Synthetic", duration: .init(value: 60, unit: .seconds),
+                  targetSpeed: .init(value: speed, unit: .kilometresPerHour), targetInclination: .init(value: inclination, unit: .percent))
+        })
+    }
+    private func comparison(_ plan: WorkoutPlan, profile: PlanningProfile? = nil, at date: Date? = nil) throws -> HistoricalPlanCompatibility {
+        HistoricalPlanCompatibilityPolicy.compare(try CanonicalWorkoutAuthoringValidator.validate(plan).get(),
+            selection: .profile(profile ?? store().records[0]), at: date ?? instant)
+    }
+    func testHistoricalComparisonAllStepsIndependentTargetsAndExactBoundaries() throws {
+        for (speed, inclination, targets) in [(Decimal(19), Decimal(0), ["speed"]), (1, 16, ["inclination"]), (19, 16, ["speed", "inclination"])] {
+            let plan = historicalPlan(speed: speed, inclination: inclination)
+            let result = try comparison(plan)
+            XCTAssertEqual(result.mismatches.count, targets.count * 3)
+            XCTAssertEqual(Set(result.mismatches.map(\.stepIndex)), Set(0..<3))
+            XCTAssertEqual(Set(result.mismatches.map(\.target)), Set(targets))
+            XCTAssertEqual(result.plan, plan)
+        }
+        for (speed, incline) in [(Decimal(string: "0.5")!, Decimal(-1)), (18, 15)] {
+            XCTAssertTrue(try comparison(historicalPlan(speed: speed, inclination: incline)).mismatches.isEmpty)
+        }
+        let misaligned = try comparison(historicalPlan(speed: Decimal(string: "0.55")!, inclination: Decimal(string: "0.1")!))
+        XCTAssertEqual(misaligned.mismatches.count, 6)
+        XCTAssertTrue(misaligned.mismatches.allSatisfy { !$0.outOfRange })
+        XCTAssertTrue(try comparison(historicalPlan(speed: Decimal(string: "1e127")!)).isMismatch)
+    }
+    func testHistoricalMinimumOriginGridZeroWidthAgeAndUnavailableEvidence() throws {
+        var record = store().records[0]
+        record.snapshot = .init(speed: .init(minimumHundredthsKph: 55, maximumHundredthsKph: 155, incrementHundredthsKph: 10),
+                                inclination: .init(minimumTenthsPercent: -5, maximumTenthsPercent: -5, incrementTenthsPercent: 5), observedAt: snapshot().observedAt)
+        XCTAssertFalse(try comparison(historicalPlan(speed: Decimal(string: "0.65")!, inclination: Decimal(string: "-0.5")!), profile: record).isMismatch)
+        XCTAssertTrue(try comparison(historicalPlan(speed: Decimal(string: "0.6")!, inclination: Decimal(string: "-0.4")!), profile: record).isMismatch)
+        let plan = historicalPlan()
+        for seconds in [30.0 * 86400 - 0.001, 30.0 * 86400, 30.0 * 86400 + 0.001] {
+            let result = try comparison(plan, at: instant.addingTimeInterval(seconds))
+            XCTAssertEqual(result.ageWarning != nil, seconds >= 30 * 86400)
+            XCTAssertFalse(result.isMismatch)
+        }
+        XCTAssertEqual(try comparison(plan, at: instant.addingTimeInterval(-1)).ageWarning, "Confirmation date cannot be verified")
+        let token = try CanonicalWorkoutAuthoringValidator.validate(plan).get()
+        for selection in [HistoricalPlanningSelection.none, .unavailable("Locked")] {
+            let result = HistoricalPlanCompatibilityPolicy.compare(token, selection: selection, at: instant)
+            XCTAssertNil(result.profile); XCTAssertFalse(result.isMismatch)
+            XCTAssertEqual(result.title, "Treadmill compatibility not yet checked")
+        }
+        record.snapshot.snapshotVersion = 99
+        let invalid = try comparison(plan, profile: record)
+        XCTAssertNil(invalid.profile)
+        guard case .unavailable = invalid.selection else { return XCTFail("Invalid snapshot must never pass") }
+    }
+    func testAIHistoricalEditRecoveryRoundtripsExactTargetsInCommaLocale() throws {
+        let plans = PlansViewModel(repository: HistoricalPlanTestRepository())
+        let exact = historicalPlan(speed: Decimal(string: "8.04672")!, inclination: Decimal(string: "-0.5")!)
+        try plans.reviewImportedForAuthoring(exact).get()
+        plans.editHistoricalStep(1, locale: Locale(identifier: "de_DE"))
+        XCTAssertFalse(plans.isEditorPresented, "AI edit stays inside its existing import sheet")
+        let draft = try XCTUnwrap(plans.draft)
+        XCTAssertEqual(draft.steps[0].speedKilometresPerHour, "8,04672")
+        XCTAssertEqual(draft.steps[2].inclinationPercent, "-0,5")
+        XCTAssertEqual(try ManualWorkoutDraftParser.parse(draft, locale: Locale(identifier: "de_DE")).get(), exact)
+        plans.reviewForAuthoring(locale: Locale(identifier: "de_DE"))
+        XCTAssertEqual(plans.preview?.plan, exact)
+    }
+    func testHistoricalSaveRechecksEvidenceAndPlanAndAcknowledgementNeverPersists() throws {
+        let repository = HistoricalPlanTestRepository()
+        var selected = HistoricalPlanningSelection.profile(store().records[0])
+        let plans = PlansViewModel(repository: repository, now: { self.instant })
+        plans.configureHistoricalSelection { _ in selected }
+        let exact = historicalPlan(speed: 19)
+        plans.beginCreate(); plans.draft = ManualWorkoutDraft(plan: exact); plans.reviewForAuthoring()
+        let acknowledgement = try XCTUnwrap(plans.historicalReview)
+        plans.confirmSave(); XCTAssertTrue(repository.records.isEmpty)
+        plans.confirmSave(acknowledging: acknowledgement)
+        XCTAssertEqual(repository.records.map(\.plan), [exact])
+        for change in 0..<4 {
+            selected = .profile(store().records[0])
+            plans.beginCreate(); plans.draft = ManualWorkoutDraft(plan: exact); plans.reviewForAuthoring()
+            let old = try XCTUnwrap(plans.historicalReview)
+            if change == 0 { selected = .none }
+            if change == 1 { selected = .unavailable("Corrupt store") }
+            if change == 2 { var record = store().records[0]; record.recordRevision += 1; record.name = "Renamed"; selected = .profile(record) }
+            if change == 3 { plans.draft?.suggestedName = "Changed exact plan"; plans.reviewForAuthoring() }
+            plans.confirmSave(acknowledging: old)
+            XCTAssertEqual(repository.records.count, 1)
+            XCTAssertNotNil(plans.preview); XCTAssertNotNil(plans.saveError)
+            plans.confirmSave(acknowledging: plans.historicalReview)
+            XCTAssertEqual(repository.records.count, 2)
+            repository.records.removeLast()
+        }
+        plans.beginCreate(); plans.draft = ManualWorkoutDraft(plan: exact); plans.reviewForAuthoring()
+        plans.editHistoricalStep(1)
+        XCTAssertNil(plans.preview); XCTAssertEqual(plans.focusedStepIndex, 1)
+        XCTAssertEqual(plans.draft?.steps[1].speedKilometresPerHour, "19")
+    }
+
 }
 
 private struct TestIdentity: PlanningProfileIdentity {
@@ -501,4 +598,16 @@ private final class ProfileNoOperationClient: FTMSClientProtocol {
     func stopScan() { XCTFail("Profile lifecycle must not scan") }
     func connect(to identifier: UUID) { XCTFail("Profile lifecycle must not connect") }
     func disconnect() { XCTFail("Profile lifecycle must not disconnect") }
+}
+
+@MainActor
+private final class HistoricalPlanTestRepository: SavedPlanRepositoryProtocol {
+    var records: [SavedPlanRecord] = []
+    func list() -> SavedPlanRepositoryStatus { .init(canonical: records.isEmpty ? .empty : .available(records: records), staging: .absent) }
+    func create(_ token: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord {
+        let record = SavedPlanRecord(id: UUID(), createdAt: Date(timeIntervalSince1970: 0), modifiedAt: Date(timeIntervalSince1970: 0), plan: token.plan)
+        records.append(record); return record
+    }
+    func replace(id: UUID, with token: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord { throw SavedPlanMutationFailure.recordNotFound(id) }
+    func delete(id: UUID) throws { records.removeAll { $0.id == id } }
 }

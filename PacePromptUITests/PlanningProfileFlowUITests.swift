@@ -147,4 +147,80 @@ final class PlanningProfileFlowUITests: XCTestCase {
         XCTAssertTrue(recovery.exists)
     }
 
+    func testHistoricalPassAndUncheckedPreviewShareSlotAndAllowSave() {
+        launchAuthoring("populated")
+        app.buttons["plans.new"].tap()
+        tapAuthoring(app.buttons["plan.review"])
+        let verdict = app.staticTexts["planning.compatibility.verdict"]
+        XCTAssertTrue(verdict.waitForExistence(timeout: 3))
+        XCTAssertEqual(verdict.label, "Validated against saved profile")
+        tapAuthoring(app.buttons["plan.back-to-edit"])
+        activeSelector.tap(); app.buttons["planning.picker.none"].tap(); app.buttons["planning.picker.done"].tap()
+        tapAuthoring(app.buttons["plan.review"])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 3))
+        XCTAssertEqual(verdict.label, "Treadmill compatibility not yet checked")
+        tapAuthoring(app.buttons["plan.confirm-save"])
+        XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000011"].waitForExistence(timeout: 3))
+    }
+    func testHistoricalMismatchEditAndExplicitExactSave() {
+        launchAuthoring("populated")
+        app.buttons["plans.new"].tap()
+        let target = app.textFields["plan.step.1.inclination"]
+        tapAuthoring(target)
+        target.press(forDuration: 1.2)
+        if app.menuItems["Select All"].waitForExistence(timeout: 2) { app.menuItems["Select All"].tap() }
+        target.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 12) + "18")
+        XCTAssertTrue((target.value as? String)?.hasPrefix("18") == true)
+        if app.keyboards.buttons["Return"].exists { app.keyboards.buttons["Return"].tap() }
+        app.swipeUp()
+        tapAuthoring(app.buttons["plan.review"])
+        let verdict = app.staticTexts["planning.compatibility.verdict"]
+        XCTAssertTrue(verdict.waitForExistence(timeout: 3))
+        XCTAssertEqual(verdict.label, "Outside saved profile range")
+        tapAuthoring(app.buttons["planning.edit-step.1"])
+        XCTAssertTrue(target.waitForExistence(timeout: 3))
+        XCTAssertTrue((target.value as? String)?.hasPrefix("18") == true)
+        tapAuthoring(app.buttons["plan.review"])
+        tapAuthoring(app.buttons["plan.confirm-save"])
+        let confirm = app.buttons["Confirm and save exact plan"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3))
+        app.buttons.matching(identifier: "Cancel").allElementsBoundByIndex.last!.tap()
+        XCTAssertTrue(app.buttons["plan.confirm-save"].exists)
+        tapAuthoring(app.buttons["plan.confirm-save"])
+        confirm.tap()
+        XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000011"].waitForExistence(timeout: 3))
+    }
+    func testAIHistoricalMismatchRecoversToExactManualDraftWithoutResending() {
+        launchAuthoring("mismatch")
+        app.buttons["plans.import"].tap()
+        let text = app.textViews["import.text"]
+        text.tap(); text.typeText("Synthetic fixed workout")
+        tapAuthoring(app.buttons["import.disclosure"])
+        tapAuthoring(app.buttons["import.consent"])
+        let verdict = app.staticTexts["planning.compatibility.verdict"]
+        XCTAssertTrue(verdict.waitForExistence(timeout: 3))
+        XCTAssertEqual(verdict.label, "Outside saved profile range")
+        tapAuthoring(app.buttons["planning.edit-step.1"])
+        let speed = app.textFields["plan.step.1.speed"]
+        XCTAssertTrue(speed.waitForExistence(timeout: 3))
+        XCTAssertTrue((speed.value as? String)?.hasPrefix("5") == true)
+        tapAuthoring(app.buttons["plan.review"])
+        tapAuthoring(app.buttons["plan.confirm-save"])
+        app.buttons["Confirm and save exact plan"].tap()
+        XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000011"].waitForExistence(timeout: 3))
+    }
+    func testLargeTextHistoricalPreviewKeepsLongNameWarningsAndSaveOperable() {
+        launchAuthoring("populated", large: true)
+        tapAuthoring(app.buttons["plans.new"])
+        tapAuthoring(app.buttons["plan.review"])
+        let verdict = app.staticTexts["planning.compatibility.verdict"]
+        XCTAssertTrue(verdict.waitForExistence(timeout: 3))
+        XCTAssertEqual(verdict.label, "Validated against saved profile")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Synthetic treadmill with a long accessible name")).firstMatch.exists)
+        tapAuthoring(app.buttons["plan.confirm-save"])
+        let saved = app.buttons["plans.record.00000000-0000-0000-0000-000000000011"]
+        for _ in 0..<12 where !saved.exists { app.swipeUp() }
+        XCTAssertTrue(saved.waitForExistence(timeout: 3))
+    }
+
 }

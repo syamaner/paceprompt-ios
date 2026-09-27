@@ -9,8 +9,10 @@ struct WorkoutImportView: View {
         NavigationStack {
             Group {
                 if let preview = plans.preview {
-                    PlanPreviewView(viewModel: plans, preview: preview,
+                    PlanPreviewView(viewModel: plans, preview: preview, profiles: profiles,
                                     onConfirm: model.confirmSave, onBack: model.returnToInput)
+                } else if plans.draft != nil {
+                    PlanEntryView(viewModel: plans, capabilities: WorkoutPlanCapabilities(speed: .unknown, inclination: .unknown), profiles: profiles)
                 } else {
                     Form {
                         Section { OptionalPlanningProfileSelector(model: profiles) }

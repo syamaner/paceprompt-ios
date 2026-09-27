@@ -61,6 +61,12 @@ final class PlanningProfilesViewModel: ObservableObject {
         if success { deliberateNoProfile = id == nil }
         return success
     }
+    func historicalSelection(reload: Bool = false) -> HistoricalPlanningSelection {
+        if reload { self.reload() }
+        if deliberateNoProfile { return .none }
+        if let failure, store == nil { return .unavailable(failure.message) }
+        return selectedProfile.map(HistoricalPlanningSelection.profile) ?? .none
+    }
     func warning(_ snapshot: PlanningProfileSnapshot) -> String? { snapshot.ageWarning(at: now()) }
     func reload() {
         do { store = try repository.load(); failure = nil }

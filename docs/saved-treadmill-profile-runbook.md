@@ -1,6 +1,6 @@
 # Saved treadmill profiles: setup and recovery
 
-Issues #141 and #142 implement lifecycle screens 4i–4l and the shared authoring selector 4a–4e of the [accepted v1 contract](../design/saved-treadmill-planning-profile-contract.md). This is local historical capability storage. Compatibility-result UI and live preflight changes remain in #143–#144. Selection is shared authoring state and never enters a saved plan or provider request.
+Issues #141–#143 implement lifecycle screens 4i–4l, the shared authoring selector 4a–4e and historical compatibility previews 4f–4h of the [accepted v1 contract](../design/saved-treadmill-planning-profile-contract.md). This is local historical capability storage. New live preflight changes remain in #144. Selection is shared authoring state and never enters a saved plan or provider request.
 
 ## Setup and normal use
 
@@ -21,7 +21,17 @@ If profile storage is unavailable, the row explains that failure. Deliberately c
 
 Selection does not edit draft values or import text. Manual increment buttons use the selected profile's increments; no-profile controls use 0.01 km/h and 0.1 %. Direct exact editing remains available beyond recorded ranges; nothing is clamped. Invalid or unrepresentable decimal text is rejected. Manual and mapped AI proposals use canonical authoring validation independently of equipment: structure, positive durations, finite exact targets and non-negative speed; signed inclination is allowed. This authoring token cannot establish live execution readiness. Extreme targets can make the distance estimate unavailable while preserving the exact plan.
 
-A canonical-valid plan can be previewed and deliberately saved while disconnected; the plan repository must still be writable. Historical compatibility verdicts and mismatch UI are deferred to #143. Run preparation still uses the existing live capability validator. AI import still requires a stored provider credential, per-request remote-send disclosure and affirmative consent. Existing live support-state vocabulary is sent; saved identity, name, equipment and ranges are excluded. Changing a selection never authorises a request or changes those transmitted fields.
+A canonical-valid plan can be previewed and deliberately saved while disconnected; the plan repository must still be writable. Preview compares the exact plan with the current selected historical record. Run preparation still uses the existing live capability validator. AI import still requires a stored provider credential, per-request remote-send disclosure and affirmative consent. Existing live support-state vocabulary is sent; saved identity, name, equipment and ranges are excluded. Changing a selection never authorises a request or changes those transmitted fields.
+
+## Historical preview and exact save
+
+Manual plans and AI proposals share the same local comparison. **Validated against saved profile** is neutral: every target is within the recorded inclusive bounds and aligned with the recorded increment measured from its minimum. The name, ranges and last-confirmed date refer to historical information; **Live compatibility will be checked before execution** remains explicit. Age ≥30 days and uncertain future dates have separate amber warnings, even when targets match.
+
+With no profile, preview says **Treadmill compatibility not yet checked** and offers the optional profile picker. Save remains available. Unavailable, corrupt, incomplete or unsupported profile data cannot produce a historical pass: the preview explains the unavailable evidence and remains unchecked. Deliberate no-profile authoring remains available without resetting storage.
+
+An amber **Outside saved profile range** or **Outside saved profile increment** verdict names every affected step, exact target, saved bounds and minimum-origin increment. **Edit step N** opens the unchanged canonical draft and scrolls/focuses that step; an AI proposal becomes an exact editable manual draft, without another provider request. Nothing is clamped or substituted. Review the edited plan again before saving.
+
+**Save plan anyway** opens a separate exact-plan confirmation displaying the affected requirements. **Confirm and save exact plan** acknowledges only that historical mismatch; Cancel writes nothing. The acknowledgement is transient and is never stored with the plan. Profile selection, record revision, name, ranges, availability or exact plan changes require a fresh comparison/acknowledgement. Before writing, the app reloads the selected profile store and compares again; changed evidence leaves the exact proposal/draft open, shows **Planning information changed**, and requires another deliberate Save. This also applies during AI confirmation. Canonical-invalid values still block preview/save. Saved plans contain no profile identity or compatibility verdict, and live execution has no bypass.
 
 ## Storage and failure handling
 
