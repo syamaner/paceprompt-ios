@@ -14,6 +14,24 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
     XCUIDevice.shared.orientation = .portrait
   }
 
+  func testAcceptedActivityStatusInBothOrientations() {
+    for orientation in [UIDeviceOrientation.portrait, .landscapeLeft] {
+      for (activity, title) in [("indoorWalking", "Walking"), ("indoorRunning", "Running")] {
+        launch(
+          scenario: "running", orientation: orientation,
+          extraEnvironment: ["PACEPROMPT_EXERCISE_ACTIVITY": activity]
+        )
+        XCTAssertTrue(app.staticTexts[title].exists)
+        let status = element("exercise.status")
+        XCTAssertTrue(status.exists)
+        XCTAssertEqual(
+          status.value as? String,
+          "\(title). Fresh treadmill evidence confirms the current effective targets."
+        )
+      }
+    }
+  }
+
   func testPortraitSnapshotsCoverEveryRequiredState() {
     let scenarios = [
       ("waiting", "Press Start on the treadmill"),

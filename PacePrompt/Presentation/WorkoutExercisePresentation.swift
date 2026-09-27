@@ -166,7 +166,7 @@ struct WorkoutExercisePresentation: Equatable {
     let totalDuration = steps.reduce(0) { $0 + $1.duration.value }
 
     stage = Self.stage(for: state)
-    status = Self.status(for: stage, state: state)
+    status = Self.status(for: stage, state: state, activity: plan?.activity)
     planName = plan?.suggestedName ?? "Workout"
     currentInterval = Self.currentInterval(
       step: currentStep,
@@ -310,7 +310,8 @@ struct WorkoutExercisePresentation: Equatable {
 
   private static func status(
     for stage: WorkoutExerciseStage,
-    state: WorkoutExecutionState
+    state: WorkoutExecutionState,
+    activity: WorkoutActivity?
   ) -> WorkoutExerciseStatusPresentation {
     switch stage {
     case .waiting:
@@ -331,9 +332,9 @@ struct WorkoutExercisePresentation: Equatable {
       )
     case .running:
       return .init(
-        title: "Running",
+        title: activity == .indoorWalking ? "Walking" : "Running",
         detail: "Fresh treadmill evidence confirms the current effective targets.",
-        symbol: "figure.run",
+        symbol: activity == .indoorWalking ? "figure.walk" : "figure.run",
         tone: .active
       )
     case .override:
