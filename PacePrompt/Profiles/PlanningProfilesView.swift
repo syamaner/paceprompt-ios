@@ -18,6 +18,7 @@ struct PlanningProfilesView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: PlanningProfilesViewModel
     var setupAvailableByDismissal = true
+    var allowsPlanningSelection = true
     var body: some View {
         List {
             Section {
@@ -45,13 +46,16 @@ struct PlanningProfilesView: View {
                 Section("Saved treadmill profiles") {
                     ForEach(model.records) { record in
                         NavigationLink {
-                            PlanningProfileDetailView(model: model, profileID: record.id)
+                            PlanningProfileDetailView(model: model, profileID: record.id, allowsPlanningSelection: allowsPlanningSelection)
                         } label: {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(record.name).font(.headline).fixedSize(horizontal: false, vertical: true)
                                 PlanningProfileSummary(snapshot: record.snapshot)
                                 if model.currentProfileID == record.id {
                                     Label("Current treadmill", systemImage: "dot.radiowaves.left.and.right").foregroundStyle(.mint)
+                                }
+                                if model.selectedProfile?.id == record.id {
+                                    Label("Selected for planning", systemImage: "checkmark.circle")
                                 }
                                 if let warning = model.warning(record.snapshot) {
                                     Label(warning, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
@@ -70,6 +74,7 @@ struct PlanningProfileDetailView: View {
     @ObservedObject var model: PlanningProfilesViewModel
     let profileID: String
     var beginRenaming = false
+    var allowsPlanningSelection = true
     @Environment(\.dismiss) private var dismiss
     @State private var editing: PlanningProfile?
     @State private var name = ""
@@ -92,6 +97,23 @@ struct PlanningProfileDetailView: View {
                         Button("Rename") { editing = record; name = record.name; nameFocused = true }
                             .frame(minHeight: 44).accessibilityIdentifier("profiles.rename")
                     }
+                }
+                Section("Planning selection") {
+                    if model.selectedProfile?.id == record.id {
+                        Label("Selected for planning", systemImage: "checkmark.circle")
+                            .accessibilityIdentifier("profiles.selected")
+                    } else if allowsPlanningSelection {
+                        Button("Use for planning") { model.commitAuthoringSelection(record.id) }
+                            .frame(minHeight: 44).accessibilityIdentifier("profiles.select")
+                    } else {
+                        Text("Return to the picker to choose this profile, then tap Done.")
+                    }
+                    if model.currentProfileID == record.id {
+                        Label("Current treadmill — connected", systemImage: "dot.radiowaves.left.and.right")
+                            .foregroundStyle(.mint)
+                    }
+                    Text("Selection uses historical planning information. Live compatibility is checked before execution.")
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Section("Saved capabilities") {
                     PlanningProfileSummary(snapshot: record.snapshot)

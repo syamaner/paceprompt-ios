@@ -21,7 +21,7 @@ enum PlanningProfileUITestSupport {
             model.observe(snapshot, peer: peer)
             if scenario != "created" {
                 if let record = model.records.first {
-                    _ = model.selectCreated(record.id)
+                    if scenario != "unselected" { _ = model.selectCreated(record.id) }
                     _ = model.rename(record, to: "Synthetic treadmill with a long accessible name")
                 }
                 model.dismissCreated()
