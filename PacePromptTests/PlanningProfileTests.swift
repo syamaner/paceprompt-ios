@@ -411,6 +411,39 @@ final class PlanningProfileTests: XCTestCase {
         XCTAssertFalse(model.commitAuthoringSelection(record.id))
         XCTAssertNil(model.selectedProfile)
     }
+    func testExistingSelectionSharesIdentityRenameRelaunchAndConnectedState() throws {
+        let repository = MemoryPlanningProfileRepository()
+        let model = model(repository)
+        model.beginDiscovery(peer: peer); model.observe(snapshot(), peer: peer)
+        let record = try XCTUnwrap(model.records.first)
+        XCTAssertNil(model.selectedProfile)
+        XCTAssertTrue(model.commitAuthoringSelection(record.id))
+        XCTAssertEqual(model.currentProfileID, record.id)
+        XCTAssertEqual(model.selectedName, model.authoringSelectionName)
+        XCTAssertTrue(model.rename(record, to: "Renamed treadmill"))
+        let relaunched = self.model(repository)
+        XCTAssertEqual(relaunched.selectedProfile?.id, record.id)
+        XCTAssertEqual(relaunched.authoringSelectionName, "Renamed treadmill")
+        XCTAssertNil(relaunched.currentProfileID)
+        model.invalidateDiscovery()
+        XCTAssertEqual(model.selectedProfile?.id, record.id)
+    }
+    func testFailedExistingSelectionRereadsPersistedTruth() throws {
+        let files = ProfileTestFiles()
+        let repository = FilePlanningProfileRepository(directory: URL(fileURLWithPath: "/synthetic/PlanningProfiles"), files: files,
+                                                       protectedDataAvailable: { true })
+        try repository.commit(store(), expectedRevision: nil)
+        let model = model(repository)
+        let record = try XCTUnwrap(model.records.first)
+        files.failure = "stage"
+        XCTAssertFalse(model.commitAuthoringSelection(record.id))
+        XCTAssertNil(model.selectedProfile)
+        XCTAssertNotNil(model.failure)
+        files.failure = "exists"
+        XCTAssertFalse(model.commitAuthoringSelection(record.id))
+        XCTAssertNil(model.selectedProfile)
+        XCTAssertEqual(model.authoringSelectionName, "Saved profiles unavailable")
+    }
     func testDeliberateNoProfileSurvivesProtectedStoreRecovery() throws {
         let repository = MemoryPlanningProfileRepository()
         let model = model(repository)

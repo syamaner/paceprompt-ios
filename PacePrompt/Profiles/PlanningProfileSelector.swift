@@ -93,7 +93,7 @@ private struct PlanningProfilePicker: View {
                     Section { Label("No saved treadmill profiles", systemImage: "tray") }
                 }
                 Section {
-                    NavigationLink("Manage saved profiles") { PlanningProfilesView(model: model, setupAvailableByDismissal: false) }
+                    NavigationLink("Manage saved profiles") { PlanningProfilesView(model: model, setupAvailableByDismissal: false, allowsPlanningSelection: false) }
                         .frame(minHeight: 44)
                 } footer: {
                     Text("Saved profiles record historical planning information. Live compatibility is checked before execution.")
