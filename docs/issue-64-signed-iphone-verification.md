@@ -30,3 +30,7 @@ For one newly recorded eligible version-2 summary:
 8. Exercise a deliberately injected ambiguous fake-store result only in the deterministic test boundary; do not manufacture an ambiguous real HealthKit write. Verify the next payload uses a higher sync version in tests.
 
 Record only the iOS version, app commit, pass/fail for each observation and whether distance was included. Do not claim that custom activity metadata survives Apple's general Health-data archive without separate direct evidence.
+
+## Watch-assisted attempts
+
+This procedure remains for iPhone-owned attempts. The [Watch-primary runbook](watch-health-interchange-runbook.md) specifies separate #115/#116 acceptance. A Watch-owned reservation must suppress this iPhone save path permanently for that attempt, even after disconnect or ambiguous Watch saving. No Watch hardware acceptance is claimed here.

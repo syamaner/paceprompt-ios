@@ -199,3 +199,7 @@ No signed IPA or signing asset was retained as an Actions artifact.
 
 Tester visibility, installation and launch have not been observed. Signed-device
 protection, HealthKit and physical treadmill acceptance are separate checks.
+
+## Deferred Watch-primary acceptance
+
+Issue #114 freezes the [Watch/Health interchange contract](../../design/watch-primary-health-interchange-contract.md) and [paired-device runbook](../watch-health-interchange-runbook.md). It adds no Watch target or release. #115, WeeklyHealthReport #80 and #116 remain separate implementation/acceptance work; existing release receipts above do not establish Watch or cross-repository interoperability.
