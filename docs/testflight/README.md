@@ -154,3 +154,31 @@ assertions were not changed to obtain the release result.
 This receipt confirms upload, Apple processing and internal tester assignment.
 Tester installation/visibility, physical Bluetooth, treadmill behaviour and
 signed-device protection remain unverified; they require separate device checks.
+
+
+### Combined iPhone improvements candidate: 1.0.1 (13)
+
+The operator authorised an internal release after Walking label PR #179, profile
+selection PR #181 and live-capability ceiling PR #180 merged. The candidate
+starts from `e3e5a2b82a8990e4f1d2346f1f4efd2d7e61ab3e`; production Debug and
+Release build numbers and matching guard fixtures advance to 13. Marketing
+version, privacy/HealthKit declarations, encryption behaviour, workflow and
+trusted signing-tools pin remain unchanged. The existing sole-tester internal
+group is the destination. Build freshness is checked by hosted Apple preflight
+before importing signing assets or uploading; no Apple credentials are copied
+locally.
+
+The first complete gate had one iOS text-edit menu test fail to expose Select All;
+all other 70 UI tests passed. The same test passed unchanged in isolation. A
+complete replacement gate on the unchanged candidate then passed 449 production
+tests (378 unit, 71 UI), 16 evaluation tests, unsigned Release simulator build,
+static analysis, coverage and offline checks. Evidence is
+`/private/tmp/pp-build13-replacement-full`; the initial failed gate is retained
+at `/private/tmp/pp-build13-full`. Of 456 frozen tracked regular-file inputs
+excluding the accounting ledger, 455 stayed byte-identical. This later
+non-executable runbook receipt is the sole difference; executable, test, build
+and validation inputs did not change. This is simulator evidence, not
+signed-device, Bluetooth or physical treadmill acceptance.
+
+Reviewed candidate merge, immutable tag, workflow and Apple/group receipt are
+pending. This candidate note does not claim upload or tester visibility.
