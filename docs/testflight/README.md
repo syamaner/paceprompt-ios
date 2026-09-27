@@ -118,3 +118,39 @@ assignment. It does not prove that the tester installed or opened the build,
 or establish physical Bluetooth, treadmill or HealthKit acceptance. Follow
 release.md's separate tester checks for those claims. Future candidates still
 require source/workflow review and explicit release authorisation.
+
+### Internal profile-flow release: 1.0.1 (12)
+
+On 27 September 2026, the operator authorised a new internal release for device
+testing. [PR #174](https://github.com/syamaner/paceprompt-ios/pull/174) merged the
+reviewed candidate at `913d67248c59c966893dbd374738c07315ed2b1b`.
+The lightweight immutable tag `testflight/1.0.1-b12` points to that merge.
+The trusted-tools pin remains `2050f1dee6763297fc784f80aaf59c317b2d7e29`.
+The build includes saved treadmill profile work merged through issue #144.
+
+[Release run 36326381304](https://github.com/syamaner/paceprompt-ios/actions/runs/36326381304)
+completed successfully on attempt 1. Masked logs confirm protected source and
+exact-main CI, the credential-free unsigned device archive, same-run handoff
+verification, Apple fresh-build/app/sole-tester-group preflight, validated signing
+identity/profile, signing without executing candidate build code, internal-only
+export and signed-artifact verification. Apple accepted the single upload at
+14:38 UTC. At 14:40 UTC, the API confirmed the processed build was internal-only
+and assigned to the unchanged sole-tester group. The environment approval was
+submitted on the operator's behalf under their explicit internal release
+authorisation, with the unchanged non-exempt-encryption declaration. No signed
+IPA or signing asset was retained as an Actions artifact.
+
+The complete local gate passed 435 production tests (372 unit, 63 UI), 16
+evaluation tests, unsigned Release simulator build, static analysis, coverage
+and offline checks with Xcode 27.0 on a fresh, unshared iPhone 17 Pro/iOS 26.5
+simulator. Final evidence is `/private/tmp/paceprompt-build12-isolated-ios26-full-gate`.
+Two earlier shared-simulator runs ended with Mach `-308` launch-service errors.
+An iOS 27 complete run and isolated repeat reproduced four landscape action-button
+hittability failures; all four passed unchanged on iOS 26.5 in isolation and the
+complete gate. [Issue #173](https://github.com/syamaner/paceprompt-ios/issues/173)
+tracks that unresolved forward-compatibility limitation. App code and test
+assertions were not changed to obtain the release result.
+
+This receipt confirms upload, Apple processing and internal tester assignment.
+Tester installation/visibility, physical Bluetooth, treadmill behaviour and
+signed-device protection remain unverified; they require separate device checks.
