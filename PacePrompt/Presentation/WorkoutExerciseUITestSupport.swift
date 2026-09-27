@@ -17,6 +17,7 @@
   struct WorkoutExerciseUITestConfiguration {
     let scenario: WorkoutExerciseUITestScenario
     let reduceMotion: Bool
+    let activity: WorkoutActivity
 
     static var current: Self? {
       let process = ProcessInfo.processInfo
@@ -28,7 +29,10 @@
       }
       return .init(
         scenario: scenario,
-        reduceMotion: process.environment["PACEPROMPT_EXERCISE_REDUCE_MOTION"] == "1"
+        reduceMotion: process.environment["PACEPROMPT_EXERCISE_REDUCE_MOTION"] == "1",
+        activity: WorkoutActivity(
+          rawValue: process.environment["PACEPROMPT_EXERCISE_ACTIVITY"] ?? ""
+        ) ?? .indoorRunning
       )
     }
   }
@@ -40,7 +44,9 @@
 
     init(configuration: WorkoutExerciseUITestConfiguration) {
       _context = State(
-        initialValue: WorkoutExerciseFixtures.context(for: configuration.scenario)
+        initialValue: WorkoutExerciseFixtures.context(
+          for: configuration.scenario, activity: configuration.activity
+        )
       )
       reduceMotion = configuration.reduceMotion
     }
@@ -133,9 +139,10 @@
     static let now = MonotonicInstant(seconds: 100)
 
     static func context(
-      for scenario: WorkoutExerciseUITestScenario
+      for scenario: WorkoutExerciseUITestScenario,
+      activity: WorkoutActivity = .indoorRunning
     ) -> WorkoutExerciseContext {
-      let plan = validatedPlan()
+      let plan = validatedPlan(activity: activity)
       let capability = capabilitySnapshot()
       let ceilings = WorkoutSessionCeilings(
         maximumSpeed: .init(value: 10, unit: .kilometresPerHour),
@@ -326,12 +333,12 @@
       )
     }
 
-    private static func validatedPlan() -> WorkoutPlanValidator.ValidatedPlan {
+    private static func validatedPlan(activity: WorkoutActivity) -> WorkoutPlanValidator.ValidatedPlan {
       let result = WorkoutPlanValidator.validate(
         .init(
           schemaVersion: WorkoutPlanSchema.currentVersion,
           suggestedName: "Synthetic Pyramid",
-          activity: .indoorRunning,
+          activity: activity,
           steps: [
             step(.warmUp, "Warm up", 120, 5, 0),
             step(.interval, "Run", 180, 7, 2),

@@ -6,6 +6,40 @@ final class WorkoutExercisePresentationTests: XCTestCase {
   private let now = MonotonicInstant(seconds: 100)
   private let locale = Locale(identifier: "en_GB")
 
+  func testActiveStatusUsesAcceptedPlanActivityWithIdenticalTargets() {
+    for (activity, title, symbol) in [
+      (WorkoutActivity.indoorWalking, "Walking", "figure.walk"),
+      (.indoorRunning, "Running", "figure.run"),
+    ] {
+      let context = WorkoutExerciseFixtures.context(for: .running, activity: activity)
+      let presentation = makePresentation(context)
+      XCTAssertEqual(presentation.stage, .running)
+      XCTAssertEqual(presentation.status.title, title)
+      XCTAssertEqual(presentation.status.symbol, symbol)
+      XCTAssertEqual(presentation.status.tone, .active)
+      XCTAssertEqual(
+        presentation.status.detail,
+        "Fresh treadmill evidence confirms the current effective targets."
+      )
+    }
+  }
+
+  func testActivityDoesNotChangeOtherExecutionStageStatus() {
+    for scenario in WorkoutExerciseUITestScenario.allCases where scenario != .running {
+      let walking = makePresentation(
+        WorkoutExerciseFixtures.context(for: scenario, activity: .indoorWalking)
+      )
+      let running = makePresentation(
+        WorkoutExerciseFixtures.context(for: scenario, activity: .indoorRunning)
+      )
+      XCTAssertEqual(walking.stage, running.stage, scenario.rawValue)
+      XCTAssertEqual(walking.status.title, running.status.title, scenario.rawValue)
+      XCTAssertEqual(walking.status.symbol, running.status.symbol, scenario.rawValue)
+      XCTAssertEqual(walking.status.detail, running.status.detail, scenario.rawValue)
+      XCTAssertEqual(walking.status.tone, running.status.tone, scenario.rawValue)
+    }
+  }
+
   func testRequiredSyntheticScenariosRemainDistinct() {
     let expected: [(WorkoutExerciseUITestScenario, WorkoutExerciseStage, String)] = [
       (.waiting, .waiting, "Press Start on the treadmill"),
