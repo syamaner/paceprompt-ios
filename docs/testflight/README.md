@@ -180,5 +180,22 @@ non-executable runbook receipt is the sole difference; executable, test, build
 and validation inputs did not change. This is simulator evidence, not
 signed-device, Bluetooth or physical treadmill acceptance.
 
-Reviewed candidate merge, immutable tag, workflow and Apple/group receipt are
-pending. This candidate note does not claim upload or tester visibility.
+[PR #182](https://github.com/syamaner/paceprompt-ios/pull/182) merged reviewed
+head `da950d1294ce562ce02a4abfd82d149db8fa61fa` at
+`2cacab9b18801ab34b518c4fee1c8dc5b477d3e3`. Exact-main CI passed; the
+merge tree equals the reviewed head. The lightweight immutable tag
+`testflight/1.0.1-b13` points to that merge. The trusted signing-tools pin
+remained `2050f1dee6763297fc784f80aaf59c317b2d7e29`.
+
+[Release run 36355270842](https://github.com/syamaner/paceprompt-ios/actions/runs/36355270842)
+passed on attempt 1. The protected source/unsigned archive jobs passed before
+environment approval, which was submitted on the operator's behalf under this
+release instruction. The protected job verified the same-run transfer, existing
+app/group/tester, fresh build, manual signing identity and internal-only signed
+artifact. Apple accepted the one upload; at 22:33 UTC on 27 September 2026,
+its processed build was confirmed internal-only and assigned to the unchanged
+sole-tester group. The unchanged non-exempt-encryption declaration applied.
+No signed IPA or signing asset was retained as an Actions artifact.
+
+Tester visibility, installation and launch have not been observed. Signed-device
+protection, HealthKit and physical treadmill acceptance are separate checks.
