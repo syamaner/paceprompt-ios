@@ -370,3 +370,34 @@ enum WorkoutPlanValidator {
         let increment: Decimal
     }
 }
+
+// Authoring validity is equipment-independent and cannot arm execution.
+protocol WorkoutAuthoringValidating {
+    func validate(_ plan: WorkoutPlan) -> Result<CanonicalWorkoutAuthoringValidator.ValidatedPlan, WorkoutPlanValidationFailure>
+}
+
+enum CanonicalWorkoutAuthoringValidator {
+    struct ValidatedPlan: Equatable {
+        let plan: WorkoutPlan
+        fileprivate init(plan: WorkoutPlan) { self.plan = plan }
+    }
+    static func validate(_ plan: WorkoutPlan) -> Result<ValidatedPlan, WorkoutPlanValidationFailure> {
+        var issues = WorkoutPlanValidator.structuralIssues(in: plan)
+        for (index, step) in plan.steps.enumerated() {
+            for (field, value) in [("targetSpeed", step.targetSpeed.value), ("targetInclination", step.targetInclination.value)] {
+                if value.isNaN {
+                    issues.append(.init(code: .nonFiniteTarget, path: "steps[\(index)].\(field).value", message: "Step \(index + 1) \(field == "targetSpeed" ? "speed" : "inclination") must be a finite canonical decimal."))
+                } else if field == "targetSpeed", value < 0 {
+                    issues.append(.init(code: .targetOutOfRange, path: "steps[\(index)].targetSpeed.value", message: "Step \(index + 1) speed must be non-negative."))
+                }
+            }
+        }
+        return issues.isEmpty ? .success(ValidatedPlan(plan: plan)) : .failure(.init(issues: issues))
+    }
+}
+
+struct CanonicalWorkoutAuthoringValidation: WorkoutAuthoringValidating {
+    func validate(_ plan: WorkoutPlan) -> Result<CanonicalWorkoutAuthoringValidator.ValidatedPlan, WorkoutPlanValidationFailure> {
+        CanonicalWorkoutAuthoringValidator.validate(plan)
+    }
+}

@@ -17,6 +17,7 @@ struct PlanningProfileSummary: View {
 struct PlanningProfilesView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: PlanningProfilesViewModel
+    var setupAvailableByDismissal = true
     var body: some View {
         List {
             Section {
@@ -34,7 +35,11 @@ struct PlanningProfilesView: View {
                 Section {
                     Label("No saved treadmill profiles", systemImage: "tray")
                     Text("Connect a treadmill in setup to read its complete speed and inclination capabilities. A profile is saved only after the read succeeds.")
-                    Button("Set up treadmill") { dismiss() }.frame(minHeight: 44)
+                    if setupAvailableByDismissal {
+                        Button("Set up treadmill") { dismiss() }.frame(minHeight: 44)
+                    } else {
+                        Text("Close the picker, then open Home → Set up treadmill to connect explicitly.")
+                    }
                 }.accessibilityIdentifier("profiles.empty")
             } else {
                 Section("Saved treadmill profiles") {

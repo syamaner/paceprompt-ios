@@ -330,6 +330,15 @@ final class PlanningProfileTests: XCTestCase {
         XCTAssertEqual(treadmill.workoutPlanCapabilities, context.capabilities)
         XCTAssertEqual(try resources.request(for: .init(text: context.text, capabilities: treadmill.workoutPlanCapabilities)).httpBody, before)
         XCTAssertFalse(String(decoding: before!, as: UTF8.self).contains("Private Synthetic Profile 141"))
+        model.beginDiscovery(peer: peer); model.observe(snapshot(maximum: 1900), peer: peer)
+        model.updateReviewed()
+        XCTAssertEqual(try resources.request(for: .init(text: context.text, capabilities: treadmill.workoutPlanCapabilities)).httpBody, before)
+        XCTAssertTrue(model.commitAuthoringSelection(nil))
+        XCTAssertEqual(try resources.request(for: .init(text: context.text, capabilities: treadmill.workoutPlanCapabilities)).httpBody, before)
+        model.protectedDataLost()
+        XCTAssertTrue(model.commitAuthoringSelection(nil))
+        XCTAssertEqual(try resources.request(for: .init(text: context.text, capabilities: treadmill.workoutPlanCapabilities)).httpBody, before)
+        model.reload()
         XCTAssertTrue(model.delete(model.records[0]))
         XCTAssertEqual(try resources.request(for: .init(text: context.text, capabilities: treadmill.workoutPlanCapabilities)).httpBody, before)
     }
@@ -367,6 +376,86 @@ final class PlanningProfileTests: XCTestCase {
         XCTAssertNil(model.review)
         XCTAssertEqual(model.records.count, 1)
     }
+    func testAuthoringRejectsLossyTextAndKeepsOverflowEstimateUnavailable() throws {
+        var draft = ManualWorkoutDraft(suggestedName: "Synthetic", activity: .indoorWalking, steps: [.warmUp, .interval, .coolDown].map {
+            .init(kind: $0, label: "Synthetic", durationSeconds: "60", speedKilometresPerHour: "1.123456789012345678901234567890123456789012345", inclinationPercent: "0")
+        })
+        XCTAssertThrowsError(try ManualWorkoutDraftParser.parse(draft, locale: Locale(identifier: "en_GB")).get())
+        XCTAssertNil(ManualWorkoutDraftParser.incrementText(draft.steps[0].speedKilometresPerHour, by: 1))
+        for index in draft.steps.indices { draft.steps[index].speedKilometresPerHour = "0001.250000" }
+        let exact = try ManualWorkoutDraftParser.parse(draft, locale: Locale(identifier: "en_GB")).get()
+        XCTAssertEqual(exact.steps[0].targetSpeed.value, Decimal(string: "1.25"))
+        let huge = WorkoutPlan(schemaVersion: 1, suggestedName: "Synthetic extreme", activity: .indoorWalking,
+            steps: exact.steps.map { .init(kind: $0.kind, label: $0.label, duration: .init(value: Int.max, unit: .seconds), targetSpeed: .init(value: Decimal(string: String(repeating: "9", count: 38) + "e127")!, unit: .kilometresPerHour), targetInclination: $0.targetInclination) })
+        let token = try CanonicalWorkoutAuthoringValidator.validate(huge).get()
+        let preview = WorkoutPlanPreview(authoringPlan: token)
+        XCTAssertNil(preview.estimatedDistanceKilometres)
+        XCTAssertEqual(PlanValueFormatter.estimatedDistanceSummary(preview.estimatedDistanceKilometres), "Estimate unavailable")
+        XCTAssertEqual(preview.plan, huge)
+        XCTAssertEqual(ManualWorkoutDraftParser.incrementText("20.1", by: Decimal(string: "0.1")!, locale: Locale(identifier: "en_GB")), "20.2")
+        XCTAssertEqual(ManualWorkoutDraftParser.incrementText("-1", by: Decimal(string: "-0.5")!, locale: Locale(identifier: "en_GB")), "-1.5")
+    }
+    func testAuthoringSelectionRestoresClearsDeletesAndRejectsStalePickerCandidate() throws {
+        let repository = MemoryPlanningProfileRepository()
+        let model = model(repository)
+        XCTAssertTrue(model.commitAuthoringSelection(nil))
+        model.beginDiscovery(peer: peer); model.observe(snapshot(), peer: peer)
+        let record = try XCTUnwrap(model.records.first)
+        XCTAssertTrue(model.commitAuthoringSelection(record.id))
+        XCTAssertEqual(self.model(repository).selectedProfile?.id, record.id)
+        XCTAssertTrue(model.commitAuthoringSelection(nil))
+        XCTAssertNil(model.selectedProfile)
+        XCTAssertTrue(model.commitAuthoringSelection(record.id))
+        XCTAssertTrue(model.delete(model.records[0]))
+        XCTAssertNil(model.selectedProfile)
+        XCTAssertFalse(model.commitAuthoringSelection(record.id))
+        XCTAssertNil(model.selectedProfile)
+    }
+    func testDeliberateNoProfileSurvivesProtectedStoreRecovery() throws {
+        let repository = MemoryPlanningProfileRepository()
+        let model = model(repository)
+        model.beginDiscovery(peer: peer); model.observe(snapshot(), peer: peer)
+        let id = try XCTUnwrap(model.records.first?.id)
+        XCTAssertTrue(model.commitAuthoringSelection(id))
+        model.protectedDataLost()
+        XCTAssertTrue(model.commitAuthoringSelection(nil))
+        model.reload()
+        XCTAssertNil(model.selectedProfile)
+        XCTAssertEqual(model.authoringSelectionName, "No treadmill selected")
+        XCTAssertEqual(try repository.load()?.lastSelectedProfileID, id)
+        XCTAssertTrue(model.commitAuthoringSelection(nil))
+        XCTAssertNil(self.model(repository).selectedProfile)
+    }
+    func testUnavailableProfilesAllowDeliberateNoProfileWithoutWriting() throws {
+        let files = ProfileTestFiles(); files.failure = "exists"
+        let repository = FilePlanningProfileRepository(directory: URL(fileURLWithPath: "/synthetic/PlanningProfiles"), files: files, protectedDataAvailable: { true })
+        let model = model(repository)
+        XCTAssertEqual(model.authoringSelectionName, "Saved profiles unavailable")
+        XCTAssertTrue(model.commitAuthoringSelection(nil))
+        XCTAssertEqual(model.authoringSelectionName, "No treadmill selected")
+        XCTAssertNotNil(model.failure); XCTAssertTrue(files.bytes.isEmpty)
+        XCTAssertFalse(model.commitAuthoringSelection("00000000-0000-0000-0000-000000000001"))
+    }
+    func testCanonicalAuthoringDoesNotForgeLiveValidityOrClampTargets() throws {
+        let kinds: [WorkoutStepKind] = [.warmUp, .interval, .coolDown]
+        func plan(speed: Decimal, inclination: Decimal = -1) -> WorkoutPlan {
+            .init(schemaVersion: 1, suggestedName: "Synthetic detached plan", activity: .indoorWalking,
+                  steps: kinds.map { .init(kind: $0, label: "Synthetic", duration: .init(value: 60, unit: .seconds), targetSpeed: .init(value: speed, unit: .kilometresPerHour), targetInclination: .init(value: inclination, unit: .percent)) })
+        }
+        let exact = plan(speed: Decimal(string: "100.123456")!)
+        let token = try CanonicalWorkoutAuthoringValidator.validate(exact).get()
+        XCTAssertEqual(token.plan, exact)
+        XCTAssertThrowsError(try WorkoutPlanValidator.validate(exact, against: .init(speed: .unknown, inclination: .unknown)).get())
+        XCTAssertThrowsError(try CanonicalWorkoutAuthoringValidator.validate(plan(speed: -1)).get())
+        XCTAssertThrowsError(try CanonicalWorkoutAuthoringValidator.validate(plan(speed: .nan)).get())
+        XCTAssertThrowsError(try CanonicalWorkoutAuthoringValidator.validate(plan(speed: 1, inclination: .nan)).get())
+        let plans = PlansViewModel()
+        plans.beginCreate(); plans.draft = ManualWorkoutDraft(plan: exact)
+        let draft = plans.draft
+        plans.reviewForAuthoring(locale: Locale(identifier: "en_GB"))
+        XCTAssertEqual(plans.preview?.plan, exact); XCTAssertEqual(plans.draft, draft)
+    }
+
 }
 
 private struct TestIdentity: PlanningProfileIdentity {

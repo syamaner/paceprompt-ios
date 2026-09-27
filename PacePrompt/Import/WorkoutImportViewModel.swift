@@ -73,14 +73,14 @@ final class WorkoutImportViewModel: ObservableObject {
 #if DEBUG
                     self.diagnostics.record(.check(.deterministicMapping, .accepted))
 #endif
-                    switch self.plans.reviewImportedPlan(plan, against: self.capabilities) {
+                    switch self.plans.reviewImportedForAuthoring(plan) {
                     case let .failure(failure):
 #if DEBUG
                         self.diagnostics.record(.check(.localCapabilityValidation, .rejected))
                         self.diagnostics.record(.check(.previewEligibility, .rejected))
                         self.diagnostics.record(.terminal(.localValidationFailure))
 #endif
-                        self.terminal("Local validation blocked this plan. Review the listed fields or use manual entry.")
+                        self.terminal("Canonical authoring validation blocked this plan. Review the listed fields or use manual entry.")
                         self.validationIssues = failure.issues
                     case .success:
 #if DEBUG

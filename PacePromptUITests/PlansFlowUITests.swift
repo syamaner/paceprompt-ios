@@ -188,7 +188,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000011"].waitForExistence(timeout: 3))
     }
 
-    func testImportedProposalWithUnknownCapabilitiesCannotPreviewOrSave() {
+    func testImportedProposalWithUnknownCapabilitiesPreviewsAndSaves() {
         launch(capabilities: "unknown", draft: "valid")
         app.tabBars.buttons["Plans"].tap(); app.buttons["plans.import"].tap()
         let editor = app.textViews["import.text"]
@@ -196,9 +196,9 @@ final class PlansFlowUITests: XCTestCase {
         editor.tap(); editor.typeText("Synthetic treadmill workout")
         tapWhenVisible(app.buttons["import.disclosure"])
         tapWhenVisible(app.buttons["import.consent"])
-        XCTAssertTrue(app.staticTexts["Local validation"].waitForExistence(timeout: 3))
-        XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
-        XCTAssertEqual(editor.value as? String, "")
+        XCTAssertTrue(app.staticTexts["Complete plan"].waitForExistence(timeout: 3))
+        tapWhenVisible(app.buttons["plan.confirm-save"])
+        XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000011"].waitForExistence(timeout: 3))
     }
 
     func testValidManualPlanPreviewsExactlyAndSavesOnlyAfterConfirmation() {
@@ -219,7 +219,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["21:00"].exists)
         XCTAssertTrue(app.staticTexts["2.2 km"].exists)
         XCTAssertTrue(findByScrolling(element("plan.review.step.3")))
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "currently known capability snapshot")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Canonical plan values validated independently of equipment")).firstMatch.exists)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "capability read at")).firstMatch.exists)
 
         tapWhenVisible(app.buttons["plan.confirm-save"])
@@ -228,27 +228,14 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
     }
 
-    func testEveryValidationClassBlocksPreviewWithDistinctGuidance() {
-        assertValidationBlocked(
-            capabilities: "unknown",
-            draft: "valid",
-            message: "Speed capability is unknown. Read the treadmill's speed target feature and range before validating this plan."
-        )
-        assertValidationBlocked(
-            capabilities: "unsupported",
-            draft: "valid",
-            message: "This treadmill reports speed target-setting as unsupported, so the plan cannot be executed."
-        )
-        assertValidationBlocked(
-            capabilities: "malformed",
-            draft: "valid",
-            message: "The reported speed capability range is invalid. Re-read a finite minimum, maximum and positive increment in km/h."
-        )
-        assertValidationBlocked(
-            capabilities: "known",
-            draft: "invalid",
-            message: "Step 2 speed is 20.1 km/h. Enter a value from 0.5 to 20 km/h."
-        )
+    func testDisconnectedUnsupportedAndMalformedLiveEvidencePermitCanonicalPreview() {
+        for state in ["unknown", "unsupported", "malformed"] {
+            launch(capabilities: state, draft: "valid")
+            openCreate(); reviewPlan()
+            XCTAssertTrue(app.staticTexts["Synthetic progression"].exists)
+            app.terminate()
+        }
+        assertValidationBlocked(capabilities: "known", draft: "invalid", message: "Enter step 2 speed as a number in km/h.")
     }
 
     func testValidationGuidanceIsGroupedAssociatedAndBlocksPreviewUntilEdited() {
@@ -261,7 +248,9 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(element("plan.validation.issue.0").label.contains("Step 02 · Speed"))
         XCTAssertTrue(findByScrolling(element("plan.validation.issue.1")))
         XCTAssertTrue(element("plan.validation.issue.1").label.contains("Step 02 · Inclination"))
-        XCTAssertTrue(findByScrolling(app.staticTexts["Needs attention: speed, inclination"]))
+        let stepProblems = app.staticTexts["Needs attention: speed, inclination"]
+        for _ in 0..<12 { if stepProblems.exists { break }; app.swipeDown() }
+        XCTAssertTrue(stepProblems.exists)
         let review = app.buttons["plan.review"]
         XCTAssertTrue(findByScrolling(review))
         XCTAssertFalse(review.isEnabled)

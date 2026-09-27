@@ -21,18 +21,21 @@ final class PlansViewModel: ObservableObject {
     private let repository: any SavedPlanRepositoryProtocol
     private let exporter: any SavedPlanExporting
     private let makeNewDraft: () -> ManualWorkoutDraft
+    private let authoringValidator: any WorkoutAuthoringValidating
     private let now: () -> Date
 
     init(
         repository: any SavedPlanRepositoryProtocol = SavedPlanRepository(),
         exporter: any SavedPlanExporting = SavedPlanExporter(),
         makeNewDraft: @escaping () -> ManualWorkoutDraft = { .empty },
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        authoringValidator: any WorkoutAuthoringValidating = CanonicalWorkoutAuthoringValidation()
     ) {
         self.repository = repository
         self.exporter = exporter
         self.makeNewDraft = makeNewDraft
         self.now = now
+        self.authoringValidator = authoringValidator
         repositoryStatus = repository.list()
     }
 
@@ -302,6 +305,23 @@ final class PlansViewModel: ObservableObject {
         }
     }
 
+    func reviewForAuthoring(locale: Locale = .autoupdatingCurrent) {
+        guard let draft else { return }
+        clearTransientResults()
+        switch ManualWorkoutDraftParser.parse(draft, locale: locale) {
+        case .failure(let failure): inputIssues = failure.issues
+        case .success(let plan):
+            switch authoringValidator.validate(plan) {
+            case .failure(let failure): validationIssues = failure.issues
+            case .success(let token): preview = WorkoutPlanPreview(authoringPlan: token)
+            }
+        }
+    }
+    func reviewImportedForAuthoring(_ plan: WorkoutPlan) -> Result<Void, WorkoutPlanValidationFailure> {
+        cancelEditor()
+        return authoringValidator.validate(plan).map { preview = WorkoutPlanPreview(authoringPlan: $0) }
+    }
+
     func returnToEditing() {
         preview = nil
         saveError = nil
@@ -311,10 +331,13 @@ final class PlansViewModel: ObservableObject {
         guard canMutate, let preview else { return }
         saveError = nil
         do {
-            if let editingRecordID {
-                _ = try repository.replace(id: editingRecordID, with: preview.validatedPlan)
-            } else {
-                _ = try repository.create(preview.validatedPlan)
+            switch preview.validation {
+            case .authoring(let token):
+                if let editingRecordID { _ = try repository.replace(id: editingRecordID, with: token) }
+                else { _ = try repository.create(token) }
+            case .execution(let token):
+                if let editingRecordID { _ = try repository.replace(id: editingRecordID, with: token) }
+                else { _ = try repository.create(token) }
             }
             repositoryStatus = repository.list()
             cancelEditor()

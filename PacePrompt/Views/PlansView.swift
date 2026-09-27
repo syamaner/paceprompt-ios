@@ -4,6 +4,7 @@ import UIKit
 struct PlansView: View {
     @ObservedObject var viewModel: PlansViewModel
     let capabilities: WorkoutPlanCapabilities
+    var profiles: PlanningProfilesViewModel? = nil
     var beginImport: (() -> Void)? = nil
     var beginWorkout: ((SavedPlanRecord) -> Void)? = nil
 
@@ -55,7 +56,7 @@ struct PlansView: View {
                 set: { if !$0 { viewModel.cancelEditor() } }
             )
         ) {
-            PlanEditorView(viewModel: viewModel, capabilities: capabilities)
+            PlanEditorView(viewModel: viewModel, capabilities: capabilities, profiles: profiles)
         }
         .sheet(
             isPresented: Binding(
@@ -94,9 +95,28 @@ struct PlansView: View {
         return PlansDeletionPresentation(record: record).title
     }
 
+    private var authoringHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            OptionalPlanningProfileSelector(model: profiles)
+            ViewThatFits(in: .horizontal) {
+                HStack { authoringActions }
+                VStack(alignment: .leading) { authoringActions }
+            }
+        }
+    }
+    @ViewBuilder private var authoringActions: some View {
+        Button("New plan") { viewModel.beginCreate() }.buttonStyle(.borderedProminent)
+            .frame(minHeight: 44).disabled(!viewModel.canMutate).accessibilityIdentifier("planning.new")
+        if let beginImport {
+            Button("AI import", action: beginImport).buttonStyle(.bordered)
+                .frame(minHeight: 44).disabled(!viewModel.libraryPresentation.canImport).accessibilityIdentifier("planning.import")
+        }
+    }
+
     private var emptyView: some View {
         ScrollView {
             VStack(spacing: 20) {
+                authoringHeader
                 if let warning = viewModel.libraryPresentation.stagingWarning {
                     PlansStatusCard(status: warning)
                         .accessibilityIdentifier("plans.staging-warning")
@@ -133,6 +153,7 @@ struct PlansView: View {
 
     private func populatedView(_ rows: [PlansPlanRowPresentation]) -> some View {
         List {
+            Section { authoringHeader }.listRowBackground(Color.clear)
             if let warning = viewModel.libraryPresentation.stagingWarning {
                 Section {
                     PlansStatusCard(status: warning)
@@ -231,6 +252,7 @@ struct PlansView: View {
     private func blockedView(_ status: PlansStatusPresentation) -> some View {
         ScrollView {
             VStack(spacing: 16) {
+                authoringHeader
                 if let warning = viewModel.libraryPresentation.stagingWarning {
                     PlansStatusCard(status: warning)
                         .accessibilityIdentifier("plans.staging-warning")
@@ -480,6 +502,7 @@ private struct SavedPlanRow: View {
 private struct PlanEditorView: View {
     @ObservedObject var viewModel: PlansViewModel
     let capabilities: WorkoutPlanCapabilities
+    let profiles: PlanningProfilesViewModel?
 
     var body: some View {
         NavigationStack {
@@ -487,7 +510,7 @@ private struct PlanEditorView: View {
                 if let preview = viewModel.preview {
                     ManualPlanReviewView(viewModel: viewModel, preview: preview)
                 } else {
-                    PlanEntryView(viewModel: viewModel, capabilities: capabilities)
+                    PlanEntryView(viewModel: viewModel, capabilities: capabilities, profiles: profiles)
                 }
             }
             .navigationTitle(
@@ -527,6 +550,7 @@ private struct PlanEditorView: View {
 private struct PlanEntryView: View {
     @ObservedObject var viewModel: PlansViewModel
     let capabilities: WorkoutPlanCapabilities
+    let profiles: PlanningProfilesViewModel?
     @Environment(\.editMode) private var editMode
 
     private var draft: Binding<ManualWorkoutDraft> {
@@ -551,6 +575,7 @@ private struct PlanEntryView: View {
 
     var body: some View {
         List {
+            Section { OptionalPlanningProfileSelector(model: profiles) }
             Section {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -597,6 +622,7 @@ private struct PlanEntryView: View {
                     StepEntryView(
                         presentation: presentation.steps[index],
                         step: draft.steps[index],
+                        profiles: profiles,
                         isReordering: isReordering,
                         moveUp: {
                             viewModel.moveSteps(from: IndexSet(integer: index), to: index - 1)
@@ -687,7 +713,7 @@ private struct PlanEntryView: View {
 
             Section {
                 Button("Review exact plan") {
-                    viewModel.validateForPreview(against: capabilities)
+                    viewModel.reviewForAuthoring()
                 }
                 .font(.headline)
                 .frame(maxWidth: .infinity, minHeight: 48)
@@ -716,6 +742,7 @@ private struct PlanEntryView: View {
 private struct StepEntryView: View {
     let presentation: ManualPlanEditorStepPresentation
     @Binding var step: ManualWorkoutStepDraft
+    let profiles: PlanningProfilesViewModel?
     let isReordering: Bool
     let moveUp: () -> Void
     let moveDown: () -> Void
@@ -805,6 +832,11 @@ private struct StepEntryView: View {
                         keyboard: .numbersAndPunctuation
                     )
                 }
+            }
+
+            if let profiles {
+                PlanningProfileManualIncrementControls(model: profiles, speed: $step.speedKilometresPerHour,
+                                                       inclination: $step.inclinationPercent, stepNumber: presentation.index + 1)
             }
 
             if let problemSummary = presentation.problemSummary {
@@ -1109,7 +1141,7 @@ struct PlanPreviewView: View {
                 )
                 LabeledContent(
                     "Estimated distance",
-                    value: "\(PlanValueFormatter.estimatedDistanceText(preview.estimatedDistanceKilometres)) km"
+                    value: PlanValueFormatter.estimatedDistanceSummary(preview.estimatedDistanceKilometres)
                 )
                 LabeledContent("Steps", value: preview.plan.steps.count.formatted())
             }
