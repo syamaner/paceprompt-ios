@@ -1,0 +1,27 @@
+{
+  "ratificationVersion": "paceprompt-host-eval-ratification/issue145-r3-route-probes-r1",
+  "status": "probe-profile-and-cap-ratified-live-run-not-authorized",
+  "source": "operator replied 'I ratify' on 2026-09-24 to the exact two-route probe profile and USD 0.03577518 hard-limit question",
+  "operatorRatifiedFields": [
+    "proposalSha256",
+    "probeHardLimitUSD"
+  ],
+  "proposalSha256": "133091376a862247ce72a4413c988e5c2fa9dd23be62f66960cf9d71c755ddce",
+  "supportingPreparedEvidenceTreeSha256": "da389803ca4c7c71ca6583579f83295e2c13283281ec8d3ed6470cdd08259920",
+  "preparedRunID": "issue145-r3-route-probe-proposal-20260924-01",
+  "probeHardLimitUSD": "0.03577518",
+  "currency": "USD",
+  "scope": "two r3 replacement-route development warm-ups only; no scored cases",
+  "maximumLogicalPositions": 2,
+  "maximumPhysicalSends": 6,
+  "separateFromFullMatrixLineageCap": true,
+  "routeCompatibilityProof": null,
+  "liveGate": null,
+  "initialLiveAuthorization": null,
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false
+  }
+}

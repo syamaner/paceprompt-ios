@@ -1,0 +1,22 @@
+{
+  "admitted": false,
+  "callCount": 3936,
+  "estimatedUSD": "98.742225560",
+  "hardLimitUSD": null,
+  "method": "serialized-complete-request-utf8-byte-upper-bound-plus-4096-framing-tokens-and-8192-output-tokens-per-call",
+  "perModelEstimatedUSD": {
+    "deepseek/deepseek-v4-flash-0731": "1.00108248",
+    "google/gemini-3.7-flash": "16.47978900",
+    "minimax/minimax-m3": "4.56198564",
+    "mistralai/mistral-small-2603": "2.90417820",
+    "mistralai/mistral-small-3.2-24b-instruct": "1.184400100",
+    "nvidia/nemotron-3-ultra-550b-a55b": "11.6332440",
+    "nvidia/nemotron-3.5-lightning": "1.22729760",
+    "openai/gpt-5.6-luna": "4.9480120",
+    "openai/gpt-5.6-sol": "44.106168",
+    "qwen/qwen-2.5-7b-instruct": "1.3981988",
+    "qwen/qwen3.8-27b": "7.97963744",
+    "z-ai/glm-5.3-flash": "1.318232300"
+  },
+  "status": "awaitingSeparateHardLimitRatification"
+}

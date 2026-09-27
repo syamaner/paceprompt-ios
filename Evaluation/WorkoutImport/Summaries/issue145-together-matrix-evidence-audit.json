@@ -1,0 +1,38 @@
+{
+  "aggregateAudit": "both stratum reports reproduced with no differences",
+  "auditStatus": "passed",
+  "childEvidenceTreeSha256": "df3c9d25b10eef6d3b5ad9b3d2155862105321a6184170c39512b1c876cb6aad",
+  "childGateAudit": "valid",
+  "cumulativeConservativeUSD": "66.418313025",
+  "cumulativeHardLimitUSD": "300.00",
+  "fixedScoredDenominator": 3597,
+  "independentReview": "exact_head_review_2; no actionable findings; response scorer replay performed by parent",
+  "interruptedRootProjection": "one durable inProgress root position is conservatively terminalUnprojected in the child report; never replayed",
+  "maximumSendsPerPosition": 3,
+  "nextDecision": "separate human evidence acceptance and aggregate-publication decision",
+  "physicalSends": 2265,
+  "productionSelection": null,
+  "profileSha256": "913620ebed0f69398d9530630ecd2ee4ba110b534cc3e554ea73b5b6210d968c",
+  "publication": "not performed; raw evidence remains ignored",
+  "queueSha256": "1c0d4ce6c43c40919afc8ac7d420403bc18f67773bcf355b9c93439f0a76ea05",
+  "rateLimitPauses": [
+    "z-ai/glm-5.3-flash",
+    "mistralai/mistral-small-3.2-24b-instruct",
+    "nvidia/nemotron-3.5-lightning"
+  ],
+  "rawResponseScorerReplay": "2223 saved scored projections reproduced with no differences",
+  "replayedPositions": 0,
+  "rootEvidenceTreeSha256": "915ff15a3713395cc31d0f20bd0a979ffe8941474e9c0a3b5c5cb508dc6613c9",
+  "rootRunID": "issue145-11model-together-matrix-20260925-01",
+  "skippedRecordAudit": "1373 records reproduced with no differences",
+  "sourceCommit": "fe306369ba11bdfaa934cc2879c428582f5e3ae6",
+  "terminalChildRunID": "issue145-11model-together-matrix-20260926-01",
+  "treeIntegrityAudit": "pre-audit digest and final external seals match",
+  "uncertainSendPositions": 4,
+  "uniqueLogicalPositions": 3608,
+  "warmupAdmissionFailures": [
+    "google/gemini-3.7-flash",
+    "nvidia/nemotron-3-ultra-550b-a55b"
+  ],
+  "wireLedgerAudits": "both valid with no errors"
+}

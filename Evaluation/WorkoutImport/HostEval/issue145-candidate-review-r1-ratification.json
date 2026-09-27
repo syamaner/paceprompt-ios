@@ -1,0 +1,24 @@
+{
+  "ratificationContractVersion": "paceprompt-issue145-candidate-review-ratification/r1",
+  "ratifiedAt": "2026-09-20",
+  "authorityURL": "https://github.com/syamaner/paceprompt-ios/issues/145#issuecomment-5751730402",
+  "ratifiedCandidateReviewSha256": "e21347e3a5d71be45717a8083e76878e3b450c5f1a7c7c9e30e0fca7aa92778b",
+  "ratifiedModelCount": 12,
+  "ratifiedScoredAttempts": 3924,
+  "ratifiedWarmups": 12,
+  "ratifiedTotalProviderCalls": 3936,
+  "ratifiedReplacementRoutes": {
+    "mistralai/mistral-small-2603": "mistral/zdr",
+    "deepseek/deepseek-v4-flash-0731": "deepinfra/fp8"
+  },
+  "authority": {
+    "zeroSpendGateImplementation": true,
+    "publicCataloguePreparation": true,
+    "credentialRead": false,
+    "compatibilityProbe": false,
+    "providerInference": false,
+    "evaluationSpend": false,
+    "liveRun": false,
+    "productionChange": false
+  }
+}

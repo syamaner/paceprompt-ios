@@ -315,7 +315,13 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       modifiedAt: Date(timeIntervalSince1970: 200),
       plan: h.plan.plan
     )
-    let coordinator = WorkoutSessionCoordinator(binding: h.binding)
+    let displayWake = RecordingWorkoutDisplayWakeController()
+    let coordinator = WorkoutSessionCoordinator(
+      binding: h.binding,
+      displayWakeController: displayWake
+    )
+
+    XCTAssertEqual(displayWake.values, [false])
 
     coordinator.begin(record)
     coordinator.limits = .init(
@@ -333,6 +339,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     coordinator.handlePreflight(.beginWorkout)
 
     XCTAssertEqual(coordinator.stage, .exercise)
+    XCTAssertEqual(displayWake.values.last, true)
     XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
     XCTAssertEqual(h.binding.orchestrator.frozenAttempt?.sourcePlanID, planID)
     XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.schemaVersion, 2)
@@ -348,7 +355,11 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
       modifiedAt: Date(timeIntervalSince1970: 200),
       plan: h.plan.plan
     )
-    let coordinator = WorkoutSessionCoordinator(binding: h.binding)
+    let displayWake = RecordingWorkoutDisplayWakeController()
+    let coordinator = WorkoutSessionCoordinator(
+      binding: h.binding,
+      displayWakeController: displayWake
+    )
 
     coordinator.begin(record)
     coordinator.limits = .init(
@@ -358,6 +369,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     coordinator.cancelBeforeExercise()
 
     XCTAssertEqual(coordinator.stage, .inactive)
+    XCTAssertEqual(displayWake.values.last, false)
     XCTAssertEqual(h.binding.orchestrator.state.execution, .idle)
     XCTAssertNil(h.binding.orchestrator.frozenAttempt)
     XCTAssertNil(h.binding.orchestrator.lastPersistedSummary)
@@ -372,6 +384,114 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
+  func testSessionCoordinatorReleasesDisplayWakeAfterInterruption() {
+    let h = Harness()
+    h.makeReadyWithFreshStationaryTelemetry()
+    let record = SavedPlanRecord(
+      id: UUID(uuidString: "00000000-0000-0000-0000-000000000109")!,
+      createdAt: Date(timeIntervalSince1970: 100),
+      modifiedAt: Date(timeIntervalSince1970: 200),
+      plan: h.plan.plan
+    )
+    let displayWake = RecordingWorkoutDisplayWakeController()
+    let coordinator = WorkoutSessionCoordinator(
+      binding: h.binding,
+      displayWakeController: displayWake
+    )
+    coordinator.begin(record)
+    coordinator.limits = .init(
+      maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3"
+    )
+    coordinator.prepareWorkout()
+    coordinator.handlePreflight(.beginWorkout)
+
+    XCTAssertEqual(displayWake.values, [false, true])
+
+    h.binding.receive(.connection(.disconnected(message: "Synthetic interruption")))
+
+    XCTAssertEqual(coordinator.exercisePresentation.stage, .interrupted)
+    XCTAssertEqual(displayWake.values, [false, true, false])
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testFreshReadCannotUseInitialOrPartialEvidenceAndTimeoutFailsClosed() {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    h.client.onRead = {}
+    h.binding.readCapabilitiesForPreflight()
+    XCTAssertEqual(h.binding.preflightRead, .reading)
+    h.binding.receive(.value(uuid: FTMSUUID.fitnessMachineFeature, data: Data([0x0C,0x16,0,0,3,0,0,0]), source: .initialRead))
+    XCTAssertEqual(h.binding.preflightRead, .reading)
+    h.binding.receive(.value(uuid: FTMSUUID.supportedSpeedRange, data: Data([0x32,0,0xD0,7,0x0A,0]), source: .preflightRead))
+    XCTAssertEqual(h.binding.preflightRead, .reading)
+    h.clock.advance(by: 10); h.binding.tick()
+    guard case .unavailable = h.binding.preflightRead else { return XCTFail("Timeout must block") }
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testReadCompletionAtDeadlineBlocksWithoutWaitingForTimer() {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let complete = h.client.onRead; h.client.onRead = {}
+    h.binding.readCapabilitiesForPreflight()
+    h.clock.advance(by: 10)
+    complete?()
+    guard case .unavailable = h.binding.preflightRead else { return XCTFail("Expired completion cannot pass") }
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testFreshReadErrorInvalidatesCachedExecutionCapability() {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    h.client.onRead = {}
+    h.binding.readCapabilitiesForPreflight()
+    h.binding.receive(.valueError(uuid: FTMSUUID.supportedSpeedRange, source: .preflightRead, message: "Synthetic failure"))
+    XCTAssertNil(h.binding.currentCapability)
+    guard case .unavailable = h.binding.preflightRead else { return XCTFail("Read failure must block") }
+    XCTAssertFalse(h.binding.canExposeArming)
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testBeginReReadsAndChangedRangeShowsExactFailureWithoutAttemptOrCommands() throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController())
+    let record = SavedPlanRecord(id: UUID(), createdAt: Date(timeIntervalSince1970: 0), modifiedAt: Date(timeIntervalSince1970: 0), plan: h.plan.plan)
+    c.begin(record); c.limits = .init(maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3")
+    c.prepareWorkout()
+    XCTAssertTrue(try XCTUnwrap(c.preflightPresentation).canBeginWorkout)
+    h.client.onRead = { [weak binding = h.binding] in
+      for (uuid, data) in [(FTMSUUID.fitnessMachineFeature, Data([0x0C,0x16,0,0,3,0,0,0])), (FTMSUUID.supportedSpeedRange, Data([0x32,0,0x90,1,0x0A,0])), (FTMSUUID.supportedInclinationRange, Data([0,0,0x96,0,0x0A,0]))] {
+        binding?.receive(.value(uuid: uuid, data: data, source: .preflightRead))
+      }
+    }
+    c.handlePreflight(.beginWorkout)
+    XCTAssertEqual(c.stage, .preflight)
+    XCTAssertNil(c.preflightPresentation)
+    XCTAssertFalse(try XCTUnwrap(c.liveFailure).issues.isEmpty)
+    XCTAssertEqual(c.selectedPlan?.plan, record.plan)
+    XCTAssertNil(h.binding.orchestrator.frozenAttempt)
+    XCTAssertTrue(h.link.writes.isEmpty)
+    c.cancelBeforeExercise(); XCTAssertEqual(c.stage, .inactive)
+  }
+
+  func testAbandonedLateReadCannotArmAndExplicitNewConnectionRecovers() throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let freshRead = h.client.onRead
+    h.client.onRead = {}
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController())
+    let record = SavedPlanRecord(id: UUID(), createdAt: Date(timeIntervalSince1970: 0), modifiedAt: Date(timeIntervalSince1970: 0), plan: h.plan.plan)
+    c.begin(record); c.limits = .init(maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3")
+    c.prepareWorkout(); XCTAssertNil(h.binding.orchestrator.state.armedWorkout)
+    h.clock.advance(by: 10); c.refresh()
+    XCTAssertTrue(try XCTUnwrap(c.liveFailure).reason.contains("disconnect and reconnect"))
+    freshRead?()
+    XCTAssertNil(h.binding.orchestrator.state.armedWorkout)
+    XCTAssertNil(c.preflightPresentation)
+    c.chooseAnotherTreadmill(); XCTAssertEqual(c.stage, .preparation)
+    XCTAssertEqual(c.selectedPlan?.plan, record.plan)
+    h.binding.receive(.connection(.disconnected(message: "Explicit synthetic disconnect")))
+    h.makeReadyWithFreshStationaryTelemetry(); h.client.onRead = freshRead
+    c.prepareWorkout(); XCTAssertTrue(try XCTUnwrap(c.preflightPresentation).canBeginWorkout)
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
   func testSessionLimitDraftParsesExactLocaleDecimalWithoutInventingDefaults() {
     XCTAssertNil(WorkoutSessionLimitDraft().ceilings())
     let parsed = WorkoutSessionLimitDraft(
@@ -383,6 +503,41 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(parsed?.maximumSpeed.value, Decimal(string: "0.70"))
     XCTAssertEqual(parsed?.maximumInclination.value, 1)
     XCTAssertEqual(parsed?.maximumStepSpeedChange.value, Decimal(string: "0.10"))
+  }
+
+  func testDisplayWakePolicyKeepsOnlyNonterminalExerciseStagesAwake() {
+    let activeStages: [WorkoutExerciseStage] = [
+      .waiting, .applying, .running, .override, .checking, .paused, .restoring,
+      .awaitingPhysicalStop, .readyToEnd, .ending,
+    ]
+    let terminalStages: [WorkoutExerciseStage] = [.finished, .failed, .interrupted]
+
+    for stage in activeStages {
+      XCTAssertTrue(
+        WorkoutDisplayWakePolicy.shouldKeepScreenAwake(
+          sessionStage: .exercise,
+          exerciseStage: stage
+        ),
+        "Expected \(stage) to keep the display awake"
+      )
+    }
+    for stage in terminalStages {
+      XCTAssertFalse(
+        WorkoutDisplayWakePolicy.shouldKeepScreenAwake(
+          sessionStage: .exercise,
+          exerciseStage: stage
+        ),
+        "Expected \(stage) to release the display wake request"
+      )
+    }
+    for stage in [WorkoutSessionStage.inactive, .preparation, .preflight] {
+      XCTAssertFalse(
+        WorkoutDisplayWakePolicy.shouldKeepScreenAwake(
+          sessionStage: stage,
+          exerciseStage: .running
+        )
+      )
+    }
   }
 
   func testAcceptedPhysicalResumeRestoresEffectiveSpeedThenInclination() throws {
@@ -591,6 +746,11 @@ extension ProductionWorkoutExecutionBindingTests {
         attemptIDs: BindingAttemptIDs(),
         automaticTicks: false
       )
+      client.onRead = { [weak binding] in
+        for (uuid, data) in [(FTMSUUID.fitnessMachineFeature, Data([0x0C,0x16,0,0,3,0,0,0])), (FTMSUUID.supportedSpeedRange, Data([0x32,0,0xD0,7,0x0A,0])), (FTMSUUID.supportedInclinationRange, Data([0,0,0x96,0,0x0A,0]))] {
+          binding?.receive(.value(uuid: uuid, data: data, source: .preflightRead))
+        }
+      }
       binding.setApplicationActivity(.active)
     }
 
@@ -711,6 +871,8 @@ private final class BindingClient: FTMSClientProtocol {
   var connectedPeripheralIdentifier: UUID?
   var connectedPeripheralName: String?
   var controlPointLink: (any FTMSControlPointLink)?
+  var onRead: (() -> Void)?
+  func refreshCapabilitiesForPreflight() -> Bool { onRead?(); return onRead != nil }
   func startScan() {}
   func stopScan() {}
   func connect(to identifier: UUID) {}
@@ -752,6 +914,15 @@ private final class BindingClock: WorkoutOrchestrationClock {
 private final class BindingAttemptIDs: WorkoutAttemptIDSource {
   func nextAttemptID() -> UUID {
     UUID(uuidString: "00000000-0000-0000-0000-000000000063")!
+  }
+}
+
+@MainActor
+private final class RecordingWorkoutDisplayWakeController: WorkoutDisplayWakeControlling {
+  private(set) var values: [Bool] = []
+
+  func setWorkoutKeepsScreenAwake(_ enabled: Bool) {
+    values.append(enabled)
   }
 }
 

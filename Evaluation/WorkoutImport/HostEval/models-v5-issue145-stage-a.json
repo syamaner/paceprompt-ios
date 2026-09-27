@@ -1,0 +1,82 @@
+{
+  "modelSetVersion": "paceprompt-host-eval-models/issue145-v5-stage-a",
+  "selectionBasis": {
+    "source": "Evaluation/WorkoutImport/Summaries/consolidated-evaluation-data.json",
+    "sourceSha256": "a5648e4dbb0dd22643c775938a400ae8ab3d056592931d80568b535da3c9ce58",
+    "rule": "highest sealed v3-or-v4 weighted composite among the twelve issue145 candidates",
+    "allPriorHardGatesPassed": false
+  },
+  "catalogueReviewedAt": "2026-09-20",
+  "catalogueURL": "https://openrouter.ai/api/v1/models",
+  "models": [
+    {
+      "requestedModelID": "openai/gpt-5.6-sol",
+      "canonicalRevision": "openai/gpt-5.6-sol-20260709",
+      "providerEndpoint": "openai",
+      "quantization": null,
+      "role": "candidateAndCeiling",
+      "priorWeightedCompositePercent": "99.3817",
+      "temperature": null,
+      "topP": null,
+      "reasoning": {"enabled": false, "effort": "none", "exclude": false},
+      "maxOutputTokens": 8192,
+      "requiredParameters": ["max_tokens", "response_format", "structured_outputs"],
+      "responseContract": "nativeJsonSchema",
+      "transportRegistry": "strategyRegistryIssue145V5",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    },
+    {
+      "requestedModelID": "google/gemini-3.7-flash",
+      "canonicalRevision": "google/gemini-3.7-flash-20260813",
+      "providerEndpoint": "google-ai-studio",
+      "quantization": null,
+      "role": "productionCandidate",
+      "priorWeightedCompositePercent": "98.1422",
+      "temperature": 0,
+      "topP": 1,
+      "reasoning": {"enabled": true, "effort": "medium", "exclude": false},
+      "maxOutputTokens": 8192,
+      "requiredParameters": ["max_tokens", "response_format", "structured_outputs"],
+      "responseContract": "nativeJsonSchema",
+      "transportRegistry": "strategyRegistryIssue145V5",
+      "transportStrategy": "semanticJsonV29",
+      "transportSchemaSha256": "9241acedc827b4bb5e1d2de0b16a762af2e5b22217f4b61408725cfad9ac009f"
+    },
+    {
+      "requestedModelID": "qwen/qwen3.8-27b",
+      "canonicalRevision": "qwen/qwen3.8-27b-20260814",
+      "providerEndpoint": "parasail/fp8",
+      "quantization": "fp8",
+      "role": "openWeightCandidate",
+      "priorWeightedCompositePercent": "91.9060",
+      "temperature": null,
+      "topP": null,
+      "reasoning": null,
+      "maxOutputTokens": 8192,
+      "zdr": true,
+      "requiredParameters": ["max_tokens", "response_format", "structured_outputs"],
+      "responseContract": "nativeJsonSchema",
+      "transportRegistry": "strategyRegistryIssue145V5",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    },
+    {
+      "requestedModelID": "openai/gpt-5.6-luna",
+      "canonicalRevision": "openai/gpt-5.6-luna-20260709",
+      "providerEndpoint": "openai",
+      "quantization": null,
+      "role": "productionCandidate",
+      "priorWeightedCompositePercent": "91.3305",
+      "temperature": null,
+      "topP": null,
+      "reasoning": {"enabled": false, "effort": "none", "exclude": false},
+      "maxOutputTokens": 8192,
+      "requiredParameters": ["max_tokens", "response_format", "structured_outputs"],
+      "responseContract": "nativeJsonSchema",
+      "transportRegistry": "strategyRegistryIssue145V5",
+      "transportStrategy": "nestedV23",
+      "transportSchemaSha256": "d4901b2dc3b1a57654ed5d6f7e96bdce30687062913036f86e616fb2f5a9bba0"
+    }
+  ]
+}

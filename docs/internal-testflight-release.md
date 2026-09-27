@@ -12,6 +12,39 @@ Issue #120 adds a separate tag-triggered release route for the existing
 external tester group, publish the app or run the complete simulator suite in
 GitHub Actions.
 
+## Build/signing boundary
+
+The split workflow has three responsibilities: verify release-source identity,
+build an unsigned Release archive without Apple credentials, then verify/sign/
+upload it on a fresh protected runner using separately pinned tools. Candidate
+scripts execute in the unprivileged source/build jobs; Xcode project/scheme
+inputs execute only in the build job. In the
+signing job the candidate checkout is read as source metadata by trusted tools,
+not imported or built. `RELEASE_TOOLS_SHA` in the protected environment selects
+the full reviewed signing-tools commit; it has no floating or candidate fallback.
+Setup and deliberate pin upgrades are documented in `testflight/setup.md`.
+
+`testflight_handoff.py` owns the bounded archive/data contract. It binds the
+package to source SHA, tag, run ID, attempt 1 and SHA-256; rejects unsafe paths,
+case collisions, links, unsupported nested code and oversized archives; and
+extracts only into a fresh directory. The trusted guard also checks metadata,
+privacy-manifest identity, arm64 architecture and the executable's device-iOS
+load command. The signer supplies a fixed distribution entitlement policy,
+validates it against the profile, signs with `codesign`, then uses Xcode's
+`-exportArchive` without a project or scheme. Domain/app code is unchanged.
+
+Contract tests cover hostile transfer inputs, stale identities/digests, bounded
+extraction and cleanup, platform spoofing, and profile entitlement mismatch.
+SHA-256 proves transfer consistency, not benign application behaviour. The
+candidate workflow itself still controls the job: review it before approval.
+Neither this separation nor a tools pin protects against approving a malicious
+workflow that removes the boundary, or defects in trusted Apple/parser tools.
+
+At implementation review the live workflow remains the combined pipeline.
+Merging this change activates the split workflow, which refuses signing until
+the reviewed tools pin is configured. Unsigned archive/transfer validation is
+not evidence of hosted signing/export compatibility or an accepted Apple upload.
+
 ## Repository controls
 
 - `testflight/<marketing-version>-b<build>` is a lightweight tag on a reviewed
@@ -24,6 +57,10 @@ GitHub Actions.
   the operator is responsible for retaining the actual independent review
   evidence, as this single-collaborator repository has no separate GitHub
   reviewer account.
+- `main` requires PRs, resolved review conversations and up-to-date fast CI from
+  GitHub Actions; force pushes/deletion are blocked and there is no bypass. The
+  single-maintainer policy has zero required GitHub approvals, so independent
+  review remains an operator obligation rather than a platform-enforced check.
 - Repository tag rulesets restrict creation to repository admins and prohibit
   tag updates and deletion. The release guard also checks the current remote
   tag, merged PR and successful fast `main` CI on the exact SHA.
@@ -92,7 +129,10 @@ variables. Enter the
 private key in GitHub's secret form, never in chat, a PR, a repository file or
 an Actions log. The workflow
 writes it to a restricted temporary file and removes it on exit. It creates
-no IPA, archive, signing or credential artifact.
+no signed IPA, signing or credential Actions artifact. The credential-free
+unsigned archive is transferred as an immutable Actions artifact retained for
+one day; in this public repository it is downloadable with repository read
+access.
 
 The first run proved Apple-managed cloud signing unavailable to this key:
 `exportArchive Cloud signing permission error` and no distribution profile.
@@ -109,14 +149,14 @@ Store `DIST_P12_B64` (single-line base64 of the `.p12`),
 `.mobileprovision`) only as `internal-testflight` **environment secrets**.
 Never paste private key or password material into chat, a PR, Git, or logs.
 The job decodes them under `RUNNER_TEMP`, imports the identity into a temporary
-keychain and installs the profile only after environment approval. Before the
-archive it checks the imported Apple Distribution certificate against the
+keychain and installs the profile only after environment approval. Before
+signing, it checks the imported Apple Distribution certificate against the
 profile's sole certificate, exact team, app ID, iOS platform, HealthKit,
 `get-task-allow=false`, expiry and lack of ad hoc/enterprise device lists.
 The profile's embedded certificate fingerprint is matched directly to the
 valid identity in the temporary keychain; no second PKCS#12 decoder is used.
-It then archives and exports with manual signing and checks that the exported
-app's actual signing certificate matches the approved CI identity. The signed
+It then signs the verified transferred archive, exports with manual signing,
+and checks that the exported app's actual signing certificate matches the approved CI identity. The signed
 entitlements are requested from `codesign` as a property list and checked for
 HealthKit, team, app ID and `get-task-allow=false` before upload. The keychain, profile and
 temporary files are removed at job exit. If any match fails, there is no upload.
@@ -126,16 +166,22 @@ profile identity.
 
 ## Workflow and evidence
 
-The unprivileged job checks the tag and source without Apple secrets. After
-environment approval, the macOS job rechecks them, pins Xcode 26.6
-(`17F113`), checks the export-compliance tag and Apple account/group/build
-identity, imports and verifies the approved manual signing assets, and archives Release. Export uses `app-store-connect`,
+The unprivileged source job checks the tag and source without Apple secrets.
+A separate macOS job builds Release with signing disabled and packages only the
+unsigned app archive and dSYM. After environment approval, the fresh signing
+runner checks the full tools pin, rechecks the source and toolchain, verifies
+and extracts this run's archive, and checks the unsigned executable before
+using Apple secrets. No candidate project is built on that runner.
+
+The pinned signing script checks Apple account/group/build identity, imports and
+verifies the manual signing assets, supplies fixed approved distribution
+entitlements and signs the transferred archive. Export uses `app-store-connect`,
 `manageAppVersionAndBuildNumber=false` and
 `testFlightInternalTestingOnly=true`. Before the single upload attempt, the
 workflow checks the IPA's version/build, bundle ID, purpose strings, privacy
 manifest, HealthKit entitlement, team, Apple Distribution signature and
-`get-task-allow=false`. It records the source SHA and IPA SHA-256 without
-retaining the IPA.
+`get-task-allow=false`. It records source and trusted tools SHAs, the transfer
+SHA-256 and IPA SHA-256 without retaining the signed IPA as an Actions artifact.
 
 After an accepted upload, the workflow waits for Apple processing and checks
 that the resulting build is `INTERNAL_ONLY` and ready for internal testing.
@@ -157,6 +203,8 @@ Run the dry checks without Apple access:
 ```sh
 python3 -B -m unittest discover -s scripts/tests -v
 actionlint .github/workflows/ci.yml .github/workflows/internal-testflight.yml
+bash -n scripts/testflight_release.sh
+shellcheck scripts/testflight_release.sh
 python3 -B scripts/verify_release_configuration.py
 ```
 

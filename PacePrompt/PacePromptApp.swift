@@ -1,4 +1,12 @@
 import SwiftUI
+import UIKit
+
+@MainActor
+final class ApplicationWorkoutDisplayWakeController: WorkoutDisplayWakeControlling {
+  func setWorkoutKeepsScreenAwake(_ enabled: Bool) {
+    UIApplication.shared.isIdleTimerDisabled = enabled
+  }
+}
 
 @main
 struct PacePromptApp: App {
@@ -29,13 +37,25 @@ struct PacePromptApp: App {
       resolvedPlans = PlansViewModel()
       workoutCapabilitiesOverride = nil
     #endif
+    #if DEBUG
+      let uiTesting = ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("--paceprompt-") && $0.hasSuffix("-ui-testing") }
+      let profiles = PlanningProfileUITestSupport.enabled ? PlanningProfileUITestSupport.model()
+        : PlanningProfilesViewModel(repository: uiTesting ? MemoryPlanningProfileRepository() : FilePlanningProfileRepository(), identity: LocalPlanningProfileIdentity())
+      resolvedTreadmill.attachPlanningProfiles(profiles, discoveryEnabled: !uiTesting)
+    #else
+      let profiles = PlanningProfilesViewModel(repository: FilePlanningProfileRepository(), identity: LocalPlanningProfileIdentity())
+      resolvedTreadmill.attachPlanningProfiles(profiles)
+    #endif
     guard let binding = resolvedTreadmill.executionBinding else {
       preconditionFailure("The production treadmill composition must include workout execution")
     }
     _treadmill = StateObject(wrappedValue: resolvedTreadmill)
     _plans = StateObject(wrappedValue: resolvedPlans)
     _workoutSession = StateObject(
-      wrappedValue: WorkoutSessionCoordinator(binding: binding)
+      wrappedValue: WorkoutSessionCoordinator(
+        binding: binding,
+        displayWakeController: ApplicationWorkoutDisplayWakeController()
+      )
     )
   }
 

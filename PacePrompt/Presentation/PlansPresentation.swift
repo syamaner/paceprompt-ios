@@ -211,7 +211,7 @@ struct ManualPlanEditorPresentation: Equatable {
         issues = mappedIssues
         planNameHasProblem = mappedIssues.contains { $0.path == "suggestedName" }
         reviewActionEnabled = mappedIssues.isEmpty
-        reviewFooter = "Review validates the whole plan against the currently known capability snapshot. It does not save, contact or control the treadmill."
+        reviewFooter = "Review validates canonical plan values independently of equipment. It does not save, contact or control the treadmill."
 
         steps = draft.steps.enumerated().map { index, step in
             let stepIssues = mappedIssues.filter { $0.stepIndex == index }
@@ -295,11 +295,11 @@ struct ManualPlanReviewPresentation: Equatable {
         totalDuration = manualPlanDurationText(
             seconds: NSDecimalNumber(decimal: preview.totalDurationSeconds).int64Value
         )
-        estimatedDistance = "\(PlanValueFormatter.estimatedDistanceText(preview.estimatedDistanceKilometres, locale: locale)) km"
+        estimatedDistance = PlanValueFormatter.estimatedDistanceSummary(preview.estimatedDistanceKilometres, locale: locale)
         stepCount = preview.plan.steps.count.formatted(.number.locale(locale))
         confirmationTitle = editing ? "Confirm and update" : "Confirm and save"
         confirmationEnabled = canConfirm
-        confirmationFooter = "Validated against the currently known capability snapshot. Review and confirmation do not contact or control the treadmill. Only confirmation writes to local storage."
+        confirmationFooter = "Canonical plan values validated independently of equipment. Live compatibility is checked before execution. Review and confirmation do not contact or control the treadmill. Only confirmation writes to local storage."
         steps = preview.plan.steps.enumerated().map { index, step in
             ManualPlanReviewStepPresentation(
                 id: index,

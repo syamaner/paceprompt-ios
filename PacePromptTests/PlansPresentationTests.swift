@@ -182,7 +182,7 @@ final class PlansPresentationTests: XCTestCase {
         XCTAssertEqual(presentation.steps[1].problemFields, [.speed])
         XCTAssertEqual(presentation.issues.map(\.context), ["Step 01 · Duration", "Step 02 · Speed"])
         XCTAssertFalse(presentation.reviewActionEnabled)
-        XCTAssertTrue(presentation.reviewFooter.contains("currently known capability snapshot"))
+        XCTAssertTrue(presentation.reviewFooter.contains("canonical plan values independently of equipment"))
         XCTAssertTrue(presentation.reviewFooter.contains("does not save, contact or control"))
     }
 
@@ -222,7 +222,7 @@ final class PlansPresentationTests: XCTestCase {
         XCTAssertTrue(create.confirmationEnabled)
         XCTAssertEqual(edit.confirmationTitle, "Confirm and update")
         XCTAssertFalse(edit.confirmationEnabled)
-        XCTAssertTrue(create.confirmationFooter.contains("currently known capability snapshot"))
+        XCTAssertTrue(create.confirmationFooter.contains("Canonical plan values validated independently of equipment"))
         XCTAssertFalse(create.confirmationFooter.localizedCaseInsensitiveContains(" at "))
     }
 
@@ -688,7 +688,7 @@ private final class FakeSavedPlanRepository: SavedPlanRepositoryProtocol {
         )
     }
 
-    func create(_ validatedPlan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord {
+    func create(_ validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord {
         createCallCount += 1
         if let createFailure { throw createFailure }
         let timestamp = Date(timeIntervalSince1970: 1_700_000_100)
@@ -704,7 +704,7 @@ private final class FakeSavedPlanRepository: SavedPlanRepositoryProtocol {
 
     func replace(
         id: UUID,
-        with validatedPlan: WorkoutPlanValidator.ValidatedPlan
+        with validatedPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan
     ) throws -> SavedPlanRecord {
         replaceCallCount += 1
         if let replaceFailure { throw replaceFailure }

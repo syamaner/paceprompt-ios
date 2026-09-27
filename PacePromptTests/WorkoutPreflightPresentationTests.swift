@@ -4,6 +4,30 @@ import XCTest
 @testable import PacePrompt
 
 final class WorkoutPreflightPresentationTests: XCTestCase {
+  func testLiveReviewNamesAllSpeedInclinationAndCombinedFailuresAndMissingEvidence() throws {
+    let fixture = Harness()
+    let plan = fixture.validatedPlan.plan
+    for read in [LiveCapabilityRead.reading, .unavailable("Unknown"), .complete(.init(rawValue: 999), .unavailable)] {
+      XCTAssertNotNil(LivePreflightFailure.review(plan, read: read, epoch: .init(rawValue: 1)))
+    }
+    let epoch = fixture.epoch
+    let valid = fixture.matchingCapability.planCapabilities
+    XCTAssertNil(LivePreflightFailure.review(plan, read: .complete(epoch, valid), epoch: epoch))
+    for (speedMismatch, inclineMismatch) in [(true, false), (false, true), (true, true)] {
+      let limited = WorkoutPlanCapabilities(
+        speed: speedMismatch ? .supported(.init(minimum: .init(value: Decimal(5)/10, unit: .kilometresPerHour), maximum: .init(value: 4, unit: .kilometresPerHour), increment: .init(value: Decimal(1)/10, unit: .kilometresPerHour))) : valid.speed,
+        inclination: inclineMismatch ? .supported(.init(minimum: .init(value: 0, unit: .percent), maximum: .init(value: 1, unit: .percent), increment: .init(value: 1, unit: .percent))) : valid.inclination)
+      let failure = try XCTUnwrap(LivePreflightFailure.review(plan, read: .complete(epoch, limited), epoch: epoch))
+      XCTAssertEqual(failure.plan, plan)
+      XCTAssertTrue(failure.readComplete)
+      XCTAssertEqual(failure.issues.contains { $0.path.contains("targetSpeed") }, speedMismatch)
+      XCTAssertEqual(failure.issues.contains { $0.path.contains("targetInclination") }, inclineMismatch)
+    }
+    for capabilities in [WorkoutPlanCapabilities.unavailable, .init(speed: .unsupported, inclination: valid.inclination)] {
+      XCTAssertNotNil(LivePreflightFailure.review(plan, read: .complete(epoch, capabilities), epoch: epoch))
+    }
+  }
+
     func testPlanIdentityTotalsCeilingsAndInitialTargetsRemainExact() {
         let harness = Harness()
         let presentation = harness.presentation(state: harness.preflightState())

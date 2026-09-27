@@ -57,12 +57,35 @@ def validate(profile: dict, identities: str, team: str,
     return {"uuid": uuid, "name": name, "certificate_sha1": fingerprint}
 
 
+def distribution_entitlements(profile: dict, team: str) -> dict:
+    # Consumer-owned fixed entitlement policy: candidate input cannot broaden it.
+    desired = {
+        "application-identifier": f"{team}.{BUNDLE_ID}",
+        "com.apple.developer.team-identifier": team,
+        "com.apple.developer.healthkit": True,
+        "get-task-allow": False,
+        "beta-reports-active": True,
+        "keychain-access-groups": [f"{team}.{BUNDLE_ID}"],
+    }
+    granted = profile.get("Entitlements", {})
+    for key, value in desired.items():
+        if key == "keychain-access-groups":
+            groups = granted.get(key, [])
+            if not isinstance(groups, list) or not any(
+                    group in (f"{team}.{BUNDLE_ID}", f"{team}.*") for group in groups):
+                raise ValueError("Profile does not grant the app's default keychain group")
+        elif granted.get(key) != value or type(granted.get(key)) is not type(value):
+            raise ValueError(f"Profile does not grant required distribution entitlement {key}")
+    return desired
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", type=Path, required=True)
     parser.add_argument("--keychain", type=Path, required=True)
     parser.add_argument("--team", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--entitlements-output", type=Path)
     args = parser.parse_args()
     try:
         if not re.fullmatch(r"[A-Z0-9]{10}", args.team):
@@ -73,6 +96,9 @@ def main() -> None:
             ["security", "find-identity", "-v", "-p", "codesigning", str(args.keychain)],
             text=True, stderr=subprocess.DEVNULL)
         result = validate(profile, identities, args.team)
+        if args.entitlements_output is not None:
+            args.entitlements_output.write_bytes(plistlib.dumps(distribution_entitlements(profile, args.team)))
+            args.entitlements_output.chmod(0o600)
         args.output.write_text(json.dumps(result))
         args.output.chmod(0o600)
         print("PASS: CI certificate and App Store profile match app, team and HealthKit capability")

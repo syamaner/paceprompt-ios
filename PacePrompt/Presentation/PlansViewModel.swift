@@ -18,21 +18,42 @@ final class PlansViewModel: ObservableObject {
     @Published private(set) var shareArtifact: SavedPlanExportArtifact?
     @Published private(set) var exportError: String?
 
+    private(set) var saveRequiresHistoricalReview = false
+    @Published private(set) var historicalReview: HistoricalPlanCompatibility?
+    @Published private(set) var focusedStepIndex: Int?
+    private var historicalSelection: (Bool) -> HistoricalPlanningSelection = { _ in .none }
+
+    func configureHistoricalSelection(_ selection: @escaping (Bool) -> HistoricalPlanningSelection) {
+        historicalSelection = selection
+    }
+    func refreshHistoricalReview() {
+        guard let preview, case .authoring(let token) = preview.validation else { historicalReview = nil; return }
+        historicalReview = HistoricalPlanCompatibilityPolicy.compare(token, selection: historicalSelection(false), at: now())
+    }
+    func editHistoricalStep(_ index: Int, locale: Locale = .autoupdatingCurrent) {
+        guard let preview, preview.plan.steps.indices.contains(index) else { return }
+        if draft == nil { draft = ManualWorkoutDraft(plan: preview.plan, locale: locale) }
+        returnToEditing()
+        focusedStepIndex = index
+    }
     private let repository: any SavedPlanRepositoryProtocol
     private let exporter: any SavedPlanExporting
     private let makeNewDraft: () -> ManualWorkoutDraft
+    private let authoringValidator: any WorkoutAuthoringValidating
     private let now: () -> Date
 
     init(
         repository: any SavedPlanRepositoryProtocol = SavedPlanRepository(),
         exporter: any SavedPlanExporting = SavedPlanExporter(),
         makeNewDraft: @escaping () -> ManualWorkoutDraft = { .empty },
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        authoringValidator: any WorkoutAuthoringValidating = CanonicalWorkoutAuthoringValidation()
     ) {
         self.repository = repository
         self.exporter = exporter
         self.makeNewDraft = makeNewDraft
         self.now = now
+        self.authoringValidator = authoringValidator
         repositoryStatus = repository.list()
     }
 
@@ -49,7 +70,8 @@ final class PlansViewModel: ObservableObject {
         libraryPresentation.canCreate
     }
 
-    var isEditorPresented: Bool { draft != nil }
+    private var importedAuthoring = false
+    var isEditorPresented: Bool { draft != nil && !importedAuthoring }
 
     var editorPresentation: ManualPlanEditorPresentation? {
         guard let draft else { return nil }
@@ -84,6 +106,7 @@ final class PlansViewModel: ObservableObject {
 
     func beginCreate() {
         guard canMutate else { return }
+        importedAuthoring = false
         editingRecordID = nil
         draft = makeNewDraft()
         clearTransientResults()
@@ -91,6 +114,7 @@ final class PlansViewModel: ObservableObject {
 
     func beginEdit(_ record: SavedPlanRecord) {
         guard canMutate else { return }
+        importedAuthoring = false
         editingRecordID = record.id
         draft = ManualWorkoutDraft(plan: record.plan)
         clearTransientResults()
@@ -302,19 +326,61 @@ final class PlansViewModel: ObservableObject {
         }
     }
 
+    func reviewForAuthoring(locale: Locale = .autoupdatingCurrent) {
+        guard let draft else { return }
+        clearTransientResults()
+        switch ManualWorkoutDraftParser.parse(draft, locale: locale) {
+        case .failure(let failure): inputIssues = failure.issues
+        case .success(let plan):
+            switch authoringValidator.validate(plan) {
+            case .failure(let failure): validationIssues = failure.issues
+            case .success(let token):
+                preview = WorkoutPlanPreview(authoringPlan: token)
+                refreshHistoricalReview()
+            }
+        }
+    }
+    func reviewImportedForAuthoring(_ plan: WorkoutPlan) -> Result<Void, WorkoutPlanValidationFailure> {
+        cancelEditor()
+        importedAuthoring = true
+        return authoringValidator.validate(plan).map {
+            preview = WorkoutPlanPreview(authoringPlan: $0)
+            refreshHistoricalReview()
+        }
+    }
+
     func returnToEditing() {
         preview = nil
+        historicalReview = nil
         saveError = nil
     }
 
-    func confirmSave() {
+    func confirmSave(acknowledging mismatch: HistoricalPlanCompatibility? = nil) {
         guard canMutate, let preview else { return }
         saveError = nil
+        saveRequiresHistoricalReview = false
+        if case .authoring(let token) = preview.validation {
+            let current = HistoricalPlanCompatibilityPolicy.compare(token, selection: historicalSelection(true), at: now())
+            guard current == historicalReview, mismatch == nil || mismatch == current else {
+                historicalReview = current
+                saveRequiresHistoricalReview = true
+                saveError = "Planning information changed. Review the current comparison and choose Save again. No plan was saved."
+                return
+            }
+            if current.isMismatch && mismatch != current {
+                saveRequiresHistoricalReview = true
+                saveError = "Review the affected steps and choose Save plan anyway to acknowledge this historical mismatch. No plan was saved."
+                return
+            }
+        }
         do {
-            if let editingRecordID {
-                _ = try repository.replace(id: editingRecordID, with: preview.validatedPlan)
-            } else {
-                _ = try repository.create(preview.validatedPlan)
+            switch preview.validation {
+            case .authoring(let token):
+                if let editingRecordID { _ = try repository.replace(id: editingRecordID, with: token) }
+                else { _ = try repository.create(token) }
+            case .execution(let token):
+                if let editingRecordID { _ = try repository.replace(id: editingRecordID, with: token) }
+                else { _ = try repository.create(token) }
             }
             repositoryStatus = repository.list()
             cancelEditor()
@@ -325,12 +391,15 @@ final class PlansViewModel: ObservableObject {
     }
 
     func cancelEditor() {
+        importedAuthoring = false
         draft = nil
         editingRecordID = nil
         clearTransientResults()
     }
 
     private func clearValidationResults() {
+        historicalReview = nil
+        focusedStepIndex = nil
         preview = nil
         inputIssues = []
         validationIssues = []

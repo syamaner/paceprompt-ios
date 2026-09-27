@@ -41,6 +41,14 @@ git ls-remote origin 'refs/tags/testflight/<marketing-version>-b<build>'
 version/build. `git ls-remote` must print nothing. Stop if either is already in
 use.
 
+If the API key is held only in the protected GitHub environment, do not decode
+or copy it locally just to run this command. Choose a number above the last
+successful release and confirm that its tag is unused. In that operating mode,
+Apple build freshness and the existing app/group/tester are checked by the
+trusted hosted preflight after environment approval and before importing the
+signing identity or uploading. A collision fails closed; investigate it and
+prepare a new build rather than rerunning or moving the immutable tag.
+
 Create a fresh branch from current remote `main`; do not reuse an earlier
 release branch:
 
@@ -94,9 +102,11 @@ do not treat that optional text as version, build or source provenance.
 Run the focused checks:
 
 ```sh
-python3 -B -m unittest scripts.tests.test_testflight_release -v
+python3 -B -m unittest discover -s scripts/tests -v
 python3 -B scripts/verify_release_configuration.py
 actionlint .github/workflows/ci.yml .github/workflows/internal-testflight.yml
+bash -n scripts/testflight_release.sh
+shellcheck scripts/testflight_release.sh
 git diff --check
 ```
 
@@ -168,6 +178,16 @@ The merge must have exactly two parents; the second parent must be the reviewed
 PR head, the merge tree must equal that head's tree, and fast `main` CI must be
 green on the exact merge SHA.
 
+Before creating a release tag, confirm that `RELEASE_TOOLS_SHA` is already set
+to an independently reviewed tools commit. Follow the bootstrap/upgrade procedure
+in `setup.md` when the signing implementation changes; app releases ordinarily
+reuse the existing pin. Read it explicitly:
+
+```sh
+gh variable get RELEASE_TOOLS_SHA --repo syamaner/paceprompt-ios \
+  --env internal-testflight --json value --jq '.value'
+```
+
 ## 5. Confirm export compliance and authorise the upload
 
 Before every upload, the operator must confirm the exact marketing version,
@@ -183,7 +203,8 @@ Set the non-secret environment gate to the exact authorised tag:
 TAG='testflight/<marketing-version>-b<build>'
 gh variable set EXPORT_COMPLIANCE_TAG \
   --env internal-testflight --body "$TAG"
-test "$(gh variable get EXPORT_COMPLIANCE_TAG --env internal-testflight)" = "$TAG"
+test "$(gh variable get EXPORT_COMPLIANCE_TAG --env internal-testflight \
+  --json value --jq '.value')" = "$TAG"
 ```
 
 This variable is an allowlist for one tag, not a substitute for the GitHub
@@ -213,15 +234,18 @@ tag.
 ## 7. Approve the protected environment job
 
 The tag starts **Actions → Internal TestFlight**. The credential-free **Verify
-protected release source** job must pass first. The signing job then waits for
-`internal-testflight` approval.
+protected release source** job must pass first. **Build unsigned release
+archive** then builds without Apple credentials and transfers a bounded archive.
+The signing job waits for `internal-testflight` approval after both jobs pass.
 
 In GitHub:
 
 1. Open the new **Internal TestFlight** workflow run.
 2. Select **Review deployments**.
 3. Select `internal-testflight`.
-4. Recheck the tag, source SHA, version/build and internal-only purpose.
+4. Recheck the tag, source SHA, version/build, trusted tools SHA and internal-only
+   purpose. Inspect any candidate workflow changes; the tools pin does not
+   authorise arbitrary code in the workflow itself.
 5. Approve and deploy.
 
 Do not approve an unexpected tag or SHA. The environment secrets become
@@ -237,20 +261,28 @@ gh run watch '<run-id>' --exit-status
 
 A green run proves these ordered stages passed:
 
-1. protected lightweight tag and reviewed `main` merge;
+1. protected lightweight tag and `main` merge with the reviewed-head attestation;
 2. exact-SHA fast CI and version/build match;
-3. explicit environment approval and pinned Xcode toolchain;
-4. App Store Connect app/group/tester preflight and unused build;
-5. certificate, profile, team, app ID, HealthKit and distribution checks;
-6. Release archive and internal-only export;
-7. signed IPA metadata, privacy manifest, purpose strings, Apple Distribution
+3. credential-free Release device archive on a separate runner;
+4. explicit environment approval, pinned Xcode and independently pinned tools;
+5. same-run/source/tag/attempt and archive SHA-256 verification, bounded extraction,
+   unsigned app metadata/platform checks and trusted source recheck;
+6. App Store Connect app/group/tester preflight and unused build;
+7. certificate/profile validation, fixed trusted distribution entitlements,
+   signing without rebuilding the project, and internal-only export;
+8. signed IPA metadata, privacy manifest, purpose strings, Apple Distribution
    signature, HealthKit entitlement and `get-task-allow=false`;
-8. one accepted upload;
-9. Apple processing to a valid internal-only beta build;
-10. assignment visible in the unchanged sole-tester group's build list.
+9. one accepted upload;
+10. Apple processing to a valid internal-only beta build;
+11. assignment visible in the unchanged sole-tester group's build list.
 
-The workflow summary records source SHA, tag, bundle ID, version/build and IPA
-SHA-256. It retains no IPA or signing asset.
+The workflow summaries record source SHA, trusted tools SHA, tag, bundle ID,
+version/build, unsigned-transfer SHA-256 and IPA SHA-256. The unsigned archive
+is an Actions artifact retained for one day. In this public repository, people
+with repository read access can download it; include no private data or
+credentials in build inputs. No signed IPA or signing asset is uploaded as an
+Actions artifact. Archive transfer checks bind identity and integrity, not
+benign app behaviour.
 
 ## 9. Verify Apple and tester evidence separately
 

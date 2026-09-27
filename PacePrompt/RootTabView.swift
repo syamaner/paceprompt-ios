@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct RootTabView: View {
     private enum Tab: Hashable {
@@ -15,6 +16,7 @@ struct RootTabView: View {
     @StateObject private var importer: WorkoutImportViewModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Tab = .home
+    @State private var pendingPlanEdit: SavedPlanRecord?
     let workoutCapabilitiesOverride: WorkoutPlanCapabilities?
 
     init(
@@ -43,6 +45,9 @@ struct RootTabView: View {
         self.plans = plans
         self.workoutSession = workoutSession
         self.workoutCapabilitiesOverride = workoutCapabilitiesOverride
+        plans.configureHistoricalSelection { [weak profiles = treadmill.planningProfiles] reload in
+            profiles?.historicalSelection(reload: reload) ?? .none
+        }
     }
 
     var body: some View {
@@ -59,6 +64,7 @@ struct RootTabView: View {
                 PlansView(
                     viewModel: plans,
                     capabilities: capabilities,
+                    profiles: treadmill.planningProfiles,
                     beginImport: { importer.begin(capabilities: capabilities) },
                     beginWorkout: workoutSession.begin
                 )
@@ -85,19 +91,26 @@ struct RootTabView: View {
             }
         }
         .sheet(isPresented: Binding(get: { importer.isPresented }, set: { if !$0 { importer.cancel() } })) {
-            WorkoutImportView(model: importer, plans: plans)
+            WorkoutImportView(model: importer, plans: plans, profiles: treadmill.planningProfiles)
         }
         .fullScreenCover(
             isPresented: Binding(
                 get: { workoutSession.isPresented },
                 set: { if !$0 { workoutSession.cancelBeforeExercise() } }
-            )
+            ),
+            onDismiss: {
+                if let record = pendingPlanEdit { plans.beginEdit(record); pendingPlanEdit = nil }
+            }
         ) {
             WorkoutSessionHost(
                 treadmill: treadmill,
                 coordinator: workoutSession,
-                showHistory: { selectedTab = .history }
+                showHistory: { selectedTab = .history },
+                editPlan: { record in pendingPlanEdit = record; selectedTab = .plans }
             )
+        }
+        .onReceive(treadmill.planningProfiles?.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in
+            Task { @MainActor in plans.refreshHistoricalReview() }
         }
         .onChange(of: capabilities) { _, value in importer.updateCapabilities(value) }
         .onChange(of: scenePhase) { _, phase in

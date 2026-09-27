@@ -1,0 +1,37 @@
+{
+  "manifestContractVersion": "paceprompt-workout-import-publication/sol56-vs-sol6-r1",
+  "status": "publishedAggregateEvidence",
+  "runID": "sol56-vs-sol6-20260922-01",
+  "ratifiedPreparedGateSha256": "af29772865b901d272e71c281b49543d05bc15f08216c3b6e63cd091e0548f01",
+  "sealedGateSha256": "e01d98634190e789593a868c57ea95560e05b60aecda791808c8069c44916bc5",
+  "hostSourceTreeSha256": "17bd8388f197930008c6bba762f4fb7bc1fe7b48a52050d5fa97ad554dedc5b0",
+  "queueSha256": "d3627835682b17517637caf5a792b45dbbf6e3e45f6d524c72ceb05caa94d51e",
+  "ignoredRunProvenance": {
+    "plannedQueueFileSha256": "c0691ca5763ef8b0c6a9b2d4463bb89f37fbf111ce952705cdb6e92499cee138",
+    "operatorRatificationSha256": "0a6f3a04085715498bf9c7dc2b30ca12d2a6480f1301634062b1ca672f801d24",
+    "finalLiveStateSha256": "f33541121548a7264ef556b8ed1212cf06ddb9a306429153569bc0e7ab335901"
+  },
+  "protectedHistoricalArtifacts": {
+    "issue145-stage-a-b-publication-manifest.json": "b89651c63c80904644d64e552e8b80073a726934aafcc9e55bf3c609df739f1a",
+    "issue145-stage-a-b-comparison-data.json": "33959dafde02004cae92b046ecdefdbeaf6de173b6e1ce2c34fab268ab25b0f0",
+    "issue145-stage-b-and-comparison-2026-09-22.md": "6871fddb889533bf826b46d6e28955348071f5d47f21dd58420a17595434f6e3",
+    "consolidated-evaluation-data.json": "a5648e4dbb0dd22643c775938a400ae8ab3d056592931d80568b535da3c9ce58",
+    "open-weight-v4-2026-09-05.md": "d766f63bfadee242635a04a6b9b36a4ad5da014c45c844f7214845e8427a7fa2"
+  },
+  "proposedAggregateArtifacts": {
+    "issue145-sol56-vs-sol6-2026-09-22-data.json": "53aa3635657f189395cc5222782bc44048d4e26c07dffba73f1dadac7bf1a16e",
+    "issue145-sol56-vs-sol6-2026-09-22-evidence-integrity.json": "98db0ab0e782f716578d5a68e9f3304b50b1ba4829fa8010b8643b3fd9ff7fad",
+    "issue145-sol56-vs-sol6-2026-09-22.md": "0bb118fdc9c6d9b3fc4729e0bf3381a090b8d872a339e591aedf0451750e780b"
+  },
+  "decisionBoundary": {
+    "automaticWinner": null,
+    "evidenceAcceptedByOperator": true,
+    "humanChoiceForSeparateReviewedChange": "openai/gpt-6-sol",
+    "onePassAndUnchangedGateFailuresDisclosed": true,
+    "productionModelSelected": true,
+    "productionChanged": false,
+    "rawRunPublished": false,
+    "mergeAuthorized": false,
+    "issueClosureAuthorized": false
+  }
+}

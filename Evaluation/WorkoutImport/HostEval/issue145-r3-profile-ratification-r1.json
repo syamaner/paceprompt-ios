@@ -1,0 +1,23 @@
+{
+  "ratificationVersion": "paceprompt-host-eval-ratification/issue145-r3-profile-r1",
+  "status": "profile-and-lineage-cap-ratified-live-run-not-authorized",
+  "source": "operator answer on 2026-09-24 to exact r3 profile and cumulative-cap question",
+  "operatorRatifiedFields": ["profileSha256", "finiteCumulativeLineageHardLimitUSD"],
+  "profileSha256": "f58b5f76356d48e954ad257123b9f44c3ab0f870d85023fe6813cf78e71ed720",
+  "supportingPreparedEvidenceTreeSha256": "56ecadcd12f18c81bf476c474a228d7f461185e1cace0403ef47d66bf3003b5e",
+  "supportingThreeSendConservativeUSD": "296.223872280",
+  "preparedRunID": "issue145-r3-profile-prep-20260923-01",
+  "queueSha256": "3327dd619bf13eac0eb6ec7de3c5f5d43ee3d2959ff5323d9b4d18fb50466f53",
+  "finiteCumulativeLineageHardLimitUSD": "300.00",
+  "currency": "USD",
+  "scope": "eventual twelve-model full-matrix run lineage only",
+  "routeCompatibilityProof": null,
+  "liveGate": null,
+  "initialLiveAuthorization": null,
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false
+  }
+}

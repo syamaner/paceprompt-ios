@@ -1,0 +1,51 @@
+{
+  "authority": {
+    "acceptedEvidence": true,
+    "issueClosure": false,
+    "merge": false,
+    "modelSelection": false,
+    "productionChange": false,
+    "proposalPreparation": true,
+    "publication": false
+  },
+  "decision": {
+    "automaticWinner": null,
+    "capabilityGateRelaxed": false,
+    "requiresHumanModelSelection": true
+  },
+  "manifestContractVersion": "paceprompt-workout-import-publication/issue145-stage-a-b-proposal-r1",
+  "proposedPublishedArtifacts": {
+    "issue145-stage-a-b-comparison-data.json": "33959dafde02004cae92b046ecdefdbeaf6de173b6e1ce2c34fab268ab25b0f0",
+    "issue145-stage-b-and-comparison-2026-09-22.md": "6871fddb889533bf826b46d6e28955348071f5d47f21dd58420a17595434f6e3",
+    "issue145-stage-b-data.json": "eeff4536b0a7d6830e6457ed9ec9c1bdd95616a731af19158d4e56edb71adb33",
+    "issue145-stage-b-evidence-integrity.json": "5dd8c5487596da0575a934f13887559c1f516ba6f1a77590c6e8311f80da86c6"
+  },
+  "protectedEvidence": {
+    "stageAAggregate": "bf922a6302e78ac47064ce578991e2205ca2d59592a123f29b65515dca2c2e0e",
+    "stageAAudit": "1748bec83ca90a9a75573e29e589f4595c25cc0c1416623e915be74d31a4738e",
+    "stageALiveState": "1ce813c83c6461fd4614681c3393933eba17bfacc7ee324a84371cabb4d995b1",
+    "stageAManifest": "ac9350f3a2876a387548d44931922f197f937f23692ed1e1111b5594786e514b",
+    "stageBAggregate": "eeff4536b0a7d6830e6457ed9ec9c1bdd95616a731af19158d4e56edb71adb33",
+    "stageBAudit": "5dd8c5487596da0575a934f13887559c1f516ba6f1a77590c6e8311f80da86c6",
+    "stageBCommittedProposal": "1646c57a6da4edeb444ffcae752862824b1fe83ec43dd2357b5cb29faf5bc302",
+    "stageBCommittedRatification": "3e07429e2d869dec3c44c8e0a805bfc4e833301f2aa77d9ccb46b18b4433dd36",
+    "stageBLiveCatalogue": "5981ff17d0b9c90a4a9de49ebfe0379680e9e3581f1bd602551f15f3499c5a89",
+    "stageBLiveState": "2dccdfa186f42ae232577dfafac794fca7e1fd69dafc3377d4e3211dc849be19",
+    "stageBOperatorGate": "cb39435e13419255ac4fef64e62bbf23b80cdadf93d8faaf199232c962d324ff",
+    "stageBOperatorRatification": "d5d539832c7cdd8c36e6b02a8bbb3a952c500c0c82d1613215108257a729ed92",
+    "stageBPlannedQueueFile": "3b90d505c753100b50298f85d9f5869e6012091c46a0352853ef757555e936d2",
+    "stageBProposalMaterial": "b64f8e218402fcb963440af6365c47e96bca089fe568c0c88d1a1409eeed2e08"
+  },
+  "sourceRuns": {
+    "stageA": "issue145-top4-stage-a-v5-20260920-01",
+    "stageB": "issue145-top3-stage-b-v5-20260921-01"
+  },
+  "stageBProfile": {
+    "hardSpendingLimitUSD": "32.07052912",
+    "hostSourceTreeSha256": "5ccaa68f979b96525ba6bf05d5a534f32e7a9b5bdf17e20c83eb24989ae6b02b",
+    "proposalSha256": "1646c57a6da4edeb444ffcae752862824b1fe83ec43dd2357b5cb29faf5bc302",
+    "providerCalls": 657,
+    "queueSha256": "e505a355a81c9c810c26b6718c0a1324a3cf2ddbc70733ca96dc717852a80346"
+  },
+  "status": "awaitingOperatorRatification"
+}

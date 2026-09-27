@@ -29,6 +29,14 @@ private final class HomeUITestFTMSClient: FTMSClientProtocol {
     let connectedPeripheralName: String? = "Synthetic FR30z"
     let controlPointLink: (any FTMSControlPointLink)? = HomeUITestControlPointLink()
 
+    private var workoutReady = false
+    func refreshCapabilitiesForPreflight() -> Bool {
+        guard workoutReady else { return false }
+        for (uuid, data) in [(FTMSUUID.fitnessMachineFeature, Data([0x0C,0x16,0,0,3,0,0,0])), (FTMSUUID.supportedSpeedRange, ProcessInfo.processInfo.environment["PACEPROMPT_PREFLIGHT_READ_MISMATCH"] == "1" ? Data([0x32,0,0x90,1,0x0A,0]) : Data([0x32,0,0xD0,7,0x0A,0])), (FTMSUUID.supportedInclinationRange, Data([0,0,0x96,0,0x0A,0]))] {
+            send(.value(uuid: uuid, data: data, source: .preflightRead))
+        }
+        return true
+    }
     func startScan() { send(.connection(.scanning)) }
     func stopScan() { send(.connection(.idle)) }
     func connect(to identifier: UUID) {}
@@ -53,6 +61,7 @@ private final class HomeUITestFTMSClient: FTMSClientProtocol {
             send(.value(uuid: FTMSUUID.supportedSpeedRange, data: Data([0x50, 0x00, 0x40, 0x06, 0x0A, 0x00]), source: .initialRead))
             send(.value(uuid: FTMSUUID.supportedInclinationRange, data: Data([0x00, 0x00, 0x78, 0x00, 0x05, 0x00]), source: .initialRead))
         case "workout-ready":
+            workoutReady = true
             send(.availability(.poweredOn))
             send(.connection(.connecting(name: "Synthetic FR30z")))
             send(.connection(.connected(name: "Synthetic FR30z")))

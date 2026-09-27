@@ -1,0 +1,21 @@
+{
+  "ratificationContractVersion": "paceprompt-issue145-full-matrix-route-probes-ratification/r1",
+  "proposalSha256": "2c4b2a6122a50fd5acc029f9282cd8bd3bb429072afe6b174ed446058715b500",
+  "ratifiedRunID": "issue145-full-matrix-route-probes-v5-20260922-01",
+  "parentPreparedRunID": "issue145-full-matrix-v5-20260922-prep01",
+  "ratifiedSpendingLimitUSD": "0.01192791",
+  "authority": {
+    "zeroSpendRunnerImplementation": true,
+    "zeroSpendGateSealing": true,
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false,
+    "fullMatrixRun": false,
+    "publication": false,
+    "productionChange": false,
+    "release": false,
+    "issueClosure": false
+  },
+  "authoritySource": "operator approved the immediately preceding request to ratify the exact two-call proposal and implement and seal its zero-spend gate; separate exact live-run authorization remains required"
+}

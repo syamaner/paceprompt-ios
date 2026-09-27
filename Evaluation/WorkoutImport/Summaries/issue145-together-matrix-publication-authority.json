@@ -1,0 +1,13 @@
+{
+  "aggregatePublicationAuthorized": true,
+  "context": "Reply to the completed, passing evidence audit and explicit next step: accept evidence and decide aggregate publication.",
+  "contractVersion": "paceprompt-workout-import-publication/issue145-together-authority-r1",
+  "evidenceAccepted": true,
+  "issueClosureAuthorizedByThisDirection": false,
+  "mergeAuthorizedByThisDirection": false,
+  "operatorDirection": "proceed now",
+  "productionChangeAuthorized": false,
+  "productionSelection": null,
+  "rawEvidencePublicationAuthorized": false,
+  "releaseAuthorizedByThisDirection": false
+}

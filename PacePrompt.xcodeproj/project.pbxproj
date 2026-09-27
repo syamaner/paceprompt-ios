@@ -105,6 +105,17 @@
 		D30000000000000000001004 /* HealthExportFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000002005 /* HealthExportFlowUITests.swift */; };
 		D40000000000000000001001 /* WorkoutHistoryExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40000000000000000002001 /* WorkoutHistoryExport.swift */; };
 		D40000000000000000001002 /* WorkoutHistoryExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40000000000000000002002 /* WorkoutHistoryExportTests.swift */; };
+		F14100000000000000001001 /* PlanningProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14100000000000000002001; };
+		F14100000000000000001002 /* PlanningProfileDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14100000000000000002002; };
+		F14100000000000000001003 /* PlanningProfileFileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14100000000000000002003; };
+		F14100000000000000001004 /* PlanningProfileJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14100000000000000002004; };
+		F14100000000000000001005 /* PlanningProfileLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14100000000000000002005; };
+		F14100000000000000001006 /* PlanningProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14100000000000000002006; };
+		F14200000000000000001001 /* PlanningProfileSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14200000000000000002001; };
+		F14100000000000000001020 /* PlanningProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14100000000000000002020; };
+		F1410000000000000000101E /* PlanningProfileUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1410000000000000000201E; };
+		F1410000000000000000101F /* PlanningProfileFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1410000000000000000201F; };
+		F14300000000000000001001 /* HistoricalPlanCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14300000000000000002001; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -234,6 +245,17 @@
 		B40000000000000000002002 /* HomeUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeUITestSupport.swift; sourceTree = "<group>"; };
 		B40000000000000000002003 /* HomePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePresentationTests.swift; sourceTree = "<group>"; };
 		B40000000000000000002004 /* HomeFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeFlowUITests.swift; sourceTree = "<group>"; };
+		F14100000000000000002001 /* PlanningProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfile.swift; sourceTree = "<group>"; };
+		F14100000000000000002002 /* PlanningProfileDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileDiscovery.swift; sourceTree = "<group>"; };
+		F14100000000000000002003 /* PlanningProfileFileRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileFileRepository.swift; sourceTree = "<group>"; };
+		F14100000000000000002004 /* PlanningProfileJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileJSON.swift; sourceTree = "<group>"; };
+		F14100000000000000002005 /* PlanningProfileLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileLifecycle.swift; sourceTree = "<group>"; };
+		F14100000000000000002006 /* PlanningProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfilesView.swift; sourceTree = "<group>"; };
+		F14200000000000000002001 /* PlanningProfileSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileSelector.swift; sourceTree = "<group>"; };
+		F14100000000000000002020 /* PlanningProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileTests.swift; sourceTree = "<group>"; };
+		F1410000000000000000201E /* PlanningProfileUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileUITestSupport.swift; sourceTree = "<group>"; };
+		F1410000000000000000201F /* PlanningProfileFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileFlowUITests.swift; sourceTree = "<group>"; };
+		F14300000000000000002001 /* HistoricalPlanCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalPlanCompatibility.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -315,6 +337,7 @@
 				AA0000000000000000002001 /* PacePromptApp.swift */,
 				D30000000000000000002003 /* PacePrompt.entitlements */,
 				AA0000000000000000002002 /* RootTabView.swift */,
+				F14100000000000000005001 /* Profiles */,
 				AA0000000000000000005003 /* Bluetooth */,
 				AA0000000000000000005009 /* Plans */,
 				AF0000000000000000005001 /* History */,
@@ -409,6 +432,7 @@
 		AA0000000000000000005006 /* PacePromptTests */ = {
 			isa = PBXGroup;
 			children = (
+				F14100000000000000002020,
 				D30000000000000000002004 /* WorkoutHealthExportTests.swift */,
 				D40000000000000000002002 /* WorkoutHistoryExportTests.swift */,
 				E10000000000000000002003 /* ProductionWorkoutExecutionBindingTests.swift */,
@@ -455,6 +479,7 @@
 		AA000000000000000000500A /* PacePromptUITests */ = {
 			isa = PBXGroup;
 			children = (
+				F1410000000000000000201F,
 				D30000000000000000002005 /* HealthExportFlowUITests.swift */,
 				B40000000000000000002004 /* HomeFlowUITests.swift */,
 				AA000000000000000000201A /* PlansFlowUITests.swift */,
@@ -528,6 +553,8 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
+		F14100000000000000005001 /* Profiles */ = {isa = PBXGroup; children = (
+				F1410000000000000000201E,F14100000000000000002001,F14100000000000000002002,F14100000000000000002003,F14100000000000000002004,F14100000000000000002005,F14100000000000000002006,F14200000000000000002001,F14300000000000000002001); path = Profiles; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -723,6 +750,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1410000000000000000101E,
+				F14100000000000000001006 /* PlanningProfilesView.swift */,
+				F14200000000000000001001 /* PlanningProfileSelector.swift */,
+				F14300000000000000001001 /* HistoricalPlanCompatibility.swift */,
+				F14100000000000000001005 /* PlanningProfileLifecycle.swift */,
+				F14100000000000000001004 /* PlanningProfileJSON.swift */,
+				F14100000000000000001003 /* PlanningProfileFileRepository.swift */,
+				F14100000000000000001002 /* PlanningProfileDiscovery.swift */,
+				F14100000000000000001001 /* PlanningProfile.swift */,
 				D30000000000000000001001 /* WorkoutHealthExport.swift in Sources */,
 				D30000000000000000001002 /* HistoryHealthExportPresentation.swift in Sources */,
 				D10000000000000000001001 /* RequestControlDiagnostic.swift in Sources */,
@@ -780,6 +816,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F14100000000000000001020,
 				D30000000000000000001003 /* WorkoutHealthExportTests.swift in Sources */,
 				D40000000000000000001002 /* WorkoutHistoryExportTests.swift in Sources */,
 				E10000000000000000001003 /* ProductionWorkoutExecutionBindingTests.swift in Sources */,
@@ -806,6 +843,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1410000000000000000101F,
 				D30000000000000000001004 /* HealthExportFlowUITests.swift in Sources */,
 				B40000000000000000001004 /* HomeFlowUITests.swift in Sources */,
 				AA000000000000000000101A /* PlansFlowUITests.swift in Sources */,
@@ -982,7 +1020,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PacePrompt/PacePrompt.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PacePrompt/Info.plist;
@@ -1018,7 +1056,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PacePrompt/PacePrompt.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PacePrompt/Info.plist;

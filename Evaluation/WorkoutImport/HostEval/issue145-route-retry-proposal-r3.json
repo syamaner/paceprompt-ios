@@ -1,0 +1,112 @@
+{
+  "proposalVersion": "paceprompt-host-eval-proposal/issue145-route-retry-r3",
+  "status": "proposed-not-ratified",
+  "purpose": "revise the issue145 full-matrix Mistral route and add bounded transient-response retries",
+  "supersedesForFutureRunsOnly": {
+    "modelsV5Sha256": "27cff2665a89ca038bd0f4a99ce66d7a0d6dc240b5e8001b019ce83048cf38fe",
+    "runPolicyV5Sha256": "189bb7a381aa64761c46d6b0c39ad225b06d533133988fdf8351e2c0fda06f6d",
+    "queueV5Sha256": "3327dd619bf13eac0eb6ec7de3c5f5d43ee3d2959ff5323d9b4d18fb50466f53"
+  },
+  "supportingEvidence": {
+    "committedManifestSha256": "1152ad79e75bb3aeb0c2702526bdf9529a611415f82edffcf4b16a3c89c5c45d",
+    "sealedProbeProposalSha256": "2c4b2a6122a50fd5acc029f9282cd8bd3bb429072afe6b174ed446058715b500",
+    "sealedProbeRatificationSha256": "b879cdd6eec28626d102719ceb02aae4d58e0ef3f729c0318dfba7a323183485",
+    "firstTerminalEvidenceTreeSha256": "95abcaee76a9a01ee679a1f53776f1ee0c659b0c6082c0c4482cf3ea75329fe1",
+    "secondTerminalEvidenceTreeSha256": "8cee0b8d907f5fa34f179f476b6668b5a0164e2054757662d3e085b226bc7db3"
+  },
+  "routeDelta": {
+    "requestedModelID": "mistralai/mistral-small-2603",
+    "canonicalRevision": "mistralai/mistral-small-2603",
+    "oldProviderEndpoint": "mistral/zdr",
+    "proposedProviderEndpoint": "mistral",
+    "unchangedProviderName": "Mistral",
+    "unchangedInputPricePerTokenUSD": "0.00000015",
+    "unchangedOutputPricePerTokenUSD": "0.0000006",
+    "retainZdrRequirement": false,
+    "proposedZdrRequestField": "omit",
+    "retainDataCollectionDenied": true,
+    "retainExactRouteAndNoFallback": true,
+    "zdrEligibilityOfProposedEndpoint": "not-required-for-synthetic-evaluation",
+    "publicCatalogueEndpointResponseSha256": "cc253a8b5d583df737cf0db27ba0f0176b9843cb7590949492c5af5738174d0a",
+    "observedAvailableStatus": 0
+  },
+  "retryDelta": {
+    "scope": "newly-ratified-future-route-probe-and-full-matrix-runners-only",
+    "maxPhysicalSendsPerLogicalPosition": 3,
+    "retryableCompleteHTTPResponseStatuses": [
+      429,
+      502,
+      503,
+      504,
+      524,
+      529
+    ],
+    "fallbackBackoffSeconds": [
+      30,
+      120
+    ],
+    "retryAfterHeader": "honour-case-insensitive-integer-seconds-or-HTTP-date-as-minimum-wait",
+    "malformedOrExcessiveRetryAfter": "stop-without-shorter-retry",
+    "maxSingleWaitSeconds": 900,
+    "maxCumulativeWaitSecondsPerPosition": 900,
+    "noResponseTimeoutConnectionCancellationOrAmbiguousSend": "do-not-retry",
+    "permanentHTTPStatusOrResponseContractFailure": "do-not-retry",
+    "afterExhaustedTransientResponses": "terminal-failure-and-pause-that-model-in-place",
+    "concurrency": 1,
+    "minimumDelayBetweenPhysicalSendsSeconds": 2,
+    "httpClientAutomaticRetries": 0,
+    "inspectAutomaticRetries": 0,
+    "fallbackRoutesOrModels": false,
+    "requestBodyOnRetry": "byte-identical-except-transport-generated-request-identity",
+    "wireEvidence": "preserve-each-physical-send-with-unique-subattempt-identity-and-response-headers",
+    "scoredDenominator": "one-frozen-logical-position-with-all-intermediate-transient-sends-visible-separately",
+    "chargeRule": "reserve-worst-case-before-each-physical-send-and-charge-unknown-as-reserved",
+    "possiblySentNonterminalAfterInterruption": "terminal-conservative-charge-never-replay"
+  },
+  "unchangedEvaluation": {
+    "productionPrompt": "issue130-r2",
+    "candidateModels": 12,
+    "scoredStrata": 2,
+    "distinctScoredCases": 109,
+    "repetitionsPerStratum": 3,
+    "scoredLogicalPositions": 3924,
+    "warmupLogicalPositions": 12,
+    "totalLogicalPositions": 3936,
+    "maximumPhysicalProviderSendsIfEveryPositionUsesAllRetries": 11808,
+    "queueCaseOrderAndLogicalAttemptIDs": "unchanged-from-v5",
+    "scorerAndPerStratumGates": "unchanged-from-v5",
+    "generationAndResponseContracts": "unchanged-from-v5",
+    "allOtherModelRoutes": "unchanged-from-v5"
+  },
+  "spending": {
+    "currency": "USD",
+    "freshPublicCatalogueAndCompletePayloadPreflightRequired": true,
+    "finiteLineageHardLimitUSD": null,
+    "proposedUpperBoundFromPriorSnapshotUSD": "296.226676680",
+    "upperBoundIsNotRatifiedHardLimit": true
+  },
+  "unresolvedBeforeLive": {
+    "replacementRouteCompatibilityProof": null,
+    "versionedModelsAndPolicyWithMockedPayloads": null,
+    "reviewedRetryingRunnerAndImmutableEvidenceLedger": null,
+    "exactProfileRatification": null,
+    "finiteLineageHardLimitRatification": null,
+    "initialLiveAuthorization": null
+  },
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false,
+    "publishResults": false,
+    "productionChange": false
+  },
+  "supersedesProposalR2Sha256": "1e62b0799f4cabc773b9bdf60c01471dea4b370d17d573b1be65f0c643dce25f",
+  "privacyDecision": {
+    "scope": "developer-only-synthetic-workout-import-evaluation",
+    "zdrRequired": false,
+    "dataCollectionDenied": true,
+    "productionPrivacyUnchanged": true,
+    "source": "operator-stated-zdr-not-material-for-this-use-case-2026-09-23"
+  }
+}

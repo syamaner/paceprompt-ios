@@ -653,6 +653,534 @@ reports native and forced-tool transport complexity separately, selects no
 automatic winner and cannot change the production provider. Any displacement
 of Sol remains a separate human decision after the evidence audit.
 
+## Issue #145 full-matrix v5 preparation
+
+The additive v5 profile evaluates the current issue #130 r2 production prompt
+against two separately reported, byte-preserved strata: the 79-case v3 held-out
+regression corpus and the 30-case reviewer-authored issue #130 acceptance
+corpus. It does not rewrite either corpus, their manifests, the schemas or the
+deterministic scorer. Three repetitions over 12 declared models produce 3,924
+scored attempts, plus one warm-up per model for 3,936 planned calls.
+
+The profile retains each model's previously ratified v3 or v4 generation and
+transport settings. It replaces two catalogue routes that are no longer
+available: Mistral Small 2603 uses `mistral/zdr`, and DeepSeek v4 Flash uses
+`deepinfra/fp8`. Those replacements remain blocked from live use until a
+separately authorised compatibility probe succeeds.
+
+Offline verification and queue enumeration do not use the network, read a
+credential or expose a live command:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-v5
+uv run --frozen paceprompt-host-eval enumerate-issue145-v5
+```
+
+Zero-spend gate preparation reads only the public catalogue, writes 12 mocked
+route-aware payloads, freezes the deterministic queue and calculates a
+conservative cost estimate under the ignored run directory:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue145-v5-gate \
+  --run-id <new-run-id>
+```
+
+Preparation intentionally emits no authorisation phrase and cannot admit the
+matrix: the hard spending limit is `null`. A later run requires separate probe
+evidence, exact spending-limit ratification, a newly bound run instance and
+explicit live authorisation. Results must remain separated by stratum and no
+automatic winner, publication or production-route change is permitted.
+
+The additive `issue145-full-matrix-route-probe-proposal-r1.json` freezes two
+ordered, zero-scored compatibility calls for the changed Mistral and DeepSeek
+routes, bound to the 22 September public-catalogue preparation. Its SHA-256 is
+`2c4b2a6122a50fd5acc029f9282cd8bd3bb429072afe6b174ed446058715b500`.
+The separate `issue145-full-matrix-route-probe-ratification-r1.json` binds the
+exact run ID and USD 0.01192791 hard limit to zero-spend runner implementation
+and gate sealing only. It explicitly withholds credential, provider, spend and
+live-run authority. The ignored parent preparation must still be present and
+byte-identical; a clean checkout without it cannot seal this probe.
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-route-probes
+uv run --frozen paceprompt-host-eval prepare-issue145-route-probes-gate \
+  --run-id issue145-full-matrix-route-probes-v5-20260922-01
+uv run --frozen paceprompt-host-eval seal-issue145-route-probes-gate \
+  --run-id issue145-full-matrix-route-probes-v5-20260922-01
+```
+
+These commands read no credential, refresh no catalogue and make no provider
+call. The sealed gate still requires separate exact-run live authorisation.
+Live execution, if later authorised, refreshes only the two public routes,
+rejects route or price increases before key lookup, runs serially with no
+retry or fallback, and stops after a failed compatibility call. Its report is
+diagnostic, never an automatic winner or full-matrix admission. The 3,936-call
+full-matrix preparation separately estimated USD 98.742225560 at snapshot
+prices; that is not a ratified hard limit and the final run must be freshly
+bound after route proof.
+
+The first probe instance ended after one HTTP 429 on the Mistral route. Its
+ignored raw evidence is preserved and its original run ID remains
+non-resumable. A zero-spend recovery gate can create a fresh child instance
+bound to exact hashes of the terminal parent gate, live admission, report,
+audit, state and complete raw-evidence tree. It reuses the frozen two-call
+profile and USD 0.01192791 per-instance
+limit; it does not infer a retry, change the route, score cases or merge
+attempts across instances. Preparation and sealing make no inference call and
+read no credential:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue145-route-probes-recovery-gate \
+  --parent-run-id issue145-full-matrix-route-probes-v5-20260922-01 \
+  --run-id <new-unique-run-id>
+uv run --frozen paceprompt-host-eval seal-issue145-route-probes-recovery-gate \
+  --run-id <same-new-run-id>
+```
+
+The child gate derives a new exact authorization phrase. The operator must
+authorize that specific phrase and the same finite hard limit before any live
+execution; there is no automatic restart. The live command performs the same
+fresh catalogue, route and price preflight before credential lookup. A child
+that enters live execution is also non-resumable. If it ends as an audited
+terminal failure, the same preparation command can name that child as
+`--parent-run-id` and create another uniquely named descendant. Each child
+has its own finite cap and exact authorization; there are no automatic retries
+or cumulative spend assumptions. This recovery lineage is limited to the
+two-route probe, not the unratified 3,936-call matrix.
+
+The operator-approved [issue #145 standing restart and compatible-repair
+contract](issue145-standing-restart-and-repair-r1.md) sets the requirements
+for a future separately versioned full-matrix runner. It does not retroactively
+change this probe's exact child-authorization rule, make the sealed v5 matrix
+resumable, or authorise a provider call.
+
+The additive `issue145_lineage.py` is a zero-spend, pure admission component
+for that future runner. Given already-verified immutable parent evidence, it
+checks root/profile continuity, arbitrary manual lineage depth, exact parent
+links, terminal/never-sent positions in frozen queue order, bound per-call
+reservations and cumulative actual-or-conservative charges against a finite
+lineage cap. It does not verify raw evidence trees, seal a live gate, read a
+credential or dispatch a call. No full-matrix restart command exists yet; the
+sealed v5 policy still states `resumable: false`, and the replacement routes
+still require proof.
+
+The additive `issue145-full-matrix-lineage-proposal-r1.json` proposes an
+otherwise byte-pinned v5 profile with manual, verified continuation. It binds
+the fresh public-catalogue preparation and its USD 98.742225560 conservative
+whole-run estimate. The selected public routes/prices and per-model bounds are
+committed as separate, non-sensitive manifests so a clean checkout can
+recompute that estimate offline. The proposal leaves route proof, root run ID,
+finite lineage hard limit, exact profile ratification, reviewed runner source and initial
+live authorisation unresolved. This command verifies the proposal entirely
+offline; it neither seals a live gate nor reads a credential:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-lineage-proposal
+```
+
+The additive `issue145-route-retry-proposal-r2.json` is a **new, unratified**
+future-run proposal after two `mistral/zdr` compatibility probes ended with
+rate-limit classifications. Their non-sensitive file-hash inventories and
+selected public `mistral` endpoint snapshot are committed in
+`issue145-route-retry-evidence-r1.json` (SHA-256
+`1152ad79e75bb3aeb0c2702526bdf9529a611415f82edffcf4b16a3c89c5c45d`);
+the sealed two-call proposal and ratification hashes are bound as well. The
+ignored raw request and response evidence remains unpublished. It proposes
+the public `mistral` endpoint while retaining `zdr: true`,
+`data_collection: deny`, exact-route identity and no fallback. Whether that
+endpoint can satisfy ZDR remains unproven and requires a new compatibility
+probe; the two prior failed probes are not reinterpreted. The proposal also
+recommends at most three physical sends per logical position, only after a
+complete 429/502/503/504/524/529 HTTP response. It uses `Retry-After` seconds
+or an HTTP date as a minimum, otherwise 30- then 120-second waits. An invalid
+or overlong header, duplicate case-insensitive header names, a missing response,
+an ambiguous send, or an exhausted
+send/wait/budget limit stops retries. Each send requires a new worst-case USD
+reservation and separately preserved wire evidence; the frozen scored
+denominator remains one logical position. These are proposed controls, **not**
+the sealed v5 zero-retry policy and not an implemented live runner. The prior
+snapshot's three-send USD 296.226676680 upper estimate is not a hard limit.
+
+The verifier checks sealed inputs, the additive proposal, committed route-change
+evidence (plus the ignored local evidence when present), proposed retry bounds and the absence of live
+authority. It reads no credential and makes no provider call:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-route-retry-proposal
+```
+
+The additive `issue145-route-retry-proposal-r3.json` supersedes r2 **for a
+future synthetic evaluation only**. The operator decided that ZDR is not
+required for this use case, so r3 specifies omission of the request's `zdr`
+field on the proposed exact `mistral` route. It still requires
+`data_collection: deny`, no route fallback, the same finite retry controls,
+and a separately ratified hard spending limit. It does not modify the sealed
+r2 proposal, production request or prompt, and it grants no live authority.
+The r3 verifier checks that these are the only changes from verified r2:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-route-retry-proposal-r3
+```
+
+`paceprompt_eval.issue145_retry_execution` is an isolated, offline-tested
+physical-send journal for a future r3 runner. It reserves the worst-case USD
+amount and durably marks each wire send as possibly sent *before* invoking an
+injected one-send adapter. A complete transient HTTP response may trigger only
+the versioned retry planner's bounded delay and another separately reserved
+wire send. Missing responses, cancellation, route mismatch and ambiguous
+headers stop without replay. The ledger keeps one logical position for scoring
+and distinct evidence for every physical send. Its verifier requires the
+externally authorised queue, hard limit and a separately sealed complete
+evidence-tree hash; it also rejects symlinks and checks wire/terminal-state
+coherence. A fresh child gate must bind that parent tree hash before restart.
+
+`paceprompt_eval.issue145_wire_adapter` adds an unwired one-send OpenRouter
+transport seam. Its caller must supply a process-only credential, an explicit
+timeout and externally bound request hash and model/provider identities for
+each logical position. It sends the exact bytes once, disables HTTP transport
+retries and redirects, preserves duplicate response headers for the journal's
+retry decision, and does not claim an actual cost when one is unverified; the
+journal then retains its conservative worst-case charge. Local mock-transport
+tests cover byte identity, wrong/missing returned route identity, no hidden
+retry and the two-send transient-response path. No provider call is made by
+these tests.
+
+Neither component is wired to a live CLI. The r3 profile remains unratified,
+with no finite ratified lineage cap, compatible route proof, sealed live gate
+or authority to read credentials. A future reviewed runner must additionally
+bind the complete profile and queue, enforce global two-second pacing and
+redaction, and verify the full immutable lineage before any live use. Existing
+v5 runs and evidence are unchanged.
+
+The additive r3 full-matrix overlay now materialises the proposed 12-model
+document without editing v5: only the Mistral endpoint changes from
+`mistral/zdr` to `mistral`, its `zdr` request field is omitted, and the
+versioned transport registry reflects that exact route. The companion policy
+overlay records the proposed retry and restart controls while retaining the
+frozen 3,936-position queue. Both overlays explicitly deny credential access,
+inference, spend and live execution. The preparation command fetches only the
+public catalogue and constructs 12 mocked request bodies and a conservative
+one-send/three-send cost preflight under the ignored `.runs` tree. Its audit
+checks the overlay and queue hashes, selected and raw catalogue response
+hashes, mocked payloads, cost calculation and complete evidence-tree hash.
+It reconstructs selected endpoint data from the saved raw public responses
+and regenerates model request bodies from the sealed inputs; the SDK's
+per-capture `x-irid` trace header is the sole ignored volatile field.
+This is not route compatibility proof or a live gate:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-full-matrix-r3
+.venv/bin/paceprompt-host-eval prepare-issue145-full-matrix-r3-proposal \
+  --run-id <new-unique-preparation-id>
+.venv/bin/paceprompt-host-eval verify-issue145-full-matrix-r3-prepared \
+  --run-id <same-preparation-id>
+.venv/bin/paceprompt-host-eval verify-issue145-full-matrix-r3-ratification \
+  --require-prepared-evidence
+```
+
+The operator ratified exact proposal SHA-256
+`f58b5f76356d48e954ad257123b9f44c3ab0f870d85023fe6813cf78e71ed720`
+and a USD 300.00 cumulative full-matrix lineage cap on 24 September 2026;
+the additive ratification file preserves that narrow authority without
+rewriting the proposal. Compatible route proof, a reviewed and sealed live
+gate, and separate initial live-run authorisation are still required before
+reading a credential or calling a provider. No candidate or production route
+is selected by this preparation.
+
+The next zero-spend proposal isolates compatibility proof for the two
+replacement routes. It references the ratified full-matrix profile but is a
+separate, unratified probe budget and eventual live gate: first the Mistral
+`mistral` route, then DeepSeek `deepinfra/fp8`, each with the sealed v3
+development warm-up `WI-V3-D020` and no scored held-out case. The proposed
+bounded-retry ceiling is three physical sends per logical warm-up, so at most
+six sends. The prepared proposal SHA-256 is
+`133091376a862247ce72a4413c988e5c2fa9dd23be62f66960cf9d71c755ddce`;
+its public-catalogue/mock-derived three-send worst case is USD 0.03577518.
+It is not a ratified probe hard limit, route proof or permission to read the
+key. The ignored proposal audit re-derives its calls and cost from the
+separately audited full-matrix preparation:
+
+```sh
+.venv/bin/paceprompt-host-eval prepare-issue145-r3-route-probe-proposal \
+  --run-id <new-unique-probe-proposal-id>
+.venv/bin/paceprompt-host-eval verify-issue145-r3-route-probe-proposal \
+  --run-id <same-probe-proposal-id>
+```
+
+On 24 September 2026 the operator ratified that exact proposal and its
+separate USD 0.03577518 probe hard limit. The additive
+`issue145-r3-route-probe-ratification-r1.json` is pinned by SHA-256 and does
+not authorise a credential read or model call. The r3 gate binds the two
+ordered development warm-up request hashes, saved endpoint evidence, retry
+policy, source tree and cap. Preparation and sealing remain zero-spend:
+
+```sh
+.venv/bin/paceprompt-host-eval verify-issue145-r3-route-probe-ratification
+.venv/bin/paceprompt-host-eval prepare-issue145-r3-route-probe-gate \
+  --run-id issue145-r3-route-probes-20260924-02
+.venv/bin/paceprompt-host-eval seal-issue145-r3-route-probe-gate \
+  --run-id issue145-r3-route-probes-20260924-02
+```
+
+The first sealed instance (`...-01`) stopped in its synchronous evidence audit
+before catalogue access or any physical provider send. Its original gate is
+preserved byte-for-byte under the ignored `stale/` evidence directory. The
+repaired runner binds that failed gate hash, requires a fresh `...-02` run ID
+and source-bound seal, and does not carry the old authorization phrase forward.
+
+The distinct `run-issue145-r3-route-probe` entrypoint requires `--live`, that
+sealed gate's exact authorization phrase and the exact USD limit. It rejects
+replay, refreshes the public route and price catalogue before consulting the
+process key, preserves every possibly-sent wire in an ignored worst-case
+budget journal, retries only the ratified complete HTTP transient statuses,
+and stops after a failed warm-up. It never scores held-out cases. A successful
+local schema check is diagnostic until the complete ignored evidence receives
+separate human acceptance; neither gate sealing nor a passing warm-up selects
+a production route or closes issue #145. Do not invoke the live entrypoint
+without separate exact-instance operator authorization.
+
+### Post-probe eleven-candidate proposal (zero spend)
+
+The operator accepted the terminal `issue145-r3-route-probes-20260924-02`
+evidence and allowed excluding the rate-limited Mistral Small 2603 candidate
+if needed. The accepted result is three complete upstream-shared-pool 429s
+on the `mistral` route, not a model-quality result. DeepSeek was not started.
+The additive proposal excludes only that candidate; the separate Mistral Small
+3.2 24B candidate remains. It filters the sealed twelve-model queue and
+renumbers each case/repetition's model positions without changing any other
+attempt identity or relative order. The sealed queue, scorer, corpora and
+historical publications are not edited.
+
+From `Evaluation/WorkoutImport/HostEval/`, prepare and mechanically verify:
+
+```sh
+.venv/bin/paceprompt-host-eval prepare-issue145-post-probe-11-proposal \
+  --run-id issue145-11model-proposal-20260924-01
+.venv/bin/paceprompt-host-eval verify-issue145-post-probe-11-proposal \
+  --run-id issue145-11model-proposal-20260924-01
+```
+
+This binds the accepted ignored evidence, original ratified profile,
+developer-source hash, exact eleven routes, derived 3,597-position scored
+queue and saved-catalogue cost calculation. The saved-price three-send bound
+is USD 287.514142080, not a newly ratified hard limit or a substitute for a
+fresh public catalogue. DeepSeek still needs route compatibility proof. This
+proposal has no credential or live-run entrypoint. A separate exact profile,
+cap, compatibility proof and initial live authorization remain necessary
+before any evaluation send or publication.
+
+### DeepSeek-only compatibility and eleven-candidate r2 preparation
+
+`paceprompt_eval.issue145_deepseek_11_r2` creates two new ignored, immutable
+zero-spend proposals without changing the r1 evidence: a one-position DeepSeek
+`deepinfra/fp8` development warm-up and a source-bound eleven-candidate r2
+queue. Preparing them requires the accepted, hash-pinned ignored r1 proposal
+to be restored locally; a clean checkout without it fails closed. The local
+`-01` and `-02` preparations were superseded during review; their ignored
+files remain preserved. From `Evaluation/WorkoutImport/HostEval/`, after the
+source and prerequisite evidence are final:
+
+```sh
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_11_r2 import prepare_proposals; print(prepare_proposals())'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_11_r2 import verify_prepared_proposals; print(verify_prepared_proposals())'
+```
+
+The warm-up's USD 0.00917478 recommendation is mechanically derived from the
+accepted probe's hash-pinned **saved** catalogue bound, not a fresh price or
+ratified hard limit. The operator's
+USD 300.00 cumulative ceiling is recorded on the r2 matrix proposal, but its
+exact executable profile and hard limit are not yet ratified. A fresh public
+catalogue, a separately reviewed live gate/runner, exact authorization and
+DeepSeek compatibility evidence are required before any scored matrix send.
+There is no credential read or provider-call entrypoint in this module.
+
+### Fresh DeepSeek compatibility profile (zero spend)
+
+`paceprompt_eval.issue145_deepseek_probe_profile` binds the accepted `-03`
+DeepSeek-only proposal, the accepted r3 probe request and a separately saved,
+hash-pinned read-only public catalogue snapshot. It replays the raw catalogue
+locally, checks the exact `deepinfra/fp8` route and required parameters, and
+recalculates the conservative per-send cost before freezing one unscored
+warm-up's request hash, retry bounds, timeouts and recommended USD limit.
+The ignored accepted proposal and catalogue snapshot must be present; a clean
+checkout without either fails closed. The first local `-01` profile failed
+its JSON round-trip check before any live gate; `-02` preceded a
+historical-evidence test correction; independent review of `-03` found
+missing accepted-request and endpoint-status checks; `-04` preceded
+source-tree binding; `-05` preceded the clean-checkout status-test repair.
+All five ignored files are preserved, and the corrected profile uses `-06`.
+From this directory:
+
+```sh
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_profile import prepare_profile; print(prepare_profile())'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_profile import verify_prepared_profile; print(verify_prepared_profile())'
+```
+
+This is a profile for separate operator ratification, not a live gate. The
+fresh endpoint listing is not response-compatibility proof. The profile does
+not read a credential, seal a live authorization phrase or send a request.
+
+### Ratified DeepSeek compatibility gate (zero spend)
+
+`issue145-deepseek-probe-ratification-r1.json` records the operator's exact
+ratification of the `-06` profile and USD 0.00917478 hard limit. It does not
+authorize credential access, a provider request or spend. The additive
+`paceprompt_eval.issue145_deepseek_probe_gate` binds that immutable profile,
+one unscored `WI-V3-D020` request, the current HostEval source tree and a
+three-send maximum. It rejects a changed profile, request, route, native
+response authority or increased live catalogue price. Local preparation and
+sealing only write ignored files under `.runs/host-eval/`; they do not read
+`.env` or call a provider:
+
+```sh
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_gate import verify_ratification; print(verify_ratification())'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_gate import prepare_gate, RUN_ID; print(prepare_gate(RUN_ID))'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_gate import seal_gate, RUN_ID; print(seal_gate(RUN_ID))'
+.venv/bin/python -c 'from paceprompt_eval.issue145_deepseek_probe_gate import verify_sealed_gate, RUN_ID; print(verify_sealed_gate(RUN_ID))'
+```
+
+`run_live` is a separate, non-CLI entrypoint that requires the exact sealed
+phrase and hard limit before a fresh catalogue preflight or key lookup. A
+future live operator must separately authorize that exact run and must provide
+the key at execution time; the preparation phase does neither. A successful
+diagnostic response is not scored acceptance or a production-model decision.
+
+### Cost-bounded four-model Stage A
+
+The additive Stage A proposal preserves the twelve-model review while reducing
+the first live decision to the four highest weighted composites in the sealed
+v3 and v4 summaries: Sol, Gemini 3.7 Flash, Qwen 3.8 27B and Luna. It retains
+all 109 cases but performs one repetition, producing 436 scored attempts and
+four warm-ups. The deterministic queue and a fresh public-catalogue cost
+preflight are bound by `issue145-stage-a-proposal-r1.json`.
+
+The output ceiling remains 8,192 for Stage A. Lowering it to 2,048 is not yet
+mechanically safe because the schema permits 64 steps and unbounded text,
+Gemini's medium reasoning shares the output allowance, and the protected
+summary does not contain per-attempt output-token maxima. Stage A must retain
+reported token evidence so a later Stage B ceiling can be reviewed rather than
+guessed.
+
+Offline verification, enumeration and zero-spend preparation are:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-stage-a
+uv run --frozen paceprompt-host-eval enumerate-issue145-stage-a
+uv run --frozen paceprompt-host-eval prepare-issue145-stage-a-gate \
+  --run-id <new-run-id>
+```
+
+The prepared gate has no authorisation phrase or hard limit. After exact profile
+and limit ratification, sealing installs the ratified limit and derives a phrase
+from the complete gate without reading a credential:
+
+```sh
+uv run --frozen paceprompt-host-eval seal-issue145-stage-a-gate \
+  --run-id <ratified-run-id>
+```
+
+Live execution is separately fail-closed behind `--live`, the exact sealed
+phrase and the exact ratified limit. It rechecks source, queue, payload,
+catalogue and cost evidence before reading `OPENROUTER_API_KEY`. Stage B cannot
+start automatically and requires a separately reviewed profile after Stage A
+token, cost, completion and route evidence is available.
+
+### Three-model Stage B proposal
+
+The Stage B proposal retains the three candidates that passed their Stage A
+warm-up and completed all 109 scored positions: Sol, Qwen 3.8 27B and Luna.
+Gemini 3.7 Flash remains excluded because its Stage A warm-up failed the strict
+schema at `$.outcome`; this proposal does not silently recover or reroute it.
+
+Stage B adds global repetitions 2 and 3 over the same sealed 79-case regression
+and 30-case issue #130 acceptance strata. This produces 654 scored attempts and
+three warm-ups, for 657 provider calls. Combined comparison is permitted only
+after the separate Stage A and Stage B integrity audits pass. The three
+repetitions then use a two-of-three per-case majority; there is still no
+automatic winner or production-route change.
+
+The only generation change from the retained Stage A profiles is a proposed
+6,144-token output ceiling. Stage A reported no output-limit failures and a
+maximum of 3,959 output tokens. A 4,096 ceiling was rejected because its 137
+token margin is only 3.5%; 6,144 leaves 2,185 tokens, or about 55%, of headroom.
+
+Offline verification and queue enumeration are:
+
+```sh
+uv run --frozen paceprompt-host-eval verify-issue145-stage-b
+uv run --frozen paceprompt-host-eval enumerate-issue145-stage-b
+```
+
+Zero-spend preparation reads only the public catalogue and writes mocked
+payloads, the deterministic queue and the conservative cost calculation under
+the ignored run directory:
+
+```sh
+uv run --frozen paceprompt-host-eval prepare-issue145-stage-b-gate \
+  --run-id <preparation-run-id>
+```
+
+The committed r1 proposal binds proposed run
+`issue145-top3-stage-b-v5-20260921-01`, queue SHA-256
+`e505a355a81c9c810c26b6718c0a1324a3cf2ddbc70733ca96dc717852a80346`,
+public-catalogue snapshot SHA-256
+`a174b002cc20094690b429e4e5a5528e863eb1f7e2c5b8658775ba48e2f4d2e4`
+and conservative limit `$32.07052912`. Its SHA-256 is
+`1646c57a6da4edeb444ffcae752862824b1fe83ec43dd2357b5cb29faf5bc302`.
+The separately recorded r1 ratification binds that proposal, run ID, the
+6,144-token output ceiling and the exact `$32.07052912` hard limit. It grants
+zero-spend gate preparation and sealing only: no credential read, provider
+inference, spending, live run, publication or production change.
+
+After a fresh public-catalogue preparation for the ratified run ID, sealing
+rechecks the complete HostEval source tree, every versioned configuration,
+ratification, deterministic queue, mocked request, catalogue endpoint and
+conservative cost before deriving a run-specific phrase:
+
+```sh
+env -u OPENROUTER_API_KEY uv run --frozen paceprompt-host-eval \
+  prepare-issue145-stage-b-gate \
+  --run-id issue145-top3-stage-b-v5-20260921-01
+env -u OPENROUTER_API_KEY uv run --frozen paceprompt-host-eval \
+  seal-issue145-stage-b-gate \
+  --run-id issue145-top3-stage-b-v5-20260921-01
+```
+
+The implemented live command remains inert unless a later operator statement
+separately authorises the exact sealed phrase and repeats the exact hard limit:
+
+```sh
+paceprompt-host-eval run-issue145-stage-b \
+  --run-id issue145-top3-stage-b-v5-20260921-01 \
+  --live \
+  --authorization <exact-sealed-phrase> \
+  --spending-limit-usd 32.07052912
+```
+
+Even then the runner revalidates the sealed evidence and a current public
+catalogue before it reads `OPENROUTER_API_KEY`. Price increases, route drift,
+source drift, any previous live-state file, or a mismatched phrase or limit
+fail before credential access. Stage B output is diagnostic and separate;
+combination with protected Stage A evidence, model selection, publication and
+production changes remain later reviewed decisions.
+
+### Accepted Stage A+B publication
+
+The separately ratified publication proposal is committed as
+`issue145-stage-a-b-publication-proposal-r1.json` at SHA-256
+`bbef325cd88faac72424b647b692a1217989f4f09c2db80bc1345bb7db1ad3c4`.
+Its ratification authorises only the bounded aggregate publication and
+exact-head review. It does not authorise raw-run publication, model selection,
+scorer or gate relaxation, a production change, merge or issue closure.
+
+The protected comparison combines Stage A repetition 1 with Stage B
+repetitions 2 and 3 for the three retained models. It retains 981 scored
+attempts over 109 cases and reports each corpus stratum separately. The issue
+#130 acceptance stratum contains no `knownCapabilityUnsupported` case, so the
+unchanged v3 scorer reports its non-empty capability hard gate as false for
+every model. The publication records that structural result explicitly and
+does not reinterpret it into an eligible model.
+
 ## Frozen protocol
 
 - 17 development cases and 34 held-out cases, with eight fixed few-shot
@@ -671,3 +1199,103 @@ of Sol remains a separate human decision after the evidence audit.
 
 The composite comparison is secondary to the hard gates and disaggregated
 results. The harness never selects a production provider.
+
+# Issue #145 eleven-model r3 gate (zero-spend preparation)
+
+The operator ratified profile SHA-256
+`ac3bd1269e1b6f219f5624bdef3978a18bb17b6fec3eb7f80e9ed1bee9246bfe`,
+root run `issue145-11model-matrix-20260925-01`, and a cumulative USD 300.00
+hard limit on 25 September 2026. This is **not** live-run authorisation. The
+additive ratification is `issue145-11model-r3-ratification-r1.json`; the earlier
+proposal, queue, scorer, corpora, prompt and provider evidence remain sealed.
+
+From this directory, the following commands use only local data and a public
+catalogue; they do not load `OPENROUTER_API_KEY` or call an inference endpoint:
+
+```sh
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate verify-ratification
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate prepare-root --run-id issue145-11model-matrix-20260925-01
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate seal-root --run-id issue145-11model-matrix-20260925-01
+uv run --frozen python -m paceprompt_eval.issue145_11model_gate verify-root --run-id issue145-11model-matrix-20260925-01
+```
+
+The ignored gate binds all 3,608 exact logical request hashes, 11 per-model
+warm-ups, 3,597 scored positions, 10,824 maximum physical sends, fresh public
+endpoint identity and three-send conservative cost. Preparation fails closed
+if a route disappears, price rises beyond the finite cap, a request control
+changes, or the immutable profile/queue differs. A live send is possible only
+through the separate `issue145_11model_run` entrypoint with the sealed phrase,
+exact cumulative cap and a *later* operator live-run authorisation. Do not run
+that entrypoint under the present zero-spend approval.
+
+After an authorised root ends or is interrupted, a manually initiated child
+must supply root-to-leaf `--ancestor-seal` values containing externally pinned
+run ID, gate SHA-256 and complete evidence-tree SHA-256. The child gate verifies
+every ancestor and its wire ledger, reserves the inherited cumulative budget,
+and admits only never-started positions. Skipped or possibly sent positions
+are terminal and cannot be replayed. The root phrase covers an admitted child
+under the standing restart contract; a child is never started automatically.
+Raw run evidence stays ignored. Aggregate publication, model selection,
+production changes, merge and issue closure remain separate decisions.
+
+If a later reviewed compatible HostEval-only repair changes the source hash,
+historical gates remain immutable. Before a child can start, a separate
+committed JSON bridge under `Evaluation/WorkoutImport/SourceRepairBridges/`
+must bind the old and new source hashes, old and new commits, exact complete
+diff SHA-256, independent review evidence, focused validation evidence and
+affirmation that frozen inputs remain unchanged. Supply its repository-relative
+path and file SHA-256 with `--source-repair-seal PATH:SHA256` when preparing or
+verifying the child (and when running an already sealed instance under a
+repaired source). The gate verifies the Git blobs, diff, commit ancestry and
+full bridge chain before credential admission. The gate also rechecks the
+ratified prompt, corpus, schema and scorer assets outside HostEval, including
+the two v1 scorer contracts, before it can admit a live run. No bridge is
+created or approved by this initial zero-spend slice.
+
+## Issue #145 MiniMax Together r4 proposal (zero spend)
+
+The operator selected an additive eleven-model proposal after the ratified
+MiniMax `coreweave/fp4` route alternated between available and unavailable
+in fresh public preflight. `issue145_11model_together_r4` changes only that
+model's exact endpoint to `together`; the other ten model routes, 109 scored
+questions and answers, 3,597 scored queue positions, generation controls,
+retry policy and separate per-stratum reporting remain unchanged. It removes
+the old MiniMax `zdr` requirement, while retaining the outbound
+`data_collection=deny`, exact-provider pin and disabled fallback. The old r3
+profile and its unstarted sealed CoreWeave gate are not rewritten.
+
+From `HostEval/`, these commands use only a public catalogue and mocked
+payloads; they do not load a credential or call an inference endpoint:
+
+```sh
+uv run --frozen python -m paceprompt_eval.issue145_11model_together_r4 prepare
+uv run --frozen python -m paceprompt_eval.issue145_11model_together_r4 verify
+```
+
+The proposal is not a live gate: its exact profile, Together route, finite cumulative cap
+and initial live execution require separate ratification and an independently
+reviewed runner before any credential read or inference send. A Together
+warm-up must pass the existing native transport and full semantic schema gate
+before its scored positions may run; catalogue metadata alone is not a
+compatibility or model-quality result.
+
+## Issue #145 ratified Together r4 gate (zero-spend preparation)
+
+The operator subsequently confirmed the exact r4 profile, root run and USD
+300 cumulative cap. `issue145-11model-together-r4-ratification-r1.json`
+records that decision without changing the earlier CoreWeave ratification or
+evidence. `issue145_11model_together_gate` and
+`issue145_11model_together_run` are separately versioned so the r3 gate and
+runner remain byte-identical. The Together gate checks the source-bound
+profile, frozen prompt/corpora/scorer, exact route and output contract, all
+3,608 planned positions and fresh public prices. The serial runner retains
+the three-send transient retry, durable wire ledger, two-second
+post-completion pacing, warm-up admission, separate fixed-denominator stratum
+reports and cumulative restart budget.
+
+`verify-ratification`, `prepare-root`, `seal-root` and `verify-root` are
+zero-spend actions. The sealed gate yields an exact authorization phrase;
+that phrase, run ID and USD limit need a separate explicit live authorization
+before the runner may read the process-only key or send inference. Raw run
+evidence remains local and ignored. Aggregate publication and production
+selection remain separate.

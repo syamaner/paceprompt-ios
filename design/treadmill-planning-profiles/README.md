@@ -43,8 +43,10 @@ authorise implementation or override repository safety policy. In particular:
 - a saved profile is historical planning information, never evidence of a
   current connection or authority to issue a command;
 - current live capabilities must be checked again before execution;
-- no profile identity, name, capability range, or other treadmill information
-  may be sent to the workout-import provider;
+- saved-profile identity, name, ranges, dates and compatibility verdicts remain
+  local and may not populate workout-import provider requests; the existing
+  explicit live speed/inclination support-state vocabulary remains permitted
+  by the ratified production contract;
 - saved plans remain equipment-neutral rather than embedding a treadmill
   profile identifier;
 - this design set does not authorise new FTMS opcodes, automatic reconnection,
@@ -56,9 +58,9 @@ until an approved issue amends a conflicting contract. In particular, adding a
 durable local profile identity requires an explicit privacy and persistence
 contract before implementation.
 
-## Decisions still requiring ratification
+## Original decisions and subsequent ratification
 
-The design board intentionally leaves these product decisions open:
+At the time the design board was supplied, these product decisions were open:
 
 1. when a saved profile becomes stale enough to warrant a warning;
 2. whether the picker shows profiles whose recorded ranges cannot satisfy the
@@ -67,5 +69,11 @@ The design board intentionally leaves these product decisions open:
 4. whether screen 4h keeps **Save plan anyway** or blocks saving until the
    mismatch has been acknowledged or corrected.
 
-Implementation issues must preserve these as explicit decisions and must not
-infer answers from the mock-ups.
+These decisions were subsequently ratified in the
+[versioned planning-profile contract](../saved-treadmill-planning-profile-contract.md)
+and implemented through issues #140–#144. That contract and the
+[implemented runbook](../../docs/saved-treadmill-profile-runbook.md) describe the
+current behaviour; the preserved boards are the original visual reference.
+Later requests #177 (live capability ceilings without session-limit entry) and
+#178 (selection from existing profile details) are separate follow-ups, not
+behaviour introduced by merging these artifacts.

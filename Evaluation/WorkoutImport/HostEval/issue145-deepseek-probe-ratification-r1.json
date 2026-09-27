@@ -1,0 +1,29 @@
+{
+  "ratificationVersion": "paceprompt-host-eval-ratification/issue145-deepseek-probe-r1",
+  "status": "profile-and-cap-ratified-live-run-not-authorized",
+  "source": "operator replied 'I ratify it. Go on' on 2026-09-24 to the immediately preceding exact -06 profile and USD 0.00917478 limit handoff",
+  "operatorRatifiedFields": [
+    "profileSha256",
+    "hardLimitUSD"
+  ],
+  "preparedRunID": "issue145-deepseek-probe-profile-20260924-06",
+  "profileSha256": "b148d5b0cb6cac0445382a3dd3a6bc17bb283096d6b3ea043652ac6d5467cd29",
+  "profileEvidenceTreeSha256": "66e300de3070d30c188d0a3b40e93c961983d3b4832a2ac01ea49e8c21cf7893",
+  "preparationSourceTreeSha256": "2ec6fc2a48f77a2b63fa606365c7ee8c37f9f7ad106e13718d29e937bc854cc9",
+  "proposedLiveRunID": "issue145-deepseek-route-probe-20260924-01",
+  "hardLimitUSD": "0.00917478",
+  "currency": "USD",
+  "scope": "one unscored DeepSeek WI-V3-D020 development warm-up on deepinfra/fp8 only",
+  "maximumLogicalPositions": 1,
+  "maximumPhysicalSends": 3,
+  "scoredHeldoutCalls": 0,
+  "routeCompatibilityProof": null,
+  "liveGate": null,
+  "initialLiveAuthorization": null,
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false
+  }
+}

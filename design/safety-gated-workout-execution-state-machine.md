@@ -296,3 +296,7 @@ The bounded delivery sequence is:
 6. Current product integration: #107 — saved-plan preparation, preflight and exercise flow without proof-only authorization or arming ceremony; physical behaviour still requires signed-iPhone observation.
 
 No implementation slice inherits physical-session authority from this document.
+
+## Historical planning-profile separation (#140)
+
+The [saved planning profile contract](saved-treadmill-planning-profile-contract.md) adds future local historical planning only. A selected profile, matching opaque identity token, recorded capability, age warning or authoring-valid plan is not a readiness/control token and cannot satisfy a current-connection guard. Live preflight must re-read complete capability and retain the accepted FR30z profile/epoch/subscription/ceiling/permission/acknowledgement/observation boundaries. Profile rename/deletion or selection cannot mutate an active immutable execution attempt, trigger a command or reconnect. No planning-profile fields are added to execution checkpoints or History by this amendment; existing checkpoint persistence remains governed by its own accepted contract. No app implementation or new command semantics are authorised here.

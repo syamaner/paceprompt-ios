@@ -31,6 +31,9 @@ final class WorkoutImportTests: XCTestCase {
         let fixture = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixtureURL)) as? NSDictionary)
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.httpBody!) as? [String: Any])
         XCTAssertEqual(body as NSDictionary, fixture)
+        XCTAssertEqual(WorkoutImportContract.model, "openai/gpt-6-sol")
+        XCTAssertEqual(WorkoutImportContract.revision, "openai/gpt-6-sol-20260922")
+        XCTAssertEqual(body["model"] as? String, "openai/gpt-6-sol")
 
         let messages = try XCTUnwrap(body["messages"] as? [[String: String]])
         XCTAssertEqual(messages.count, 24)
@@ -253,7 +256,7 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         let valid = try json(envelope())
         var missingModel = valid; missingModel.removeValue(forKey: "model")
         XCTAssertEqual(try failure(missingModel), .identityModelMissing)
-        var unqualifiedRevision = valid; unqualifiedRevision["model"] = "gpt-5.6-sol-20260709"
+        var unqualifiedRevision = valid; unqualifiedRevision["model"] = "gpt-6-sol-20260922"
         XCTAssertEqual(try failure(unqualifiedRevision), .identityModelRevisionWithoutProvider)
         var nonStringModel = valid; nonStringModel["model"] = 56
         XCTAssertEqual(try failure(nonStringModel), .identityModelNonString)
@@ -277,6 +280,18 @@ final class WorkoutImportBoundaryTests: XCTestCase {
                      .identityProviderMissing, .identityProviderMismatch,
                      .identityServiceTier, .identityMessageModel] {
             XCTAssertFalse(code.rawValue.contains("synthetic-secret"))
+        }
+    }
+
+    func testSelectedRevisionRejectsPreviousModelAndRevisionDrift() throws {
+        let valid = try json(envelope())
+        for model in ["openai/gpt-5.6-sol", "openai/gpt-5.6-sol-20260709",
+                      "openai/gpt-6-sol-20990101"] {
+            var object = valid
+            object["model"] = model
+            XCTAssertThrowsError(try WorkoutImportContract.parseEnvelope(data(object))) { error in
+                XCTAssertEqual(error as? ImportFailure, .identityModelMismatch)
+            }
         }
     }
 
@@ -607,7 +622,7 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         }
     }
 
-    func testUnknownCapabilitiesAndMalformedRangesHaveNoPreviewThroughGenerator() throws {
+    func testUnknownCapabilitiesAndMalformedLiveRangesDoNotBlockCanonicalAuthoring() throws {
         let malformedInclination = WorkoutTargetCapability<WorkoutInclinationRange>.supported(.init(
             minimum: .init(value: 2, unit: .percent), maximum: .init(value: 1, unit: .percent), increment: .init(value: 0, unit: .percent)))
         for capabilities in [WorkoutPlanCapabilities(speed: .unknown, inclination: .unknown),
@@ -618,8 +633,8 @@ final class WorkoutImportBoundaryTests: XCTestCase {
             let tested = WorkoutImportViewModel(generator: generator, plans: plans)
             tested.begin(capabilities: capabilities); tested.text = "Synthetic workout"; tested.reviewDisclosure(); tested.consentAndSend()
             generator.complete(.proposal(try parsedProposal()))
-            XCTAssertFalse(tested.validationIssues.isEmpty); XCTAssertNil(plans.preview); XCTAssertTrue(tested.text.isEmpty)
-            tested.confirmSave(); XCTAssertTrue(repo.records.isEmpty)
+            XCTAssertTrue(tested.validationIssues.isEmpty); XCTAssertNotNil(plans.preview); XCTAssertFalse(tested.text.isEmpty)
+            tested.confirmSave(); XCTAssertEqual(repo.records.count, 1)
         }
     }
 
@@ -634,6 +649,67 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         XCTAssertNil(plans.preview); XCTAssertTrue(tested.isSending)
         generator.complete(.proposal(try parsedProposal())); XCTAssertNotNil(plans.preview)
         tested.cancel(); old?(.proposal(try parsedProposal())); XCTAssertNil(plans.preview); XCTAssertTrue(repo.records.isEmpty)
+    }
+
+    func testSelectionChangesPreserveConsentAndInFlightRequestAndNeutralSave() throws {
+        let profiles = PlanningProfilesViewModel(repository: MemoryPlanningProfileRepository(), identity: LocalPlanningProfileIdentity())
+        let peer = "00000000-0000-0000-0000-000000000142"
+        let snapshot = PlanningProfileSnapshot(speed: .init(minimumHundredthsKph: 50, maximumHundredthsKph: 1800, incrementHundredthsKph: 10), inclination: .init(minimumTenthsPercent: 0, maximumTenthsPercent: 150, incrementTenthsPercent: 5), observedAt: "2026-09-27T00:00:00Z")
+        profiles.beginDiscovery(peer: peer); profiles.observe(snapshot, peer: peer)
+        let record = try XCTUnwrap(profiles.records.first)
+        let repository = ImportRepositoryDouble(), generator = SyntheticGenerator()
+        let plans = PlansViewModel(repository: repository)
+        let importer = WorkoutImportViewModel(generator: generator, plans: plans)
+        importer.begin(capabilities: .init(speed: .unknown, inclination: .unknown))
+        importer.text = "Synthetic fixed workout"; importer.reviewDisclosure()
+        let disclosure = try XCTUnwrap(importer.disclosure)
+        let resources = try ImportResources()
+        let body = try resources.request(for: disclosure).httpBody
+        XCTAssertTrue(profiles.commitAuthoringSelection(record.id))
+        XCTAssertEqual(importer.disclosure, disclosure)
+        importer.consentAndSend()
+        XCTAssertTrue(profiles.rename(profiles.records[0], to: "Private synthetic equipment"))
+        XCTAssertTrue(profiles.commitAuthoringSelection(nil))
+        XCTAssertTrue(profiles.delete(profiles.records[0]))
+        XCTAssertTrue(importer.isSending)
+        XCTAssertEqual(generator.requests, [disclosure])
+        XCTAssertEqual(try resources.request(for: generator.requests[0]).httpBody, body)
+        generator.complete(.proposal(try parsedProposal()))
+        let exact = try XCTUnwrap(plans.preview?.plan)
+        importer.confirmSave()
+        XCTAssertEqual(repository.records.map(\.plan), [exact])
+        let saved = String(decoding: try JSONEncoder().encode(exact), as: UTF8.self)
+        XCTAssertFalse(saved.contains(record.id)); XCTAssertFalse(saved.contains(record.machineKey))
+        XCTAssertFalse(saved.contains("Private synthetic equipment"))
+    }
+
+    func testHistoricalChangesDuringAISaveRetainExactProposalForFreshAcknowledgement() throws {
+        let record = PlanningProfile(profileID: "00000000-0000-0000-0000-000000000143", machineKey: String(repeating: "c", count: 64), name: "Synthetic private profile", recordRevision: 1,
+            snapshot: .init(speed: .init(minimumHundredthsKph: 50, maximumHundredthsKph: 700, incrementHundredthsKph: 10), inclination: .init(minimumTenthsPercent: 0, maximumTenthsPercent: 150, incrementTenthsPercent: 5), observedAt: "2026-09-27T00:00:00Z"))
+        for change in 0..<3 {
+            var selection = HistoricalPlanningSelection.profile(record)
+            let repository = ImportRepositoryDouble(), generator = SyntheticGenerator()
+            let plans = PlansViewModel(repository: repository, now: { Date(timeIntervalSince1970: 1_800_000_000) })
+            plans.configureHistoricalSelection { _ in selection }
+            let importer = WorkoutImportViewModel(generator: generator, plans: plans)
+            importer.begin(capabilities: .init(speed: .unknown, inclination: .unknown))
+            importer.text = "Synthetic fixed workout"; importer.reviewDisclosure(); importer.consentAndSend()
+            generator.complete(.proposal(try parsedProposal()))
+            let exact = try XCTUnwrap(plans.preview?.plan)
+            let old = try XCTUnwrap(plans.historicalReview)
+            XCTAssertTrue(old.isMismatch)
+            if change == 0 { var renamed = record; renamed.name = "Renamed private profile"; renamed.recordRevision += 1; selection = .profile(renamed) }
+            if change == 1 { selection = .none }
+            if change == 2 { selection = .unavailable("Corrupt profile store") }
+            importer.confirmSave(acknowledging: old)
+            XCTAssertTrue(repository.records.isEmpty)
+            XCTAssertEqual(plans.preview?.plan, exact); XCTAssertTrue(importer.isPresented)
+            XCTAssertEqual(importer.text, "Synthetic fixed workout")
+            XCTAssertNotNil(plans.saveError)
+            importer.confirmSave(acknowledging: plans.historicalReview)
+            XCTAssertEqual(repository.records.map(\.plan), [exact])
+            XCTAssertFalse(importer.isPresented)
+        }
     }
 
     private func parsedProposal(duration: String = "0.5") throws -> WorkoutProposal {
@@ -694,12 +770,12 @@ private final class RecordingImportDiagnosticSink: ImportDiagnosticSink {
 private final class ImportRepositoryDouble: SavedPlanRepositoryProtocol {
     var records: [SavedPlanRecord] = []; var fail = false
     func list() -> SavedPlanRepositoryStatus { .init(canonical: records.isEmpty ? .empty : .available(records: records), staging: .absent) }
-    func create(_ plan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord {
+    func create(_ plan: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord {
         if fail { throw SavedPlanMutationFailure.writeFailed(.atomicReplacement) }
         let record = SavedPlanRecord(id: UUID(), createdAt: Date(timeIntervalSince1970: 1), modifiedAt: Date(timeIntervalSince1970: 1), plan: plan.plan)
         records.append(record); return record
     }
-    func replace(id: UUID, with plan: WorkoutPlanValidator.ValidatedPlan) throws -> SavedPlanRecord { throw SavedPlanMutationFailure.recordNotFound(id) }
+    func replace(id: UUID, with plan: CanonicalWorkoutAuthoringValidator.ValidatedPlan) throws -> SavedPlanRecord { throw SavedPlanMutationFailure.recordNotFound(id) }
     func delete(id: UUID) throws { throw SavedPlanMutationFailure.recordNotFound(id) }
 }
 

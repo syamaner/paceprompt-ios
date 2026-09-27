@@ -762,14 +762,19 @@ private enum WorkoutExercisePalette {
 
 extension View {
   fileprivate func exerciseLayoutMarker(_ identifier: String, label: String) -> some View {
-    background {
+    // Group real controls without an overlapping accessible geometry leaf.
+    ZStack {
+      // Preserve the wrapper's identity independently of nested region identifiers.
       Color.clear
-        .contentShape(Rectangle())
+        .frame(width: 0, height: 0)
         .allowsHitTesting(false)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
-        .accessibilityIdentifier(identifier)
+        .accessibilityHidden(true)
+      self
     }
+    .contentShape(.accessibility, Rectangle())
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel(label)
+    .accessibilityIdentifier(identifier)
   }
 
   fileprivate func exerciseActionStyle(tint: Color) -> some View {

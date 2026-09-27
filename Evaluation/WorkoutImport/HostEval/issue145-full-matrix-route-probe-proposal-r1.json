@@ -1,0 +1,67 @@
+{
+  "proposalContractVersion": "paceprompt-issue145-full-matrix-route-probes/r1",
+  "status": "proposed-not-ratified",
+  "purpose": "Prove both changed provider routes before the separately ratified 12-model issue145-v5 run",
+  "proposedRunID": "issue145-full-matrix-route-probes-v5-20260922-01",
+  "parentCandidateReviewSha256": "e21347e3a5d71be45717a8083e76878e3b450c5f1a7c7c9e30e0fca7aa92778b",
+  "parentRunPolicySha256": "189bb7a381aa64761c46d6b0c39ad225b06d533133988fdf8351e2c0fda06f6d",
+  "parentModelsSha256": "27cff2665a89ca038bd0f4a99ce66d7a0d6dc240b5e8001b019ce83048cf38fe",
+  "preparedZeroSpendGateSha256": "379f0a8b3a09c5a80035601e258a5702d4f118e1e7d6110fd48c56933b40bb41",
+  "publicCatalogueSelectedSha256": "686809362bf4e66bfda56233cddbb9488fdbe17cdfdc5c7b05fc5382ca769bcf",
+  "warmupCaseID": "WI-V3-D020",
+  "orderedCalls": [
+    {
+      "requestedModelID": "mistralai/mistral-small-2603",
+      "canonicalRevision": "mistralai/mistral-small-2603",
+      "providerEndpoint": "mistral/zdr",
+      "mockPayloadSha256": "55dd81652c358d6909f54c32aa024d89048ea9d62672cc8befabe0e4115b3e7c",
+      "completeRequestUTF8Bytes": 22267,
+      "inputPricePerTokenUSD": "0.00000015",
+      "outputPricePerTokenUSD": "0.0000006",
+      "conservativeCallUSD": "0.00886965"
+    },
+    {
+      "requestedModelID": "deepseek/deepseek-v4-flash-0731",
+      "canonicalRevision": "deepseek/deepseek-v4-flash-20260731",
+      "providerEndpoint": "deepinfra/fp8",
+      "mockPayloadSha256": "f53cb2c4001fdcbc92db572fa777f50f465f1b6b517b7585ff0349da74de5955",
+      "completeRequestUTF8Bytes": 22299,
+      "inputPricePerTokenUSD": "0.00000006",
+      "outputPricePerTokenUSD": "0.00000018",
+      "conservativeCallUSD": "0.00305826"
+    }
+  ],
+  "execution": {
+    "totalProviderCalls": 2,
+    "globalConcurrency": 1,
+    "minimumInterCallDelaySeconds": 2,
+    "maxOutputTokensPerCall": 8192,
+    "automaticRetries": 0,
+    "httpConnectRetries": 0,
+    "connectTimeoutSeconds": 15,
+    "attemptTimeoutSeconds": 180,
+    "resumable": false,
+    "fallbacks": false,
+    "stopAfterAnyFailedCompatibilityCall": true,
+    "scoredHeldoutCalls": 0
+  },
+  "compatibilityPass": "exact pinned route and canonical identity, native strict response contract, transport normalization and full workout-import-model-output/v2 schema validity; oracle agreement diagnostic only",
+  "spending": {
+    "currency": "USD",
+    "conservativeWorstCase": "0.01192791",
+    "recommendedHardLimit": "0.01192791",
+    "hardLimitRatified": false,
+    "preflightMethod": "the parent v5 serialized complete request UTF-8 byte upper bound plus 4096 framing tokens and 8192 output tokens per call"
+  },
+  "authority": {
+    "credentialRead": false,
+    "providerInference": false,
+    "spend": false,
+    "liveRun": false,
+    "fullMatrixRun": false,
+    "publication": false,
+    "productionChange": false,
+    "release": false,
+    "issueClosure": false
+  }
+}

@@ -3107,6 +3107,95 @@ def main(argv: list[str] | None = None) -> int:
     run_open_weight_v4.add_argument("--live", action="store_true")
     run_open_weight_v4.add_argument("--authorization")
     run_open_weight_v4.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue145-v5")
+    subparsers.add_parser("verify-issue145-lineage-proposal")
+    subparsers.add_parser("enumerate-issue145-v5")
+    prepare_issue145_v5 = subparsers.add_parser("prepare-issue145-v5-gate")
+    prepare_issue145_v5.add_argument("--run-id", required=True)
+    subparsers.add_parser("verify-issue145-stage-a")
+    subparsers.add_parser("enumerate-issue145-stage-a")
+    prepare_issue145_stage_a = subparsers.add_parser(
+        "prepare-issue145-stage-a-gate"
+    )
+    prepare_issue145_stage_a.add_argument("--run-id", required=True)
+    seal_issue145_stage_a = subparsers.add_parser("seal-issue145-stage-a-gate")
+    seal_issue145_stage_a.add_argument("--run-id", required=True)
+    run_issue145_stage_a = subparsers.add_parser("run-issue145-stage-a")
+    run_issue145_stage_a.add_argument("--run-id", required=True)
+    run_issue145_stage_a.add_argument("--live", action="store_true")
+    run_issue145_stage_a.add_argument("--authorization")
+    run_issue145_stage_a.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue145-stage-b")
+    subparsers.add_parser("enumerate-issue145-stage-b")
+    prepare_issue145_stage_b = subparsers.add_parser(
+        "prepare-issue145-stage-b-gate"
+    )
+    prepare_issue145_stage_b.add_argument("--run-id", required=True)
+    seal_issue145_stage_b = subparsers.add_parser("seal-issue145-stage-b-gate")
+    seal_issue145_stage_b.add_argument("--run-id", required=True)
+    run_issue145_stage_b = subparsers.add_parser("run-issue145-stage-b")
+    run_issue145_stage_b.add_argument("--run-id", required=True)
+    run_issue145_stage_b.add_argument("--live", action="store_true")
+    run_issue145_stage_b.add_argument("--authorization")
+    run_issue145_stage_b.add_argument("--spending-limit-usd")
+    subparsers.add_parser("verify-issue145-route-probes")
+    subparsers.add_parser("verify-issue145-route-retry-proposal")
+    subparsers.add_parser("verify-issue145-route-retry-proposal-r3")
+    subparsers.add_parser("verify-issue145-full-matrix-r3")
+    verify_issue145_r3_ratification = subparsers.add_parser(
+        "verify-issue145-full-matrix-r3-ratification"
+    )
+    verify_issue145_r3_ratification.add_argument(
+        "--require-prepared-evidence", action="store_true"
+    )
+    prepare_issue145_r3 = subparsers.add_parser("prepare-issue145-full-matrix-r3-proposal")
+    prepare_issue145_r3.add_argument("--run-id", required=True)
+    verify_issue145_r3_prepared = subparsers.add_parser("verify-issue145-full-matrix-r3-prepared")
+    verify_issue145_r3_prepared.add_argument("--run-id", required=True)
+    prepare_issue145_r3_probes = subparsers.add_parser(
+        "prepare-issue145-r3-route-probe-proposal"
+    )
+    prepare_issue145_r3_probes.add_argument("--run-id", required=True)
+    verify_issue145_r3_probes = subparsers.add_parser(
+        "verify-issue145-r3-route-probe-proposal"
+    )
+    verify_issue145_r3_probes.add_argument("--run-id", required=True)
+    subparsers.add_parser("verify-issue145-r3-route-probe-ratification")
+    prepare_issue145_r3_probe_gate = subparsers.add_parser(
+        "prepare-issue145-r3-route-probe-gate"
+    )
+    prepare_issue145_r3_probe_gate.add_argument("--run-id", required=True)
+    seal_issue145_r3_probe_gate = subparsers.add_parser(
+        "seal-issue145-r3-route-probe-gate"
+    )
+    seal_issue145_r3_probe_gate.add_argument("--run-id", required=True)
+    run_issue145_r3_probe = subparsers.add_parser("run-issue145-r3-route-probe")
+    run_issue145_r3_probe.add_argument("--run-id", required=True)
+    run_issue145_r3_probe.add_argument("--live", action="store_true")
+    run_issue145_r3_probe.add_argument("--authorization")
+    run_issue145_r3_probe.add_argument("--spending-limit-usd")
+    prepare_post_probe_11 = subparsers.add_parser(
+        "prepare-issue145-post-probe-11-proposal"
+    )
+    prepare_post_probe_11.add_argument("--run-id", required=True)
+    verify_post_probe_11 = subparsers.add_parser(
+        "verify-issue145-post-probe-11-proposal"
+    )
+    verify_post_probe_11.add_argument("--run-id", required=True)
+    prepare_route_probes = subparsers.add_parser("prepare-issue145-route-probes-gate")
+    prepare_route_probes.add_argument("--run-id", required=True)
+    seal_route_probes = subparsers.add_parser("seal-issue145-route-probes-gate")
+    seal_route_probes.add_argument("--run-id", required=True)
+    prepare_route_probe_recovery = subparsers.add_parser("prepare-issue145-route-probes-recovery-gate")
+    prepare_route_probe_recovery.add_argument("--run-id", required=True)
+    prepare_route_probe_recovery.add_argument("--parent-run-id", required=True)
+    seal_route_probe_recovery = subparsers.add_parser("seal-issue145-route-probes-recovery-gate")
+    seal_route_probe_recovery.add_argument("--run-id", required=True)
+    run_route_probes = subparsers.add_parser("run-issue145-route-probes")
+    run_route_probes.add_argument("--run-id", required=True)
+    run_route_probes.add_argument("--live", action="store_true")
+    run_route_probes.add_argument("--authorization")
+    run_route_probes.add_argument("--spending-limit-usd")
     mock = subparsers.add_parser("mock-payloads")
     mock.add_argument("--run-id", required=True)
     prepare = subparsers.add_parser("prepare-gate")
@@ -3364,6 +3453,222 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         )
+        return 0
+    if args.command == "verify-issue145-v5":
+        from .issue145 import verify as verify_issue145_v5
+
+        report = verify_issue145_v5()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-lineage-proposal":
+        from .issue145_lineage_profile import verify as verify_issue145_lineage_proposal
+
+        report = verify_issue145_lineage_proposal()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-issue145-v5":
+        from .issue145 import queue_document as issue145_v5_queue
+
+        print_json(issue145_v5_queue())
+        return 0
+    if args.command == "prepare-issue145-v5-gate":
+        from .issue145 import prepare_gate as prepare_issue145_v5_gate
+
+        print_json(asyncio.run(prepare_issue145_v5_gate(args.run_id)))
+        return 0
+    if args.command == "verify-issue145-stage-a":
+        from .issue145_stage_a import verify as verify_issue145_stage_a
+
+        report = verify_issue145_stage_a()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-issue145-stage-a":
+        from .issue145_stage_a import queue_document as issue145_stage_a_queue
+
+        print_json(issue145_stage_a_queue())
+        return 0
+    if args.command == "prepare-issue145-stage-a-gate":
+        from .issue145_stage_a import prepare_gate as prepare_issue145_stage_a_gate
+
+        print_json(asyncio.run(prepare_issue145_stage_a_gate(args.run_id)))
+        return 0
+    if args.command == "seal-issue145-stage-a-gate":
+        from .issue145_stage_a import seal_gate as seal_issue145_stage_a_gate
+
+        print_json(seal_issue145_stage_a_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-stage-a":
+        from .issue145_stage_a import run_live as run_issue145_stage_a_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-stage-a requires --live")
+        print_json(
+            asyncio.run(
+                run_issue145_stage_a_live(
+                    run_id=args.run_id,
+                    authorization=args.authorization or "",
+                    spending_limit_usd=args.spending_limit_usd or "",
+                )
+            )
+        )
+        return 0
+    if args.command == "verify-issue145-stage-b":
+        from .issue145_stage_b import verify as verify_issue145_stage_b
+
+        report = verify_issue145_stage_b()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "enumerate-issue145-stage-b":
+        from .issue145_stage_b import queue_document as issue145_stage_b_queue
+
+        print_json(issue145_stage_b_queue())
+        return 0
+    if args.command == "prepare-issue145-stage-b-gate":
+        from .issue145_stage_b import prepare_gate as prepare_issue145_stage_b_gate
+
+        print_json(asyncio.run(prepare_issue145_stage_b_gate(args.run_id)))
+        return 0
+    if args.command == "seal-issue145-stage-b-gate":
+        from .issue145_stage_b import seal_gate as seal_issue145_stage_b_gate
+
+        print_json(seal_issue145_stage_b_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-stage-b":
+        from .issue145_stage_b import run_live as run_issue145_stage_b_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-stage-b requires --live")
+        print_json(
+            asyncio.run(
+                run_issue145_stage_b_live(
+                    run_id=args.run_id,
+                    authorization=args.authorization or "",
+                    spending_limit_usd=args.spending_limit_usd or "",
+                )
+            )
+        )
+        return 0
+    if args.command == "verify-issue145-route-probes":
+        from .issue145_route_probes import verify as verify_route_probes
+
+        print_json(verify_route_probes())
+        return 0
+    if args.command == "verify-issue145-route-retry-proposal":
+        from .issue145_retry_profile import verify as verify_retry_proposal
+
+        report = verify_retry_proposal()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-route-retry-proposal-r3":
+        from .issue145_retry_profile_r3 import verify as verify_retry_proposal_r3
+
+        report = verify_retry_proposal_r3()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-full-matrix-r3":
+        from .issue145_full_matrix_r3 import verify as verify_issue145_r3
+
+        report = verify_issue145_r3()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-full-matrix-r3-ratification":
+        from .issue145_full_matrix_r3 import verify_ratification
+
+        report = verify_ratification(
+            require_prepared_evidence=args.require_prepared_evidence
+        )
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "prepare-issue145-full-matrix-r3-proposal":
+        from .issue145_full_matrix_r3 import prepare_proposal as prepare_issue145_r3
+
+        print_json(asyncio.run(prepare_issue145_r3(args.run_id)))
+        return 0
+    if args.command == "verify-issue145-full-matrix-r3-prepared":
+        from .issue145_full_matrix_r3 import verify_prepared_proposal
+
+        report = verify_prepared_proposal(args.run_id)
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "prepare-issue145-r3-route-probe-proposal":
+        from .issue145_r3_route_probe_profile import prepare_proposal
+
+        print_json(prepare_proposal(args.run_id))
+        return 0
+    if args.command == "verify-issue145-r3-route-probe-proposal":
+        from .issue145_r3_route_probe_profile import verify_prepared_proposal
+
+        report = verify_prepared_proposal(args.run_id)
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "verify-issue145-r3-route-probe-ratification":
+        from .issue145_r3_route_probe_profile import verify_probe_ratification
+
+        report = verify_probe_ratification()
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "prepare-issue145-r3-route-probe-gate":
+        from .issue145_r3_route_probe_run import prepare_gate
+
+        print_json(prepare_gate(args.run_id))
+        return 0
+    if args.command == "seal-issue145-r3-route-probe-gate":
+        from .issue145_r3_route_probe_run import seal_gate
+
+        print_json(seal_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-r3-route-probe":
+        from .issue145_r3_route_probe_run import run_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-r3-route-probe requires --live")
+        print_json(asyncio.run(run_live(
+            run_id=args.run_id,
+            authorization=args.authorization or "",
+            spending_limit_usd=args.spending_limit_usd or "",
+        )))
+        return 0
+    if args.command == "prepare-issue145-post-probe-11-proposal":
+        from .issue145_post_probe_11 import prepare_proposal
+
+        print_json(prepare_proposal(args.run_id))
+        return 0
+    if args.command == "verify-issue145-post-probe-11-proposal":
+        from .issue145_post_probe_11 import verify_prepared_proposal
+
+        report = verify_prepared_proposal(args.run_id)
+        print_json(report)
+        return 0 if report["status"] == "valid" else 1
+    if args.command == "prepare-issue145-route-probes-gate":
+        from .issue145_route_probes import prepare_gate as prepare_route_probe_gate
+
+        print_json(prepare_route_probe_gate(args.run_id))
+        return 0
+    if args.command == "seal-issue145-route-probes-gate":
+        from .issue145_route_probes import seal_gate as seal_route_probe_gate
+
+        print_json(seal_route_probe_gate(args.run_id))
+        return 0
+    if args.command == "prepare-issue145-route-probes-recovery-gate":
+        from .issue145_route_probes import prepare_recovery_gate
+
+        print_json(prepare_recovery_gate(args.run_id, args.parent_run_id))
+        return 0
+    if args.command == "seal-issue145-route-probes-recovery-gate":
+        from .issue145_route_probes import seal_recovery_gate
+
+        print_json(seal_recovery_gate(args.run_id))
+        return 0
+    if args.command == "run-issue145-route-probes":
+        from .issue145_route_probes import run_live as run_route_probes_live
+
+        if not args.live:
+            raise SystemExit("run-issue145-route-probes requires --live")
+        print_json(asyncio.run(run_route_probes_live(
+            run_id=args.run_id,
+            authorization=args.authorization or "",
+            spending_limit_usd=args.spending_limit_usd or "",
+        )))
         return 0
     if args.command == "enumerate":
         report = verify()

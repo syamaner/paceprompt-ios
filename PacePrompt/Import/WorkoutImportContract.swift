@@ -56,8 +56,8 @@ enum WorkoutProposalMapper {
 
 // Deliberately independent of the evaluation parser, scorer and provider adapter.
 enum WorkoutImportContract {
-    static let model = "openai/gpt-5.6-sol"
-    static let revision = "openai/gpt-5.6-sol-20260709"
+    static let model = "openai/gpt-6-sol"
+    static let revision = "openai/gpt-6-sol-20260922"
     static let endpoint = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
     static let pathOrder = ["activity", "steps", "steps.repetitions", "steps.kind", "steps.duration",
         "steps.duration.value", "steps.duration.unit", "steps.targetSpeed", "steps.targetSpeed.value",

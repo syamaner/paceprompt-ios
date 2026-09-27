@@ -21,10 +21,10 @@ struct ManualWorkoutDraft: Equatable {
         self.steps = steps
     }
 
-    init(plan: WorkoutPlan) {
+    init(plan: WorkoutPlan, locale: Locale = .autoupdatingCurrent) {
         suggestedName = plan.suggestedName
         activity = plan.activity
-        steps = plan.steps.map(ManualWorkoutStepDraft.init)
+        steps = plan.steps.map { ManualWorkoutStepDraft(step: $0, locale: locale) }
     }
 }
 
@@ -52,13 +52,13 @@ struct ManualWorkoutStepDraft: Identifiable, Equatable {
         self.inclinationPercent = inclinationPercent
     }
 
-    init(step: WorkoutStep) {
+    init(step: WorkoutStep, locale: Locale = .autoupdatingCurrent) {
         self.init(
             kind: step.kind,
             label: step.label,
             durationSeconds: String(step.duration.value),
-            speedKilometresPerHour: PlanValueFormatter.domainText(step.targetSpeed.value),
-            inclinationPercent: PlanValueFormatter.domainText(step.targetInclination.value)
+            speedKilometresPerHour: PlanValueFormatter.localizedText(step.targetSpeed.value, locale: locale),
+            inclinationPercent: PlanValueFormatter.localizedText(step.targetInclination.value, locale: locale)
         )
     }
 }
@@ -153,11 +153,44 @@ enum ManualWorkoutDraftParser {
         issues: inout [ManualWorkoutInputIssue]
     ) -> Decimal? {
         guard let normalized = normalizedNumber(value, locale: locale, allowsDecimal: true),
-              let result = Decimal(string: normalized, locale: Locale(identifier: "en_US_POSIX")) else {
+              let result = losslessDecimal(normalized) else {
             issues.append(.init(path: path, message: message))
             return nil
         }
         return result
+    }
+
+    static func incrementText(_ text: String, by increment: Decimal, locale: Locale = .autoupdatingCurrent) -> String? {
+        guard let normalized = normalizedNumber(text, locale: locale, allowsDecimal: true),
+              var value = losslessDecimal(normalized), !value.isNaN else { return nil }
+        var delta = increment, result = Decimal()
+        guard NSDecimalAdd(&result, &value, &delta, .plain) == .noError, !result.isNaN else { return nil }
+        return PlanValueFormatter.localizedText(result, locale: locale)
+    }
+
+    private static func losslessDecimal(_ normalized: String) -> Decimal? {
+        guard let value = Decimal(string: normalized, locale: Locale(identifier: "en_US_POSIX")), !value.isNaN,
+              decimalIdentity(normalized) == decimalIdentity(NSDecimalNumber(decimal: value).stringValue) else { return nil }
+        return value
+    }
+    // Compare significant digits and decimal exponent, allowing harmless zero padding only.
+    private static func decimalIdentity(_ text: String) -> String? {
+        let parts = text.lowercased().split(separator: "e", omittingEmptySubsequences: false)
+        guard parts.count <= 2 else { return nil }
+        var significand = String(parts[0])
+        let negative = significand.hasPrefix("-")
+        if significand.hasPrefix("-") || significand.hasPrefix("+") { significand.removeFirst() }
+        let fields = significand.split(separator: ".", omittingEmptySubsequences: false)
+        guard fields.count <= 2 else { return nil }
+        let exponent = parts.count == 2 ? Int(parts[1]) : 0
+        guard var power = exponent else { return nil }
+        power -= fields.count == 2 ? fields[1].count : 0
+        var digits = fields.joined()
+        guard !digits.isEmpty, digits.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        while digits.first == "0" { digits.removeFirst() }
+        if digits.isEmpty { return "0" }
+        while digits.last == "0" { digits.removeLast(); power += 1 }
+        return "\(negative ? "-" : "")\(digits)e\(power)"
     }
 
     private static func normalizedNumber(
@@ -199,20 +232,39 @@ enum ManualWorkoutDraftParser {
 }
 
 struct WorkoutPlanPreview: Equatable {
-    let validatedPlan: WorkoutPlanValidator.ValidatedPlan
+    enum Validation: Equatable {
+        case authoring(CanonicalWorkoutAuthoringValidator.ValidatedPlan)
+        case execution(WorkoutPlanValidator.ValidatedPlan)
+    }
+    let validation: Validation
     let totalDurationSeconds: Decimal
-    let estimatedDistanceKilometres: Decimal
-
-    var plan: WorkoutPlan { validatedPlan.plan }
-
-    init(validatedPlan: WorkoutPlanValidator.ValidatedPlan) {
-        self.validatedPlan = validatedPlan
-        totalDurationSeconds = validatedPlan.plan.steps.reduce(Decimal.zero) {
-            $0 + Decimal($1.duration.value)
+    let estimatedDistanceKilometres: Decimal?
+    var plan: WorkoutPlan {
+        switch validation { case .authoring(let value): value.plan; case .execution(let value): value.plan }
+    }
+    init(validatedPlan: WorkoutPlanValidator.ValidatedPlan) { self.init(validation: .execution(validatedPlan)) }
+    init(authoringPlan: CanonicalWorkoutAuthoringValidator.ValidatedPlan) { self.init(validation: .authoring(authoringPlan)) }
+    private init(validation: Validation) {
+        self.validation = validation
+        let plan: WorkoutPlan
+        switch validation { case .authoring(let value): plan = value.plan; case .execution(let value): plan = value.plan }
+        totalDurationSeconds = plan.steps.reduce(Decimal.zero) { $0 + Decimal($1.duration.value) }
+        estimatedDistanceKilometres = Self.distanceEstimate(plan)
+    }
+    private static func distanceEstimate(_ plan: WorkoutPlan) -> Decimal? {
+        var total = Decimal.zero
+        for step in plan.steps {
+            var speed = step.targetSpeed.value, duration = Decimal(step.duration.value), divisor = Decimal(3_600)
+            var product = Decimal(), distance = Decimal(), next = Decimal()
+            let multiply = NSDecimalMultiply(&product, &speed, &duration, .plain)
+            guard multiply == .noError || multiply == .lossOfPrecision else { return nil }
+            let divide = NSDecimalDivide(&distance, &product, &divisor, .plain)
+            guard divide == .noError || divide == .lossOfPrecision else { return nil }
+            let addition = NSDecimalAdd(&next, &total, &distance, .plain)
+            guard addition == .noError || addition == .lossOfPrecision, !next.isNaN else { return nil }
+            total = next
         }
-        estimatedDistanceKilometres = validatedPlan.plan.steps.reduce(Decimal.zero) {
-            $0 + ($1.targetSpeed.value * Decimal($1.duration.value) / Decimal(3_600))
-        }
+        return total
     }
 }
 
@@ -227,10 +279,16 @@ enum PlanValueFormatter {
         return text.replacingOccurrences(of: ".", with: separator)
     }
 
+    static func estimatedDistanceSummary(_ value: Decimal?, locale: Locale = .autoupdatingCurrent) -> String {
+        guard let value, !value.isNaN else { return "Estimate unavailable" }
+        return "\(estimatedDistanceText(value, locale: locale)) km"
+    }
+
     static func estimatedDistanceText(
-        _ value: Decimal,
+        _ value: Decimal?,
         locale: Locale = .autoupdatingCurrent
     ) -> String {
+        guard let value, !value.isNaN else { return "Estimate unavailable" }
         let formatter = NumberFormatter()
         formatter.locale = locale
         formatter.numberStyle = .decimal
