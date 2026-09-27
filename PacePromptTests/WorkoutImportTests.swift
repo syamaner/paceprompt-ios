@@ -683,6 +683,35 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         XCTAssertFalse(saved.contains("Private synthetic equipment"))
     }
 
+    func testHistoricalChangesDuringAISaveRetainExactProposalForFreshAcknowledgement() throws {
+        let record = PlanningProfile(profileID: "00000000-0000-0000-0000-000000000143", machineKey: String(repeating: "c", count: 64), name: "Synthetic private profile", recordRevision: 1,
+            snapshot: .init(speed: .init(minimumHundredthsKph: 50, maximumHundredthsKph: 700, incrementHundredthsKph: 10), inclination: .init(minimumTenthsPercent: 0, maximumTenthsPercent: 150, incrementTenthsPercent: 5), observedAt: "2026-09-27T00:00:00Z"))
+        for change in 0..<3 {
+            var selection = HistoricalPlanningSelection.profile(record)
+            let repository = ImportRepositoryDouble(), generator = SyntheticGenerator()
+            let plans = PlansViewModel(repository: repository, now: { Date(timeIntervalSince1970: 1_800_000_000) })
+            plans.configureHistoricalSelection { _ in selection }
+            let importer = WorkoutImportViewModel(generator: generator, plans: plans)
+            importer.begin(capabilities: .init(speed: .unknown, inclination: .unknown))
+            importer.text = "Synthetic fixed workout"; importer.reviewDisclosure(); importer.consentAndSend()
+            generator.complete(.proposal(try parsedProposal()))
+            let exact = try XCTUnwrap(plans.preview?.plan)
+            let old = try XCTUnwrap(plans.historicalReview)
+            XCTAssertTrue(old.isMismatch)
+            if change == 0 { var renamed = record; renamed.name = "Renamed private profile"; renamed.recordRevision += 1; selection = .profile(renamed) }
+            if change == 1 { selection = .none }
+            if change == 2 { selection = .unavailable("Corrupt profile store") }
+            importer.confirmSave(acknowledging: old)
+            XCTAssertTrue(repository.records.isEmpty)
+            XCTAssertEqual(plans.preview?.plan, exact); XCTAssertTrue(importer.isPresented)
+            XCTAssertEqual(importer.text, "Synthetic fixed workout")
+            XCTAssertNotNil(plans.saveError)
+            importer.confirmSave(acknowledging: plans.historicalReview)
+            XCTAssertEqual(repository.records.map(\.plan), [exact])
+            XCTAssertFalse(importer.isPresented)
+        }
+    }
+
     private func parsedProposal(duration: String = "0.5") throws -> WorkoutProposal {
         guard case let .proposal(p) = try WorkoutImportContract.parseModelOutput(modelOutput(duration: duration)) else { throw ImportFailure.structure }; return p
     }

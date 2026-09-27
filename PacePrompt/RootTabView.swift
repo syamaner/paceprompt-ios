@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct RootTabView: View {
     private enum Tab: Hashable {
@@ -43,6 +44,9 @@ struct RootTabView: View {
         self.plans = plans
         self.workoutSession = workoutSession
         self.workoutCapabilitiesOverride = workoutCapabilitiesOverride
+        plans.configureHistoricalSelection { [weak profiles = treadmill.planningProfiles] reload in
+            profiles?.historicalSelection(reload: reload) ?? .none
+        }
     }
 
     var body: some View {
@@ -99,6 +103,9 @@ struct RootTabView: View {
                 coordinator: workoutSession,
                 showHistory: { selectedTab = .history }
             )
+        }
+        .onReceive(treadmill.planningProfiles?.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in
+            Task { @MainActor in plans.refreshHistoricalReview() }
         }
         .onChange(of: capabilities) { _, value in importer.updateCapabilities(value) }
         .onChange(of: scenePhase) { _, phase in

@@ -115,6 +115,7 @@
 		F14100000000000000001020 /* PlanningProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14100000000000000002020; };
 		F1410000000000000000101E /* PlanningProfileUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1410000000000000000201E; };
 		F1410000000000000000101F /* PlanningProfileFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1410000000000000000201F; };
+		F14300000000000000001001 /* HistoricalPlanCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14300000000000000002001; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -254,6 +255,7 @@
 		F14100000000000000002020 /* PlanningProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileTests.swift; sourceTree = "<group>"; };
 		F1410000000000000000201E /* PlanningProfileUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileUITestSupport.swift; sourceTree = "<group>"; };
 		F1410000000000000000201F /* PlanningProfileFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileFlowUITests.swift; sourceTree = "<group>"; };
+		F14300000000000000002001 /* HistoricalPlanCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalPlanCompatibility.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -552,7 +554,7 @@
 			sourceTree = "<group>";
 		};
 		F14100000000000000005001 /* Profiles */ = {isa = PBXGroup; children = (
-				F1410000000000000000201E,F14100000000000000002001,F14100000000000000002002,F14100000000000000002003,F14100000000000000002004,F14100000000000000002005,F14100000000000000002006,F14200000000000000002001); path = Profiles; sourceTree = "<group>"; };
+				F1410000000000000000201E,F14100000000000000002001,F14100000000000000002002,F14100000000000000002003,F14100000000000000002004,F14100000000000000002005,F14100000000000000002006,F14200000000000000002001,F14300000000000000002001); path = Profiles; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -751,6 +753,7 @@
 				F1410000000000000000101E,
 				F14100000000000000001006 /* PlanningProfilesView.swift */,
 				F14200000000000000001001 /* PlanningProfileSelector.swift */,
+				F14300000000000000001001 /* HistoricalPlanCompatibility.swift */,
 				F14100000000000000001005 /* PlanningProfileLifecycle.swift */,
 				F14100000000000000001004 /* PlanningProfileJSON.swift */,
 				F14100000000000000001003 /* PlanningProfileFileRepository.swift */,

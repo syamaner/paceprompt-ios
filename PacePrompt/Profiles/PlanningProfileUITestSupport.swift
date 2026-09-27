@@ -14,7 +14,7 @@ enum PlanningProfileUITestSupport {
         if scenario != "empty" {
             let peer = "00000000-0000-0000-0000-000000000141"
             let snapshot = PlanningProfileSnapshot(
-                speed: .init(minimumHundredthsKph: 50, maximumHundredthsKph: 1800, incrementHundredthsKph: 10),
+                speed: .init(minimumHundredthsKph: 50, maximumHundredthsKph: scenario == "mismatch" ? 450 : 1800, incrementHundredthsKph: 10),
                 inclination: .init(minimumTenthsPercent: 0, maximumTenthsPercent: 150, incrementTenthsPercent: 5),
                 observedAt: PlanningProfileSnapshot.timestamp(Date(timeIntervalSince1970: 1_700_000_000)))
             model.beginDiscovery(peer: peer)

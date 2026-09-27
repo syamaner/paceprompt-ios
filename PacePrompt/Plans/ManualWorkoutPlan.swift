@@ -21,10 +21,10 @@ struct ManualWorkoutDraft: Equatable {
         self.steps = steps
     }
 
-    init(plan: WorkoutPlan) {
+    init(plan: WorkoutPlan, locale: Locale = .autoupdatingCurrent) {
         suggestedName = plan.suggestedName
         activity = plan.activity
-        steps = plan.steps.map(ManualWorkoutStepDraft.init)
+        steps = plan.steps.map { ManualWorkoutStepDraft(step: $0, locale: locale) }
     }
 }
 
@@ -52,13 +52,13 @@ struct ManualWorkoutStepDraft: Identifiable, Equatable {
         self.inclinationPercent = inclinationPercent
     }
 
-    init(step: WorkoutStep) {
+    init(step: WorkoutStep, locale: Locale = .autoupdatingCurrent) {
         self.init(
             kind: step.kind,
             label: step.label,
             durationSeconds: String(step.duration.value),
-            speedKilometresPerHour: PlanValueFormatter.domainText(step.targetSpeed.value),
-            inclinationPercent: PlanValueFormatter.domainText(step.targetInclination.value)
+            speedKilometresPerHour: PlanValueFormatter.localizedText(step.targetSpeed.value, locale: locale),
+            inclinationPercent: PlanValueFormatter.localizedText(step.targetInclination.value, locale: locale)
         )
     }
 }
