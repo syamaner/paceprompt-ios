@@ -72,6 +72,9 @@ final class WorkoutSessionCoordinator: ObservableObject {
   @Published var limits = WorkoutSessionLimitDraft()
   @Published private(set) var notice: String?
   @Published private(set) var revision = 0
+  @Published private(set) var liveFailure: LivePreflightFailure?
+  private enum PendingRead { case preparation, begin }
+  private var pendingRead: PendingRead?
 
   let binding: ProductionWorkoutExecutionBinding
   private let displayWakeController: any WorkoutDisplayWakeControlling
@@ -86,8 +89,10 @@ final class WorkoutSessionCoordinator: ObservableObject {
     displayWakeIsEnabled = false
     displayWakeController.setWorkoutKeepsScreenAwake(false)
     _ = binding.orchestrator.recoverInterruptedHistory()
+    binding.capabilityReadObserver = { [weak self] in self?.completeCapabilityRead() }
     binding.executionStateObserver = { [weak self] _ in
       self?.synchronizeDisplayWakePolicy()
+      if self?.stage == .preflight, self?.pendingRead == nil { self?.completeCapabilityRead() }
     }
   }
 
@@ -96,7 +101,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
   var canLeaveExercise: Bool { exercisePresentation.allowsDismissal }
 
   var preflightPresentation: WorkoutPreflightPresentation? {
-    guard let record = selectedPlan,
+    guard liveFailure == nil, pendingRead == nil, let record = selectedPlan,
       let profile = binding.executionProfile,
       let ceilings = limits.ceilings(),
       case .success(let plan) = WorkoutPlanValidator.validate(
@@ -134,6 +139,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
 
   func cancelBeforeExercise() {
     guard stage == .preparation || stage == .preflight else { return }
+    pendingRead = nil
     if stage == .preflight,
       case .preflight = binding.orchestrator.state.execution,
       binding.cancelPreflight()?.reducerDisposition != .accepted
@@ -145,45 +151,74 @@ final class WorkoutSessionCoordinator: ObservableObject {
   }
 
   func prepareWorkout() {
-    guard stage == .preparation, let record = selectedPlan else { return }
-    guard binding.canExposeArming,
-      let capability = binding.currentCapability,
-      let ceilings = limits.ceilings()
-    else {
-      notice = binding.canExposeArming
-        ? "Enter all three session limits as exact numbers."
-        : "Connect the accepted FR30z and wait for its current profile checks to complete."
-      return
-    }
-    guard case .success(let plan) = WorkoutPlanValidator.validate(
-      record.plan,
-      against: capability.planCapabilities
-    ) else {
-      notice = "This saved plan is not valid for the current treadmill capability snapshot."
-      return
-    }
-    guard let result = binding.arm(plan: plan, ceilings: ceilings, sourcePlanID: record.id),
-      result.reducerDisposition == .accepted
-    else {
-      notice =
-        "The plan or session limits are outside the current treadmill range, grid, or maximum interval change."
-      return
+    guard stage == .preparation, selectedPlan != nil else { return }
+    guard limits.ceilings() != nil else {
+      notice = "Enter all three session limits as exact numbers."; return
     }
     notice = nil
     stage = .preflight
-    refresh()
+    requestCapabilityRead(.preparation)
+  }
+
+  private func requestCapabilityRead(_ action: PendingRead) {
+    pendingRead = action
+    if let plan = selectedPlan?.plan {
+      liveFailure = .init(plan: plan, reason: "Reading current treadmill capabilities. Execution remains blocked.", issues: [], readComplete: false)
+    }
+    binding.readCapabilitiesForPreflight()
+  }
+
+  private func completeCapabilityRead() {
+    guard stage == .preflight, let record = selectedPlan else { return }
+    guard case .reading = binding.preflightRead else {
+      let action = pendingRead
+      pendingRead = nil
+      liveFailure = LivePreflightFailure.review(record.plan, read: binding.preflightRead, epoch: binding.epoch)
+      if liveFailure == nil && !binding.canExposeArming {
+        liveFailure = .init(plan: record.plan, reason: "Current capability or subscriptions do not match the accepted FR30z execution profile. No control authority is granted.", issues: [], readComplete: true)
+      }
+      if liveFailure == nil, action == nil, binding.orchestrator.state.armedWorkout == nil {
+        liveFailure = .init(plan: record.plan, reason: "A new deliberate preparation is required. Choose another treadmill to return to setup.", issues: [], readComplete: true)
+      }
+      if liveFailure == nil, let action {
+        switch action {
+        case .preparation:
+          guard let capability = binding.currentCapability, let ceilings = limits.ceilings(),
+            case .success(let plan) = WorkoutPlanValidator.validate(record.plan, against: capability.planCapabilities),
+            let result = binding.arm(plan: plan, ceilings: ceilings, sourcePlanID: record.id), result.reducerDisposition == .accepted else {
+              liveFailure = .init(plan: record.plan, reason: "The current plan or session limits fail the accepted range, increment or maximum interval-change guards.", issues: [], readComplete: true)
+              revision &+= 1; return
+          }
+        case .begin:
+          guard preflightPresentation?.canBeginWorkout == true,
+            let result = binding.beginWorkout(), result.reducerDisposition == .accepted else {
+              liveFailure = .init(plan: record.plan, reason: "Current execution readiness changed. Begin a new deliberate preparation.", issues: [], readComplete: true)
+              revision &+= 1; return
+          }
+          stage = .exercise
+        }
+      }
+      synchronizeDisplayWakePolicy()
+      revision &+= 1
+      return
+    }
   }
 
   func handlePreflight(_ intent: WorkoutPreflightIntent) {
+    guard stage == .preflight, intent == .beginWorkout,
+      preflightPresentation?.canBeginWorkout == true else { return }
+    requestCapabilityRead(.begin)
+  }
+
+  func chooseAnotherTreadmill() {
     guard stage == .preflight else { return }
-    guard intent == .beginWorkout,
-      preflightPresentation?.canBeginWorkout == true,
-      let result = binding.beginWorkout(),
-      result.reducerDisposition == .accepted
-    else { return }
-    notice = nil
-    stage = .exercise
-    refresh()
+    let record = selectedPlan
+    let previousLimits = limits
+    cancelBeforeExercise()
+    guard stage == .inactive, let record else { return }
+    begin(record)
+    limits = previousLimits
+    notice = "Choose and connect a treadmill explicitly, then Continue for a fresh read."
   }
 
   func handleExercise(_ intent: WorkoutExerciseIntent) {
@@ -227,6 +262,8 @@ final class WorkoutSessionCoordinator: ObservableObject {
 
   private func reset() {
     stage = .inactive
+    pendingRead = nil
+    liveFailure = nil
     selectedPlan = nil
     limits = .init()
     notice = nil
@@ -249,6 +286,8 @@ struct WorkoutSessionHost: View {
   @ObservedObject var treadmill: TreadmillSetupViewModel
   @ObservedObject var coordinator: WorkoutSessionCoordinator
   let showHistory: () -> Void
+  let editPlan: (SavedPlanRecord) -> Void
+  @State private var choosingTreadmill = false
 
   private let refreshTimer = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
 
@@ -260,7 +299,16 @@ struct WorkoutSessionHost: View {
       case .preparation:
         preparation
       case .preflight:
-        if let presentation = coordinator.preflightPresentation {
+        if let failure = coordinator.liveFailure {
+          LivePreflightFailureView(failure: failure, treadmillName: treadmill.connectionState.title, cancel: coordinator.cancelBeforeExercise, edit: {
+            let record = coordinator.selectedPlan
+            coordinator.cancelBeforeExercise()
+            if coordinator.stage == .inactive, let record { editPlan(record) }
+          }, chooseTreadmill: {
+            coordinator.chooseAnotherTreadmill()
+            if coordinator.stage == .preparation { choosingTreadmill = true }
+          })
+        } else if let presentation = coordinator.preflightPresentation {
           WorkoutPreflightView(presentation: presentation, send: coordinator.handlePreflight)
             .overlay(alignment: .topLeading) { preflightCancelButton }
         } else {
@@ -276,6 +324,11 @@ struct WorkoutSessionHost: View {
           terminalAction
         }
       }
+    }
+    .sheet(isPresented: $choosingTreadmill) {
+      NavigationStack { TreadmillSetupView(treadmill: treadmill).toolbar {
+        ToolbarItem(placement: .confirmationAction) { Button("Done") { choosingTreadmill = false } }
+      } }
     }
     .onReceive(refreshTimer) { _ in coordinator.refresh() }
   }

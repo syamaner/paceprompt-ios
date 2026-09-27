@@ -11,6 +11,10 @@ enum WorkoutPreflightUITestScenario: String {
     case readyToBegin = "ready-to-begin"
     case waitingForPhysicalStart = "waiting-for-physical-start"
     case failed
+    case liveSpeed = "live-speed"
+    case liveIncline = "live-incline"
+    case liveCombined = "live-combined"
+    case liveUnknown = "live-unknown"
 }
 
 struct WorkoutPreflightUITestConfiguration {
@@ -36,20 +40,36 @@ struct WorkoutPreflightUITestHost: View {
     @State private var context: WorkoutPreflightContext
     @State private var now: MonotonicInstant
     private let reduceMotion: Bool
+    private let scenario: WorkoutPreflightUITestScenario
+    @State private var recovery: String?
 
     init(configuration: WorkoutPreflightUITestConfiguration) {
         let fixture = WorkoutPreflightFixtures.fixture(for: configuration.scenario)
         _context = State(initialValue: fixture.context)
         _now = State(initialValue: fixture.now)
         reduceMotion = configuration.reduceMotion
+        scenario = configuration.scenario
     }
 
     var body: some View {
-        WorkoutPreflightView(
-            presentation: .init(context: context, at: now, locale: Locale(identifier: "en_GB")),
-            send: handle,
-            reduceMotionOverride: reduceMotion
-        )
+        if let recovery { Text(recovery).accessibilityIdentifier("preflight.test-recovery") }
+        else if let failure = liveFailure {
+            LivePreflightFailureView(failure: failure, treadmillName: "Synthetic current treadmill", cancel: { recovery = "Cancelled" }, edit: { recovery = "Exact plan edit" }, chooseTreadmill: { recovery = "Explicit treadmill setup" })
+                .dynamicTypeSize(.accessibility3)
+        } else {
+            WorkoutPreflightView(presentation: .init(context: context, at: now, locale: Locale(identifier: "en_GB")), send: handle, reduceMotionOverride: reduceMotion)
+        }
+    }
+    private var liveFailure: LivePreflightFailure? {
+        guard scenario.rawValue.hasPrefix("live-") else { return nil }
+        if scenario == .liveUnknown { return LivePreflightFailure.review(context.validatedPlan.plan, read: .unavailable("Current capability is unknown or unavailable"), epoch: .init(rawValue: 58)) }
+        let capability = context.executionState.connection.readyCapability!.planCapabilities
+        let speedMismatch = scenario != .liveIncline
+        let inclineMismatch = scenario != .liveSpeed
+        let limited = WorkoutPlanCapabilities(
+            speed: speedMismatch ? .supported(.init(minimum: .init(value: Decimal(5)/10, unit: .kilometresPerHour), maximum: .init(value: 4, unit: .kilometresPerHour), increment: .init(value: Decimal(1)/10, unit: .kilometresPerHour))) : capability.speed,
+            inclination: inclineMismatch ? .supported(.init(minimum: .init(value: 0, unit: .percent), maximum: .init(value: 1, unit: .percent), increment: .init(value: 1, unit: .percent))) : capability.inclination)
+        return LivePreflightFailure.review(context.validatedPlan.plan, read: .complete(.init(rawValue: 58), limited), epoch: .init(rawValue: 58))
     }
 
     private func handle(_ intent: WorkoutPreflightIntent) {
@@ -236,7 +256,7 @@ private enum WorkoutPreflightFixtures {
                 state: state,
                 now: 4.2
             )
-        case .readyToBegin:
+        case .readyToBegin, .liveSpeed, .liveIncline, .liveCombined, .liveUnknown:
             return make(
                 plan: plan,
                 ceilings: ceilings,

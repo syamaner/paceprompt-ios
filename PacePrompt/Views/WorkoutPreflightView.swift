@@ -365,3 +365,65 @@ private extension View {
             }
     }
 }
+
+struct LivePreflightFailureView: View {
+    let failure: LivePreflightFailure
+    let treadmillName: String
+    let cancel: () -> Void
+    let edit: () -> Void
+    let chooseTreadmill: () -> Void
+    @AccessibilityFocusState private var verdictFocused: Bool
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
+                    Text("Preflight").font(.largeTitle.bold())
+                    Spacer()
+                    Button("Cancel", action: cancel).frame(minHeight: 44).accessibilityIdentifier("workout.preflight.cancel")
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("This workout cannot begin", systemImage: "exclamationmark.octagon.fill").font(.headline).foregroundStyle(.red)
+                    Text(failure.reason)
+                    Text("Your saved plan has not been altered.")
+                }.preflightCard().overlay { RoundedRectangle(cornerRadius: 16).stroke(.red) }
+                    .accessibilityElement(children: .combine).accessibilityIdentifier("preflight.live-failure")
+                    .accessibilityFocused($verdictFocused)
+                if !failure.issues.isEmpty {
+                    Text("INCOMPATIBLE TARGETS").font(.caption.bold())
+                    ForEach(Array(failure.issues.enumerated()), id: \.offset) { _, issue in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(stepLabel(issue), systemImage: "xmark.circle").foregroundStyle(.red)
+                            Text("Current treadmill requirement").font(.caption)
+                            Text(issue.message)
+                        }.preflightCard().accessibilityElement(children: .combine)
+                            .accessibilityIdentifier("preflight.live-issue.\(issue.path)")
+                            .accessibilityAddTraits(.isSelected)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("LIVE COMPATIBILITY CHECK").font(.caption.bold())
+                    Text("Current treadmill: \(treadmillName)")
+                    Text("Capability read: \(failure.readComplete ? "Complete" : "Unavailable or in progress")")
+                    Label("Execution blocked", systemImage: "lock.shield.fill").foregroundStyle(.red)
+                }.preflightCard().accessibilityElement(children: .combine)
+                Text("Physical Start and Stop and the safety key remain authoritative. PacePrompt applies only validated speed and inclination targets after its live execution checks pass.")
+                    .font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                Button("Edit plan", action: edit).buttonStyle(.borderedProminent).frame(minHeight: 44).accessibilityIdentifier("preflight.edit-plan")
+                Button("Choose another treadmill", action: chooseTreadmill).buttonStyle(.bordered).frame(minHeight: 44).accessibilityIdentifier("preflight.choose-treadmill")
+            }.fixedSize(horizontal: false, vertical: true).padding(20)
+        }.background(WorkoutPreflightPalette.background.ignoresSafeArea()).preferredColorScheme(.dark)
+            .accessibilityIdentifier("preflight.live-failure.screen")
+            .onAppear { verdictFocused = true }
+            .onChange(of: failure) { _, _ in
+                verdictFocused = false
+                Task { @MainActor in verdictFocused = true }
+            }
+    }
+    private func stepLabel(_ issue: WorkoutPlanValidationIssue) -> String {
+        for (index, step) in failure.plan.steps.enumerated() where issue.path.hasPrefix("steps[\(index)]") {
+            return "Step \(index + 1) · \(step.kind.displayName)"
+        }
+        return "Current capability"
+    }
+
+}

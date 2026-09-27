@@ -16,6 +16,7 @@ struct RootTabView: View {
     @StateObject private var importer: WorkoutImportViewModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Tab = .home
+    @State private var pendingPlanEdit: SavedPlanRecord?
     let workoutCapabilitiesOverride: WorkoutPlanCapabilities?
 
     init(
@@ -96,12 +97,16 @@ struct RootTabView: View {
             isPresented: Binding(
                 get: { workoutSession.isPresented },
                 set: { if !$0 { workoutSession.cancelBeforeExercise() } }
-            )
+            ),
+            onDismiss: {
+                if let record = pendingPlanEdit { plans.beginEdit(record); pendingPlanEdit = nil }
+            }
         ) {
             WorkoutSessionHost(
                 treadmill: treadmill,
                 coordinator: workoutSession,
-                showHistory: { selectedTab = .history }
+                showHistory: { selectedTab = .history },
+                editPlan: { record in pendingPlanEdit = record; selectedTab = .plans }
             )
         }
         .onReceive(treadmill.planningProfiles?.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in

@@ -362,3 +362,28 @@ struct WorkoutPreflightPresentation: Equatable {
         return "\(text) \(unit)"
     }
 }
+
+// A complete, explicit read from the current connection; never historical profile evidence.
+enum LiveCapabilityRead: Equatable {
+    case reading
+    case unavailable(String)
+    case complete(ConnectionEpoch, WorkoutPlanCapabilities)
+}
+struct LivePreflightFailure: Equatable {
+    let plan: WorkoutPlan
+    let reason: String
+    let issues: [WorkoutPlanValidationIssue]
+    let readComplete: Bool
+    static func review(_ plan: WorkoutPlan, read: LiveCapabilityRead, epoch: ConnectionEpoch?) -> Self? {
+        switch read {
+        case .reading: return .init(plan: plan, reason: "Reading current treadmill capabilities. Execution remains blocked.", issues: [], readComplete: false)
+        case .unavailable(let reason): return .init(plan: plan, reason: reason, issues: [], readComplete: false)
+        case .complete(let observedEpoch, let capabilities):
+            guard observedEpoch == epoch else { return .init(plan: plan, reason: "The capability read belongs to a different connection.", issues: [], readComplete: false) }
+            switch WorkoutPlanValidator.validate(plan, against: capabilities) {
+            case .success: return nil
+            case .failure(let failure): return .init(plan: plan, reason: "The current treadmill cannot satisfy this exact plan. Your saved plan has not been altered.", issues: failure.issues, readComplete: true)
+            }
+        }
+    }
+}

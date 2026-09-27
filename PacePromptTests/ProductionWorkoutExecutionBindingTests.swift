@@ -414,6 +414,84 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
+  func testFreshReadCannotUseInitialOrPartialEvidenceAndTimeoutFailsClosed() {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    h.client.onRead = {}
+    h.binding.readCapabilitiesForPreflight()
+    XCTAssertEqual(h.binding.preflightRead, .reading)
+    h.binding.receive(.value(uuid: FTMSUUID.fitnessMachineFeature, data: Data([0x0C,0x16,0,0,3,0,0,0]), source: .initialRead))
+    XCTAssertEqual(h.binding.preflightRead, .reading)
+    h.binding.receive(.value(uuid: FTMSUUID.supportedSpeedRange, data: Data([0x32,0,0xD0,7,0x0A,0]), source: .preflightRead))
+    XCTAssertEqual(h.binding.preflightRead, .reading)
+    h.clock.advance(by: 10); h.binding.tick()
+    guard case .unavailable = h.binding.preflightRead else { return XCTFail("Timeout must block") }
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testReadCompletionAtDeadlineBlocksWithoutWaitingForTimer() {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let complete = h.client.onRead; h.client.onRead = {}
+    h.binding.readCapabilitiesForPreflight()
+    h.clock.advance(by: 10)
+    complete?()
+    guard case .unavailable = h.binding.preflightRead else { return XCTFail("Expired completion cannot pass") }
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testFreshReadErrorInvalidatesCachedExecutionCapability() {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    h.client.onRead = {}
+    h.binding.readCapabilitiesForPreflight()
+    h.binding.receive(.valueError(uuid: FTMSUUID.supportedSpeedRange, source: .preflightRead, message: "Synthetic failure"))
+    XCTAssertNil(h.binding.currentCapability)
+    guard case .unavailable = h.binding.preflightRead else { return XCTFail("Read failure must block") }
+    XCTAssertFalse(h.binding.canExposeArming)
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testBeginReReadsAndChangedRangeShowsExactFailureWithoutAttemptOrCommands() throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController())
+    let record = SavedPlanRecord(id: UUID(), createdAt: Date(timeIntervalSince1970: 0), modifiedAt: Date(timeIntervalSince1970: 0), plan: h.plan.plan)
+    c.begin(record); c.limits = .init(maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3")
+    c.prepareWorkout()
+    XCTAssertTrue(try XCTUnwrap(c.preflightPresentation).canBeginWorkout)
+    h.client.onRead = { [weak binding = h.binding] in
+      for (uuid, data) in [(FTMSUUID.fitnessMachineFeature, Data([0x0C,0x16,0,0,3,0,0,0])), (FTMSUUID.supportedSpeedRange, Data([0x32,0,0x90,1,0x0A,0])), (FTMSUUID.supportedInclinationRange, Data([0,0,0x96,0,0x0A,0]))] {
+        binding?.receive(.value(uuid: uuid, data: data, source: .preflightRead))
+      }
+    }
+    c.handlePreflight(.beginWorkout)
+    XCTAssertEqual(c.stage, .preflight)
+    XCTAssertNil(c.preflightPresentation)
+    XCTAssertFalse(try XCTUnwrap(c.liveFailure).issues.isEmpty)
+    XCTAssertEqual(c.selectedPlan?.plan, record.plan)
+    XCTAssertNil(h.binding.orchestrator.frozenAttempt)
+    XCTAssertTrue(h.link.writes.isEmpty)
+    c.cancelBeforeExercise(); XCTAssertEqual(c.stage, .inactive)
+  }
+
+  func testAbandonedLateReadCannotArmAndExplicitNewConnectionRecovers() throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let freshRead = h.client.onRead
+    h.client.onRead = {}
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController())
+    let record = SavedPlanRecord(id: UUID(), createdAt: Date(timeIntervalSince1970: 0), modifiedAt: Date(timeIntervalSince1970: 0), plan: h.plan.plan)
+    c.begin(record); c.limits = .init(maximumSpeed: "10", maximumInclination: "6", maximumStepSpeedChange: "3")
+    c.prepareWorkout(); XCTAssertNil(h.binding.orchestrator.state.armedWorkout)
+    h.clock.advance(by: 10); c.refresh()
+    XCTAssertTrue(try XCTUnwrap(c.liveFailure).reason.contains("disconnect and reconnect"))
+    freshRead?()
+    XCTAssertNil(h.binding.orchestrator.state.armedWorkout)
+    XCTAssertNil(c.preflightPresentation)
+    c.chooseAnotherTreadmill(); XCTAssertEqual(c.stage, .preparation)
+    XCTAssertEqual(c.selectedPlan?.plan, record.plan)
+    h.binding.receive(.connection(.disconnected(message: "Explicit synthetic disconnect")))
+    h.makeReadyWithFreshStationaryTelemetry(); h.client.onRead = freshRead
+    c.prepareWorkout(); XCTAssertTrue(try XCTUnwrap(c.preflightPresentation).canBeginWorkout)
+    XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
   func testSessionLimitDraftParsesExactLocaleDecimalWithoutInventingDefaults() {
     XCTAssertNil(WorkoutSessionLimitDraft().ceilings())
     let parsed = WorkoutSessionLimitDraft(
@@ -668,6 +746,11 @@ extension ProductionWorkoutExecutionBindingTests {
         attemptIDs: BindingAttemptIDs(),
         automaticTicks: false
       )
+      client.onRead = { [weak binding] in
+        for (uuid, data) in [(FTMSUUID.fitnessMachineFeature, Data([0x0C,0x16,0,0,3,0,0,0])), (FTMSUUID.supportedSpeedRange, Data([0x32,0,0xD0,7,0x0A,0])), (FTMSUUID.supportedInclinationRange, Data([0,0,0x96,0,0x0A,0]))] {
+          binding?.receive(.value(uuid: uuid, data: data, source: .preflightRead))
+        }
+      }
       binding.setApplicationActivity(.active)
     }
 
@@ -788,6 +871,8 @@ private final class BindingClient: FTMSClientProtocol {
   var connectedPeripheralIdentifier: UUID?
   var connectedPeripheralName: String?
   var controlPointLink: (any FTMSControlPointLink)?
+  var onRead: (() -> Void)?
+  func refreshCapabilitiesForPreflight() -> Bool { onRead?(); return onRead != nil }
   func startScan() {}
   func stopScan() {}
   func connect(to identifier: UUID) {}

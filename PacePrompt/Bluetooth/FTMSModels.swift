@@ -457,11 +457,13 @@ enum FTMSDiagnosticKind: Equatable {
 
 enum FTMSValueSource: Equatable {
     case initialRead
+    case preflightRead
     case notification
 
     var title: String {
         switch self {
         case .initialRead: "Initial read"
+        case .preflightRead: "Preflight read"
         case .notification: "Notification"
         }
     }
