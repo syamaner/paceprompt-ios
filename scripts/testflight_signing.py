@@ -26,10 +26,13 @@ def validate(profile: dict, identities: str, team: str,
         raise ValueError("Distribution profile team differs")
     if profile.get("ApplicationIdentifierPrefix") != [team]:
         raise ValueError("Distribution profile prefix differs")
-    # Apple's profile family can be iOS for a Watch companion. The exact App ID,
-    # certificate and team bind the role; this is not a claim about a real profile.
+    # Apple-issued phone and Watch App Store profiles inspected on 2026-09-28
+    # share this platform family. It does not broaden the executable platforms:
+    # exact App ID/team/certificate bind the role; Mach-O policy checks device code.
     platforms = profile.get("Platform")
-    allowed = [["iOS"]] if role == "phone" else [["iOS"], ["watchOS"], ["iOS", "watchOS"]]
+    allowed = [["iOS"], ["iOS", "xrOS", "visionOS"]]
+    if role == "watch":
+        allowed += [["watchOS"], ["iOS", "watchOS"]]
     if platforms not in allowed:
         raise ValueError("Distribution profile platform family differs")
     if "ProvisionedDevices" in profile or "ProvisionsAllDevices" in profile:

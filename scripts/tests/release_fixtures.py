@@ -51,7 +51,7 @@ def entitlements(role):
 
 
 def profile(role):
-    return {'TeamIdentifier': [TEAM], 'ApplicationIdentifierPrefix': [TEAM], 'Platform': ['iOS'],
+    return {'TeamIdentifier': [TEAM], 'ApplicationIdentifierPrefix': [TEAM], 'Platform': ['iOS', 'xrOS', 'visionOS'],
             'UUID': ('12345678' if role == 'phone' else '87654321') + '-1234-1234-1234-123456789abc',
             'Name': 'Synthetic ' + role, 'ExpirationDate': dt.datetime(2099, 1, 1),
             'DeveloperCertificates': [CERTIFICATE], 'Entitlements': entitlements(role)}

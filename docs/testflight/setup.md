@@ -183,11 +183,16 @@ unset PROFILE_INSPECTION_DIR
 ```
 
 The repository guard performs these checks for both roles during release.
-The Watch profile platform-family policy accepts `iOS`, `watchOS`, or the ordered
-pair `iOS, watchOS`; the phone accepts only `iOS`. The exact App ID, team and
-certificate bind the profile to its role. This compatibility policy has synthetic
-test coverage; the actual generated Watch profile and hosted export remain to be
-verified during separately authorised setup/release. Unexpected platform output
+The phone and Watch profile platform-family policy accepts `iOS` or the exact
+ordered family `iOS, xrOS, visionOS`; the Watch also accepts `watchOS` and the
+ordered pair `iOS, watchOS`. The shared three-entry family was observed in both
+Apple-issued App Store profiles during authorised setup on 28 September 2026.
+Exact App ID, team and certificate still bind each profile to its role. This
+profile declaration does not permit visionOS executables: the separate Mach-O
+policy still requires iPhone IOS and Watch WATCHOS device slices. Synthetic tests
+cover accepted families, malformed/unknown families, role swaps and visionOS
+binary rejection. Actual profile inspection does not prove possession of the CI
+private key, signed export or Apple upload acceptance. Unexpected platform output
 requires a reviewed policy change, not an ad hoc bypass.
 
 ## 5. Confirm the internal group and discover IDs
