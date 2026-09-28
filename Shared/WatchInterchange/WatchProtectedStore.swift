@@ -43,17 +43,50 @@ struct WatchProtectedFile {
     private let directory: () throws -> URL
     init(directory: @escaping () throws -> URL = WatchProtectedFile.directory) { self.directory = directory }
     func load() throws -> WatchWorkoutJournal? {
-        let file = WatchProtectedFile(url: try directory().appendingPathComponent("watch-journal-v1.json"))
-        guard let data = try file.read() else { return nil }
+        let root = try directory()
+        let current = WatchProtectedFile(url: root.appendingPathComponent("watch-journal-v2.json"))
+        let legacy = WatchProtectedFile(url: root.appendingPathComponent("watch-journal-v1.json"))
+        guard let data = try current.read() ?? legacy.read() else { return nil }
+        return try decode(data)
+    }
+    private func decode(_ data: Data) throws -> WatchWorkoutJournal {
         guard data.count <= 65_536 else { throw WatchStoreError.ambiguous }
         let value = try JSONDecoder().decode(WatchWorkoutJournal.self, from: data)
-        guard value.formatVersion == 1, ["indoorWalking", "indoorRunning"].contains(value.activity),
+        guard [1, 2].contains(value.formatVersion), ["indoorWalking", "indoorRunning"].contains(value.activity),
               value.manifest.map({ (try? WatchWire.encode($0)) != nil && $0.summaryID == value.summaryID }) ?? true,
-              value.summaryID.map({ UUID(uuidString: $0)?.uuidString.lowercased() == $0 }) ?? true else { throw WatchStoreError.ambiguous }
+              [value.summaryID, value.attemptID].allSatisfy({ $0.map { UUID(uuidString: $0)?.uuidString.lowercased() == $0 } ?? true }),
+              value.formatVersion == 2 || value.phase != .retired else { throw WatchStoreError.ambiguous }
         return value
     }
     func save(_ value: WatchWorkoutJournal) throws {
-        try WatchProtectedFile(url: try directory().appendingPathComponent("watch-journal-v1.json")).write(JSONEncoder().encode(value))
+        let data = try JSONEncoder().encode(value); _ = try decode(data)
+        try WatchProtectedFile(url: try directory().appendingPathComponent("watch-journal-v2.json")).write(data)
+    }
+    func containsRetiredIdentity(_ summaryID: String) throws -> Bool {
+        let root = try directory().appendingPathComponent("retired-attempts-v1", isDirectory: true)
+        guard FileManager.default.fileExists(atPath: root.path) else { return false }
+        let names = try FileManager.default.contentsOfDirectory(atPath: root.path)
+        guard names.count <= 64, names.allSatisfy({ $0.hasSuffix(".json") }) else { throw WatchStoreError.ambiguous }
+        for name in names {
+            guard let data = try WatchProtectedFile(url: root.appendingPathComponent(name)).read() else { throw WatchStoreError.ambiguous }
+            if try decode(data).summaryID == summaryID { return true }
+        }
+        return false
+    }
+    func archive(_ value: WatchWorkoutJournal) throws {
+        let data = try JSONEncoder().encode(value); _ = try decode(data)
+        // Never overwrite or automatically evict an uncertain outcome. Legacy v1
+        // can contain one unbound record without any identity.
+        let key = value.attemptID ?? value.summaryID ?? "legacy-unbound"
+        let root = try directory().appendingPathComponent("retired-attempts-v1", isDirectory: true)
+        let file = WatchProtectedFile(url: root.appendingPathComponent(key + ".json"))
+        if let old = try file.read() {
+            guard try decode(old) == value else { throw WatchStoreError.ambiguous }; return
+        }
+        if FileManager.default.fileExists(atPath: root.path) {
+            guard try FileManager.default.contentsOfDirectory(atPath: root.path).count < 64 else { throw WatchStoreError.ambiguous }
+        }
+        try file.write(data)
     }
 }
 

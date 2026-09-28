@@ -51,12 +51,15 @@ struct PacePromptApp: App {
     }
     _treadmill = StateObject(wrappedValue: resolvedTreadmill)
     _plans = StateObject(wrappedValue: resolvedPlans)
+    // Install HealthKit mirroring ingress once during app construction, including
+    // a background launch. A callback alone never starts treadmill execution.
+    let watchAdapter = PhoneWatchSessionAdapter()
     _workoutSession = StateObject(
       wrappedValue: WorkoutSessionCoordinator(
         binding: binding,
         displayWakeController: ApplicationWorkoutDisplayWakeController(),
         watchFactory: {
-          let adapter = PhoneWatchSessionAdapter()
+          let adapter = watchAdapter
           let lifecycle = PhoneWatchLifecycle(port: adapter, reserve: { id in
             try WatchOwnershipStore().reserve(id)
             guard binding.orchestrator.reserveWatchAttempt(id: id) else { throw WatchStoreError.definite }

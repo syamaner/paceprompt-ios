@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 29 Sep 2026 | `PP-20260928-10` | Issue #198 durable Watch controls and app lifecycle recovery | `gpt-6-astra` | 10,939,119 (10,766,080; 0) | 44,514 | 10,983,633 | Unmeasured | Exact 99-request root implementation phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-09` | Issue #195 successful internal build 16 release receipt | `gpt-6-astra` | 3,979,321 (3,954,176; 0) | 10,892 | 3,990,213 | Unmeasured | Exact 37-request root delivery/receipt phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-08` | Issue #195 internal TestFlight build 16 candidate | `gpt-6-astra` | 7,151,357 (7,070,848; 0) | 11,913 | 7,163,270 | Unmeasured | Exact 86-request root candidate/review/validation phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-07` | Issue #193 console overrides and moving step time | `gpt-6-astra` | 15,654,883 (15,386,752; 0) | 46,337 | 15,701,220 | Unmeasured | Exact 103-request root implementation/review/validation phase; independent reviewer and final insertion/delivery excluded |
@@ -1282,3 +1283,54 @@ requests; largest input 116,794. Phase reasoning output 636 is a subset of outpu
 Counter resets inside the boundary and historical resets: 0; exact replay events
 and repeated cumulative snapshots: 0. Threshold crossings remain unmeasured.
 This final numeric insertion and subsequent receipt delivery are excluded.
+
+## PP-20260928-10 Watch durability and measurement boundary
+
+Issue #198 repairs startup/recovery blocking and adds explicit Watch recording
+controls after the operator reported a pre-start connection timeout and stuck
+Watch screen on build 16. Source inspection established permanent ambiguous-state
+blocking and binding-only phone mirror acceptance; it did not establish the full
+physical failure cause. End recording & save uses the existing single-save or
+zero-interval discard path. Stop recording verifies termination, preserves uncertain
+results and fences late callbacks. Prepare next workout requires verified stop,
+immutable archival and a durable retired marker before a new reserved identity.
+No uncertain finish is retried or replaced. Journal v2 reads legacy v1; bounded
+archives preserve file protection and backup exclusion without automatic eviction.
+
+The phone installs mirroring ingress once at app construction. Same-session OS
+redelivery validates activity/start/summary without repeating execution start.
+Cumulative manifests retain their revision across retries until acknowledged.
+Foreground refreshes deadlines and state on both devices; stale completions check
+the deadline before they can mutate state, even if the timer has not run. Contract
+revision 1.2 and the runbooks describe this behaviour and the unperformed paired-
+device procedure. Wire/Health metadata v1, single Watch writer, phone suppression,
+zero-prefix discard, distance source and treadmill control remain unchanged.
+No release, hardware operation, new permissions or dependent reader work occurred.
+
+Measurement scope: root Desktop session
+`01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`, baseline
+`/private/tmp/pp-watch-durable-baseline.json`, event 1231 at
+`2026-09-28T22:10:58.083Z`. Baseline counters: input 157,803,545; cached input
+155,369,600; cache-write input 0; output 406,625 (reasoning subset 105,948);
+total 158,210,170. The phase includes implementation, tests, working-diff review
+coordination, complete validation and documentation. Independent reviewer usage,
+final numeric insertion, commit and subsequent delivery are excluded.
+API-equivalent estimate and long-context threshold remain Unmeasured because
+verified official rates/threshold for this exact model are unavailable. No other
+model's rates are substituted; this is not a ChatGPT subscription bill.
+
+Validation: focused Watch tests and all 475 production unit tests passed. The
+complete gate passed on Xcode 27.0 (27A266a), iOS 26.5 simulator: 475 unit,
+72 UI and 16 evaluation tests; unsigned Release build including Watch; static
+analysis and coverage; 57 repository script, 41 scorer, 13 summary, 247 offline
+HostEval tests (36 explicit private-evidence skips), and 24 accounting tests.
+Evidence: `/private/tmp/pp198-complete-gate` and its sibling `.log`. All 418
+tracked non-Markdown inputs, including skill symlinks, are frozen in
+`/private/tmp/pp198-frozen-inputs.json`; later documentation/accounting changes
+do not alter these inputs. Twenty-one local documentation links and
+`git diff --check` passed. Independent working-diff review approved the freeze;
+exact-head review and required CI are recorded on the PR. Main protection, the
+primary checkout's existing scheme edits and local signing settings are preserved.
+Device/background/HealthKit/FR30z acceptance remains unperformed for this repair.
+
+Final snapshot: event 1331 at `2026-09-28T23:05:47.078Z`; input 168,742,664, cached input 166,135,680, cache-write input 0, output 451,139, total 169,193,803. Exact report `/private/tmp/pp198-final-accounting.json`: 99 measured requests; largest input 225,659. Phase reasoning output 12,413 is a subset of output, not added again. Historical and in-boundary counter resets: 0; validated excluded exact replays: 0; repeated cumulative snapshots: 1. Threshold crossings remain unmeasured without a verified exact-model threshold. This final numeric insertion and subsequent delivery are excluded. The stable change ID retains the implementation start date; the commit ledger date is 29 September.

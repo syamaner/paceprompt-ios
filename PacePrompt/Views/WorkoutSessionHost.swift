@@ -225,6 +225,11 @@ final class WorkoutSessionCoordinator: ObservableObject {
     refresh()
   }
 
+  func applicationBecameActive() {
+    watch?.foreground()
+    projectWatchExecution()
+  }
+
   func refresh() {
     binding.tick()
     watch?.tick()
@@ -234,7 +239,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
   }
 
   private func projectWatchExecution() {
-    guard useAppleWatch, let watch, watch.phase == .bound else { return }
+    guard useAppleWatch, let watch, [.bound, .reconnecting].contains(watch.phase) else { return }
     let orchestrator = binding.orchestrator
     let reading = SystemWorkoutOrchestrationClock().read()
     if case let .fresh(sample) = orchestrator.state.telemetry {

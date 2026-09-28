@@ -1,14 +1,14 @@
 # Watch companion operation and evidence (#115)
 
-Authority: [contract v1, revision 1.1](../design/watch-primary-health-interchange-contract.md), [architecture gate](../design/watch-companion-implementation-gate.md), and the operator's zero-interval discard decision. Minimum versions are iOS 17 and watchOS 10. This document describes the implemented path; software checks do not establish signed-device acceptance.
+Authority: [contract v1, revision 1.2](../design/watch-primary-health-interchange-contract.md), [architecture gate](../design/watch-companion-implementation-gate.md), and the operator's zero-interval discard decision. Minimum versions are iOS 17 and watchOS 10. This document describes the implemented path; software checks do not establish signed-device acceptance.
 
 ## Start and ownership
 
 On iPhone, select a saved plan, prepare the treadmill and opt into **Record workout on Apple Watch**. Begin reserves a new identity in protected local storage before asking HealthKit to launch the Watch. Execution waits for a matching Watch binding response and then rechecks the existing treadmill readiness. The physical console and safety key remain authoritative; Watch recording never controls them.
 
-The Watch owns one primary session and its associated builder. The phone owns execution and sends only closed intervals and accepted cumulative distance. HealthKit's mirrored-session channel is the sole transport. There is no automatic remirroring or treadmill reconnection. Once reserved, that attempt can never use iPhone Health saving, even after timeout, disconnection, relaunch or an uncertain Watch result. Start a new deliberate attempt after ending an unavailable attempt; do not retry its identity.
+The Watch owns one primary session and its associated builder. The phone owns execution and sends only closed intervals and accepted cumulative distance. HealthKit's mirrored-session channel is the sole transport. There is no app-driven automatic remirroring or treadmill reconnection. HealthKit OS redelivery may restore the same identity after activity/start/bind validation; it never restarts execution. Once reserved, that attempt can never use iPhone Health saving, even after timeout, disconnection, relaunch or an uncertain Watch result. Start a new deliberate attempt after ending an unavailable attempt; do not retry its identity.
 
-The Watch displays recording status, elapsed recording time, available heart rate and estimated active energy with HealthKit provenance. Missing quantities remain unavailable. **End recording** ends Health recording only: it does not stop the treadmill. On iPhone, **Watch-owned; save result unavailable on iPhone** is intentional. Final acknowledgement confirms interchange, not a saved Health workout. The Watch retains the actual result locally.
+The Watch displays recording status, elapsed recording time, available heart rate and estimated active energy with HealthKit provenance. Missing quantities remain unavailable. **End recording & save** ends Health recording only: it does not stop the treadmill. On iPhone, **Watch-owned; save result unavailable on iPhone** is intentional. Final acknowledgement confirms interchange, not a saved Health workout. The Watch retains the actual result locally.
 
 ## End, discard and recovery
 
@@ -16,7 +16,7 @@ The phone sends a cumulative final manifest only after the Watch establishes its
 
 If there are no usable intervals, the Watch ends and discards the builder without calling finish. A definite discard displays **Workout not saved: no execution intervals were received or usable.** This is not a promise to delete sensor samples HealthKit may already have stored. Any uncertain mutation, finish result or receipt-persistence failure remains uncertain and never triggers a replacement workout or iPhone fallback.
 
-Active-workout recovery attaches only to the existing primary session and builder, validates identity/start/activity/source provenance, and restores delegates. It does not recreate an ended or ambiguous builder. End a recovered recording on Watch. A quarantined journal is deliberately not cleared automatically; there is no user recovery/reset UI in this slice. Preserve the state for a separately authorised investigation rather than deleting ownership markers or assuming no Health workout exists.
+Active-workout recovery attaches only to the existing primary session and builder, validates identity/start/activity/source provenance, and restores delegates. It does not recreate an ended or ambiguous builder. End a recovered recording on Watch. An uncertain journal is not cleared automatically. Use **Stop recording**, then **Prepare next workout** only after the app verifies that the existing HealthKit primary has ended or none is active. The old outcome is archived and remains uncertain; no Health workout is deleted or replaced, and its iPhone suppression stays permanent. A storage/probe failure keeps recovery blocked and offers another explicit stop/check. Do not reinstall or delete ownership files as a recovery step.
 
 ## Privacy and retention
 
@@ -24,7 +24,7 @@ The iPhone does not request Health reads. Its existing manual Health save remain
 
 Both apps remain local-first. No account, analytics, telemetry, cloud transport, second connectivity channel or raw sensor log is added. HealthKit itself may sync Health data according to the user's Apple settings. Interval metadata includes prescribed/effective/observed treadmill values and provenance, not device identity, raw FTMS packets, command evidence, plan prose or raw heart-rate/energy samples. Other authorised Health readers can access saved workout metadata; review their permissions before export.
 
-The Watch keeps one bounded, versioned journal under Application Support, containing ownership, interval manifests and save receipt. A subsequent legitimate attempt replaces a terminal saved/discarded journal; uncertain state blocks replacement. The phone retains one immutable reservation per Watch attempt, plus its version-3 local History record. Reservations have no deletion API and survive failed starts; do not remove them as troubleshooting. Both stores use atomic replacement, complete file protection and backup exclusion. Leftover staging files or unavailable protected data fail closed. Simulator tests exercise atomic contents and backup exclusion but cannot verify device file encryption; device builds require protection-attribute readback.
+The Watch keeps one bounded, versioned active journal under Application Support, containing ownership, interval manifests and save receipt. Local journal v2 reads legacy v1 and adds explicit retirement, with up to 64 immutable uncertain-attempt archives and no automatic eviction. This is separate from the unchanged wire/Health metadata v1. A subsequent legitimate attempt replaces a saved/discarded or explicitly retired active journal. Retirement requires verified stop and a durable archive; it never retries the old summary. The phone retains one immutable reservation per Watch attempt, plus its version-3 local History record. Reservations have no deletion API and survive failed starts; do not remove them as troubleshooting. Both stores use atomic replacement, complete file protection and backup exclusion. Leftover staging files or unavailable protected data fail closed. Simulator tests exercise atomic contents and backup exclusion but cannot verify device file encryption; device builds require protection-attribute readback.
 
 Watch-owned History is schema 3 with an explicit ownership envelope. Missing/invalid new ownership is rejected, never treated as a legacy phone record. Version-1/2 records retain their prior interpretation. The existing JSON export accepts schema 2 only; schema 3 is unavailable rather than downgraded. No Watch sensor samples are copied into local History.
 
@@ -79,3 +79,29 @@ and observe countdown during the ramp and progression into step 3. Confirm overr
 clear at the next planned step. End recording on Watch and inspect Health/Fitness
 for the single workout; record any save-uncertain state separately. This is a test
 procedure, not evidence that the behaviour has passed on real equipment.
+
+## Recording controls and app lifecycle (#198)
+
+Controls are above the metrics so recovery does not depend on scrolling beneath
+calories. **End recording & save** uses the ordinary single save/discard path.
+**Stop recording** is available while connecting, recording, saving or uncertain;
+it stops Health recording, prevents subsequent save operations and checks native
+termination. A finish already submitted may still complete. The confirmation
+explicitly says the treadmill keeps moving until stopped at its console.
+**Prepare next workout** preserves the uncertain result before allowing a new
+iPhone attempt. None of these controls pauses or stops the treadmill.
+
+Recovery, saving and verified stop have a 15-second operation watchdog. A timeout
+exposes Stop recording again; it does not imply a saved/discarded result or stopped
+HealthKit session. Background/foreground transitions preserve the live lifecycle;
+foreground refreshes deadlines and resends current state. The phone registers
+mirroring at launch and can accept OS redelivery for the same activity/start and
+summary, within a 30-second reconnect window. The initial execution-start callback
+is never repeated. Cumulative manifests retry unchanged revisions until acknowledged
+within the existing rate/byte bounds. Real disconnect/recovery remains incomplete.
+Cold phone relaunch never reconstructs or resumes treadmill execution.
+
+If recovery says previous state is unavailable, an archive cannot be written or
+retention is full, preserve it and report the status. Do not erase local files.
+These software guarantees require paired-device acceptance for actual scheduling,
+locked-device protected storage, OS reconnection and Health result visibility.

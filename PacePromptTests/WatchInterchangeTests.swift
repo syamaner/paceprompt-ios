@@ -437,11 +437,273 @@ import XCTest
         XCTAssertNil(HistoryHealthExportPresenter.make(summary: owned, isSaving: false)?.actionTitle)
         XCTAssertEqual(owned.replacingHealthExport(with: .notRequested).ownership, .watchPrimary)
     }
+    func testForceStopPreservesUncertainAttemptAndRequiresExplicitRetirement() async throws {
+        try await bound(); try await receive(manifest(1)); await sut.forceStop()
+        XCTAssertEqual(recording.finishes, 0); XCTAssertEqual(recording.discards, 0)
+        XCTAssertEqual(sut.journal?.phase, .ambiguous); XCTAssertTrue(sut.canPrepareNext)
+        await sut.launch(activity: "indoorWalking"); XCTAssertEqual(recording.creates, 1)
+        sut.prepareNextWorkout()
+        XCTAssertEqual(store.archives.first?.summaryID, id); XCTAssertEqual(store.archives.first?.phase, .ambiguous)
+        XCTAssertEqual(sut.journal?.phase, .retired); XCTAssertFalse(sut.canStop)
+        await sut.launch(activity: "indoorWalking"); XCTAssertEqual(recording.creates, 2)
+        XCTAssertNil(sut.journal?.summaryID); XCTAssertEqual(sut.journal?.phase, .unbound)
+        var oldBind = message(.bind); oldBind.workoutActivity = "indoorWalking"; try await receive(oldBind)
+        XCTAssertNil(sut.journal?.summaryID); XCTAssertEqual(recording.begins, 1)
+        var fresh = WatchWireMessage(.bind, summaryID: "11400000-0000-4000-8000-000000000002"); fresh.workoutActivity = "indoorWalking"
+        try await receive(fresh); XCTAssertEqual(recording.begins, 2)
+    }
+    func testFailedArchiveOrRetirementWriteDoesNotPermitNewAttempt() async throws {
+        try await bound(); await sut.forceStop(); store.failArchive = true
+        sut.prepareNextWorkout(); await sut.launch(activity: "indoorWalking")
+        XCTAssertEqual(recording.creates, 1); XCTAssertEqual(sut.journal?.phase, .ambiguous)
+        store.failArchive = false; store.failPhase = .retired
+        sut.prepareNextWorkout(); XCTAssertEqual(sut.journal?.phase, .ambiguous)
+        store.failPhase = nil; sut.prepareNextWorkout(); XCTAssertEqual(sut.journal?.phase, .retired)
+    }
+    func testHungStopDoubleTapAndForegroundTimeoutNeverClaimStopped() async throws {
+        try await bound(); recording.holdStop = true
+        let task = Task { await sut.forceStop() }; await Task.yield()
+        await sut.forceStop(); XCTAssertEqual(recording.order.filter { $0 == "verifiedStop" }.count, 1)
+        XCTAssertFalse(sut.canPrepareNext); clock.time = 16; await sut.foreground()
+        XCTAssertFalse(sut.stopVerified); XCTAssertTrue(sut.canStop)
+        recording.stopWaiter?.resume(); recording.stopWaiter = nil; await task.value
+        XCTAssertFalse(sut.stopVerified); XCTAssertEqual(sut.journal?.phase, .ambiguous)
+    }
+    func testLatePreparationAfterStopAndNewAttemptCannotChangeNewJournal() async throws {
+        recording.holdPrepare = true
+        let old = Task { await sut.launch(activity: "indoorWalking") }; await Task.yield()
+        await sut.forceStop(); sut.prepareNextWorkout(); recording.holdPrepare = false
+        await sut.launch(activity: "indoorWalking"); let current = sut.journal; let calls = recording.order
+        recording.prepareWaiter?.resume(throwing: WatchStoreError.definite); recording.prepareWaiter = nil; await old.value
+        XCTAssertEqual(sut.journal, current); XCTAssertEqual(recording.order, calls); XCTAssertEqual(recording.discards, 0)
+    }
+    func testLateStartAfterStopAndNewAttemptCannotBindOldIdentity() async throws {
+        await sut.launch(activity: "indoorWalking"); recording.holdBegin = true
+        var b = message(.bind); b.workoutActivity = "indoorWalking"; let bytes = try WatchWire.encode(b)
+        let old = Task { await sut.receive(bytes) }; await Task.yield()
+        await sut.forceStop(); sut.prepareNextWorkout(); await sut.launch(activity: "indoorWalking")
+        let current = sut.journal; recording.startWaiter?.resume(returning: start); recording.startWaiter = nil; await old.value
+        XCTAssertEqual(sut.journal, current); XCTAssertFalse(sent.contains { $0.kind == .bound })
+    }
+    func testLateRecoveryErrorAfterStopCannotQuarantineNewAttempt() async throws {
+        try await bound(); recording.holdRecovery = true
+        let recovered = WatchWorkoutLifecycle(store: store, recording: recording, now: { self.start }, monotonic: { self.clock.time }, send: { _ in })
+        let old = Task { await recovered.recover() }; await Task.yield()
+        await recovered.forceStop(); recovered.prepareNextWorkout(); await recovered.launch(activity: "indoorWalking")
+        let current = recovered.journal
+        recording.recoveryWaiter?.resume(throwing: WatchStoreError.ambiguous); recording.recoveryWaiter = nil; await old.value
+        XCTAssertEqual(recovered.journal, current)
+    }
+    func testLateAssemblyAfterStopCannotFinishOrOverwriteNewAttempt() async throws {
+        try await bound(); try await receive(manifest(1)); clock.time = 60; recording.holdAssembly = true
+        let old = Task { await sut.endWorkout() }; await Task.yield()
+        XCTAssertTrue(sut.canStop); XCTAssertFalse(sut.canEnd)
+        await sut.forceStop(); sut.prepareNextWorkout(); await sut.launch(activity: "indoorWalking")
+        let current = sut.journal; recording.assemblyWaiter?.resume(); recording.assemblyWaiter = nil; await old.value
+        XCTAssertEqual(sut.journal, current); XCTAssertEqual(recording.finishes, 0)
+    }
+    func testLateFinishAfterDeadlineAndRetirementDoesNotClaimNewSave() async throws {
+        try await bound(); try await receive(manifest(1)); clock.time = 60; recording.holdFinish = true
+        let old = Task { await sut.endWorkout() }; await Task.yield()
+        XCTAssertEqual(sut.journal?.phase, .finishing); clock.time = 76; await sut.tick()
+        XCTAssertEqual(sut.journal?.phase, .ambiguous); XCTAssertTrue(sut.canStop)
+        await sut.forceStop(); sut.prepareNextWorkout(); await sut.launch(activity: "indoorWalking")
+        let current = sut.journal
+        recording.finishWaiter?.resume(returning: UUID().uuidString); recording.finishWaiter = nil; await old.value
+        XCTAssertEqual(sut.journal, current); XCTAssertEqual(recording.finishes, 1)
+        XCTAssertEqual(store.archives.first?.summaryID, id)
+    }
+    func testNativeAdapterAssemblyFenceStopsAfterEachSuspension() async throws {
+        for stopAtActivity in [false, true] {
+            let ops = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: ops)
+            try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin(); adapter.end()
+            ops.holdEndCollection = !stopAtActivity; ops.holdActivity = stopAtActivity
+            let assembly = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: false, distance: .unavailable)
+            let old = Task { try await adapter.assemble(assembly) }; await Task.yield()
+            try await adapter.stopAndVerify(); try adapter.releaseStopped()
+            ops.activities = []; let before = ops.calls.count
+            ops.builderWaiter?.resume(); ops.builderWaiter = nil
+            do { try await old.value; XCTFail("stale assembly accepted") } catch {}
+            XCTAssertEqual(ops.calls.count, before)
+            XCTAssertFalse(ops.calls.contains("metadata")); XCTAssertFalse(ops.calls.contains("finish"))
+        }
+    }
+    func testForegroundAndOSReconnectDoNotStartExecutionAgain() async throws {
+        let port = TestPhonePort(); var starts = 0; var reserves = 0
+        let phone = PhoneWatchLifecycle(port: port, reserve: { _ in reserves += 1 }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
+        phone.bound = { _ in starts += 1 }; await phone.start(activity: "indoorWalking")
+        var b = message(.bound); b.workoutStart = start; let bytes = try WatchWire.encode(b); phone.receive(bytes)
+        phone.disconnect(); XCTAssertEqual(phone.phase, .reconnecting)
+        XCTAssertTrue(phone.acceptsMirror(activity: "indoorWalking", indoor: true, start: start))
+        XCTAssertFalse(phone.acceptsMirror(activity: "indoorWalking", indoor: true, start: start.addingTimeInterval(1)))
+        XCTAssertFalse(phone.acceptsMirror(activity: "indoorRunning", indoor: true, start: start))
+        phone.update(intervals: [interval()], outcome: nil); phone.mirrorConnected(); phone.receive(bytes); phone.foreground()
+        XCTAssertEqual(phone.phase, .bound); XCTAssertEqual(starts, 1); XCTAssertEqual(reserves, 1); XCTAssertEqual(port.launches, 1)
+        XCTAssertEqual(port.messages.last(where: { $0.kind == .manifest })?.intervals, [interval()])
+    }
+    func testLostManifestAckRetriesSameRevisionAndStopsWhenAcknowledged() async throws {
+        let port = TestPhonePort()
+        let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
+        await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
+        phone.update(intervals: [interval()], outcome: nil); let first = port.messages.last!
+        clock.time = 5; phone.foreground()
+        XCTAssertEqual(port.messages.filter { $0.kind == .manifest }, [first, first])
+        var ack = message(.ack); ack.revision = first.revision; phone.receive(try WatchWire.encode(ack))
+        clock.time = 10; phone.tick(); XCTAssertEqual(port.messages.filter { $0.kind == .manifest }.count, 2)
+    }
+    func testReconnectDeadlineAndIntegrityFailureCannotBeClearedByForeground() async throws {
+        let port = TestPhonePort()
+        let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
+        await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; let bytes = try WatchWire.encode(b); phone.receive(bytes)
+        phone.receive(Data("bad".utf8)); phone.disconnect(); clock.time = 10; phone.disconnect()
+        clock.time = 30; phone.foreground(); phone.receive(bytes)
+        XCTAssertEqual(phone.phase, .unavailable); XCTAssertTrue(phone.integrityFailed)
+        XCTAssertFalse(phone.acceptsReplacementMirror); XCTAssertEqual(port.launches, 1)
+    }
+    func testDisconnectDuringEndPreparationNeverReopensFinalDeadline() async throws {
+        let port = TestPhonePort()
+        let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
+        await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
+        phone.update(intervals: [interval()], outcome: "completed"); phone.disconnect(); phone.foreground(); phone.receive(try WatchWire.encode(b))
+        XCTAssertEqual(phone.phase, .unavailable); XCTAssertFalse(port.messages.contains { $0.kind == .finalize })
+    }
+    func testProtectedJournalLegacyMigrationAndIdempotentArchive() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let disk = ProtectedWatchJournal(directory: { root })
+        var legacy = WatchWorkoutJournal(activity: "indoorWalking"); legacy.formatVersion = 1; legacy.phase = .ambiguous; legacy.summaryID = id
+        try WatchProtectedFile(url: root.appendingPathComponent("watch-journal-v1.json")).write(JSONEncoder().encode(legacy))
+        XCTAssertEqual(try disk.load(), legacy); try disk.archive(legacy); try disk.archive(legacy)
+        var retired = legacy; retired.formatVersion = 2; retired.phase = .retired; try disk.save(retired)
+        XCTAssertEqual(try disk.load(), retired)
+        XCTAssertTrue(try disk.containsRetiredIdentity(id))
+        let archive = root.appendingPathComponent("retired-attempts-v1").appendingPathComponent(id + ".json")
+        XCTAssertEqual(try JSONDecoder().decode(WatchWorkoutJournal.self, from: Data(contentsOf: archive)), legacy)
+        XCTAssertEqual(try archive.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup, true)
+        var conflict = legacy; conflict.incomplete = true; XCTAssertThrowsError(try disk.archive(conflict))
+        try Data("partial".utf8).write(to: root.appendingPathComponent("watch-journal-v2.json.staging"))
+        XCTAssertThrowsError(try disk.load())
+    }
+
+    func testFinishDeadlineIsCheckedBeforeAcceptingCallbackWithoutTick() async throws {
+        try await bound(); try await receive(manifest(1)); clock.time = 60; recording.holdFinish = true
+        let task = Task { await sut.endWorkout() }; await Task.yield()
+        clock.time = 76
+        recording.finishWaiter?.resume(returning: UUID().uuidString); recording.finishWaiter = nil; await task.value
+        XCTAssertEqual(sut.journal?.phase, .ambiguous); XCTAssertNil(sut.journal?.savedWorkoutID)
+        XCTAssertTrue(sut.canStop); XCTAssertEqual(recording.finishes, 1)
+    }
+    func testStopDeadlineIsCheckedBeforeAcceptingCallbackWithoutTick() async throws {
+        try await bound(); recording.holdStop = true
+        let task = Task { await sut.forceStop() }; await Task.yield(); clock.time = 16
+        recording.stopWaiter?.resume(); recording.stopWaiter = nil; await task.value
+        XCTAssertFalse(sut.canPrepareNext); XCTAssertFalse(sut.stopVerified); XCTAssertTrue(sut.canStop)
+    }
+    func testRecoveryDeadlineIsCheckedBeforeAcceptingCallbackWithoutTick() async throws {
+        try await bound(); recording.holdRecovery = true
+        let recovered = WatchWorkoutLifecycle(store: store, recording: recording, now: { self.start }, monotonic: { self.clock.time }, send: { _ in })
+        let task = Task { await recovered.recover() }; await Task.yield(); clock.time = 16
+        recording.recoveryWaiter?.resume(returning: (start, true)); recording.recoveryWaiter = nil; await task.value
+        XCTAssertEqual(recovered.journal?.phase, .ambiguous); XCTAssertTrue(recovered.canStop); XCTAssertFalse(recovered.canEnd)
+    }
+    func testStopProbeAndReleaseFailureCannotRetireOrStartAnotherAttempt() async throws {
+        try await bound(); recording.stopFailure = true; await sut.forceStop()
+        XCTAssertFalse(sut.canPrepareNext); sut.prepareNextWorkout(); XCTAssertTrue(store.archives.isEmpty)
+        await sut.launch(activity: "indoorWalking"); XCTAssertEqual(recording.creates, 1)
+        recording.stopFailure = false; await sut.forceStop(); recording.releaseFailure = true
+        sut.prepareNextWorkout(); XCTAssertEqual(store.value?.phase, .ambiguous)
+        XCTAssertEqual(sut.journal?.phase, .ambiguous)
+        recording.releaseFailure = false; sut.prepareNextWorkout(); XCTAssertEqual(store.value?.phase, .retired)
+    }
+    func testStopVerifierRequiresExactEndedObject() async throws {
+        let proof = WatchStopVerifier(); let current = NSObject(); let stale = NSObject()
+        var ended: AnyObject?; var completed = false
+        let task = Task {
+            try await proof.verify(probe: { current }, isEnded: { _ in false }, end: { ended = $0 })
+            completed = true
+        }
+        await Task.yield(); XCTAssertTrue(ended === current)
+        proof.observedEnded(stale); await Task.yield(); XCTAssertFalse(completed)
+        proof.observedEnded(current); try await task.value; XCTAssertTrue(completed)
+    }
+    func testStopVerifierNilEndedAndProbeError() async throws {
+        let proof = WatchStopVerifier(); let current = NSObject(); var endCalls = 0
+        try await proof.verify(probe: { nil }, isEnded: { _ in false }, end: { _ in endCalls += 1 })
+        try await proof.verify(probe: { current }, isEnded: { _ in true }, end: { _ in endCalls += 1 })
+        XCTAssertEqual(endCalls, 0)
+        do {
+            try await proof.verify(probe: { throw WatchStoreError.ambiguous }, isEnded: { _ in false }, end: { _ in endCalls += 1 })
+            XCTFail("probe error accepted")
+        } catch {}
+        XCTAssertEqual(endCalls, 0)
+    }
+    func testStopVerifierCancelledProbeNeverEndsItsLateResult() async throws {
+        let proof = WatchStopVerifier(); var waiter: CheckedContinuation<AnyObject?, Error>?; var endCalls = 0
+        let old = Task { try await proof.verify(probe: { try await withCheckedThrowingContinuation { waiter = $0 } }, isEnded: { _ in false }, end: { _ in endCalls += 1 }) }
+        await Task.yield(); proof.cancel()
+        try await proof.verify(probe: { nil }, isEnded: { _ in false }, end: { _ in endCalls += 1 })
+        waiter?.resume(returning: NSObject()); waiter = nil
+        do { try await old.value; XCTFail("late probe accepted") } catch {}
+        XCTAssertEqual(endCalls, 0)
+    }
+    func testStopVerifierCancelledWaitRejectsLateEndedCallback() async throws {
+        let proof = WatchStopVerifier(); let oldSession = NSObject(); let newSession = NSObject(); var finished = false
+        let old = Task { try await proof.verify(probe: { oldSession }, isEnded: { _ in false }, end: { _ in }) }
+        await Task.yield(); proof.cancel()
+        do { try await old.value; XCTFail("cancelled stop accepted") } catch {}
+        let next = Task { try await proof.verify(probe: { newSession }, isEnded: { _ in false }, end: { _ in }); finished = true }
+        await Task.yield(); proof.observedEnded(oldSession); await Task.yield(); XCTAssertFalse(finished)
+        proof.observedEnded(newSession); try await next.value; XCTAssertTrue(finished)
+    }
+    func testRepeatedAdapterReleaseAfterStorageFailureIsIdempotent() async throws {
+        let ops = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: ops)
+        try await adapter.prepare(activity: "indoorWalking"); adapter.end(); try await adapter.stopAndVerify()
+        try adapter.releaseStopped(); let count = ops.calls.count; try adapter.releaseStopped()
+        XCTAssertEqual(ops.calls.count, count)
+        try await adapter.prepare(activity: "indoorWalking"); XCTAssertEqual(ops.calls.filter { $0 == "create" }.count, 2)
+    }
+    func testColdPhoneAndWrongIdentityNeverAcceptMirrorOrBeginExecution() async throws {
+        let port = TestPhonePort(); var starts = 0
+        let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
+        phone.bound = { _ in starts += 1 }
+        XCTAssertFalse(phone.acceptsMirror(activity: "indoorWalking", indoor: true, start: start))
+        phone.foreground(); phone.mirrorConnected(); XCTAssertTrue(port.messages.isEmpty)
+        await phone.start(activity: "indoorWalking")
+        var b = WatchWireMessage(.bound, summaryID: "11400000-0000-4000-8000-000000000002"); b.workoutStart = start
+        phone.receive(try WatchWire.encode(b)); XCTAssertEqual(starts, 0); XCTAssertTrue(phone.integrityFailed)
+    }
+
+    func testLatePauseFailureCannotMarkNewBoundAttemptIncomplete() async throws {
+        try await bound(); recording.holdPause = true
+        var pause = message(.recordingState); pause.sequence = 1; pause.state = "paused"; pause.observedAt = start
+        let data = try WatchWire.encode(pause); let old = Task { await sut.receive(data) }; await Task.yield()
+        await sut.forceStop(); sut.prepareNextWorkout(); await sut.launch(activity: "indoorWalking")
+        var fresh = WatchWireMessage(.bind, summaryID: "11400000-0000-4000-8000-000000000002"); fresh.workoutActivity = "indoorWalking"
+        try await receive(fresh); let current = sut.journal; XCTAssertFalse(current!.incomplete)
+        recording.pauseWaiter?.resume(throwing: WatchStoreError.ambiguous); recording.pauseWaiter = nil; await old.value
+        XCTAssertEqual(sut.journal, current); XCTAssertEqual(sut.journal?.phase, .recording)
+    }
+    func testArchiveLimitNeverEvictsAnUncertainIdentity() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let disk = ProtectedWatchJournal(directory: { root })
+        for index in 0..<64 {
+            var journal = WatchWorkoutJournal(activity: "indoorWalking", attemptID: String(format: "11400000-0000-4000-8000-%012d", index))
+            journal.phase = .ambiguous; try disk.archive(journal)
+        }
+        var extra = WatchWorkoutJournal(activity: "indoorWalking", attemptID: "11400000-0000-4000-8000-999999999999"); extra.phase = .ambiguous
+        XCTAssertThrowsError(try disk.archive(extra))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("retired-attempts-v1").path).count, 64)
+    }
+
 }
 
 @MainActor private final class TestClock { var time: TimeInterval = 0 }
 @MainActor private final class TestJournal: WatchJournalStore {
     var value: WatchWorkoutJournal?; var saved: [WatchWorkoutJournal] = []; var failNext = false; var failPhase: WatchWorkoutJournal.Phase?
+    var archives: [WatchWorkoutJournal] = []; var failArchive = false
+    func containsRetiredIdentity(_ summaryID: String) throws -> Bool { archives.contains { $0.summaryID == summaryID } }
+    func archive(_ journal: WatchWorkoutJournal) throws { if failArchive { throw WatchStoreError.ambiguous }; archives.append(journal) }
     func load() throws -> WatchWorkoutJournal? { value }
     func save(_ journal: WatchWorkoutJournal) throws {
         if failNext || journal.phase == failPhase { failNext = false; throw WatchStoreError.ambiguous }
@@ -453,18 +715,24 @@ import XCTest
     var creates = 0, begins = 0, pauses = 0, resumes = 0, discards = 0, finishes = 0, recovers = 0
     var order: [String] = []; var assemblies: [WatchAssembly] = []
     var assemblyFailure: WatchStoreError?; var finishFailure = false; var discardFailure = false; var recoverySource = true
+    var stopFailure = false, releaseFailure = false
+    var holdPrepare = false, holdRecovery = false, holdAssembly = false, holdFinish = false, holdStop = false
+    var prepareWaiter: CheckedContinuation<Void, Error>?, assemblyWaiter: CheckedContinuation<Void, Error>?, stopWaiter: CheckedContinuation<Void, Error>?
+    var recoveryWaiter: CheckedContinuation<(start: Date, sourceExclusion: Bool), Error>?, finishWaiter: CheckedContinuation<String, Error>?
     var holdBegin = false, holdPause = false, holdResume = false
     var startWaiter: CheckedContinuation<Date, Error>?, pauseWaiter: CheckedContinuation<Date, Error>?, resumeWaiter: CheckedContinuation<Void, Error>?
     init(start: Date) { self.start = start; pauseDate = start.addingTimeInterval(60) }
-    func prepare(activity: String) async throws { creates += 1 }
-    func recover(activity: String) async throws -> (start: Date, sourceExclusion: Bool) { recovers += 1; return (start, recoverySource) }
+    func stopAndVerify() async throws { order.append("verifiedStop"); if stopFailure { throw WatchStoreError.ambiguous }; if holdStop { try await withCheckedThrowingContinuation { stopWaiter = $0 } } }
+    func releaseStopped() throws { order.append("release"); if releaseFailure { throw WatchStoreError.ambiguous } }
+    func prepare(activity: String) async throws { creates += 1; if holdPrepare { try await withCheckedThrowingContinuation { prepareWaiter = $0 } } }
+    func recover(activity: String) async throws -> (start: Date, sourceExclusion: Bool) { recovers += 1; if holdRecovery { return try await withCheckedThrowingContinuation { recoveryWaiter = $0 } }; return (start, recoverySource) }
     func begin() async throws -> Date { begins += 1; if holdBegin { return try await withCheckedThrowingContinuation { startWaiter = $0 } }; return start }
     func pause() async throws -> Date { pauses += 1; if holdPause { return try await withCheckedThrowingContinuation { pauseWaiter = $0 } }; return pauseDate }
     func resume() async throws { resumes += 1; if holdResume { try await withCheckedThrowingContinuation { resumeWaiter = $0 } } }
     func end() { order.append("end") }
     func discard() throws { discards += 1; if discardFailure { throw WatchStoreError.ambiguous } }
-    func assemble(_ value: WatchAssembly) async throws { order.append("assemble"); assemblies.append(value); if let assemblyFailure { throw assemblyFailure } }
-    func finish() async throws -> String { order.append("finish"); finishes += 1; if finishFailure { throw WatchStoreError.ambiguous }; return "11400000-0000-4000-8000-000000000099" }
+    func assemble(_ value: WatchAssembly) async throws { order.append("assemble"); assemblies.append(value); if holdAssembly { try await withCheckedThrowingContinuation { assemblyWaiter = $0 } }; if let assemblyFailure { throw assemblyFailure } }
+    func finish() async throws -> String { order.append("finish"); finishes += 1; if holdFinish { return try await withCheckedThrowingContinuation { finishWaiter = $0 } }; if finishFailure { throw WatchStoreError.ambiguous }; return "11400000-0000-4000-8000-000000000099" }
 }
 @MainActor private final class TestPhonePort: PhoneWatchPort {
     var launches = 0; var messages: [WatchWireMessage] = []
@@ -479,6 +747,8 @@ import XCTest
     var authorized = true, configuredSourceExcludesDistance = true, addExtraActivity = false, nilFinish = false
     var holdAuthorization = false, holdMirror = false
     var authorizationWaiter: CheckedContinuation<Bool, Error>?, mirrorWaiter: CheckedContinuation<Void, Error>?
+    var holdEndCollection = false, holdActivity = false
+    var builderWaiter: CheckedContinuation<Void, Error>?
     var metadataDistance: Bool?
     func resetForNewAttempt() throws { calls.append("reset") }
     func authorize() async throws -> Bool { calls.append("authorize"); if holdAuthorization { return try await withCheckedThrowingContinuation { authorizationWaiter = $0 } }; return authorized }
@@ -492,11 +762,12 @@ import XCTest
     func pausePrimary() async throws -> Date { calls.append("pause"); return Date() }
     func resumePrimary() async throws { calls.append("resume") }
     func endPrimary() { calls.append("end"); ended = true }
+    func stopPrimaryAndVerify() async throws { calls.append("verifiedStop"); ended = true }
     func discardBuilder() throws { calls.append("discard") }
     func finishBuilder() async throws -> String? { calls.append("finish"); return nilFinish ? nil : UUID().uuidString }
-    func endCollection(at: Date) async throws { calls.append("endCollection") }
+    func endCollection(at: Date) async throws { calls.append("endCollection"); if holdEndCollection { try await withCheckedThrowingContinuation { builderWaiter = $0 } } }
     func addActivity(_ interval: WatchInterval, summaryID: String, activity: String) async throws {
-        calls.append("activity"); let item = WatchBuilderActivity(start: interval.startedAt, end: interval.endedAt, activity: activity, indoor: true)
+        calls.append("activity"); if holdActivity { try await withCheckedThrowingContinuation { builderWaiter = $0 } }; let item = WatchBuilderActivity(start: interval.startedAt, end: interval.endedAt, activity: activity, indoor: true)
         activities.append(item); if addExtraActivity { activities.append(item) }
     }
     func addDistance(metres: Decimal, summaryID: String, start: Date, end: Date) async throws { calls.append("distance") }
