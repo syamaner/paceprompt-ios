@@ -32,10 +32,21 @@ Watch-owned History is schema 3 with an explicit ownership envelope. Missing/inv
 
 Run `python3 scripts/verify_watch_boundaries.py`, `python3 -B -m unittest discover -s scripts/tests -v`, the focused `WatchInterchangeTests`, ownership/History/execution regressions, and then the complete `scripts/validate_local.sh` gate on final executable inputs. Shared synthetic complete/incomplete fixtures are bundled only into the test target. Tests exercise production lifecycle/assembly adapters through fake SDK-operation ports, including delayed callbacks, storage failure, zero-prefix discard and single-writer suppression. Native SDK compilation and an idle Watch simulator render are separate evidence levels.
 
-Use the [paired-device acceptance procedure](watch-health-interchange-runbook.md) for later signed-device permission, real mirroring, sensors, builder activity readback, metadata, distance-source and recovery checks. Physical FR30z operation remains #116. WeeklyHealthReport extraction remains #80. No simulator or fake test substitutes for those observations. The [release runbook](testflight/setup.md#watch-companion-release-boundary-115) records the strict two-bundle preparation and remaining Watch profile/tools-pin activation; this slice does not upload a release.
+Use the [paired-device acceptance procedure](watch-health-interchange-runbook.md) for later signed-device permission, real mirroring, sensors, builder activity readback, metadata, distance-source and recovery checks. Physical FR30z operation remains #116. WeeklyHealthReport extraction remains #80. No simulator or fake test substitutes for those observations. The [release setup runbook](testflight/setup.md#watch-companion-release-boundary-115) records the strict two-bundle signing policy. Separately authorised #188 completed Watch App ID/profile setup and internal TestFlight 1.0.1 (15); see the [release receipt](testflight/README.md#watch-internal-release-101-15-issue-188). Apple processing and internal-group assignment do not establish installation or any paired-device acceptance row.
 
 ## Recorded software evidence
 
 The #115 final local gate on Xcode 27.0 (27A266a), iOS 26.5 simulator, passed 437 production unit tests, 72 UI tests, 16 developer-only evaluation tests, unsigned Release build (including Watch), static analysis and coverage. Offline HostEval ran 247 tests with 36 explicit skips for absent ignored private evidence; all 46 repository script tests and 24 accounting-helper tests passed. The independent working-diff review found no remaining P1/P2 findings after repairs. The PR records the exact committed-head review and required hosted CI. Earlier failed focused runs and the deliberately superseded full run are not acceptance evidence.
 
 An isolated watchOS 26.5 simulator installed and displayed the compiled idle Watch UI. This did not exercise a real mirrored HealthKit session, permission prompt, sensor data or save. All signed-device, HealthKit readback, physical FR30z and WeeklyHealthReport rows in the acceptance runbook remain unperformed. No signing or release acceptance is implied.
+
+
+## Internal release availability (#188)
+
+Internal TestFlight 1.0.1 (15) uses reviewed source
+`796819b21382ac7dd038fb989e79e1352aaf06ca` and immutable tag
+`testflight/1.0.1-b15`. Its protected hosted run verified both signed apps, uploaded
+once, confirmed Apple processing `VALID` and observed assignment to the existing
+sole-tester internal group. Tester visibility/install/launch and all signed-device
+HealthKit, physical FR30z and WeeklyHealthReport acceptance remain unperformed.
+The earlier software-only evidence above remains scoped to its original slice.
