@@ -90,6 +90,31 @@ class WatchReleaseTests(unittest.TestCase):
                     signing.validate(changed, f.IDENTITIES, f.TEAM, role=role)
         with self.assertRaises(ValueError): signing.distribution_entitlements(f.profile('phone'), f.TEAM, 'arbitrary')
 
+    def test_apple_shared_profile_family_preserves_closed_platform_policy(self):
+        for role in policy.BUNDLES:
+            profile = f.profile(role)
+            accepted = [['iOS'], ['iOS', 'xrOS', 'visionOS']]
+            if role == 'watch':
+                accepted += [['watchOS'], ['iOS', 'watchOS']]
+            for family in accepted:
+                with self.subTest(role=role, family=family):
+                    signing.validate({**profile, 'Platform': family}, f.IDENTITIES, f.TEAM, role=role)
+            for family in (None, [], 'iOS', ['xrOS', 'visionOS'], ['iOS', 'visionOS'],
+                           ['visionOS', 'xrOS', 'iOS'], ['iOS', 'iOS'],
+                           ['iOS', 'xrOS', 'visionOS', 'macOS']):
+                with self.subTest(role=role, family=family), self.assertRaisesRegex(ValueError, 'platform family'):
+                    signing.validate({**profile, 'Platform': family}, f.IDENTITIES, f.TEAM, role=role)
+        with self.assertRaisesRegex(ValueError, 'platform family'):
+            signing.validate({**f.profile('phone'), 'Platform': ['watchOS']}, f.IDENTITIES, f.TEAM)
+
+    def test_shared_profile_family_does_not_authorise_vision_device_code(self):
+        for role in policy.BUNDLES:
+            signing.validate(f.profile(role), f.IDENTITIES, f.TEAM, role=role)
+            for platform in (11, 12):
+                for signed in (False, True):
+                    with self.subTest(role=role, platform=platform, signed=signed), self.assertRaisesRegex(ValueError, 'platform'):
+                        policy.macho(f.macho(role, signed=signed, platform=platform), role, signed)
+
     def test_watch_project_configurations_must_match_tag(self):
         project = guard.PROJECT.read_text()
         for config in ('02', '03'):

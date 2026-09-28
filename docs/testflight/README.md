@@ -246,3 +246,41 @@ delivery PR before protected merge. The fresh tag, hosted signing/export, upload
 Apple processing and internal-group assignment remain pending.
 Neither setup nor simulator evidence establishes tester visibility, installation,
 real mirrored sessions, HealthKit writes or physical treadmill acceptance.
+
+
+### Actual Watch profile compatibility (#188)
+
+After explicit operator confirmation on 28 September 2026, Apple generated
+`PacePrompt Watch CI App Store` for the fixed Watch companion ID using the existing
+distribution certificate. Private local inspection confirmed both profiles have
+the same team/certificate, distinct UUIDs, exact role identities, no device or
+enterprise distribution and the fixed required entitlements. Only the new
+`DIST_WATCH_PROFILE_B64` environment secret was added; the six existing secrets
+and tester audience were preserved. Secret-name readback is configuration evidence,
+not proof that the hosted signer can use its private key.
+
+Both actual profiles declare the ordered family `iOS, xrOS, visionOS`. The
+prepared guard rejected it before any tag/upload. The bounded correction accepts
+that exact profile family for phone and Watch while preserving role identity,
+certificate and fixed-entitlement validation. Separate device Mach-O checks still
+reject visionOS and simulator code. Synthetic profile fixtures exercise this
+family through the real shell orchestration with fake Apple tools; additional
+negative tests retain unknown/malformed-family and visionOS-binary rejection.
+
+Independent working-diff review found no actionable findings; all 57 script tests
+and release lint checks pass. The replacement complete gate passed on all 417 frozen non-Markdown inputs:
+437 unit, 72 UI and 16 evaluation tests; unsigned Release simulator build
+including Watch, analysis, coverage and offline checks. HostEval passed 247 tests
+with 36 explicit private-evidence skips; 57 script and 24 accounting tests passed.
+Evidence: `/private/tmp/pp188-profile-gate-v2.log` and
+`/private/tmp/pp188-profile-gate-v2`. Documentation checks passed 42 links, 34 shell
+snippets and two embedded Python snippets (syntax/compile only). The corrected tools must be reviewed, merged and activated
+before release. Build 14 remains unused: no tag, signed export or upload has yet
+been attempted. Actual hosted signing/export and Apple acceptance remain pending.
+
+The first profile-repair full gate was stopped after the existing simulator
+refused app launches with `Busy / Application failed preflight checks`. All three
+affected Health export UI tests passed unchanged on a fresh dedicated simulator
+(`/private/tmp/pp188-profile-focused.log`). The replacement gate uses that fresh
+simulator and unchanged executable inputs. The failed run is retained at
+`/private/tmp/pp188-profile-gate.log` and is not acceptance evidence.

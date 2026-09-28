@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 28 Sep 2026 | `PP-20260928-04` | Issue #188 actual Apple profile-family compatibility | `gpt-6-astra` | 19,884,033 (19,818,752; 0) | 15,654 | 19,899,687 | Unmeasured | Exact 118-request root setup/repair/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-03` | Issue #188 Watch internal TestFlight 1.0.1 (14) candidate and setup | `gpt-6-astra` | 14,577,998 (14,424,064; 0) | 21,014 | 14,599,012 | Unmeasured | Exact 130-request root candidate/setup/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-02` | Issue #186 strict Watch archive and signing preparation | `gpt-6-astra` | 10,909,958 (10,643,840; 0) | 42,878 | 10,952,836 | Unmeasured | Root implementation/review/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-01` | Issue #115 Watch-owned companion and zero-interval discard | `gpt-6-astra` | 26,587,444 (26,142,592; 0) | 103,517 | 26,690,961 | Unmeasured | Exact 196-request root implementation/review/validation phase; reviewer and final insertion/delivery excluded |
@@ -1016,3 +1017,45 @@ final numeric insertion and later exact-head review/delivery are excluded.
 API-equivalent cost and long-context crossings remain unmeasured because no
 verified official rate/threshold for this exact model is supplied; no other
 model's rate or subscription bill is substituted.
+
+
+## PP-20260928-04 profile compatibility and measurement boundary
+
+Issue #188 authorised actual Watch profile generation and protected internal
+release. After operator confirmation, the Watch App Store profile was generated,
+privately compared with the existing phone profile and stored as the sole new
+protected environment secret. Existing certificate/API key/phone profile, tester
+audience, local signing settings and unrelated worktrees remain unchanged.
+
+Actual profile inspection found both roles declare the exact ordered family
+`iOS, xrOS, visionOS`, which the prepared signing guard rejected. The repair accepts
+only that additional observed profile family; exact role identity, certificate,
+team, entitlements and separate device Mach-O policy remain unchanged. Synthetic
+fixtures now exercise the shared family through shell orchestration; focused
+tests reject malformed/unknown families and signed/unsigned visionOS binaries.
+Independent working-diff review found no actionable findings; 57 script tests and
+release lint pass. The replacement complete gate passed: 437 unit, 72 UI and 16 evaluation tests;
+unsigned Release simulator build including Watch, analysis/coverage and offline
+checks. HostEval passed 247 tests with 36 explicit private-evidence skips; all
+57 script and 24 accounting tests passed. Evidence is
+`/private/tmp/pp188-profile-gate-v2.log` and `/private/tmp/pp188-profile-gate-v2`.
+All 417 inputs in `/private/tmp/pp188-profile-frozen-inputs.json` remain unchanged.
+Documentation checks passed 42 links, 34 shell snippets and two embedded Python
+snippets (syntax/compile only). No tag or actual signed export/upload is claimed by this repair.
+
+Root session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`. Baseline
+`/private/tmp/pp188-release-receipt-baseline.json`, event 615 at
+`2026-09-28T12:20:18.587Z`: input 77,661,181; cached input 76,189,440; cache-write
+input 0; output 253,824 (reasoning subset 67,384); total 77,915,005. This boundary
+starts before the profile compatibility repair and includes subsequent profile
+setup, implementation, review coordination and validation. Earlier UI/session
+setup attempts before the baseline are excluded. Final event 733 at `2026-09-28T13:11:37.130Z` follows the complete replacement gate and ledger draft immediately before commit: input 97,545,214; cached input 96,008,192; cache-write input 0; output 269,478; total 97,814,692. Exact report `/private/tmp/pp188-profile-final-accounting.json`: 118 requests, largest input 182,209; reasoning output 3,697 is included in output. No counter resets, replayed token events or repeated cumulative snapshots occurred. The failed gate, unchanged focused recovery and replacement complete gate are included. Independent reviewer, final numeric insertion and later delivery are
+excluded. API-equivalent cost and long-context crossings remain unmeasured because
+no verified official rate/threshold for this exact model is supplied.
+
+The first profile-repair full gate was stopped after the existing simulator
+refused app launches with `Busy / Application failed preflight checks`. All three
+affected Health export UI tests passed unchanged on a fresh dedicated simulator
+(`/private/tmp/pp188-profile-focused.log`). The replacement gate uses that fresh
+simulator and unchanged executable inputs. The failed run is retained at
+`/private/tmp/pp188-profile-gate.log` and is not acceptance evidence.
