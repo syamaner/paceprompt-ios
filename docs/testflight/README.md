@@ -213,3 +213,36 @@ verification. This is preparation only: the environment tools pin and credential
 are unchanged, no new build/tag is issued, and no signed export or upload is claimed.
 Follow [setup](setup.md#watch-companion-release-boundary-115) before a separately
 authorised fresh release. Earlier phone-only receipts do not validate Watch delivery.
+
+
+### Watch companion candidate: 1.0.1 (14), issue #188
+
+The operator authorised Watch signing setup and an internal-only TestFlight
+upload, excluding hardware operation. The candidate advances all four phone/Watch
+Debug/Release build settings to 14; marketing version remains 1.0.1. App behaviour,
+privacy and encryption declarations, release workflow and signing policy are
+unchanged. Existing signing settings, credentials and the sole-tester group are
+preserved.
+
+On 28 September 2026, the operator completed registration of the explicit
+`com.otherweather.PromptPace.watchkitapp` App ID with HealthKit. The protected
+environment's `RELEASE_TOOLS_SHA` was activated and read back as
+`ab0ec096af74b79a498b7686fc87476781e612cc`, the independently reviewed PR #187
+merge. All 55 release-tool tests, workflow lint, ShellCheck and shell syntax
+passed from a separate clean checkout of that exact commit. Watch provisioning
+profile generation and validation remain pending at this checkpoint.
+
+Independent review of the candidate build/fixture diff found no actionable
+findings. Focused release tests and metadata/boundary checks passed. The complete
+local gate passed: 437 production unit tests, 72 simulator UI tests, 16 evaluation
+tests, unsigned Release simulator build including Watch, static analysis and
+coverage. Offline HostEval passed 247 tests with 36 explicit private-evidence
+skips; all 55 script and 24 accounting tests passed. Evidence is
+`/private/tmp/pp188-complete-gate` and `/private/tmp/pp188-complete-gate.log`; all
+417 frozen non-Markdown inputs remained byte-identical. Documentation checks
+passed 42 local links, 34 shell snippets and two embedded Python snippets
+(syntax/compile only). Exact-head review and required CI are recorded on the
+delivery PR before protected merge. The fresh tag, hosted signing/export, upload,
+Apple processing and internal-group assignment remain pending.
+Neither setup nor simulator evidence establishes tester visibility, installation,
+real mirrored sessions, HealthKit writes or physical treadmill acceptance.

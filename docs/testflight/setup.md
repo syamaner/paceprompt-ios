@@ -523,17 +523,17 @@ Watch profiles embedding that certificate. Replace the related secrets together.
 
 ## Watch companion release boundary (#115)
 
-Issue #186 prepares strict two-bundle tooling and synthetic failure coverage for
+Issue #186 delivered strict two-bundle tooling and synthetic failure coverage for
 the #115 companion. Its architecture and evidence are recorded in
-[Watch release preparation](../../design/watch-release-preparation.md). This code
-change does not activate a new `RELEASE_TOOLS_SHA`, supply the Watch profile, sign
-an actual distribution or upload a release. The old independently pinned tools
-continue to reject nested apps until deliberately upgraded through the procedure
-above. Keep local signing configuration and team identifiers out of Git.
+[Watch release preparation](../../design/watch-release-preparation.md). That
+preparation did not activate signing or upload a release. Authorised setup under
+#188 subsequently activated the reviewed tools merge
+`ab0ec096af74b79a498b7686fc87476781e612cc`; see the
+[current setup and candidate receipt](README.md#watch-companion-candidate-101-14-issue-188).
+Keep local signing configuration and team identifiers out of Git.
 
-A later authorised setup must validate the real Watch profile and update the tools
-pin. Then prepare a fresh build number and an exact-head-attested candidate merge;
-1.0.1 (13) is already used. Do not infer hosted Xcode 26.6 compatibility, Apple
+A release still requires a validated real Watch profile, a fresh build number and
+an exact-head-attested candidate merge; 1.0.1 (13) is already used. Do not infer hosted Xcode 26.6 compatibility, Apple
 acceptance, TestFlight visibility or paired-device behaviour from local unsigned
 Xcode 27.0 and mocked-tool tests. #115 device acceptance, WeeklyHealthReport #80
 and physical/cross-repository #116 remain open dependent work.
