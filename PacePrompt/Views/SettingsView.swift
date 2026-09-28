@@ -47,7 +47,7 @@ struct SettingsView: View {
             }
             Section("Privacy") {
                 Label("Saved plans stay local", systemImage: "iphone")
-                Text("Saved plans stay on this device. Optional remote import sends workout text to OpenRouter and OpenAI only after a disclosure and your agreement for each request. A key is stored in this device’s Keychain. Remote processing has no zero-retention guarantee. No analytics or Health reads are used. PacePrompt writes a completed workout and optional accepted distance to Apple Health only after you choose Save to Apple Health.")
+                Text("Saved plans stay on this device. Optional remote import sends workout text to OpenRouter and OpenAI only after a disclosure and your agreement for each request. A key is stored in this device’s Keychain. Remote processing has no zero-retention guarantee. No analytics are used. The iPhone does not read Health data and saves iPhone-only workouts only after you choose Save to Apple Health. If you choose Apple Watch recording, the Watch separately reads available heart rate and active energy and saves its workout, execution intervals and optional accepted treadmill distance. iPhone saving stays disabled for that attempt. Workouts without usable intervals are discarded; sensor samples may already remain in HealthKit.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("settings.privacy")

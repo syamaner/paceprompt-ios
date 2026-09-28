@@ -62,8 +62,8 @@ def verify() -> None:
     assert project.count("INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;") == 2
     assert project.count("TARGETED_DEVICE_FAMILY = 1;") >= 2
     health_share_purpose = (
-        "PacePrompt does not read Apple Health data. It only asks to save a completed "
-        "workout and optional distance when you choose Save to Apple Health."
+        "PacePrompt on iPhone does not read Apple Health data. It saves iPhone-only workouts "
+        "when you choose Save to Apple Health. Apple Watch separately records Watch-assisted workouts."
     )
     assert project.count(
         f'INFOPLIST_KEY_NSHealthShareUsageDescription = "{health_share_purpose}";'

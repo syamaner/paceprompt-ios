@@ -248,7 +248,8 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
             throw WorkoutHistoryMutationFailure.invalidSummary
         }
         let existing = summaries[index]
-        guard existing.schemaVersion == WorkoutExecutionSummarySchema.currentVersion,
+        guard existing.schemaVersion >= WorkoutExecutionSummarySchema.currentVersion,
+              !existing.isWatchOwnedOrInvalidOwnership,
               let previous = existing.healthExport,
               healthExportTransitionIsValid(from: previous, to: state) else {
             throw WorkoutHistoryMutationFailure.invalidSummary
@@ -415,6 +416,9 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
         if let index = summary.progress.currentStepIndex,
            !(summary.planSnapshot.steps.indices.contains(index)) { return false }
 
+        guard summary.schemaVersion == 3 ? summary.ownership == .watchPrimary : summary.ownership == nil else { return false }
+        if summary.schemaVersion == 3, summary.healthExport != .notRequested { return false }
+
         switch summary.outcome {
         case .inProgress, .completed: break
         case let .stoppedByUser(reason), let .interrupted(reason), let .failed(reason):
@@ -429,7 +433,7 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
             guard summary.schemaVersion == WorkoutExecutionSummarySchema.legacyVersion,
                   metres.isFinite, metres >= 0 else { return false }
         case let .measuredWithProvenance(metres, provenance):
-            guard summary.schemaVersion == WorkoutExecutionSummarySchema.currentVersion,
+            guard summary.schemaVersion >= WorkoutExecutionSummarySchema.currentVersion,
                   metres.isFinite, metres >= 0,
                   provenance.startCumulativeMetres.isFinite,
                   provenance.finalCumulativeMetres.isFinite,
@@ -537,7 +541,7 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
 
     private func immutableFieldsMatch(_ lhs: WorkoutExecutionSummary, _ rhs: WorkoutExecutionSummary) -> Bool {
         lhs.id == rhs.id && lhs.schemaVersion == rhs.schemaVersion && lhs.sourcePlanID == rhs.sourcePlanID
-            && lhs.planSnapshot == rhs.planSnapshot && lhs.attemptedAt == rhs.attemptedAt
+            && lhs.planSnapshot == rhs.planSnapshot && lhs.attemptedAt == rhs.attemptedAt && lhs.ownership == rhs.ownership
     }
 
     private func hasExpectedShape(_ data: Data) -> Bool {
@@ -550,9 +554,13 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
     private func summaryHasExpectedShape(_ value: [String: Any]) -> Bool {
         let base = Set(["id", "schemaVersion", "planSnapshot", "attemptedAt", "lastUpdatedAt", "outcome", "activeDuration", "distance", "progress", "physicalStopConfirmation"])
         guard let schemaVersion = value["schemaVersion"] as? Int else { return false }
-        let required = schemaVersion == WorkoutExecutionSummarySchema.currentVersion
+        let required = schemaVersion >= WorkoutExecutionSummarySchema.currentVersion
             ? base.union(["activityTimeline", "healthExport"]) : base
-        let allowed = required.union(["sourcePlanID"])
+        let allowed = required.union(["sourcePlanID"]).union(schemaVersion == 3 ? ["ownership"] : [])
+        if schemaVersion == 3 {
+            guard let ownership = value["ownership"] as? [String: Any], Set(ownership.keys) == ["schemaVersion", "owner"],
+                  ownership["schemaVersion"] as? Int == 1, ownership["owner"] as? String == "watchPrimary" else { return false }
+        }
         guard Set(value.keys).isSubset(of: allowed), required.isSubset(of: Set(value.keys)),
               let plan = value["planSnapshot"] as? [String: Any], planHasExpectedShape(plan),
               let outcome = value["outcome"] as? [String: Any], taggedObjectHasExpectedShape(outcome, valueKey: "reasonCode", valueRequiredFor: ["stoppedByUser", "interrupted", "failed"]),
@@ -560,7 +568,7 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
               let distance = value["distance"] as? [String: Any], distanceHasExpectedShape(distance),
               let progress = value["progress"] as? [String: Any], Set(progress.keys).isSubset(of: ["completedStepCount", "currentStepIndex", "activeSecondsInCurrentStep"]), Set(["completedStepCount", "activeSecondsInCurrentStep"]).isSubset(of: Set(progress.keys)),
               let stop = value["physicalStopConfirmation"] as? [String: Any], taggedObjectHasExpectedShape(stop, valueKey: "confirmedAt", valueRequiredFor: ["humanConfirmed"]) else { return false }
-        if schemaVersion == WorkoutExecutionSummarySchema.currentVersion {
+        if schemaVersion >= WorkoutExecutionSummarySchema.currentVersion {
             guard let timeline = value["activityTimeline"] as? [String: Any],
                   activityTimelineHasExpectedShape(timeline),
                   let healthExport = value["healthExport"] as? [String: Any],

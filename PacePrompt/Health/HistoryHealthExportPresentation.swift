@@ -19,6 +19,9 @@ enum HistoryHealthExportPresenter {
     summary: WorkoutExecutionSummary,
     isSaving: Bool
   ) -> HistoryHealthExportPresentation? {
+    if summary.isWatchOwnedOrInvalidOwnership {
+      return .init(title: summary.planSnapshot.suggestedName, outcome: outcome(summary.outcome), activity: "Apple Watch workout", timing: "Recorded independently on Apple Watch", duration: "See local workout details", distance: "See local workout details", intervalCount: "Local execution remains in History", status: "Watch-owned; save result unavailable on iPhone", actionTitle: nil, confirmationTitle: "", confirmationMessage: "")
+    }
     let candidateVersion = nextVersion(summary.healthExport)
     guard case let .eligible(payload) = WorkoutHealthPayloadFactory.make(
       summary: summary,
@@ -514,6 +517,9 @@ enum HistoryWorkoutDetailPresenter {
     isSaving: Bool,
     mutationAllowed: Bool
   ) -> HistoryHealthCard {
+    if summary.isWatchOwnedOrInvalidOwnership {
+      return .init(title: "Apple Watch recording", detail: "Watch-owned; save result unavailable on iPhone", symbol: "applewatch", actionTitle: nil, confirmationTitle: nil, confirmationMessage: nil)
+    }
     guard let export = HistoryHealthExportPresenter.make(summary: summary, isSaving: isSaving) else {
       let detail: String
       if summary.schemaVersion == WorkoutExecutionSummarySchema.legacyVersion {
@@ -835,7 +841,7 @@ private extension HistoryWorkoutRow {
     date = historyDateFormatter(locale: locale, timeZone: timeZone).string(from: summary.attemptedAt)
     duration = HistoryWorkoutDetailPresenter.duration(summary.activeDuration)
     distance = HistoryWorkoutDetailPresenter.distance(summary.distance, locale: locale)
-    health = historyHealthRowStatus(summary.healthExport, schemaVersion: summary.schemaVersion)
+    health = summary.isWatchOwnedOrInvalidOwnership ? "Watch-owned; save result unavailable on iPhone" : historyHealthRowStatus(summary.healthExport, schemaVersion: summary.schemaVersion)
   }
 }
 

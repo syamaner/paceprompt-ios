@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>WKApplication</key>
+	<true/>
+	<key>WKCompanionAppBundleIdentifier</key>
+	<string>com.otherweather.PromptPace</string>
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>workout-processing</string>
+	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>PacePrompt uses available heart rate and HealthKit-calculated active energy during your Apple Watch workout. Sensor values stay in HealthKit and are not copied to iPhone History.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>PacePrompt saves one Apple Watch workout with execution intervals, available active energy and optional treadmill distance. Workouts without usable execution intervals are discarded.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>

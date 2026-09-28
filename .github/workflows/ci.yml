@@ -43,6 +43,9 @@ jobs:
       - name: Verify saved profile dependency and side-effect boundaries
         run: python3 -B scripts/verify_planning_profile_boundaries.py
 
+      - name: Verify Watch ownership and command boundaries
+        run: python3 -B scripts/verify_watch_boundaries.py
+
       - name: Verify deterministic workout-import corpus
         run: |
           python3 -B Evaluation/WorkoutImport/Scoring/scorer.py \

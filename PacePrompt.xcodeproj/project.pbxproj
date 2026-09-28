@@ -116,6 +116,31 @@
 		F1410000000000000000101E /* PlanningProfileUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1410000000000000000201E; };
 		F1410000000000000000101F /* PlanningProfileFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1410000000000000000201F; };
 		F14300000000000000001001 /* HistoricalPlanCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14300000000000000002001; };
+		D11500000000000000000200 /* PhoneWatchLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000100; };
+		D11500000000000000000300 /* PhoneWatchLifecycle.swift in Watch Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000100; };
+		D11500000000000000000201 /* WatchWorkoutLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000101; };
+		D11500000000000000000301 /* WatchWorkoutLifecycle.swift in Watch Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000101; };
+		D11500000000000000000202 /* WatchProtectedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000102; };
+		D11500000000000000000302 /* WatchProtectedStore.swift in Watch Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000102; };
+		D11500000000000000000203 /* WatchWire.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000103; };
+		D11500000000000000000303 /* WatchWire.swift in Watch Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000103; };
+		D11500000000000000000204 /* PhoneWatchSessionAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000104; };
+		D11500000000000000000205 /* WatchExecutionProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000105; };
+		D11500000000000000000306 /* WatchHealthKitAdapter.swift in Watch Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000106; };
+		D11500000000000000000307 /* PacePromptWatchApp.swift in Watch Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000107; };
+		D11500000000000000000399 /* StrictImportJSON.swift in Watch Sources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000000; };
+		D11500000000000000000403 /* Watch Privacy Manifest in Resources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000401; };
+		D11500000000000000000404 /* Watch Assets in Resources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000402; };
+		D11500000000000000000405 /* PacePromptWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = D11500000000000000000400; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D11500000000000000000802 /* WatchInterchangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11500000000000000000801; };
+		D11500000000000000000902 = {isa = PBXBuildFile; fileRef = D11500000000000000000901; };
+		D11500000000000000000903 = {isa = PBXBuildFile; fileRef = D11500000000000000000901; };
+		D11500000000000000000912 = {isa = PBXBuildFile; fileRef = D11500000000000000000911; };
+		D11500000000000000000913 = {isa = PBXBuildFile; fileRef = D11500000000000000000911; };
+		D11500000000000000000922 = {isa = PBXBuildFile; fileRef = D11500000000000000000921; };
+		D11500000000000000000923 = {isa = PBXBuildFile; fileRef = D11500000000000000000921; };
+		D11500000000000000000B00 = {isa = PBXBuildFile; fileRef = D11500000000000000000A00; };
+		D11500000000000000000B01 = {isa = PBXBuildFile; fileRef = D11500000000000000000A01; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -140,7 +165,12 @@
 			remoteGlobalIDString = AB0000000000000000000101;
 			remoteInfo = PacePromptEvaluation;
 		};
+		D11500000000000000000603 = {isa = PBXContainerItemProxy; containerPortal = AA0000000000000000000001; proxyType = 1; remoteGlobalIDString = D11500000000000000000700; remoteInfo = PacePromptWatch; };
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D11500000000000000000602 /* Embed Watch Content */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = "$(CONTENTS_FOLDER_PATH)/Watch"; dstSubfolderSpec = 16; files = (D11500000000000000000405,); name = "Embed Watch Content"; runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		AA0000000000000000002001 /* PacePromptApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptApp.swift; sourceTree = "<group>"; };
@@ -256,6 +286,23 @@
 		F1410000000000000000201E /* PlanningProfileUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileUITestSupport.swift; sourceTree = "<group>"; };
 		F1410000000000000000201F /* PlanningProfileFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningProfileFlowUITests.swift; sourceTree = "<group>"; };
 		F14300000000000000002001 /* HistoricalPlanCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalPlanCompatibility.swift; sourceTree = "<group>"; };
+		D11500000000000000000100 /* PhoneWatchLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WatchInterchange/PhoneWatchLifecycle.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000101 /* WatchWorkoutLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WatchInterchange/WatchWorkoutLifecycle.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000102 /* WatchProtectedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WatchInterchange/WatchProtectedStore.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000103 /* WatchWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WatchInterchange/WatchWire.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000104 /* PhoneWatchSessionAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Watch/PhoneWatchSessionAdapter.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000105 /* WatchExecutionProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePrompt/Execution/WatchExecutionProjection.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000106 /* WatchHealthKitAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptWatch/WatchHealthKitAdapter.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000107 /* PacePromptWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptWatch/PacePromptWatchApp.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000400 /* PacePromptWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = PacePromptWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D11500000000000000000401 /* Watch Privacy Manifest */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PacePromptWatch/PrivacyInfo.xcprivacy; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000402 /* Watch Assets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = PacePromptWatch/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000801 /* WatchInterchangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacePromptTests/WatchInterchangeTests.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000901 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WatchInterchange/WatchBuilderAssembly.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000911 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WatchInterchange/WatchRecordingAdapter.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000921 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WatchInterchange/WatchHealthMetadata.swift; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000A00 = {isa = PBXFileReference; lastKnownFileType = text.json; path = docs/fixtures/watch-health-v1/complete.synthetic.json; sourceTree = SOURCE_ROOT; };
+		D11500000000000000000A01 = {isa = PBXFileReference; lastKnownFileType = text.json; path = docs/fixtures/watch-health-v1/incomplete.synthetic.json; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -300,6 +347,8 @@
 		AA0000000000000000005001 = {
 			isa = PBXGroup;
 			children = (
+				D11500000000000000000801,
+				D11500000000000000000500,
 				AC0000000000000000000000,
 				AC0000000000000000000001,
 				AC0000000000000000000002,
@@ -472,6 +521,7 @@
 				AA0000000000000000002103 /* PacePromptUITests.xctest */,
 				AB0000000000000000002101 /* PacePromptEvaluation.app */,
 				AB0000000000000000002102 /* PacePromptEvaluationTests.xctest */,
+				D11500000000000000000400,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -555,6 +605,7 @@
 		};
 		F14100000000000000005001 /* Profiles */ = {isa = PBXGroup; children = (
 				F1410000000000000000201E,F14100000000000000002001,F14100000000000000002002,F14100000000000000002003,F14100000000000000002004,F14100000000000000002005,F14100000000000000002006,F14200000000000000002001,F14300000000000000002001); path = Profiles; sourceTree = "<group>"; };
+		D11500000000000000000500 /* Watch Companion */ = {isa = PBXGroup; children = (D11500000000000000000921,D11500000000000000000911,D11500000000000000000901,D11500000000000000000100,D11500000000000000000101,D11500000000000000000102,D11500000000000000000103,D11500000000000000000104,D11500000000000000000105,D11500000000000000000106,D11500000000000000000107,D11500000000000000000401,D11500000000000000000402,); name = "Watch Companion"; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -565,10 +616,12 @@
 				AA0000000000000000004001 /* Frameworks */,
 				AA0000000000000000007001 /* Sources */,
 				AA0000000000000000008001 /* Resources */,
+				D11500000000000000000602,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D11500000000000000000604,
 			);
 			name = PacePrompt;
 			productName = PacePrompt;
@@ -646,6 +699,7 @@
 			productReference = AB0000000000000000002102 /* PacePromptEvaluationTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		D11500000000000000000700 /* PacePromptWatch */ = {isa = PBXNativeTarget; buildConfigurationList = D11500000000000000000701; buildPhases = (D11500000000000000000600,D11500000000000000000601,); buildRules = (); dependencies = (); name = PacePromptWatch; productName = PacePromptWatch; productReference = D11500000000000000000400; productType = "com.apple.product-type.application"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -694,6 +748,7 @@
 				AA0000000000000000000103 /* PacePromptUITests */,
 				AB0000000000000000000101 /* PacePromptEvaluation */,
 				AB0000000000000000000102 /* PacePromptEvaluationTests */,
+				D11500000000000000000700,
 			);
 		};
 /* End PBXProject section */
@@ -713,6 +768,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                D11500000000000000000B01,
+                D11500000000000000000B00,
 				AD0000000000000000000009 /* outbound-request.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -743,6 +800,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D11500000000000000000601 /* Watch Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (D11500000000000000000403,D11500000000000000000404,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -750,6 +808,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                D11500000000000000000922,
+                D11500000000000000000912,
+                D11500000000000000000902,
 				F1410000000000000000101E,
 				F14100000000000000001006 /* PlanningProfilesView.swift */,
 				F14200000000000000001001 /* PlanningProfileSelector.swift */,
@@ -809,6 +870,12 @@
 				AA0000000000000000001016 /* ManualWorkoutPlan.swift in Sources */,
 				AA0000000000000000001017 /* PlansViewModel.swift in Sources */,
 				AA0000000000000000001019 /* PlansUITestSupport.swift in Sources */,
+				D11500000000000000000200,
+				D11500000000000000000201,
+				D11500000000000000000202,
+				D11500000000000000000203,
+				D11500000000000000000204,
+				D11500000000000000000205,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -816,6 +883,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                D11500000000000000000802,
 				F14100000000000000001020,
 				D30000000000000000001003 /* WorkoutHealthExportTests.swift in Sources */,
 				D40000000000000000001002 /* WorkoutHistoryExportTests.swift in Sources */,
@@ -881,6 +949,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D11500000000000000000600 /* Watch Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (D11500000000000000000923,D11500000000000000000913,D11500000000000000000903,D11500000000000000000300,D11500000000000000000301,D11500000000000000000302,D11500000000000000000303,D11500000000000000000306,D11500000000000000000307,D11500000000000000000399,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -899,6 +968,7 @@
 			target = AB0000000000000000000101 /* PacePromptEvaluation */;
 			targetProxy = AB0000000000000000003001 /* PBXContainerItemProxy */;
 		};
+		D11500000000000000000604 = {isa = PBXTargetDependency; target = D11500000000000000000700; targetProxy = D11500000000000000000603; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -1028,7 +1098,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "PacePrompt on iPhone does not read Apple Health data. It saves iPhone-only workouts when you choose Save to Apple Health. Apple Watch separately records Watch-assisted workouts.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1064,7 +1134,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "PacePrompt on iPhone does not read Apple Health data. It saves iPhone-only workouts when you choose Save to Apple Health. Apple Watch separately records Watch-assisted workouts.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1265,6 +1335,8 @@
 			};
 			name = Release;
 		};
+		D11500000000000000000702 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CODE_SIGN_ENTITLEMENTS = PacePromptWatch/PacePromptWatch.entitlements; CURRENT_PROJECT_VERSION = 13; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = PacePromptWatch/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = PacePrompt; MARKETING_VERSION = 1.0.1; PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace.watchkitapp; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = watchos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "watchos watchsimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 4; WATCHOS_DEPLOYMENT_TARGET = 10.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");}; name = Debug; };
+		D11500000000000000000703 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CODE_SIGN_ENTITLEMENTS = PacePromptWatch/PacePromptWatch.entitlements; CURRENT_PROJECT_VERSION = 13; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = PacePromptWatch/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = PacePrompt; MARKETING_VERSION = 1.0.1; PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace.watchkitapp; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = watchos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "watchos watchsimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 4; WATCHOS_DEPLOYMENT_TARGET = 10.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");}; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1322,6 +1394,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		D11500000000000000000701 = {isa = XCConfigurationList; buildConfigurations = (D11500000000000000000702,D11500000000000000000703,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = AA0000000000000000000001 /* Project object */;

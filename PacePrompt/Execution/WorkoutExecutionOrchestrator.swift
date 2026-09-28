@@ -116,6 +116,16 @@ final class WorkoutExecutionOrchestrator {
   private let clock: any WorkoutOrchestrationClock
   private let attemptIDs: any WorkoutAttemptIDSource
 
+  private var reservedWatchID: UUID?
+
+  func reserveWatchAttempt(id: UUID) -> Bool {
+    guard frozenAttempt == nil, reservedWatchID == nil, case .preflight = state.execution else { return false }
+    reservedWatchID = id
+    return true
+  }
+
+  var watchClosedIntervals: [WorkoutExecutedInterval] { closedExecutedIntervals }
+
   private var preparedInputs: PreparedInputs?
   private var latestDistance: WorkoutDistance = .unavailable(
     reason: .init(rawValue: "distance-not-yet-measured"))
@@ -235,7 +245,8 @@ final class WorkoutExecutionOrchestrator {
         physicalStopConfirmation: recoveredStopConfirmation(
           summary.physicalStopConfirmation),
         activityTimeline: summary.activityTimeline,
-        healthExport: summary.healthExport
+        healthExport: summary.healthExport,
+        ownership: summary.ownership
       )
       do {
         try history.record(updated)
@@ -291,7 +302,7 @@ final class WorkoutExecutionOrchestrator {
       }
       let attemptedAt = reading.wallClock
       frozenAttempt = .init(
-        attemptID: attemptIDs.nextAttemptID(),
+        attemptID: reservedWatchID ?? attemptIDs.nextAttemptID(),
         sourcePlanID: preparedInputs?.sourcePlanID,
         plan: armed.plan,
         capability: armed.capability,
@@ -808,7 +819,7 @@ final class WorkoutExecutionOrchestrator {
     let attempt = frozenAttempt!
     return .init(
       id: attempt.attemptID,
-      schemaVersion: WorkoutExecutionSummarySchema.currentVersion,
+      schemaVersion: reservedWatchID == nil ? WorkoutExecutionSummarySchema.currentVersion : WorkoutExecutionSummarySchema.watchVersion,
       sourcePlanID: attempt.sourcePlanID,
       planSnapshot: attempt.plan.plan,
       attemptedAt: attempt.attemptedAt,
@@ -819,7 +830,8 @@ final class WorkoutExecutionOrchestrator {
       progress: progress(state),
       physicalStopConfirmation: stopConfirmation(state.execution),
       activityTimeline: activityTimeline(),
-      healthExport: .notRequested
+      healthExport: .notRequested,
+      ownership: reservedWatchID == nil ? nil : .watchPrimary
     )
   }
 
@@ -1158,6 +1170,7 @@ final class WorkoutExecutionOrchestrator {
   }
 
   private func resetAttemptContext() {
+    reservedWatchID = nil
     preparedInputs = nil
     frozenAttempt = nil
     lastPersistedSummary = nil

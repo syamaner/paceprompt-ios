@@ -5,6 +5,32 @@ import XCTest
 
 @MainActor
 final class WorkoutHealthExportTests: XCTestCase {
+  func testWatchAndReservedPhoneIdentityNeverRequestPermissionOrSave() async throws {
+    let phone = fixture()
+    var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(phone)) as? [String: Any])
+    object["schemaVersion"] = 3; object["ownership"] = ["schemaVersion": 1, "owner": "watchPrimary"]
+    let watch = try JSONDecoder().decode(WorkoutExecutionSummary.self, from: JSONSerialization.data(withJSONObject: object))
+    for record in [watch, phone] {
+      let store = FakeHealthStore(); let history = FakeHistory(record)
+      let service = WorkoutHealthExportCoordinator(history: history, healthStore: store, phoneSaveAllowed: { _ in false })
+      _ = await service.save(record)
+      XCTAssertEqual(store.authorizationRequests, 0); XCTAssertTrue(store.savedPayloads.isEmpty)
+    }
+  }
+
+  func testWatchHistoryRowAndCardNeverOfferPhoneSave() throws {
+    var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(fixture())) as? [String: Any])
+    object["schemaVersion"] = 3; object["ownership"] = ["schemaVersion": 1, "owner": "watchPrimary"]
+    let watch = try JSONDecoder().decode(WorkoutExecutionSummary.self, from: JSONSerialization.data(withJSONObject: object))
+    let list = HistoryLibraryPresentation(status: .init(canonical: .available(summaries: [watch]), staging: .absent))
+    guard case let .populated(rows) = list.content else { return XCTFail("Watch History must remain visible") }
+    XCTAssertEqual(rows.first?.health, "Watch-owned; save result unavailable on iPhone")
+    let detail = HistoryWorkoutDetailPresenter.make(summary: watch, isSaving: false, healthMutationAllowed: true)
+    XCTAssertEqual(detail.health.title, "Apple Watch recording")
+    XCTAssertEqual(detail.health.detail, "Watch-owned; save result unavailable on iPhone")
+    XCTAssertNil(detail.health.actionTitle)
+  }
+
   func testPayloadUsesStableIdentifiersExactDecimalsAndIndependentSources() throws {
     let summary = fixture()
     guard case let .eligible(payload) = WorkoutHealthPayloadFactory.make(

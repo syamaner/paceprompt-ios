@@ -54,7 +54,16 @@ struct PacePromptApp: App {
     _workoutSession = StateObject(
       wrappedValue: WorkoutSessionCoordinator(
         binding: binding,
-        displayWakeController: ApplicationWorkoutDisplayWakeController()
+        displayWakeController: ApplicationWorkoutDisplayWakeController(),
+        watchFactory: {
+          let adapter = PhoneWatchSessionAdapter()
+          let lifecycle = PhoneWatchLifecycle(port: adapter, reserve: { id in
+            try WatchOwnershipStore().reserve(id)
+            guard binding.orchestrator.reserveWatchAttempt(id: id) else { throw WatchStoreError.definite }
+          }, makeID: UUID.init, monotonic: { ProcessInfo.processInfo.systemUptime })
+          adapter.lifecycle = lifecycle
+          return lifecycle
+        }
       )
     )
   }

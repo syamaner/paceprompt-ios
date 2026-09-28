@@ -396,3 +396,13 @@ This issue adds no entitlement or executable code, permission prompt, HealthKit 
 ## Post-MVP Watch ownership boundary
 
 The [Watch-primary contract v1](watch-primary-health-interchange-contract.md) governs only newly reserved Watch-assisted attempts after #115 implementation. It suppresses the iPhone save from reservation onward, including ambiguous outcomes; the iPhone retry/replacement rules here must never be used as Watch fallback. Historical iPhone-only records and this timeline metadata mapping remain unchanged. #114 is specification evidence only.
+
+The #115 implementation encodes new Watch-owned local records as schema 3 with a
+required versioned ownership envelope. Payload eligibility, the export service
+(before permission and again before saving), History actions and repository
+export-state mutation all refuse these records. A durable reservation also
+suppresses a colliding phone identity independently of record decoding. See the
+[local storage amendment](local-workout-storage-and-history-contract.md#watch-ownership-amendment-115).
+Zero usable Watch intervals discard the builder under contract revision 1.1;
+this never restores iPhone eligibility. Existing iPhone-only saves and their
+separate retry policy remain unchanged.

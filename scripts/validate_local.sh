@@ -63,6 +63,8 @@ fi
 python3 -B scripts/verify_planning_profile_boundaries.py
 python3 -B scripts/verify_import_resources.py
 python3 -B scripts/verify_release_configuration.py
+python3 -B scripts/verify_watch_boundaries.py
+python3 -B -m unittest discover -s scripts/tests -v
 python3 -B Evaluation/WorkoutImport/Scoring/scorer.py \
   --root Evaluation/WorkoutImport verify-corpus
 python3 -B -m unittest discover \
