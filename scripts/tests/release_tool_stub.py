@@ -56,6 +56,9 @@ elif command == 'xcodebuild':
         for path in app.rglob('*'):
             if path.is_file(): bundle.write(path, 'Payload/PacePrompt.app/' + path.relative_to(app).as_posix())
         if failure == 'extra-app': bundle.writestr('Payload/Extra.app/Extra', f.macho('phone', signed=True))
+        # Apple's documented default includes optional symbols; omission must fail closed.
+        if plistlib.loads(options.read_bytes()).get('uploadSymbols') is not False or failure == 'extra-symbols':
+            bundle.writestr('Symbols/00000000-0000-0000-0000-000000000000.symbols', b'synthetic symbols')
 elif command == 'xcrun':
     assert args[:2] == ['altool', '--upload-app']
 else:

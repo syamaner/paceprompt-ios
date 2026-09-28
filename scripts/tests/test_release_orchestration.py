@@ -33,7 +33,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                'DIST_P12_PASSWORD': 'synthetic',
                'DIST_PROFILE_B64': encode(plistlib.dumps(f.profile('phone'))),
                'DIST_WATCH_PROFILE_B64': encode(plistlib.dumps(f.profile('watch'))),
-               'RELEASE_TAG': 'testflight/1.0.1-b14', 'RELEASE_SHA': 'a' * 40,
+               'RELEASE_TAG': 'testflight/1.0.1-b15', 'RELEASE_SHA': 'a' * 40,
                'GITHUB_STEP_SUMMARY': str(root / 'summary')}
         if failure == 'swapped-profile': env['DIST_WATCH_PROFILE_B64'] = env['DIST_PROFILE_B64']
         result = subprocess.run(['/bin/bash', str(f.ROOT / 'scripts/testflight_release.sh')],
@@ -55,6 +55,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
         self.assertEqual(options['provisioningProfiles'], {f.policy.role(role)['id']: f.profile(role)['UUID'] for role in ('phone', 'watch')})
         self.assertIs(options['testFlightInternalTestingOnly'], True)
         self.assertIs(options['manageAppVersionAndBuildNumber'], False)
+        self.assertIs(options['uploadSymbols'], False)
         uploads = [i for i, call in enumerate(calls) if call[0] == 'xcrun']
         verifies = [i for i, call in enumerate(calls) if call[0] == 'codesign' and '--verify' in call]
         self.assertEqual(len(uploads), 1); self.assertEqual(len(verifies), 2)
@@ -64,7 +65,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
 
     def test_each_bundle_failure_blocks_upload_and_signing_failure_blocks_export(self):
         for failure in ('sign-watch', 'sign-phone', 'verify-watch', 'verify-phone', 'swapped-profile',
-                        'hidden-entitlement', 'hidden-certificate', 'hidden-identifier', 'extra-app'):
+                        'hidden-entitlement', 'hidden-certificate', 'hidden-identifier', 'extra-app', 'extra-symbols'):
             with self.subTest(failure=failure):
                 result, calls, _ = self.run_release(failure)
                 self.assertNotEqual(result.returncode, 0)

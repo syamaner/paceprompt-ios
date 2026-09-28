@@ -109,6 +109,8 @@ with open(sys.argv[1], 'wb') as output:
         'signingCertificate': sys.argv[4],
         'manageAppVersionAndBuildNumber': False,
         'testFlightInternalTestingOnly': True,
+        # Keep optional Apple symbol packages outside the closed IPA graph.
+        'uploadSymbols': False,
     }, output)
 PY
 xcodebuild -quiet -exportArchive -archivePath "$work/PromptPace.xcarchive" \

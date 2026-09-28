@@ -13,7 +13,7 @@ IDENTITIES = f'  1) {FINGERPRINT} "Apple Distribution: CI ({TEAM})"'
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def info(role, version='1.0.1', build='14'):
+def info(role, version='1.0.1', build='15'):
     b = policy.role(role)
     result = plistlib.loads((ROOT / ('PacePrompt' if role == 'phone' else 'PacePromptWatch') / 'Info.plist').read_bytes())
     result.update(CFBundleIdentifier=b['id'], CFBundleExecutable=b['executable'],
@@ -57,7 +57,7 @@ def profile(role):
             'DeveloperCertificates': [CERTIFICATE], 'Entitlements': entitlements(role)}
 
 
-def app_tree(app, version='1.0.1', build='14', signed=False):
+def app_tree(app, version='1.0.1', build='15', signed=False):
     for role, b in policy.BUNDLES.items():
         bundle = app / b['path']; bundle.mkdir(parents=True, exist_ok=True)
         (bundle / 'Info.plist').write_bytes(plistlib.dumps(info(role, version, build)))
