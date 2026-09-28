@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 28 Sep 2026 | `PP-20260928-08` | Issue #195 internal TestFlight build 16 candidate | `gpt-6-astra` | 7,151,357 (7,070,848; 0) | 11,913 | 7,163,270 | Unmeasured | Exact 86-request root candidate/review/validation phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-07` | Issue #193 console overrides and moving step time | `gpt-6-astra` | 15,654,883 (15,386,752; 0) | 46,337 | 15,701,220 | Unmeasured | Exact 103-request root implementation/review/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-06` | Issue #188 successful Watch internal release receipt | `gpt-6-astra` | 5,596,196 (5,510,272; 0) | 12,989 | 5,609,185 | Unmeasured | Exact 54-request root delivery/receipt phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-05` | Issue #188 build 15 symbol-package export recovery | `gpt-6-astra` | 14,394,490 (14,192,640; 0) | 21,177 | 14,415,667 | Unmeasured | Exact 120-request root release diagnosis/repair/validation phase; independent reviewer and final insertion/delivery excluded |
@@ -1196,3 +1197,46 @@ rates/threshold for this exact model were not verified; no other model's prices
 are substituted and this is not a subscription bill.
 
 Final snapshot: event 1061 at `2026-09-28T20:58:10.802Z`; input 139,571,626, cached input 137,356,160, cache-write input 0, output 367,662, total 139,939,288. Exact report `/private/tmp/pp193-final-accounting.json`: 103 measured requests; largest input 222,354. Phase reasoning output 15,999 is a subset of output, not added again. Counter resets inside the boundary: 0; historical resets: 0; validated excluded exact replay events: 3; repeated cumulative snapshots: 1. Threshold crossings remain unmeasured without a verified exact-model threshold. This numeric insertion and subsequent delivery are excluded.
+
+## PP-20260928-08 build 16 candidate and measurement boundary
+
+Issue #195 prepares internal TestFlight 1.0.1 (16) containing the merged #193
+console-override and moving-step countdown repair. Only four production build
+settings and matching synthetic release fixtures change. The release runbook
+now names all paired phone/Watch fixture modules and their mismatch replacements.
+No production behaviour, signing settings, workflow, privacy or encryption change
+is included. Independent working-diff review found no actionable findings.
+Focused validation passed 57 repository script tests, source release metadata,
+workflow lint, release shell syntax, ShellCheck and `git diff --check`.
+
+The required complete gate passed on Xcode 27.0 (27A266a), iOS 26.5 simulator:
+449 unit tests, 72 UI tests, 16 evaluation tests, unsigned Release build including
+Watch, static analysis and coverage; 57 script, 41 scorer, 13 summary, 247 HostEval
+tests (36 explicit private-evidence skips) and 24 accounting tests. Evidence is
+`/private/tmp/pp-build16-complete-gate`, with output at
+`/private/tmp/pp-build16-complete-gate.log`. All 417 non-Markdown inputs are
+recorded in `/private/tmp/pp-build16-frozen-inputs.json`. Exact-head review and
+required hosted CI are recorded on the delivery PR. This candidate checkpoint
+does not claim upload, Apple processing, tester installation or physical acceptance.
+Existing root scheme changes, other worktrees and local signing settings remain
+untouched.
+
+Measurement scope: root Desktop session
+`01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`, baseline
+`/private/tmp/pp-build16-baseline.json`, event 1085 at
+`2026-09-28T21:10:50.224Z`. Baseline counters: input 143,780,401; cached input
+141,488,384; cache-write input 0; output 377,942 (reasoning subset 103,614); total
+144,158,343. The phase includes candidate preparation, focused and complete
+validation, working-diff review coordination and documentation. Independent
+reviewer usage, final numeric insertion, commit and subsequent delivery are
+excluded. API-equivalent estimate and long-context threshold remain Unmeasured:
+verified official rates/threshold for this exact model are unavailable, no other
+model's rates are substituted, and this is not a subscription bill.
+
+Final snapshot: event 1171 at `2026-09-28T21:45:34.935Z`; input 150,931,758,
+cached input 148,559,232, cache-write input 0, output 389,855, total 151,321,613.
+Exact report `/private/tmp/pp-build16-candidate-accounting.json`: 86 measured
+requests; largest input 97,749. Phase reasoning output 1,009 is a subset of output.
+Counter resets inside the boundary and historical resets: 0; exact replay events
+and repeated cumulative snapshots: 0. Threshold crossings remain unmeasured.
+This final numeric insertion and subsequent delivery are excluded.
