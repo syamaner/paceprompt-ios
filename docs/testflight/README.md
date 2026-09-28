@@ -331,3 +331,50 @@ All 417 non-documentation inputs match
 42 local links, 34 shell snippets (syntax only) and two embedded Python snippets
 (compilation only). Independent complete-diff review found no actionable findings.
 Exact committed-head review and hosted CI will be recorded on the delivery PR.
+
+### Watch internal release: 1.0.1 (15), issue #188
+
+[PR #191](https://github.com/syamaner/paceprompt-ios/pull/191) merged as
+`796819b21382ac7dd038fb989e79e1352aaf06ca`. Its independently reviewed second parent
+is `06ebf19eb0a6bc7701486360a47fb9ca61d4cfb0`; the merge tree is identical.
+Required [PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36433451866)
+and [exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36433605646)
+passed. Main protection was not bypassed. The exact clean merged signing tools
+passed 57 focused tests and lint before `RELEASE_TOOLS_SHA` activation/readback.
+
+Immutable tag `testflight/1.0.1-b15` and the trusted-tools pin both identify that
+merge. The unchanged encryption declaration was bound to this tag.
+[Release run 36433756311](https://github.com/syamaner/paceprompt-ios/actions/runs/36433756311),
+attempt 1, passed protected-source verification and the credential-free hosted
+Xcode 26.6 archive, then received the normal protected-environment approval under
+the operator's internal-upload authorisation. Existing main/environment/tag
+protections and the sole-tester audience were preserved.
+
+Hosted evidence now establishes both real App Store profiles against the CI
+certificate, explicit Watch-then-phone signing, internal-only export and the
+unchanged whole-IPA/per-architecture signature, entitlement and privacy guards.
+The single upload returned `UPLOAD SUCCEEDED with no errors`. Apple processing
+reached `VALID`, the build audience was `INTERNAL_ONLY`, and the processed build
+was assigned to and read back from the unchanged sole-tester internal group.
+The complete run concluded successfully. Tester-side visibility, installation,
+launch and paired-device HealthKit behaviour were not observed.
+
+The retained credential-free unsigned archive has SHA-256
+`583a71a68c27586bbba21425975bf6bc02ad6f5757f3647b0ccf78aa84f6613e`.
+Its bounded handoff was revalidated against the hosted digest, exact source, tag,
+run and attempt. Both `PacePrompt.app.dSYM` and `PacePromptWatch.app.dSYM` are
+retained with it at `/private/tmp/pp188-build15-retained/PromptPace.xcarchive`;
+the original transfer is `/private/tmp/pp188-build15-hosted-archive/unsigned-release.zip`.
+A digest-verified copy of the unsigned transfer is also retained in durable
+private local storage at `~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-15/unsigned-release.zip`,
+outside Git and the worktree. Temporary extraction paths above may be cleaned
+without losing that archive. Optional symbol submission remains disabled, so Apple-side symbolication
+may be limited. The hosted archive expires after one day. No signed IPA or signing
+asset was uploaded as an Actions artifact.
+
+Watch App ID/profile setup and internal TestFlight delivery under #188 are now
+complete. #115 signed paired-device acceptance, WeeklyHealthReport #80 reader
+implementation and #116 interoperability acceptance remain outstanding. No
+hardware was operated, Health data accessed, tester added or public/external
+release submitted. Contract revision 1.1, zero-interval discard, single Watch
+writer and permanent iPhone-save suppression remain unchanged.

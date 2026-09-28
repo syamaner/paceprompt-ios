@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 28 Sep 2026 | `PP-20260928-06` | Issue #188 successful Watch internal release receipt | `gpt-6-astra` | 5,596,196 (5,510,272; 0) | 12,989 | 5,609,185 | Unmeasured | Exact 54-request root delivery/receipt phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-05` | Issue #188 build 15 symbol-package export recovery | `gpt-6-astra` | 14,394,490 (14,192,640; 0) | 21,177 | 14,415,667 | Unmeasured | Exact 120-request root release diagnosis/repair/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-04` | Issue #188 actual Apple profile-family compatibility | `gpt-6-astra` | 19,884,033 (19,818,752; 0) | 15,654 | 19,899,687 | Unmeasured | Exact 118-request root setup/repair/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-03` | Issue #188 Watch internal TestFlight 1.0.1 (14) candidate and setup | `gpt-6-astra` | 14,577,998 (14,424,064; 0) | 21,014 | 14,599,012 | Unmeasured | Exact 130-request root candidate/setup/validation phase; independent reviewer and final insertion/delivery excluded |
@@ -1105,3 +1106,35 @@ validation. Independent reviewer, final numeric insertion and later delivery are
 excluded. Final event 860 at `2026-09-28T14:04:37.057Z` follows the completed gate and ledger draft immediately before commit: input 112,862,049; cached input 111,118,976; cache-write input 0; output 292,843; total 113,154,892. Exact report `/private/tmp/pp188-build15-final-accounting.json`: 120 requests, largest input 217,841; reasoning output 5,191 is included in output. No counter resets occurred. One exact replay (event 781 of 780) and one unchanged cumulative snapshot (event 787) were validated and excluded from usage. API-equivalent cost
 and long-context crossings remain unmeasured without verified official rates
 and threshold for this exact model.
+
+
+## PP-20260928-06 release receipt and measurement boundary
+
+Records the successful separately authorised Watch setup and internal TestFlight
+1.0.1 (15) delivery after protected PR #191 merge. Source and trusted tools are
+`796819b21382ac7dd038fb989e79e1352aaf06ca`; immutable tag
+`testflight/1.0.1-b15`; successful first run 36433756311. Required PR and exact-main
+CI, clean merged-tool tests/lint, protected source, hosted unsigned archive,
+normal environment approval, both profiles/CI certificate, signing/export,
+whole-IPA guard, single upload, Apple VALID/internal-only checks and observable
+existing-group assignment passed. Matching unsigned archive/dSYMs were retained
+and revalidated, with a digest-verified transfer copy in private durable local
+Application Support storage outside Git and the worktree. This receipt changes documentation only, preserving all 417
+frozen inputs and the passing complete gate. Device/HealthKit/FR30z/WHR acceptance
+remains unperformed. Independent working-diff review found no actionable findings and verified the
+release success markers, retained archive/dSYM digest and private file permissions.
+Documentation checks passed 43 local links, 34 shell snippets (syntax only) and
+two embedded Python snippets (compilation only); all 417 frozen inputs remain
+unchanged. Parent #7, #115, #116 and WeeklyHealthReport #80 received append-only
+release receipts preserving their open states and unfinished acceptance work.
+Exact-head review and required CI are recorded on the receipt PR.
+
+Root session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`. Baseline
+`/private/tmp/pp188-build15-delivery-baseline.json`, event 863 at
+`2026-09-28T14:05:48.652Z`: input 113,118,482; cached input 111,367,936; cache-write
+input 0; output 294,530 (reasoning subset 76,329); total 113,413,012. The phase
+covers candidate PR delivery, protected release activation/upload/verification
+and receipt preparation. Independent reviewer, final numeric insertion and later
+receipt delivery are excluded. Final event 920 at `2026-09-28T14:27:42.553Z` follows receipt preparation, review and documentation checks immediately before commit: input 118,714,678; cached input 116,878,208; cache-write input 0; output 307,519; total 119,022,197. Exact report `/private/tmp/pp188-build15-receipt-accounting.json`: 54 requests, largest input 122,147; reasoning output 1,962 is included in output. No counter resets or repeated cumulative snapshots occurred. Three exact replays (events 866 of 865, 917 of 916, 919 of 918) were validated and excluded from usage.
+API-equivalent estimate and long-context threshold remain unmeasured without
+verified official rates/threshold for this exact model.
