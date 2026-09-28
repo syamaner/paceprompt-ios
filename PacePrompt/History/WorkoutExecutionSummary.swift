@@ -3,7 +3,8 @@ import Foundation
 enum WorkoutExecutionSummarySchema {
     static let legacyVersion = 1
     static let currentVersion = 2
-    static let supportedVersions: Set<Int> = [legacyVersion, currentVersion]
+    static let watchVersion = 3
+    static let supportedVersions: Set<Int> = [legacyVersion, currentVersion, watchVersion]
 }
 
 struct WorkoutExecutionReasonCode: RawRepresentable, Codable, Equatable {
@@ -418,6 +419,12 @@ enum WorkoutPhysicalStopConfirmation: Equatable, Codable {
     }
 }
 
+struct WorkoutOwnershipEnvelope: Codable, Equatable {
+    let schemaVersion: Int
+    let owner: String
+    static let watchPrimary = Self(schemaVersion: 1, owner: "watchPrimary")
+}
+
 struct WorkoutExecutionSummary: Codable, Equatable {
     let id: UUID
     let schemaVersion: Int
@@ -432,6 +439,9 @@ struct WorkoutExecutionSummary: Codable, Equatable {
     let physicalStopConfirmation: WorkoutPhysicalStopConfirmation
     let activityTimeline: WorkoutActivityTimeline?
     let healthExport: WorkoutHealthExportState?
+    let ownership: WorkoutOwnershipEnvelope?
+
+    var isWatchOwnedOrInvalidOwnership: Bool { schemaVersion >= 3 || ownership != nil }
 
     init(
         id: UUID,
@@ -446,7 +456,8 @@ struct WorkoutExecutionSummary: Codable, Equatable {
         progress: WorkoutExecutionProgress,
         physicalStopConfirmation: WorkoutPhysicalStopConfirmation,
         activityTimeline: WorkoutActivityTimeline? = nil,
-        healthExport: WorkoutHealthExportState? = nil
+        healthExport: WorkoutHealthExportState? = nil,
+        ownership: WorkoutOwnershipEnvelope? = nil
     ) {
         self.id = id
         self.schemaVersion = schemaVersion
@@ -461,6 +472,7 @@ struct WorkoutExecutionSummary: Codable, Equatable {
         self.physicalStopConfirmation = physicalStopConfirmation
         self.activityTimeline = activityTimeline
         self.healthExport = healthExport
+        self.ownership = ownership
     }
 
     func replacingHealthExport(with state: WorkoutHealthExportState) -> Self {
@@ -477,7 +489,8 @@ struct WorkoutExecutionSummary: Codable, Equatable {
             progress: progress,
             physicalStopConfirmation: physicalStopConfirmation,
             activityTimeline: activityTimeline,
-            healthExport: state
+            healthExport: state,
+            ownership: ownership
         )
     }
 }

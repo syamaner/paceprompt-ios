@@ -490,3 +490,14 @@ For planned rotation before expiry, with no suspected exposure:
 A new distribution certificate requires a new `.p12` and a new provisioning
 profile that embeds that certificate. Never update only one of those two
 secrets.
+
+## Watch companion release boundary (#115)
+
+The Watch companion adds a nested watchOS app to the archive. The current trusted
+archive handoff rejects nested apps/extensions. Keep that rejection in place;
+unsigned iPhone/Watch simulator builds do not validate a signed distribution.
+Before a later Watch release, separately review the trusted signing tools, nested
+bundle identity/entitlements, provisioning profiles and archive inspection. Keep
+team identifiers and signing configuration local. Do not reuse the older
+single-app successful handoff as evidence for this shape. No release upload or
+hardware installation was authorised by the #115 implementation slice.

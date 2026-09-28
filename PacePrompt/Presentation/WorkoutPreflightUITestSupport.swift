@@ -20,6 +20,7 @@ enum WorkoutPreflightUITestScenario: String {
 struct WorkoutPreflightUITestConfiguration {
     let scenario: WorkoutPreflightUITestScenario
     let reduceMotion: Bool
+    var useAppleWatch = false
 
     static var current: Self? {
         let process = ProcessInfo.processInfo
@@ -31,7 +32,8 @@ struct WorkoutPreflightUITestConfiguration {
         }
         return .init(
             scenario: scenario,
-            reduceMotion: process.environment["PACEPROMPT_PREFLIGHT_REDUCE_MOTION"] == "1"
+            reduceMotion: process.environment["PACEPROMPT_PREFLIGHT_REDUCE_MOTION"] == "1",
+            useAppleWatch: process.environment["PACEPROMPT_PREFLIGHT_WATCH"] == "1"
         )
     }
 }
@@ -39,6 +41,7 @@ struct WorkoutPreflightUITestConfiguration {
 struct WorkoutPreflightUITestHost: View {
     @State private var context: WorkoutPreflightContext
     @State private var now: MonotonicInstant
+    private let useAppleWatch: Bool
     private let reduceMotion: Bool
     private let scenario: WorkoutPreflightUITestScenario
     @State private var recovery: String?
@@ -47,6 +50,7 @@ struct WorkoutPreflightUITestHost: View {
         let fixture = WorkoutPreflightFixtures.fixture(for: configuration.scenario)
         _context = State(initialValue: fixture.context)
         _now = State(initialValue: fixture.now)
+        useAppleWatch = configuration.useAppleWatch
         reduceMotion = configuration.reduceMotion
         scenario = configuration.scenario
     }
@@ -57,7 +61,7 @@ struct WorkoutPreflightUITestHost: View {
             LivePreflightFailureView(failure: failure, treadmillName: "Synthetic current treadmill", cancel: { recovery = "Cancelled" }, edit: { recovery = "Exact plan edit" }, chooseTreadmill: { recovery = "Explicit treadmill setup" })
                 .dynamicTypeSize(.accessibility3)
         } else {
-            WorkoutPreflightView(presentation: .init(context: context, at: now, locale: Locale(identifier: "en_GB")), send: handle, reduceMotionOverride: reduceMotion)
+            WorkoutPreflightView(presentation: .init(context: context, at: now, locale: Locale(identifier: "en_GB")), send: handle, reduceMotionOverride: reduceMotion, useAppleWatch: useAppleWatch)
         }
     }
     private var liveFailure: LivePreflightFailure? {

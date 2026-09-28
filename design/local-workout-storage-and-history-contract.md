@@ -162,3 +162,26 @@ None of these slices may add network transmission, HealthKit, watchOS, FTMS writ
 ## Saved planning profiles: separate future storage boundary
 
 The [saved treadmill planning profile contract](saved-treadmill-planning-profile-contract.md), issue #140, permits a separate protected/backup-excluded historical-profile collection containing bounded decoded ranges, accepted observation date, user name and an installation-local opaque identity token. This narrow exception to the non-persistent live-capability rule does not permit raw packets, raw peripheral identifiers or Bluetooth names in that store. Plans/history/exports remain equipment-neutral and do not gain profile fields. Its separate confirmed reset scope does not silently expand Reset local workout data. The current app implementation is unchanged by this documentation amendment.
+
+## Watch ownership amendment (#115)
+
+The separately authorised [Watch-primary contract](watch-primary-health-interchange-contract.md)
+adds local execution-summary schema 3 with required
+`ownership = {"schemaVersion": 1, "owner": "watchPrimary"}`. Execution fields keep
+the schema-2 meaning; `healthExport` remains `notRequested` because the phone is
+not this attempt's Health writer. Ownership is immutable. Missing, unknown or
+invalid ownership in a schema-3 record is invalid data, never a legacy phone
+record. Existing schemas 1 and 2 retain their original decoding and meaning;
+there is no migration or reconstruction. The current JSON export does not
+support schema 3 and must not downgrade it.
+
+A separate protected, backup-excluded phone reservation is written before Watch
+launch and permanently suppresses iPhone saving for that identity, even if no
+History record is created. It has no deletion/reset API in this slice. The Watch
+keeps one protected, backup-excluded lifecycle/interval journal and actual save
+receipt. It contains no heart-rate or energy samples. Terminal saved/discarded
+journals can be replaced for a new deliberate attempt; ambiguous journals block
+replacement. See the [operating runbook](../docs/watch-companion-runbook.md) for
+retention and recovery. Any future reset/deletion slice must preserve single-writer
+ownership and explicitly define its interaction with these stores; the older
+planned reset scope is not permission to remove their suppression records.

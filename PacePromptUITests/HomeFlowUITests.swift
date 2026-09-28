@@ -81,7 +81,9 @@ final class HomeFlowUITests: XCTestCase {
         XCTAssertTrue(guidedAccess.label.contains("triple-click the side button"))
         let privacy = app.descendants(matching: .any)["settings.privacy"]
         XCTAssertTrue(privacy.waitForExistence(timeout: 2))
-        XCTAssertTrue(privacy.label.contains("No analytics or Health reads are used."))
+        XCTAssertTrue(privacy.label.contains("The iPhone does not read Health data"))
+        XCTAssertTrue(privacy.label.contains("Watch separately reads available heart rate and active energy"))
+        XCTAssertTrue(privacy.label.contains("Workouts without usable intervals are discarded"))
         app.swipeUp()
         XCTAssertEqual(
             app.descendants(matching: .any)["settings.current-slice"].value as? String,

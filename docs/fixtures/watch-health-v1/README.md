@@ -1,6 +1,6 @@
 # Watch Health interchange v1 synthetic fixtures
 
-These two files are shared producer/reader contract projections for PacePrompt
+The complete and incomplete files are shared producer/reader contract projections for PacePrompt
 #115 and WeeklyHealthReport #80, governed by the
 [accepted contract](../../../design/watch-primary-health-interchange-contract.md).
 They are not real HealthKit records, entire Daily JSON documents or production
@@ -12,6 +12,8 @@ adapters. All identities, times, heart rates, energy and distances are synthetic
 - `incomplete.synthetic.json`: mirror lost after applied revision 1 before the
   final handshake, one valid prefix activity, available workout statistics,
   missing activity statistics and omitted distance. The phone still cannot save.
+
+Contract revision 1.1 adds `zero-interval.synthetic.json`: absent manifest, wholly invalid recording bounds and recovered empty-prefix traces end with discard, no saved workout and no phone fallback. This is a terminal-decision fixture, not a HealthKit readback projection. The two original nonempty fixtures remain byte-for-byte unchanged.
 
 `fixtureSchemaVersion` versions the test wrapper. Manifest/interchange schema 1,
 activity timeline schema 1, local summary schemas 1/2, PacePrompt JSON format 1
@@ -32,7 +34,7 @@ Validate with:
 python3 -B -m unittest discover -s scripts/tests -p 'test_watch_health_contract.py' -v
 ```
 
-At #80 implementation, copy both JSON files byte-for-byte from the accepted
+At #80 implementation, copy all three JSON files byte-for-byte from the accepted
 PacePrompt merge commit, record that commit and SHA-256 digest in the consumer's
 fixture manifest, then run its own decoder/encoder/fake-store tests. Compute the
 digests with `shasum -a 256 docs/fixtures/watch-health-v1/*.json`. Do not fetch

@@ -47,8 +47,9 @@ recovery restores an existing builder rather than creating another one.
 Exercise missing workout permission, missing distance permission, missing sensor
 visibility and a mirror disconnected before final ack/confirmation. Confirm no
 automatic remirror, phone save, command or target restoration. End recording on
-Watch; save available metrics/prefix as incomplete, distance omitted. Read back
-status directly with an authorised HealthKit reader. Ambiguous finish, journal
+Watch; save a nonempty valid prefix as incomplete, distance omitted. If no usable
+interval remains, discard without finishing and verify no workout was saved. Read
+back saved status directly with an authorised HealthKit reader. Ambiguous finish, journal
 failure, partial builder mutation and unknown protocol inputs belong in deterministic
 fake-store tests; do not deliberately corrupt real Health data to manufacture them.
 
@@ -128,3 +129,28 @@ state and schema-v4 round trip pass on the tested combination. Reconcile #7,
 #115 and #80; #7 closes only after all accepted children finish. An executable
 repair invalidates affected device evidence and requires new focused/full gates
 and exact-head review before repeating it. Record every unperformed case.
+
+## Revision 1.1: no usable intervals
+
+The operator selected zero-prefix discard on 28 September 2026. For no manifest,
+all intervals outside recording bounds, and recovered empty prefix, verify that
+Watch ends the existing session, discards its builder and never calls finish.
+After definite discard, the Watch displays “Workout not saved: no execution intervals were received or
+usable.” No workout/readback projection is expected. iPhone suppression and local
+History remain unchanged. Do not claim that discarding a workout deletes sensor
+samples HealthKit may already have persisted. An uncertain discard remains
+ambiguous and cannot trigger creation, finish retry or a phone fallback.
+
+The new synthetic zero-interval fixture proves the terminal contract only. Actual
+builder discard and any previously persisted sensor samples remain signed-device
+observations; this amendment grants no device or treadmill-operation authority.
+
+## #115 implementation handoff
+
+The [companion operating runbook](watch-companion-runbook.md) describes the
+implemented ownership, protected retention, failure and recovery paths. The
+source/test/CI evidence recorded in the #115 PR is distinct from every signed
+paired-device and physical row above, which remains unperformed until observed.
+The schema/fixture amendment for zero intervals does not implement WHR #80 or
+complete #116. Resolve the nested Watch signing handoff before installing a
+later signed candidate; do not relax release checks to obtain one.

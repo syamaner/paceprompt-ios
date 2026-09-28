@@ -4,6 +4,7 @@ struct WorkoutPreflightView: View {
     let presentation: WorkoutPreflightPresentation
     let send: (WorkoutPreflightIntent) -> Void
     var reduceMotionOverride: Bool? = nil
+    var useAppleWatch = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -160,9 +161,9 @@ struct WorkoutPreflightView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Apple Health")
                     .font(.headline)
-                Text("Ready for a later deliberate save")
+                Text(useAppleWatch ? "Apple Watch owns this recording" : "Ready for a later deliberate save")
                     .font(.subheadline.weight(.semibold))
-                Text("No permission is requested and no workout or health data is saved on this screen.")
+                Text(useAppleWatch ? "Begin requests recording on Apple Watch and may ask for Health permissions there. The Watch saves the workout; iPhone saving stays disabled for this attempt." : "No permission is requested and no workout or health data is saved on this screen.")
                     .font(.subheadline)
                     .foregroundStyle(WorkoutPreflightPalette.muted)
                     .fixedSize(horizontal: false, vertical: true)

@@ -202,6 +202,22 @@ final class WorkoutHistoryRepositoryTests: XCTestCase {
         }
     }
 
+    func testWatchOwnershipRoundTripAndHealthSaveCannotBeReclassified() throws {
+        let legacy = summary(id: uuid(1)), phone = versionTwoSummary(id: uuid(2))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(versionTwoSummary(id: uuid(3)))) as? [String: Any])
+        object["schemaVersion"] = 3; object["ownership"] = ["schemaVersion": 1, "owner": "watchPrimary"]
+        let watch = try JSONDecoder().decode(WorkoutExecutionSummary.self, from: JSONSerialization.data(withJSONObject: object))
+        let fs = try seededFileSystem([legacy, phone, watch]); let repo = WorkoutHistoryRepository(fileSystem: fs)
+        XCTAssertEqual(availableSummaries(repo), [legacy, phone, watch])
+        XCTAssertThrowsError(try repo.updateHealthExport(summaryID: watch.id, state: .pending(attemptedAt: date(25), syncVersion: 1)))
+        XCTAssertEqual(availableSummaries(repo).last?.ownership, .watchPrimary)
+        for invalid in [nil, ["schemaVersion": 2, "owner": "watchPrimary"], ["schemaVersion": 1, "owner": "phone"]] as [[String: Any]?] {
+            object["ownership"] = invalid
+            let corrupt = try JSONDecoder().decode(WorkoutExecutionSummary.self, from: JSONSerialization.data(withJSONObject: object))
+            XCTAssertThrowsError(try repo.record(corrupt))
+        }
+    }
+
     private func availableSummaries(_ repository: WorkoutHistoryRepository) -> [WorkoutExecutionSummary] {
         guard case let .available(summaries) = repository.list().canonical else { XCTFail("Expected available summaries"); return [] }
         return summaries

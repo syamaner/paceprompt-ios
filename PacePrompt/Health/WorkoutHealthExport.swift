@@ -70,7 +70,8 @@ enum WorkoutHealthPayloadFactory {
     summary: WorkoutExecutionSummary,
     syncVersion: Int
   ) -> WorkoutHealthExportEligibility {
-    guard summary.schemaVersion == WorkoutExecutionSummarySchema.currentVersion,
+    guard !summary.isWatchOwnedOrInvalidOwnership,
+          summary.schemaVersion == WorkoutExecutionSummarySchema.currentVersion,
           syncVersion > 0,
           outcomeAndStopAreEligible(summary.outcome, summary.physicalStopConfirmation),
           case let .measured(activeSeconds) = summary.activeDuration,
@@ -329,19 +330,22 @@ final class WorkoutHealthExportCoordinator: ObservableObject {
   private let history: any WorkoutHistoryRepositoryProtocol
   private let healthStore: any WorkoutHealthStoreProtocol
   private let now: () -> Date
+  private let phoneSaveAllowed: (UUID) -> Bool
 
   init(
     history: any WorkoutHistoryRepositoryProtocol,
     healthStore: any WorkoutHealthStoreProtocol,
-    now: @escaping () -> Date = Date.init
+    now: @escaping () -> Date = Date.init,
+    phoneSaveAllowed: @escaping (UUID) -> Bool = { WatchOwnershipStore().phoneSaveAllowed($0) }
   ) {
     self.history = history
     self.healthStore = healthStore
     self.now = now
+    self.phoneSaveAllowed = phoneSaveAllowed
   }
 
   func save(_ summary: WorkoutExecutionSummary) async -> WorkoutHealthExportState {
-    guard !isSaving else { return summary.healthExport ?? .notRequested }
+    guard !summary.isWatchOwnedOrInvalidOwnership, phoneSaveAllowed(summary.id), !isSaving else { return summary.healthExport ?? .notRequested }
     if case let .saved(savedAt, version, uuid, count, distance)? = summary.healthExport {
       return .saved(
         savedAt: savedAt,
@@ -395,6 +399,7 @@ final class WorkoutHealthExportCoordinator: ObservableObject {
     let finalPayload = includeDistance ? payload : payload.withoutDistance()
 
     do {
+      guard phoneSaveAllowed(summary.id) else { return .unavailable(category: .unavailable) }
       let uuid = try await healthStore.save(finalPayload)
       let state = WorkoutHealthExportState.saved(
         savedAt: now(),

@@ -341,6 +341,29 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
+  func testWatchBindingIsRequiredBeforeExecutionAndCannotDriveTreadmill() async throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let id = UUID(uuidString: "00000000-0000-0000-0000-000000000115")!
+    let port = BindingWatchPort()
+    let phone = PhoneWatchLifecycle(port: port, reserve: { id in
+      guard h.binding.orchestrator.reserveWatchAttempt(id: id) else { throw WatchStoreError.definite }
+    }, makeID: { id }, monotonic: { 0 })
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController(), watchFactory: { phone })
+    let record = SavedPlanRecord(id: UUID(), createdAt: Date(), modifiedAt: Date(), plan: h.plan.plan)
+    c.begin(record); c.useAppleWatch = true; c.prepareWorkout(); c.handlePreflight(.beginWorkout)
+    await Task.yield()
+    XCTAssertEqual(c.stage, .preflight); XCTAssertEqual(h.binding.orchestrator.state.execution, .preflight)
+    XCTAssertEqual(port.launches, 1); XCTAssertTrue(h.link.writes.isEmpty)
+    var bound = WatchWireMessage(.bound, summaryID: id.uuidString.lowercased()); bound.workoutStart = Date(timeIntervalSince1970: 100)
+    phone.receive(try WatchWire.encode(bound))
+    XCTAssertEqual(c.stage, .exercise); XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
+    XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.id, id)
+    XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.schemaVersion, 3)
+    XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.ownership, .watchPrimary)
+    phone.disconnect()
+    XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart); XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
   func testNormalSessionCoordinatorCanCancelPreparedWorkoutAndPrepareAgain() {
     let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()
@@ -976,4 +999,10 @@ private final class BindingRawTransport: FitnessMachineControlTransport {
     return .init(epoch: state.link.epoch!, sequence: UInt64(submissions.count))
   }
   func disconnect() { state.link = .disconnected }
+}
+
+@MainActor private final class BindingWatchPort: PhoneWatchPort {
+  var launches = 0
+  func launch(activity: String) async throws { launches += 1 }
+  func send(_ data: Data) {}
 }

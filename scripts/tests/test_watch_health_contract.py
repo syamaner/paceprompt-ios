@@ -142,6 +142,26 @@ class ContractTests(unittest.TestCase):
         self.first, self.final = self.fixture['manifests']
         self.oracle = Oracle(self.first['summaryID'])
 
+    def test_zero_interval_amendment_discards_without_saved_projection(self):
+        fixture = load('zero-interval')
+        self.assertEqual(fixture['contractRevision'], '1.1')
+        self.assertIs(fixture['synthetic'], True)
+        for scenario in fixture['scenarios']:
+            with self.subTest(scenario=scenario['name']):
+                start, end = timestamp(scenario['workoutStart']), timestamp(scenario['workoutEnd'])
+                materializable = []
+                for interval in scenario['intervals']:
+                    a, b = timestamp(interval['startedAt']), timestamp(interval['endedAt'])
+                    if not start <= a < b <= end:
+                        break
+                    materializable.append(interval)
+                finish = int(bool(materializable))
+                discard = int(not materializable)
+                self.assertEqual(finish, fixture['expected']['finishCalls'])
+                self.assertEqual(discard, fixture['expected']['discardCalls'])
+                self.assertIsNone(fixture['expected']['workout'])
+                self.assertEqual(fixture['expected']['readerState'], 'noWorkout')
+
     def test_golden_complete_and_incomplete_projection(self):
         for name in ('complete', 'incomplete'):
             with self.subTest(name=name):

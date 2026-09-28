@@ -61,6 +61,13 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         XCTAssertFalse(app.buttons["preflight.begin"].exists)
     }
 
+    func testWatchPreflightDisclosesSeparatePermissionsAndPermanentPhoneSuppression() {
+        launch(scenario: "ready-to-begin", extraEnvironment: ["PACEPROMPT_PREFLIGHT_WATCH": "1"])
+        XCTAssertTrue(app.staticTexts["Apple Watch owns this recording"].exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label == %@", "Begin requests recording on Apple Watch and may ask for Health permissions there. The Watch saves the workout; iPhone saving stays disabled for this attempt.")).firstMatch.exists)
+        XCTAssertFalse(app.staticTexts["Ready for a later deliberate save"].exists)
+    }
+
     func testBlockedAndTransitionalReadinessStatesRemainDistinctAndDisabled() {
         let scenarios = [
             ("disconnected", "Disconnected."),
