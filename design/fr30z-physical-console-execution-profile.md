@@ -123,8 +123,8 @@ FTMS encodes the relevant speed and inclination fields as scaled integers. After
 - A sample is fresh for **2.0 seconds** from its monotonic receipt time.
 - When a required sample becomes older than 2.0 seconds, freeze active workout and segment timing at `sample.receivedAt + 2.0 seconds`, suppress plan transitions and enter **Checking treadmill**.
 - Checking continues while required telemetry is absent. Silence is a signal to freeze and ask the operator what the physical console shows; it is never stationary evidence and never emits a procedure.
-- Active duration advances only from accepted current-epoch moving telemetry. At most 2.0 seconds after the last matching sample may be counted; a longer unobserved gap is excluded. Timers and wall-clock time do not prove progress.
-- A fresh background Treadmill Data wake may execute exactly one due planned boundary through the ordinary target-only acknowledgement and later-observation path. It cannot replay missed steps. Preflight, arming, overrides, resume restoration and other interactive controls remain foreground-only.
+- The planned-step countdown counts accepted current-epoch movement, including target ramps; persisted settled active duration counts only settled target evidence. Each clock permits at most 2.0 seconds after its last supporting sample; longer unobserved gaps are excluded. See the [step-clock amendment](console-overrides-and-step-clock.md) for due-boundary confirmation and console settling. Timers alone never issue a transition.
+- A fresh background Treadmill Data wake may execute exactly one due planned boundary through the ordinary target-only acknowledgement and later-observation path. It cannot replay missed steps. Preflight, arming, app overrides, resume restoration and other interactive controls remain foreground-only. Passive console observation is not an interactive app command.
 - A fresh zero-speed sample received during checking establishes the telemetry-based pause condition.
 - A fresh non-zero sample received during checking, with no other adverse evidence, returns to the preceding target-observation or running state. The uncertain gap is excluded from active duration.
 - The operator may deliberately confirm that the treadmill is physically stationary at any time while checking. That separately recorded human evidence establishes pause or ending eligibility without inventing a zero-speed packet.
@@ -175,7 +175,7 @@ For each segment:
 `effective target = current-segment manual override ?? planned segment target`
 
 - Speed and inclination overrides are independent.
-- A manual adjustment changes the effective target immediately and uses the target sequence above.
+- An app adjustment changes the effective target immediately and uses the target sequence above. A settled console change is adopted without a command under the [revision-1 console and step-clock amendment](console-overrides-and-step-clock.md).
 - **Return to plan** removes current-segment overrides and reapplies changed planned targets.
 - Overrides survive physical pause/resume.
 - Overrides clear when the next plan segment begins; that segment's planned targets become effective.
@@ -187,11 +187,11 @@ For each segment:
 
 The paused screen shows the exact pending effective speed and inclination. After the operator presses physical Start and a fresh non-zero sample is accepted:
 
-1. preserve the same segment and remaining active duration;
+1. preserve the same segment and remaining moving step time;
 2. set effective speed, even if the console began at 0.50 km/h;
 3. after its matching FTMS success, set effective inclination;
 4. after its matching success, wait for a later fresh joint exact report;
-5. resume segment timing only from that joint report.
+5. open a settled interval only from that joint report; the step countdown resumes from accepted moving telemetry during the restoration ramp.
 
 If control is no longer held, another procedure is in flight, the connection/identity/capabilities changed, or any procedure/evidence fails, do not restore or reacquire automatically. The attempt becomes interrupted and the console/safety key owns recovery.
 

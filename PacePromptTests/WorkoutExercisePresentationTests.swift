@@ -6,6 +6,19 @@ final class WorkoutExercisePresentationTests: XCTestCase {
   private let now = MonotonicInstant(seconds: 100)
   private let locale = Locale(identifier: "en_GB")
 
+  func testRampCountdownUsesMovingClockAndCapsUnknownTimeIndependentlyOfSettledDuration() {
+    let original = WorkoutExerciseFixtures.context(for: .applying)
+    var state = original.state
+    state.currentSegment?.movingClock = .init(accumulatedSeconds: 40, lastMovingAt: .init(seconds: 90))
+    var context = WorkoutExerciseContext(state: state, frozenAttempt: original.frozenAttempt, latestSummary: nil)
+    XCTAssertEqual(makePresentation(context).countdown, "2:18", "Only two seconds of extrapolation are allowed")
+    XCTAssertEqual(makePresentation(context).elapsedActiveTime, "2:31")
+    state.currentSegment?.movingClock.accumulatedSeconds = 180
+    context = .init(state: state, frozenAttempt: original.frozenAttempt, latestSummary: nil)
+    XCTAssertEqual(makePresentation(context).countdown, "0:00")
+    XCTAssertEqual(makePresentation(context).status.title, "Step time complete")
+  }
+
   func testActiveStatusUsesAcceptedPlanActivityWithIdenticalTargets() {
     for (activity, title, symbol) in [
       (WorkoutActivity.indoorWalking, "Walking", "figure.walk"),

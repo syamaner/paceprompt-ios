@@ -82,7 +82,7 @@ enum WorkoutHealthPayloadFactory {
           startedAt == intervals.first?.startedAt,
           endedAt == intervals.last?.endedAt,
           intervalsAreEligible(intervals, plan: summary.planSnapshot),
-          summedDuration(intervals) == activeSeconds
+          WorkoutExecutedInterval.measuredSeconds(in: intervals) == activeSeconds
     else { return .ineligible }
 
     let distance: Decimal?
@@ -163,10 +163,6 @@ enum WorkoutHealthPayloadFactory {
       previousSegmentIndex = interval.segmentIndex
     }
     return true
-  }
-
-  private static func summedDuration(_ intervals: [WorkoutExecutedInterval]) -> Int {
-    Int(floor(intervals.reduce(0) { $0 + $1.endedAt.timeIntervalSince($1.startedAt) } + 0.000_000_001))
   }
 
   private static func distanceIsAccepted(

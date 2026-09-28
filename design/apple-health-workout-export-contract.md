@@ -55,7 +55,7 @@ A recorded timeline contains:
 - `timingProvenance`: `executionClock`, identifying the accepted reducer/orchestrator timing boundary rather than claiming continuous belt-motion measurement; and
 - ordered `executedIntervals`.
 
-The existing summary `activeDuration` remains the single persisted duration field. When measured, it must equal the sum of the closed executed-interval durations.
+The existing summary `activeDuration` remains the single persisted duration field. When measured, it must equal the integer sum of the closed executed-interval durations (floor with a 1-microsecond Date representation tolerance shared by producer, validator and payload projection). The transient moving step countdown includes ramps under issue #193 and does not replace this settled-duration meaning.
 
 `startedAt` is never copied from `attemptedAt`. `endedAt` is never copied from `lastUpdatedAt` or a later human stationary-confirmation time. Human confirmation establishes a safe terminal state; it does not invent an earlier physical stop instant.
 
@@ -78,7 +78,7 @@ An executed interval is a closed period during which one effective target pair w
 | `settledObservation` | Required speed, inclination, UTC time and provenance from the later exact joint treadmill report; kept separate from the effective target. |
 | `endReason` | Stable value such as `planTransition`, `targetChanged`, `paused`, `completed`, `endedByUser`, `interrupted` or `failed`. |
 
-The interval starts only when issue #57's later current-epoch joint treadmill report has observed the effective speed and inclination after all required acknowledgements. That single settled observation is an aggregate boundary fact, not a persisted telemetry trace or average. Without it, no executed interval opens.
+The interval starts only when a current-epoch joint treadmill report has observed the effective speed and inclination after all required app acknowledgements. The [issue #193 amendment](console-overrides-and-step-clock.md) additionally admits a passively confirmed console pair when there is no app procedure; that path does not fabricate an acknowledgement. That single settled observation is an aggregate boundary fact, not a persisted telemetry trace or average. Without it, no executed interval opens.
 
 A speed or inclination change closes the current interval and can open another interval only after the new effective pair is separately observed. Because speed and inclination overrides are independent, each axis records its own `planned` or `manualOverride` source. Pause gaps are not active intervals. Resume opens a new interval after the restored effective pair is observed; restoration itself does not change the value source.
 

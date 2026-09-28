@@ -138,4 +138,14 @@ Inspected Xcode 27.0 (27A266a), iOS 27 SDK headers on 27 September 2026: `HKWork
 
 Primary Apple references: [multidevice sessions](https://developer.apple.com/documentation/healthkit/building-a-multidevice-workout-app), [activities](https://developer.apple.com/documentation/healthkit/dividing-a-healthkit-workout-into-activities), [workout statistics](https://developer.apple.com/documentation/healthkit/hkworkout/statistics(for:)), [disable collection](https://developer.apple.com/documentation/healthkit/hkliveworkoutdatasource/disablecollection(for:)), [authorization](https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data). SDK and documentation are not signed-device acceptance.
 
-This PR adds no watchOS target, production HealthKit code/read/write, entitlement, purpose string, WatchConnectivity, treadmill command/control change, hardware operation, release upload, provider call, WeeklyHealthReport implementation or personal data. #115 and #80 remain implementation work; #116 remains a separately authorised physical acceptance procedure.
+The original #114 specification PR added no watchOS target, production HealthKit code/read/write, entitlement, purpose string, WatchConnectivity, treadmill command/control change, hardware operation, release upload, provider call, WeeklyHealthReport implementation or personal data. Subsequent #115 software and internal release evidence are recorded in the operating runbook; signed paired-device acceptance remains outstanding. #80 remains reader implementation work and #116 remains the separately authorised interoperability acceptance procedure.
+
+## Execution timing clarification (#193)
+
+The [revision-1 console and step-clock amendment](console-overrides-and-step-clock.md)
+counts moving ramps toward the prescribed step duration, while this contract still
+receives only closed settled intervals. Passive console confirmation can produce a
+`manualOverride` without an app command; it does not claim a protocol acknowledgement.
+Multiple intervals may share the original `segmentIndex`. Moving step time is not
+transmitted as HealthKit duration or distance. Revision 1.1, wire/metadata schema 1,
+fixture bytes, 64-interval bound, zero-prefix discard and ownership are unchanged.

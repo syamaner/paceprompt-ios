@@ -313,6 +313,18 @@ struct WorkoutExercisePresentation: Equatable {
     state: WorkoutExecutionState,
     activity: WorkoutActivity?
   ) -> WorkoutExerciseStatusPresentation {
+    if let segment = state.currentSegment,
+      let plan = state.armedWorkout?.plan.plan,
+      plan.steps.indices.contains(segment.stepIndex),
+      [.applying, .restoring, .running, .override].contains(stage),
+      segment.movingClock.elapsed(at: state.lastEventTime) >= Double(plan.steps[segment.stepIndex].duration.value) {
+      return .init(title: "Step time complete", detail: "Waiting for the treadmill setting to settle before the next step.",
+        symbol: "clock.badge.checkmark", tone: .warning)
+    }
+    if [.running, .override].contains(stage), state.currentSegment?.activeStartedAt == nil {
+      return .init(title: "Treadmill setting changing", detail: "The step timer continues while moving. Waiting for a settled speed and incline.",
+        symbol: "slider.horizontal.3", tone: .warning)
+    }
     switch stage {
     case .waiting:
       return .init(
@@ -364,7 +376,7 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Restoring targets",
         detail:
-          "Speed is restored before inclination; timing resumes only after later joint observation.",
+          "Speed is restored before inclination. The step timer counts fresh reported movement during the ramp.",
         symbol: "arrow.clockwise.circle.fill",
         tone: .warning
       )
@@ -629,11 +641,7 @@ struct WorkoutExercisePresentation: Equatable {
     at now: MonotonicInstant
   ) -> Int {
     guard let segment = state.currentSegment else { return 0 }
-    var elapsed = segment.accumulatedActiveSeconds
-    if let startedAt = segment.activeStartedAt {
-      elapsed += max(0, now.seconds - startedAt.seconds)
-    }
-    return max(0, Int(floor(elapsed + 0.000_000_001)))
+    return max(0, Int(floor(segment.movingClock.elapsed(at: now) + 0.000_000_001)))
   }
 
   private static func elapsedTotal(
@@ -643,8 +651,14 @@ struct WorkoutExercisePresentation: Equatable {
     if currentSegmentIsIncludedInCompletedTotal(state) {
       return max(0, Int(floor(state.completedActiveSeconds + 0.000_000_001)))
     }
-    return max(
-      0, Int(floor(state.completedActiveSeconds + Double(elapsedInSegment(state: state, at: now)))))
+    var elapsed = state.completedActiveSeconds
+    if let segment = state.currentSegment {
+      elapsed += segment.accumulatedActiveSeconds
+      if let started = segment.activeStartedAt {
+        elapsed += min(max(0, now.seconds - started.seconds), FR30zExecutionProfile.telemetryFreshnessInterval)
+      }
+    }
+    return max(0, Int(floor(elapsed + 0.000_000_001)))
   }
 
   private static func currentSegmentIsIncludedInCompletedTotal(
@@ -658,11 +672,8 @@ struct WorkoutExercisePresentation: Equatable {
     case .readyToEnd(let completion), .ending(let completion), .finished(let completion):
       return completion.reason == .completedPlan
     case .failed, .interrupted:
-      guard let plan = state.armedWorkout?.plan.plan else { return false }
-      let plannedTotal = plan.steps.reduce(0.0) {
-        $0 + TimeInterval($1.duration.value)
-      }
-      return state.completedActiveSeconds >= plannedTotal
+      guard let segment = state.currentSegment else { return false }
+      return state.completedStepCount > segment.stepIndex
     default:
       return false
     }

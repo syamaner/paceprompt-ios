@@ -39,13 +39,15 @@ struct FR30zCapabilitySnapshot: Equatable {
   let planCapabilities: WorkoutPlanCapabilities
 }
 
-/// The immutable issue #57 product policy. It deliberately has no Start, Stop,
-/// Pause, retry, reconnect, or control-reacquisition option.
+/// The accepted FR30z product policy, including issue #193 moving step timing.
+/// It has no Start, Stop, Pause, retry, reconnect, or control-reacquisition option.
 struct FR30zExecutionProfile: Equatable {
   static let identity = "fr30z-physical-console-v1"
   static let telemetryFreshnessInterval: TimeInterval = 2
   static let targetObservationInterval: TimeInterval = 30
   static let procedureResponseInterval: TimeInterval = 30
+  static let consoleSettlingInterval: TimeInterval = 1
+  static let consoleSettlingSampleCount = 3
   let peripheralIdentity: String
   let equipmentIdentity: String
 
@@ -242,12 +244,46 @@ struct ArmedWorkout: Equatable {
   let profile: FR30zExecutionProfile
 }
 
+/// Counts observed movement, including ramps, independently of settled execution intervals.
+struct WorkoutStepMovingClock: Equatable {
+  var accumulatedSeconds: TimeInterval = 0
+  var lastMovingAt: MonotonicInstant?
+
+  func elapsed(at now: MonotonicInstant) -> TimeInterval {
+    accumulatedSeconds + (lastMovingAt.map {
+      min(max(0, now.seconds - $0.seconds), FR30zExecutionProfile.telemetryFreshnessInterval)
+    } ?? 0)
+  }
+
+  mutating func observeMoving(at now: MonotonicInstant) {
+    if let lastMovingAt {
+      accumulatedSeconds += min(
+        max(0, now.seconds - lastMovingAt.seconds), FR30zExecutionProfile.telemetryFreshnessInterval)
+    }
+    lastMovingAt = now
+  }
+
+  mutating func freeze(at now: MonotonicInstant) {
+    if lastMovingAt != nil { observeMoving(at: now) }
+    lastMovingAt = nil
+  }
+}
+
+struct WorkoutConsoleTargetCandidate: Equatable {
+  let target: WorkoutTarget
+  let firstObservedAt: MonotonicInstant
+  var lastObservedAt: MonotonicInstant
+  var sampleCount: Int
+}
+
 struct WorkoutCurrentSegment: Equatable {
   let stepIndex: Int
   var accumulatedActiveSeconds: TimeInterval
   var activeStartedAt: MonotonicInstant?
   var speedOverride: WorkoutSpeed?
   var inclinationOverride: WorkoutInclination?
+  var movingClock = WorkoutStepMovingClock()
+  var consoleCandidate: WorkoutConsoleTargetCandidate?
 }
 
 enum WorkoutTargetSequencePurpose: Equatable {
@@ -370,6 +406,7 @@ struct WorkoutExecutionState: Equatable {
   var targetSequence: WorkoutTargetSequence?
   var lastConfirmedTarget: WorkoutTarget?
   var completedActiveSeconds: TimeInterval = 0
+  var completedStepCount = 0
   var motionPossible = false
   var isForegroundActive = true
   var applicationLifecycle: WorkoutApplicationLifecycle = .active
@@ -714,6 +751,7 @@ struct WorkoutExecutionReducer {
     case .controlPermissionLost(_, let reason):
       disposition = interrupt(.controlPermissionLost(reason), state: &state, effects: &effects)
     case .applicationLifecycleChanged(_, let lifecycle):
+      state.currentSegment?.consoleCandidate = nil
       state.applicationLifecycle = lifecycle
       state.isForegroundActive = lifecycle == .active
       if lifecycle == .active {
@@ -1058,6 +1096,7 @@ extension WorkoutExecutionReducer {
 
     switch input {
     case .unavailable(let reason):
+      freezeSegmentAtEvidenceBoundary(at: now, state: &state)
       state.telemetry = .unavailable(reason)
       state.observedMachine = .unknown
       if attemptNeedsTelemetry(state.execution), !isWaitingWithoutControl(state) {
@@ -1065,6 +1104,7 @@ extension WorkoutExecutionReducer {
       }
       return .accepted
     case .malformed(let reason):
+      freezeSegmentAtEvidenceBoundary(at: now, state: &state)
       state.telemetry = .malformed(reason)
       state.observedMachine = .unknown
       if attemptNeedsTelemetry(state.execution) {
@@ -1073,6 +1113,7 @@ extension WorkoutExecutionReducer {
       return .accepted
     case .sample(let speed, let inclination, let distance):
       guard let speed, let inclination else {
+        freezeSegmentAtEvidenceBoundary(at: now, state: &state)
         state.telemetry = .unavailable("Required speed or inclination field missing")
         state.observedMachine = .unknown
         if attemptNeedsTelemetry(state.execution) {
@@ -1111,6 +1152,8 @@ extension WorkoutExecutionReducer {
     at now: MonotonicInstant,
     state: inout WorkoutExecutionState
   ) -> WorkoutReductionDisposition {
+    state.currentSegment?.movingClock.freeze(at: now)
+    state.currentSegment?.consoleCandidate = nil
     let evidence = WorkoutStationaryEvidence.telemetry(sample)
     switch state.execution {
     case .applyingTargets, .runningSegment, .restoringTargets:
@@ -1144,6 +1187,14 @@ extension WorkoutExecutionReducer {
     state: inout WorkoutExecutionState,
     effects: inout [WorkoutExecutionEffect]
   ) -> WorkoutReductionDisposition {
+    switch state.execution {
+    case .waitingForPhysicalStart, .acquiringControl, .applyingTargets, .runningSegment,
+      .paused, .restoringTargets:
+      state.currentSegment?.movingClock.observeMoving(at: now)
+    case .checkingTreadmill(let checking) where checking.origin != .awaitingPhysicalStopForCompletion:
+      state.currentSegment?.movingClock.observeMoving(at: now)
+    default: break
+    }
     switch state.execution {
     case .waitingForPhysicalStart:
       guard state.currentSegment != nil else { return .rejected(.noCurrentSegment) }
@@ -1202,38 +1253,11 @@ extension WorkoutExecutionReducer {
         completeTargetObservation(sample, at: now, state: &state)
       }
     case .runningSegment:
-      if let target = effectiveTarget(state), sampleMatches(sample, target: target),
-        var segment = state.currentSegment
-      {
-        if let previousEvidenceAt = segment.activeStartedAt {
-          let evidenceGap = now.seconds - previousEvidenceAt.seconds
-          if evidenceGap > FR30zExecutionProfile.telemetryFreshnessInterval {
-            let freshnessBoundary = previousEvidenceAt.advanced(
-              by: FR30zExecutionProfile.telemetryFreshnessInterval
-            )
-            freezeSegment(at: freshnessBoundary, state: &state)
-            state.execution = .checkingTreadmill(
-              .init(origin: .runningSegment, freshnessBoundary: freshnessBoundary)
-            )
-            return resolveCheckingWithMoving(
-              .init(origin: .runningSegment, freshnessBoundary: freshnessBoundary),
-              sample: sample,
-              at: now,
-              state: &state,
-              effects: &effects
-            )
-          }
-          segment.accumulatedActiveSeconds += max(0, evidenceGap)
-        }
-        segment.activeStartedAt = now
-        state.currentSegment = segment
-        state.observedMachine = .targetReported(stepIndex: segment.stepIndex, sample: sample)
+      consumeSettledMovingSample(sample, at: now, state: &state)
+      if case .targetReported = state.observedMachine {
         return progressRunningSegment(
-          at: now,
-          state: &state,
-          effects: &effects,
-          allowBackgroundTelemetryTransition: true
-        )
+          at: now, state: &state, effects: &effects,
+          allowBackgroundTelemetryTransition: true)
       }
     case .readyToEnd:
       state.execution = .awaitingPhysicalStopForCompletion
@@ -1246,7 +1270,63 @@ extension WorkoutExecutionReducer {
     default:
       break
     }
+    if case .runningSegment = state.execution {
+      return progressRunningSegment(
+        at: now, state: &state, effects: &effects, allowBackgroundTelemetryTransition: true)
+    }
     return .accepted
+  }
+
+  /// Passive console changes have no app procedure or fabricated acknowledgement.
+  fileprivate func consumeSettledMovingSample(
+    _ sample: WorkoutTelemetrySample, at now: MonotonicInstant,
+    state: inout WorkoutExecutionState
+  ) {
+    guard let target = effectiveTarget(state), var segment = state.currentSegment,
+      state.targetSequence == nil, case .idle = state.procedure else { return }
+    if sampleMatches(sample, target: target) {
+      if let previous = segment.activeStartedAt {
+        segment.accumulatedActiveSeconds += min(
+          max(0, now.seconds - previous.seconds), FR30zExecutionProfile.telemetryFreshnessInterval)
+      }
+      segment.activeStartedAt = now
+      segment.consoleCandidate = nil
+      state.currentSegment = segment
+      state.observedMachine = .targetReported(stepIndex: segment.stepIndex, sample: sample)
+      return
+    }
+
+    // The first deviation ends settled evidence; the moving step clock keeps counting.
+    freezeSegmentAtSettledEvidenceBoundary(at: now, state: &state)
+    segment = state.currentSegment!
+    guard validSpeedAdjustment(sample.speed, state: state),
+      validInclinationAdjustment(sample.inclination, state: state) else {
+      segment.consoleCandidate = nil
+      state.currentSegment = segment
+      return
+    }
+    let observed = WorkoutTarget(speed: sample.speed, inclination: sample.inclination)
+    if var candidate = segment.consoleCandidate, candidate.target == observed,
+      now > candidate.lastObservedAt,
+      now.seconds - candidate.lastObservedAt.seconds <= FR30zExecutionProfile.telemetryFreshnessInterval {
+      candidate.sampleCount += 1
+      candidate.lastObservedAt = now
+      segment.consoleCandidate = candidate
+    } else {
+      segment.consoleCandidate = .init(
+        target: observed, firstObservedAt: now, lastObservedAt: now, sampleCount: 1)
+    }
+    if let candidate = segment.consoleCandidate,
+      candidate.sampleCount >= FR30zExecutionProfile.consoleSettlingSampleCount,
+      now.seconds - candidate.firstObservedAt.seconds >= FR30zExecutionProfile.consoleSettlingInterval {
+      if sample.speed != target.speed { segment.speedOverride = sample.speed }
+      if sample.inclination != target.inclination { segment.inclinationOverride = sample.inclination }
+      segment.consoleCandidate = nil
+      segment.activeStartedAt = now
+      state.lastConfirmedTarget = observed
+      state.observedMachine = .targetReported(stepIndex: segment.stepIndex, sample: sample)
+    }
+    state.currentSegment = segment
   }
 
   fileprivate func resolveCheckingWithMoving(
@@ -1284,11 +1364,13 @@ extension WorkoutExecutionReducer {
         return advanceTargetSequence(at: now, state: &state, effects: &effects)
       }
     case .runningSegment:
-      state.execution = .runningSegment
-      if var segment = state.currentSegment {
-        segment.activeStartedAt = now
-        state.currentSegment = segment
+      if effectiveTarget(state) != state.lastConfirmedTarget {
+        return startTargetSequence(purpose: .manualAdjustment, forceBothAxes: false,
+          at: now, state: &state, effects: &effects)
       }
+      state.execution = .runningSegment
+      consumeSettledMovingSample(sample, at: now, state: &state)
+      // A fresh report after a gap establishes a new anchor, never catches up missed steps.
     case .paused(let evidence):
       state.execution = .paused(evidence)
       return consumeReportedMoving(sample, at: now, state: &state, effects: &effects)
@@ -1315,13 +1397,18 @@ extension WorkoutExecutionReducer {
     if case .checkingTreadmill = state.execution {
       return .accepted
     }
+    if let lastMoving = state.currentSegment?.movingClock.lastMovingAt,
+      now.seconds - lastMoving.seconds > FR30zExecutionProfile.telemetryFreshnessInterval {
+      state.currentSegment?.movingClock.freeze(at: now)
+      state.currentSegment?.consoleCandidate = nil
+    }
     if let sample = currentTelemetrySample(state.telemetry),
       phaseRequiresFreshTelemetry(state),
       now.seconds - sample.receivedAt.seconds > FR30zExecutionProfile.telemetryFreshnessInterval
     {
       let freshnessBoundary = sample.receivedAt.advanced(
         by: FR30zExecutionProfile.telemetryFreshnessInterval)
-      freezeSegment(at: freshnessBoundary, state: &state)
+      freezeSegmentAtEvidenceBoundary(at: freshnessBoundary, state: &state)
       state.telemetry = .stale(sample)
       state.observedMachine = .unknown
       let checking = WorkoutCheckingState(
@@ -1396,7 +1483,7 @@ extension WorkoutExecutionReducer {
         } else {
           freshnessBoundary = now
         }
-        freezeSegment(at: freshnessBoundary, state: &state)
+        freezeSegmentAtEvidenceBoundary(at: freshnessBoundary, state: &state)
         state.observedMachine = .unknown
         state.execution = .checkingTreadmill(
           .init(
@@ -1443,17 +1530,25 @@ extension WorkoutExecutionReducer {
     allowBackgroundTelemetryTransition: Bool = false
   ) -> WorkoutReductionDisposition {
     guard var segment = state.currentSegment,
-      let startedAt = segment.activeStartedAt,
       let armed = state.armedWorkout
     else { return .rejected(.noCurrentSegment) }
+    guard case .runningSegment = state.execution,
+      case .idle = state.procedure, state.targetSequence == nil,
+      case .targetReported(let observedStep, let sample) = state.observedMachine,
+      observedStep == segment.stepIndex, sample.receivedAt == now,
+      let target = effectiveTarget(state), sampleMatches(sample, target: target)
+    else { return .accepted }
     let duration = TimeInterval(armed.plan.plan.steps[segment.stepIndex].duration.value)
-    let active = segment.accumulatedActiveSeconds + now.seconds - startedAt.seconds
+    let active = segment.movingClock.elapsed(at: now)
     guard active + 0.000_000_001 >= duration else { return .accepted }
 
-    segment.accumulatedActiveSeconds = duration
-    segment.activeStartedAt = nil
+    freezeSegmentAtSettledEvidenceBoundary(at: now, state: &state)
+    segment = state.currentSegment!
+    segment.movingClock.freeze(at: now)
+    segment.consoleCandidate = nil
     state.currentSegment = segment
-    state.completedActiveSeconds += duration
+    state.completedActiveSeconds += segment.accumulatedActiveSeconds
+    state.completedStepCount = segment.stepIndex + 1
     if segment.stepIndex + 1 >= armed.plan.plan.steps.count {
       state.targetSequence = nil
       state.execution = .awaitingPhysicalStopForCompletion
@@ -1466,6 +1561,7 @@ extension WorkoutExecutionReducer {
       speedOverride: nil,
       inclinationOverride: nil
     )
+    state.currentSegment?.movingClock.observeMoving(at: now)
     return startTargetSequence(
       purpose: .plannedTransition,
       forceBothAxes: false,
@@ -1491,12 +1587,13 @@ extension WorkoutExecutionReducer {
     if let inclination, !validInclinationAdjustment(inclination, state: state) {
       return .rejected(.invalidAdjustment)
     }
+    segment.consoleCandidate = nil
     if let speed { segment.speedOverride = speed }
     if let inclination { segment.inclinationOverride = inclination }
     state.currentSegment = segment
     switch state.execution {
     case .runningSegment:
-      freezeSegment(at: now, state: &state)
+      freezeSegmentAtSettledEvidenceBoundary(at: now, state: &state)
       return startTargetSequence(
         purpose: .manualAdjustment,
         forceBothAxes: false,
@@ -1523,12 +1620,13 @@ extension WorkoutExecutionReducer {
   ) -> WorkoutReductionDisposition {
     guard var segment = state.currentSegment else { return .rejected(.noCurrentSegment) }
     guard adjustmentStateAllowsChange(state.execution) else { return .rejected(.wrongState) }
+    segment.consoleCandidate = nil
     segment.speedOverride = nil
     segment.inclinationOverride = nil
     state.currentSegment = segment
     switch state.execution {
     case .runningSegment:
-      freezeSegment(at: now, state: &state)
+      freezeSegmentAtSettledEvidenceBoundary(at: now, state: &state)
       return startTargetSequence(
         purpose: .returnToPlan,
         forceBothAxes: false,
@@ -1633,6 +1731,14 @@ extension WorkoutExecutionReducer {
   fileprivate func freezeSegmentAtEvidenceBoundary(
     at now: MonotonicInstant,
     state: inout WorkoutExecutionState
+  ) {
+    state.currentSegment?.movingClock.freeze(at: now)
+    state.currentSegment?.consoleCandidate = nil
+    freezeSegmentAtSettledEvidenceBoundary(at: now, state: &state)
+  }
+
+  fileprivate func freezeSegmentAtSettledEvidenceBoundary(
+    at now: MonotonicInstant, state: inout WorkoutExecutionState
   ) {
     guard let startedAt = state.currentSegment?.activeStartedAt else { return }
     freezeSegment(
@@ -1969,14 +2075,10 @@ extension WorkoutExecutionReducer {
     guard let segment = state.currentSegment else { return state.completedActiveSeconds }
     var current = segment.accumulatedActiveSeconds
     if let started = segment.activeStartedAt {
-      current += max(0, state.lastEventTime.seconds - started.seconds)
+      current += min(max(0, state.lastEventTime.seconds - started.seconds),
+        FR30zExecutionProfile.telemetryFreshnessInterval)
     }
-    let duration = state.armedWorkout.map {
-      TimeInterval($0.plan.plan.steps[segment.stepIndex].duration.value)
-    }
-    if duration == segment.accumulatedActiveSeconds,
-      state.completedActiveSeconds >= segment.accumulatedActiveSeconds
-    {
+    if state.completedStepCount > segment.stepIndex {
       return state.completedActiveSeconds
     }
     return state.completedActiveSeconds + current

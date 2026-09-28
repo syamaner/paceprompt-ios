@@ -205,6 +205,13 @@ struct WorkoutExecutedInterval: Codable, Equatable {
     let effectiveInclination: WorkoutEffectiveInclination
     let settledObservation: WorkoutSettledObservation
     let endReason: WorkoutExecutedIntervalEndReason
+
+    /// One producer/validator/export rule for Date subtraction near an integer second.
+    /// The microsecond tolerance absorbs floating-point representation, not a missing interval.
+    static func measuredSeconds(in intervals: [Self]) -> Int {
+        let duration = intervals.reduce(0.0) { $0 + $1.endedAt.timeIntervalSince($1.startedAt) }
+        return max(0, Int(floor(duration + 0.000_001)))
+    }
 }
 
 enum WorkoutActivityTimeline: Codable, Equatable {
