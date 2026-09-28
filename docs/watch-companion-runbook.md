@@ -66,4 +66,16 @@ the earlier availability checkpoint for those narrow observations. The reported
 step stall is tracked by #193; the Watch save-uncertain state remains a separate
 unresolved observation. No raw values or diagnostics are published. Full signed
 paired-device, metadata, distance-source and WHR acceptance remain outstanding.
-This repair does not upload a newer candidate; build 15 does not contain it.
+Build 15 does not contain this repair. The subsequent #195 release makes it
+available in internal TestFlight **1.0.1 (16)**: source
+`f416d485a05128204a7788affc951934a042e381`, tag `testflight/1.0.1-b16`.
+[The release receipt](testflight/README.md#console-override-internal-release-101-16-issue-195)
+records accepted upload, Apple API processing and assignment to the unchanged
+sole-tester group. Build-16 installation and physical acceptance remain unobserved.
+
+For a later operator test, confirm build 16 on iPhone and the updated companion on
+Watch, use a comfortable three-step plan, change speed or inclination during step 2,
+and observe countdown during the ramp and progression into step 3. Confirm overrides
+clear at the next planned step. End recording on Watch and inspect Health/Fitness
+for the single workout; record any save-uncertain state separately. This is a test
+procedure, not evidence that the behaviour has passed on real equipment.

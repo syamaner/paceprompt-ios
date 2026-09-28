@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 28 Sep 2026 | `PP-20260928-09` | Issue #195 successful internal build 16 release receipt | `gpt-6-astra` | 3,979,321 (3,954,176; 0) | 10,892 | 3,990,213 | Unmeasured | Exact 37-request root delivery/receipt phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-08` | Issue #195 internal TestFlight build 16 candidate | `gpt-6-astra` | 7,151,357 (7,070,848; 0) | 11,913 | 7,163,270 | Unmeasured | Exact 86-request root candidate/review/validation phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-07` | Issue #193 console overrides and moving step time | `gpt-6-astra` | 15,654,883 (15,386,752; 0) | 46,337 | 15,701,220 | Unmeasured | Exact 103-request root implementation/review/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-06` | Issue #188 successful Watch internal release receipt | `gpt-6-astra` | 5,596,196 (5,510,272; 0) | 12,989 | 5,609,185 | Unmeasured | Exact 54-request root delivery/receipt phase; independent reviewer and final insertion/delivery excluded |
@@ -1240,3 +1241,44 @@ requests; largest input 97,749. Phase reasoning output 1,009 is a subset of outp
 Counter resets inside the boundary and historical resets: 0; exact replay events
 and repeated cumulative snapshots: 0. Threshold crossings remain unmeasured.
 This final numeric insertion and subsequent delivery are excluded.
+
+## PP-20260928-09 build 16 release receipt and measurement boundary
+
+Issue #195 delivered internal TestFlight 1.0.1 (16) from protected merge
+`f416d485a05128204a7788affc951934a042e381`, independently reviewed parent
+`8ec006f0a0051a508aa40ad06f83a40937faed8a`, immutable tag `testflight/1.0.1-b16`.
+Required PR CI 36488334600 and exact-main CI 36488472363 passed. The existing
+admin-only tag creation rule and separate immutable-tag rules were preserved;
+main protection was not bypassed. Release run 36488598314, attempt 1, passed
+normal protected approval, unchanged pinned tools, profile/signature/privacy
+validation, one upload, Apple API processing and existing sole-tester-group
+readback. The unsigned archive and both dSYMs were digest/identity verified and
+retained privately. No hardware was operated or tester added. The expired browser
+session prevented a separate visual Apple check; hosted API evidence remains
+explicitly distinct from tester installation and paired-device acceptance.
+
+This receipt changes documentation/accounting only. The 417 frozen inputs and
+complete candidate gate remain applicable. Watch save-uncertain diagnosis,
+#115/#116 acceptance and WeeklyHealthReport #80 reader work remain outstanding.
+The runbooks and trackers record release availability without closing that work.
+Independent exact-head receipt review and required CI are recorded on its PR.
+
+Measurement scope: root Desktop session
+`01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`, baseline
+`/private/tmp/pp-build16-receipt-baseline.json`, event 1172 at
+`2026-09-28T21:46:09.372Z`. Baseline counters: input 151,030,041; cached input
+148,656,768; cache-write input 0; output 390,739 (reasoning subset 104,623); total
+151,420,780. This phase covers candidate delivery, protected release, API evidence,
+archive retention, tracker/runbook receipt preparation and review coordination.
+Independent reviewer usage, final numeric insertion, commit and subsequent
+receipt delivery are excluded. API-equivalent estimate and long-context threshold
+remain Unmeasured because exact-model official rates/threshold are unverified;
+no other model's prices are used and this is not a subscription bill.
+
+Final snapshot: event 1209 at `2026-09-28T21:58:51.330Z`; input 155,009,362,
+cached input 152,610,944, cache-write input 0, output 401,631, total 155,410,993.
+Exact report `/private/tmp/pp-build16-receipt-accounting.json`: 37 measured
+requests; largest input 116,794. Phase reasoning output 636 is a subset of output.
+Counter resets inside the boundary and historical resets: 0; exact replay events
+and repeated cumulative snapshots: 0. Threshold crossings remain unmeasured.
+This final numeric insertion and subsequent receipt delivery are excluded.
