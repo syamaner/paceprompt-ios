@@ -13,7 +13,7 @@ unset PYTHONPATH PYTHONHOME
 cd "$tools"
 umask 077
 test -n "$ASC_KEY_ID" && test -n "$ASC_ISSUER_ID" && test -n "$ASC_API_KEY_P8_B64"
-test -n "$DIST_P12_B64" && test -n "$DIST_P12_PASSWORD" && test -n "$DIST_PROFILE_B64"
+test -n "$DIST_P12_B64" && test -n "$DIST_P12_PASSWORD" && test -n "$DIST_PROFILE_B64" && test -n "$DIST_WATCH_PROFILE_B64"
 [[ "$ASC_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]
 [[ "$ASC_KEY_ID" =~ ^[A-Z0-9]{10}$ ]]
 work="$RUNNER_TEMP/testflight"
@@ -23,8 +23,10 @@ mkdir -p "$work" "$key_dir" "$profile_dir"
 key_path="$key_dir/AuthKey_${ASC_KEY_ID}.p8"
 keychain="$work/distribution.keychain-db"
 profile_path=''
+watch_profile_path=''
 cleanup() {
   if [ -n "$profile_path" ]; then rm -f "$profile_path"; fi
+  if [ -n "$watch_profile_path" ]; then rm -f "$watch_profile_path"; fi
   security delete-keychain "$keychain" >/dev/null 2>&1 || true
   rm -f "$key_path"
   rm -rf "$work"
@@ -39,8 +41,9 @@ version="${version%-b*}"
 python3 -B "$tools/scripts/testflight_api.py" preflight --version "$version" --build "$build"
 printf '%s' "$DIST_P12_B64" | base64 -D > "$work/distribution.p12"
 printf '%s' "$DIST_PROFILE_B64" | base64 -D > "$work/distribution.mobileprovision"
-unset DIST_P12_B64 DIST_PROFILE_B64
-if [ ! -s "$work/distribution.p12" ] || [ ! -s "$work/distribution.mobileprovision" ]; then
+printf '%s' "$DIST_WATCH_PROFILE_B64" | base64 -D > "$work/watch.mobileprovision"
+unset DIST_P12_B64 DIST_PROFILE_B64 DIST_WATCH_PROFILE_B64
+if [ ! -s "$work/distribution.p12" ] || [ ! -s "$work/distribution.mobileprovision" ] || [ ! -s "$work/watch.mobileprovision" ]; then
   echo 'FAIL: a signing secret decoded to an empty file' >&2
   exit 1
 fi
@@ -56,22 +59,31 @@ security set-key-partition-list -S apple-tool:,apple: -s \
 unset DIST_P12_PASSWORD keychain_password
 echo 'PASS: temporary signing identity imported'
 security list-keychains -d user -s "$keychain"
-python3 -B "$tools/scripts/testflight_signing.py" \
-  --profile "$work/distribution.mobileprovision" \
-  --keychain "$keychain" --team "$ASC_TEAM_ID" \
-  --output "$work/signing.json"
+python3 -B "$tools/scripts/testflight_signing.py" --role phone \
+  --profile "$work/distribution.mobileprovision" --keychain "$keychain" --team "$ASC_TEAM_ID" \
+  --output "$work/signing.json" --entitlements-output "$work/distribution-entitlements.plist"
+python3 -B "$tools/scripts/testflight_signing.py" --role watch \
+  --profile "$work/watch.mobileprovision" --keychain "$keychain" --team "$ASC_TEAM_ID" \
+  --output "$work/watch-signing.json" --entitlements-output "$work/watch-entitlements.plist"
 profile_uuid="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["uuid"])' "$work/signing.json")"
+watch_profile_uuid="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["uuid"])' "$work/watch-signing.json")"
 certificate_sha1="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["certificate_sha1"])' "$work/signing.json")"
+watch_certificate_sha1="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["certificate_sha1"])' "$work/watch-signing.json")"
+test "$certificate_sha1" = "$watch_certificate_sha1"
+test "$profile_uuid" != "$watch_profile_uuid"
 profile_path="$profile_dir/$profile_uuid.mobileprovision"
+watch_profile_path="$profile_dir/$watch_profile_uuid.mobileprovision"
 cp "$work/distribution.mobileprovision" "$profile_path"
+cp "$work/watch.mobileprovision" "$watch_profile_path"
 # Only Apple tools process the verified app; no candidate build scripts run here.
 cp -R "$VERIFIED_ARCHIVE" "$work/PromptPace.xcarchive"
 app="$work/PromptPace.xcarchive/Products/Applications/PacePrompt.app"
+watch="$app/Watch/PacePromptWatch.app"
 cp "$work/distribution.mobileprovision" "$app/embedded.mobileprovision"
-python3 -B "$tools/scripts/testflight_signing.py" \
-  --profile "$work/distribution.mobileprovision" --keychain "$keychain" \
-  --team "$ASC_TEAM_ID" --output "$work/signing.json" \
-  --entitlements-output "$work/distribution-entitlements.plist"
+cp "$work/watch.mobileprovision" "$watch/embedded.mobileprovision"
+# Sign each nested bundle explicitly, enclosing app last.
+codesign --force --sign "$certificate_sha1" --keychain "$keychain" \
+  --entitlements "$work/watch-entitlements.plist" "$watch"
 codesign --force --sign "$certificate_sha1" --keychain "$keychain" \
   --entitlements "$work/distribution-entitlements.plist" "$app"
 python3 - "$work/PromptPace.xcarchive/Info.plist" "$ASC_TEAM_ID" <<'PYINFO'
@@ -86,13 +98,14 @@ with open(path, 'wb') as target:
 PYINFO
 echo 'PASS: verified unsigned archive signed without executing candidate build code'
 cd "$work"
-python3 - "$work/export-options.plist" "$ASC_TEAM_ID" "$profile_uuid" "$certificate_sha1" <<'PY'
+python3 - "$work/export-options.plist" "$ASC_TEAM_ID" "$profile_uuid" "$certificate_sha1" "$watch_profile_uuid" <<'PY'
 import plistlib, sys
 with open(sys.argv[1], 'wb') as output:
     plistlib.dump({
         'method': 'app-store-connect', 'destination': 'export',
         'signingStyle': 'manual', 'teamID': sys.argv[2],
-        'provisioningProfiles': {'com.otherweather.PromptPace': sys.argv[3]},
+        'provisioningProfiles': {'com.otherweather.PromptPace': sys.argv[3],
+                                 'com.otherweather.PromptPace.watchkitapp': sys.argv[5]},
         'signingCertificate': sys.argv[4],
         'manageAppVersionAndBuildNumber': False,
         'testFlightInternalTestingOnly': True,
@@ -103,11 +116,8 @@ xcodebuild -quiet -exportArchive -archivePath "$work/PromptPace.xcarchive" \
 echo 'PASS: internal-only App Store export created'
 ipa="$work/export/PacePrompt.ipa"
 test -f "$ipa"
-mkdir "$work/payload"
-ditto -x -k "$ipa" "$work/payload"
-app="$work/payload/Payload/PacePrompt.app"
-test -d "$app"
-python3 -B "$tools/scripts/testflight_guard.py" artifact --app "$app" \
+python3 -B "$tools/scripts/testflight_guard.py" exported \
+  --ipa "$ipa" --destination "$work/payload" \
   --tag "$RELEASE_TAG" --team "$ASC_TEAM_ID" \
   --certificate-sha1 "$certificate_sha1"
 digest="$(shasum -a 256 "$ipa" | awk '{print $1}')"

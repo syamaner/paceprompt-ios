@@ -161,4 +161,5 @@ jobs:
           DIST_P12_B64: ${{ secrets.DIST_P12_B64 }}
           DIST_P12_PASSWORD: ${{ secrets.DIST_P12_PASSWORD }}
           DIST_PROFILE_B64: ${{ secrets.DIST_PROFILE_B64 }}
+          DIST_WATCH_PROFILE_B64: ${{ secrets.DIST_WATCH_PROFILE_B64 }}
         run: bash "$TRUSTED_TOOLS_ROOT/scripts/testflight_release.sh"

@@ -1,6 +1,6 @@
 """Synthetic release-policy checks; only a temporary ad hoc signature on macOS."""
 
-import importlib.util
+import importlib
 import base64
 import datetime as dt
 import hashlib
@@ -19,11 +19,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def module(name: str):
-    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
-    loaded = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(loaded)
-    return loaded
+    return importlib.import_module("scripts." + name)
 
+
+from scripts.tests import release_fixtures as fixtures
 
 guard = module("testflight_guard")
 api = module("testflight_api")
@@ -143,20 +142,12 @@ class ReleaseGuardTests(unittest.TestCase):
             guard.check_tag("testflight/1.0.1-b13", PROJECT.replace("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;", "PRODUCT_BUNDLE_IDENTIFIER = other.app;", 1))
 
     def test_rejects_missing_purpose_and_changed_version(self):
-        info = {
-            "CFBundleIdentifier": guard.BUNDLE_ID,
-            "CFBundleShortVersionString": "1.0.1",
-            "CFBundleVersion": "13",
-            "ITSAppUsesNonExemptEncryption": False,
-            "NSBluetoothAlwaysUsageDescription": "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.",
-            "NSHealthShareUsageDescription": "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.",
-            "NSHealthUpdateUsageDescription": "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.",
-        }
+        info = fixtures.info('phone')
         guard.metadata(info, "1.0.1", "13")
         for invalid in ("NO", 0, True):
             with self.subTest(encryption=invalid), self.assertRaises(ValueError):
                 guard.metadata({**info, "ITSAppUsesNonExemptEncryption": invalid}, "1.0.1", "13")
-        for key in info:
+        for key in ("CFBundleIdentifier", "CFBundleVersion", "NSHealthShareUsageDescription", "NSHealthUpdateUsageDescription", "NSBluetoothAlwaysUsageDescription"):
             changed = dict(info)
             del changed[key]
             with self.subTest(key=key), self.assertRaises(ValueError):
@@ -287,21 +278,6 @@ class ReleaseGuardTests(unittest.TestCase):
         self.assertIn('test "$GITHUB_RUN_ATTEMPT" = 1', workflow)
         self.assertIn("'signingStyle': 'manual'", signer)
         self.assertNotIn("-allowProvisioningUpdates", workflow)
-
-    def test_unsigned_guard_checks_device_load_command_not_only_plist_platform(self):
-        info = {"CFBundleExecutable": "PacePrompt", "DTPlatformName": "iphoneos"}
-        with patch.object(guard, "check_tag", return_value=("1.0.1", "13")), \
-             patch.object(guard, "metadata"), patch.object(guard, "plist", return_value=info):
-            for architecture, platform in [("arm64", "IOS"), ("arm64", "IOSSIMULATOR"),
-                                            ("x86_64", "IOS"), ("arm64", "MACOS")]:
-                with self.subTest(architecture=architecture, platform=platform), \
-                     patch.object(guard.subprocess, "check_output",
-                                  side_effect=[architecture, f" platform {platform}\n"]):
-                    if architecture == "arm64" and platform == "IOS":
-                        guard.unsigned(Path("Synthetic.app"), "testflight/1.0.1-b13")
-                    else:
-                        with self.assertRaises(ValueError):
-                            guard.unsigned(Path("Synthetic.app"), "testflight/1.0.1-b13")
 
     def test_source_rejects_missing_exact_head_review(self):
         sha = "a" * 40

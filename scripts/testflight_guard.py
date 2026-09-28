@@ -14,6 +14,14 @@ import urllib.request
 from pathlib import Path
 
 
+if __package__:
+    from . import testflight_policy as policy, testflight_signing as signing_policy, testflight_handoff as handoff
+else:
+    import testflight_policy as policy
+    import testflight_signing as signing_policy
+    import testflight_handoff as handoff
+TRUSTED_ROOT = Path(__file__).resolve().parents[1]
+
 # A trusted signer reads candidate metadata as data; it never imports candidate code.
 ROOT = Path(os.environ.get("PACEPROMPT_RELEASE_SOURCE_ROOT",
                            str(Path(__file__).resolve().parents[1]))).resolve()
@@ -32,11 +40,11 @@ def git(*args: str) -> str:
 
 def versions(project: str) -> tuple[str, str]:
     blocks = re.findall(
-        r"AA000000000000000000A10[12] /\* (?:Debug|Release) \*/ = \{.*?\n\t\t\};",
+        r"(?:AA000000000000000000A10[12]|D1150000000000000000070[23]) /\* (?:Debug|Release) \*/ = \{.*?name = (?:Debug|Release);\s*\};",
         project,
         re.DOTALL,
     )
-    if len(blocks) != 2:
+    if len(blocks) != 4:
         fail("Production Debug/Release build settings are missing")
     pairs = []
     for block in blocks:
@@ -46,10 +54,11 @@ def versions(project: str) -> tuple[str, str]:
                 fail(f"Expected one {name} in each production configuration")
             return values[0].strip('"')
 
-        if setting("PRODUCT_BUNDLE_IDENTIFIER") != BUNDLE_ID:
+        expected_id = policy.WATCH_ID if "D115" in block else BUNDLE_ID
+        if setting("PRODUCT_BUNDLE_IDENTIFIER") != expected_id:
             fail("Unexpected production bundle identifier")
         pairs.append((setting("MARKETING_VERSION"), setting("CURRENT_PROJECT_VERSION")))
-    if pairs[0] != pairs[1]:
+    if any(pair != pairs[0] for pair in pairs):
         fail("Production Debug and Release versions differ")
     return pairs[0]
 
@@ -121,48 +130,34 @@ def plist(path: Path) -> dict:
     return plistlib.loads(path.read_bytes())
 
 
-def metadata(info: dict, version: str, build: str) -> None:
-    expected = {
-        "CFBundleIdentifier": BUNDLE_ID,
-        "CFBundleShortVersionString": version,
-        "CFBundleVersion": build,
-        "ITSAppUsesNonExemptEncryption": False,
-        "NSBluetoothAlwaysUsageDescription": "PacePrompt uses Bluetooth to connect to your treadmill and request speed and inclination targets during a workout you begin at its physical console.",
-        "NSHealthShareUsageDescription": "PacePrompt does not read Apple Health data. It only asks to save a completed workout and optional distance when you choose Save to Apple Health.",
-        "NSHealthUpdateUsageDescription": "PacePrompt saves a completed indoor workout and optional treadmill distance to Apple Health only when you choose Save to Apple Health.",
-    }
-    for key, value in expected.items():
-        if key == "ITSAppUsesNonExemptEncryption":
-            if info.get(key) is not False:
-                fail(f"Unexpected or missing {key}")
-        elif info.get(key) != value:
-            fail(f"Unexpected or missing {key}")
+def metadata(info: dict, version: str, build: str, role: str = "phone") -> None:
+    policy.metadata(info, version, build, role)
+
+
+def checked_bundles(app: Path, tag: str, signed: bool = False):
+    version, build = check_tag(tag, PROJECT.read_text())
+    bundles = policy.app_graph(app, signed)
+    for role, bundle in bundles.items():
+        metadata(plist(bundle / "Info.plist"), version, build, role)
+        source = "PacePrompt" if role == "phone" else "PacePromptWatch"
+        privacy = plist(bundle / "PrivacyInfo.xcprivacy")
+        if privacy != plist(TRUSTED_ROOT / source / "PrivacyInfo.xcprivacy"):
+            fail(f"{role}: privacy manifest differs from trusted policy")
+        policy.macho((bundle / policy.role(role)["executable"]).read_bytes(), role, signed)
+    return bundles
 
 
 def unsigned(app: Path, tag: str) -> None:
-    version, build = check_tag(tag, PROJECT.read_text())
-    info = plist(app / "Info.plist")
-    metadata(info, version, build)
-    if info.get("CFBundleExecutable") != "PacePrompt" or info.get("DTPlatformName") != "iphoneos":
-        fail("Unsigned app is not the production device executable")
-    if plist(app / "PrivacyInfo.xcprivacy") != plist(ROOT / "PacePrompt/PrivacyInfo.xcprivacy"):
-        fail("Unsigned app privacy manifest differs from candidate source")
-    architectures = subprocess.check_output(
-        ["xcrun", "lipo", "-archs", str(app / "PacePrompt")], text=True).split()
-    if architectures != ["arm64"]:
-        fail("Unsigned app must contain only device arm64 code")
-    load_commands = subprocess.check_output(
-        ["xcrun", "vtool", "-show-build", str(app / "PacePrompt")], text=True)
-    if re.findall(r"^\s*platform (\S+)$", load_commands, re.MULTILINE) != ["IOS"]:
-        fail("Unsigned executable is not built for device iOS")
-    print(f"PASS: unsigned device artifact {BUNDLE_ID} {version} ({build})")
+    checked_bundles(app, tag)
+    print("PASS: unsigned iPhone and Watch device artifacts")
 
 
-def verify_signing_leaf(app: Path, certificate_sha1: str) -> None:
+def verify_signing_leaf(app: Path, certificate_sha1: str, architecture: str | None = None) -> None:
+    selection = ["--architecture", architecture] if architecture else []
     with tempfile.TemporaryDirectory(prefix="paceprompt-signature-") as temporary:
         prefix = str(Path(temporary) / "certificate")
         try:
-            subprocess.run(["codesign", "-d", f"--extract-certificates={prefix}", str(app)],
+            subprocess.run(["codesign", "-d", *selection, f"--extract-certificates={prefix}", str(app)],
                            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError:
             fail("Signed app certificate extraction failed")
@@ -174,9 +169,10 @@ def verify_signing_leaf(app: Path, certificate_sha1: str) -> None:
             fail("Signed app certificate differs from approved CI identity")
 
 
-def signed_entitlements(app: Path) -> dict:
+def signed_entitlements(app: Path, architecture: str | None = None) -> dict:
+    selection = ["--architecture", architecture] if architecture else []
     # macOS 26 emits a human-readable [Dict] for "-"; ":-" emits a plist.
-    raw = subprocess.check_output(["codesign", "-d", "--entitlements", ":-", str(app)],
+    raw = subprocess.check_output(["codesign", "-d", *selection, "--entitlements", ":-", str(app)],
                                   stderr=subprocess.DEVNULL)
     try:
         result = plistlib.loads(raw)
@@ -188,46 +184,39 @@ def signed_entitlements(app: Path) -> dict:
 
 
 def artifact(app: Path, tag: str, team: str, certificate_sha1: str) -> None:
-    version, build = check_tag(tag, PROJECT.read_text())
-    metadata(plist(app / "Info.plist"), version, build)
-    privacy = plist(app / "PrivacyInfo.xcprivacy")
-    if privacy != plist(ROOT / "PacePrompt/PrivacyInfo.xcprivacy"):
-        fail("Bundled privacy manifest differs from source")
-    signing = subprocess.check_output(["codesign", "-d", "--verbose=4", str(app)], text=True, stderr=subprocess.STDOUT)
-    if f"Identifier={BUNDLE_ID}" not in signing or f"TeamIdentifier={team}" not in signing:
-        fail("Distribution signature identity or team differs")
-    if "Authority=Apple Distribution:" not in signing:
-        fail("App is not Apple Distribution signed")
-    signed = signed_entitlements(app)
-    if signed.get("com.apple.developer.healthkit") is not True:
-        fail("Signed app lacks HealthKit entitlement")
-    if signed.get("get-task-allow") is not False:
-        fail("Signed app permits debugging")
-    if signed.get("com.apple.developer.team-identifier") != team:
-        fail("Signed entitlement team differs")
-    if signed.get("application-identifier") != f"{team}.{BUNDLE_ID}":
-        fail("Signed application identifier differs")
-    profile_path = app / "embedded.mobileprovision"
-    if not profile_path.is_file():
-        fail("Distribution provisioning profile is missing")
-    profile = plistlib.loads(subprocess.check_output(["security", "cms", "-D", "-i", str(profile_path)], stderr=subprocess.DEVNULL))
-    if profile.get("TeamIdentifier") != [team]:
-        fail("Distribution profile belongs to another team")
-    if profile.get("Entitlements", {}).get("application-identifier") != f"{team}.{BUNDLE_ID}":
-        fail("Distribution profile app identifier differs")
-    if profile.get("Entitlements", {}).get("get-task-allow") is not False:
-        fail("Distribution profile permits debugging")
-    if profile.get("Entitlements", {}).get("com.apple.developer.healthkit") is not True:
-        fail("Distribution profile lacks HealthKit entitlement")
-    if "ProvisionedDevices" in profile or "ProvisionsAllDevices" in profile:
-        fail("Distribution profile allows non-App Store distribution")
-    certificates = profile.get("DeveloperCertificates")
-    if not isinstance(certificates, list) or len(certificates) != 1 or \
-            hashlib.sha1(certificates[0]).hexdigest().upper() != certificate_sha1:
-        fail("Embedded profile certificate differs from approved CI identity")
-    subprocess.run(["codesign", "--verify", "--strict", "--deep", str(app)], check=True)
-    verify_signing_leaf(app, certificate_sha1)
-    print(f"PASS: signed artifact {BUNDLE_ID} {version} ({build}), team {team}")
+    bundles = checked_bundles(app, tag, signed=True)
+    uuids = set()
+    # Nested code first. Every check must pass for both before the caller uploads.
+    for role in ("watch", "phone"):
+        bundle = bundles[role]
+        bundle_id = policy.role(role)["id"]
+        profile = plistlib.loads(subprocess.check_output(
+            ["security", "cms", "-D", "-i", str(bundle / "embedded.mobileprovision")],
+            stderr=subprocess.DEVNULL))
+        # Bind the embedded profile to the already-approved keychain fingerprint.
+        identity = f'  1) {certificate_sha1} "Apple Distribution: Approved ({team})"'
+        result = signing_policy.validate(profile, identity, team, role=role)
+        if result["uuid"] in uuids:
+            fail("Phone and Watch profiles must be distinct")
+        uuids.add(result["uuid"])
+        desired = signing_policy.distribution_entitlements(profile, team, role)
+        cpus = policy.macho((bundle / policy.role(role)["executable"]).read_bytes(), role, signed=True)
+        for cpu in sorted(cpus):
+            architecture = {0x100000c: "arm64", 0x200000c: "arm64_32"}[cpu]
+            details = subprocess.check_output(
+                ["codesign", "-d", "--architecture", architecture, "--verbose=4", str(bundle)],
+                text=True, stderr=subprocess.STDOUT)
+            lines = details.splitlines()
+            if f"Identifier={bundle_id}" not in lines or f"TeamIdentifier={team}" not in lines:
+                fail(f"{role}/{architecture}: distribution signature identity or team differs")
+            if not any(line.startswith("Authority=Apple Distribution:") for line in lines):
+                fail(f"{role}/{architecture}: app is not Apple Distribution signed")
+            signed = signed_entitlements(bundle, architecture)
+            if plistlib.dumps(signed, sort_keys=True) != plistlib.dumps(desired, sort_keys=True):
+                fail(f"{role}/{architecture}: signed entitlements differ from fixed policy")
+            verify_signing_leaf(bundle, certificate_sha1, architecture)
+        subprocess.run(["codesign", "--verify", "--all-architectures", "--strict", "--deep", str(bundle)], check=True)
+    print("PASS: signed iPhone and Watch artifacts, profiles, privacy and exact entitlements")
 
 
 def main() -> None:
@@ -241,6 +230,12 @@ def main() -> None:
     art.add_argument("--tag", required=True)
     art.add_argument("--team", required=True)
     art.add_argument("--certificate-sha1", required=True)
+    exported = commands.add_parser("exported")
+    exported.add_argument("--ipa", type=Path, required=True)
+    exported.add_argument("--destination", type=Path, required=True)
+    exported.add_argument("--tag", required=True)
+    exported.add_argument("--team", required=True)
+    exported.add_argument("--certificate-sha1", required=True)
     uns = commands.add_parser("unsigned")
     uns.add_argument("--app", type=Path, required=True)
     uns.add_argument("--tag", required=True)
@@ -250,6 +245,9 @@ def main() -> None:
             source(args.tag, args.sha)
         elif args.command == "unsigned":
             unsigned(args.app, args.tag)
+        elif args.command == "exported":
+            app = handoff.unpack_ipa(args.ipa, args.destination)
+            artifact(app, args.tag, args.team, args.certificate_sha1)
         else:
             artifact(args.app, args.tag, args.team, args.certificate_sha1)
     except (ValueError, KeyError, subprocess.CalledProcessError, OSError) as error:

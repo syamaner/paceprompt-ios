@@ -66,6 +66,11 @@ Identifiers**, select the explicit App ID for `com.otherweather.PromptPace`, and
 confirm that **HealthKit** is enabled. Stop if Apple asks to create a different
 App ID or change its HealthKit capability.
 
+For the companion, separately authorise setup of the explicit
+`com.otherweather.PromptPace.watchkitapp` App ID with HealthKit under the same
+team. This is a companion identifier; do not create another App Store Connect
+app record. Stop on any unexpected capability or identity change.
+
 ## 2. Create the App Store Connect API key
 
 If API access is not already enabled, the Account Holder opens **App Store
@@ -132,7 +137,7 @@ unique export password. Keep the `.p12` and password in separate protected
 locations. Never export only the certificate: the workflow needs the associated
 private key.
 
-## 4. Create the App Store Connect provisioning profile
+## 4. Create the two App Store Connect provisioning profiles
 
 1. Open Apple Developer → **Certificates, Identifiers & Profiles → Profiles → +**.
 2. Under **Distribution**, select **App Store Connect**.
@@ -144,7 +149,11 @@ private key.
 An App Store Connect profile contains one distribution certificate. Stop if
 Apple asks to change the App ID or HealthKit capability.
 
-Inspect the profile locally without committing its decoded content:
+Repeat the profile procedure for `com.otherweather.PromptPace.watchkitapp`,
+selecting the **same** distribution certificate and naming the separate profile
+`PacePrompt Watch CI App Store`. The two profiles must have distinct UUIDs.
+
+Inspect each profile locally without committing its decoded content:
 
 ```sh
 umask 077
@@ -157,7 +166,8 @@ plutil -p "$PROFILE_INSPECTION_DIR/profile.plist" | less
 Confirm:
 
 - `TeamIdentifier` is the expected team;
-- `application-identifier` ends with `.com.otherweather.PromptPace`;
+- `application-identifier` exactly matches the team prefix and the selected
+  phone or Watch bundle ID;
 - `com.apple.developer.healthkit` is true;
 - `get-task-allow` is false;
 - `beta-reports-active` is true;
@@ -172,7 +182,13 @@ rm -rf "$PROFILE_INSPECTION_DIR"
 unset PROFILE_INSPECTION_DIR
 ```
 
-The repository guard performs the same fail-closed checks during release.
+The repository guard performs these checks for both roles during release.
+The Watch profile platform-family policy accepts `iOS`, `watchOS`, or the ordered
+pair `iOS, watchOS`; the phone accepts only `iOS`. The exact App ID, team and
+certificate bind the profile to its role. This compatibility policy has synthetic
+test coverage; the actual generated Watch profile and hosted export remain to be
+verified during separately authorised setup/release. Unexpected platform output
+requires a reviewed policy change, not an ad hoc bypass.
 
 ## 5. Confirm the internal group and discover IDs
 
@@ -246,7 +262,8 @@ secrets**:
 | `ASC_API_KEY_P8_B64` | Single-line base64 of the downloaded `.p8` |
 | `DIST_P12_B64` | Single-line base64 of the `.p12` identity |
 | `DIST_P12_PASSWORD` | `.p12` export password |
-| `DIST_PROFILE_B64` | Single-line base64 of the `.mobileprovision` |
+| `DIST_PROFILE_B64` | Single-line base64 of the phone App Store profile |
+| `DIST_WATCH_PROFILE_B64` | Single-line base64 of the separate Watch App Store profile |
 
 To enter a value in the GitHub UI, click **Add environment secret**, type the
 exact name from the table, paste the value, and select **Add secret**. GitHub
@@ -264,6 +281,7 @@ SECRET_SETUP_DIR="$(mktemp -d "${TMPDIR:-/private/tmp}/paceprompt-secrets.XXXXXX
 P8_PATH="$HOME/path/to/AuthKey_<KEY_ID>.p8"
 P12_PATH="$HOME/path/to/PacePrompt-CI.p12"
 PROFILE_PATH="$HOME/path/to/PacePrompt_CI_App_Store.mobileprovision"
+WATCH_PROFILE_PATH="$HOME/path/to/PacePrompt_Watch_CI_App_Store.mobileprovision"
 
 base64 -i "$P8_PATH" -o "$SECRET_SETUP_DIR/p8.b64"
 gh secret set ASC_API_KEY_P8_B64 --env internal-testflight \
@@ -276,6 +294,10 @@ gh secret set DIST_P12_B64 --env internal-testflight \
 base64 -i "$PROFILE_PATH" -o "$SECRET_SETUP_DIR/profile.b64"
 gh secret set DIST_PROFILE_B64 --env internal-testflight \
   < "$SECRET_SETUP_DIR/profile.b64"
+
+base64 -i "$WATCH_PROFILE_PATH" -o "$SECRET_SETUP_DIR/watch-profile.b64"
+gh secret set DIST_WATCH_PROFILE_B64 --env internal-testflight \
+  < "$SECRET_SETUP_DIR/watch-profile.b64"
 
 printf '%s' '<key-id>' | gh secret set ASC_KEY_ID --env internal-testflight
 printf '%s' '<issuer-uuid>' | gh secret set ASC_ISSUER_ID --env internal-testflight
@@ -356,7 +378,8 @@ TOOLS_SHA='<reviewed-40-character-tools-commit-sha>'
   git cat-file -e "$TOOLS_SHA^{commit}"
   git merge-base --is-ancestor "$TOOLS_SHA" origin/main
   for file in scripts/testflight_release.sh scripts/testflight_handoff.py \
-    scripts/testflight_guard.py scripts/testflight_signing.py scripts/testflight_api.py; do
+    scripts/testflight_guard.py scripts/testflight_signing.py scripts/testflight_policy.py \
+    scripts/testflight_api.py PacePrompt/PrivacyInfo.xcprivacy PacePromptWatch/PrivacyInfo.xcprivacy; do
     git cat-file -e "$TOOLS_SHA:$file"
   done
 )
@@ -379,16 +402,24 @@ test "$(gh variable get RELEASE_TOOLS_SHA --repo syamaner/paceprompt-ios \
 
 A missing or malformed pin fails before the trusted-tools checkout. The signer
 checks that checkout's HEAD equals the pin, then executes only its tools. The
-candidate checkout is used for Git/source metadata and privacy-manifest checks;
-its scripts, project and scheme are not executed in the signing job. Builds
+candidate checkout is used for Git/source metadata; privacy manifests are checked
+against the trusted checkout. Candidate scripts, project and scheme are not executed in the signing job. Builds
 run on a separate runner with no Apple environment or credentials.
 
-The artifact handoff supports the current single arm64 iOS app and its dSYM.
-It rejects symlinks, nested app/extension/framework/dylib content, signed profile
-content, unsafe or duplicate paths and oversized archives. New nested code or
-entitlements require a deliberate reviewed tools update rather than relaxing
-checks during a release. Candidate-specific purpose strings or identity changes
-may also require updating the trusted guard and its pin.
+The version-2 artifact handoff permits exactly the phone app and
+`Watch/PacePromptWatch.app`, plus their two dSYMs as inert data. The phone requires
+device arm64; Watch accepts device arm64_32 with optional arm64, checking every
+Mach-O slice. Both executable permissions are restored after bounded extraction.
+Unknown nested code, disguised Mach-O resources, unsigned inputs containing
+signature load commands/profiles, symlinks, unsafe or duplicate paths and oversized
+archives fail closed. Identity, capability or topology changes require a deliberate
+reviewed tools update. The pinned privacy manifests and purpose strings must match.
+
+The signer validates both profiles against one approved certificate, generates
+fixed role-specific entitlements, signs Watch first and phone last, and exports
+with an explicit two-profile map. Both exported bundles must pass identity,
+privacy, device code, complete profile, exact entitlement, certificate-leaf and
+strict signature checks before the single upload command is reachable.
 
 The tag's workflow still defines secret access and can be edited in a candidate.
 A tools pin is not protection against an approved malicious workflow that
@@ -455,7 +486,7 @@ gh secret list --repo syamaner/paceprompt-ios --env internal-testflight
 Expect `true`, active deletion/force-push/PR/status-check rules, a fast-check
 context bound to GitHub Actions (integration ID `15368`), default token
 permissions `read`, and `can_approve_pull_request_reviews=false`. Expect no
-repository Actions secrets and all six named Apple/signing secrets in the
+repository Actions secrets and all seven named Apple/signing secrets in the
 environment. Read each ruleset's detail (`gh api
 repos/syamaner/paceprompt-ios/rulesets/<id>`) to confirm conditions and bypass
 actors; the ruleset list alone does not establish tag immutability or admin-only
@@ -487,17 +518,29 @@ For planned rotation before expiry, with no suspected exposure:
 4. After that release is verified, revoke the superseded Apple API key or
    certificate and securely delete obsolete local copies.
 
-A new distribution certificate requires a new `.p12` and a new provisioning
-profile that embeds that certificate. Never update only one of those two
-secrets.
+A new distribution certificate requires a new `.p12` and replacement phone and
+Watch profiles embedding that certificate. Replace the related secrets together.
 
 ## Watch companion release boundary (#115)
 
-The Watch companion adds a nested watchOS app to the archive. The current trusted
-archive handoff rejects nested apps/extensions. Keep that rejection in place;
-unsigned iPhone/Watch simulator builds do not validate a signed distribution.
-Before a later Watch release, separately review the trusted signing tools, nested
-bundle identity/entitlements, provisioning profiles and archive inspection. Keep
-team identifiers and signing configuration local. Do not reuse the older
-single-app successful handoff as evidence for this shape. No release upload or
-hardware installation was authorised by the #115 implementation slice.
+Issue #186 prepares strict two-bundle tooling and synthetic failure coverage for
+the #115 companion. Its architecture and evidence are recorded in
+[Watch release preparation](../../design/watch-release-preparation.md). This code
+change does not activate a new `RELEASE_TOOLS_SHA`, supply the Watch profile, sign
+an actual distribution or upload a release. The old independently pinned tools
+continue to reject nested apps until deliberately upgraded through the procedure
+above. Keep local signing configuration and team identifiers out of Git.
+
+A later authorised setup must validate the real Watch profile and update the tools
+pin. Then prepare a fresh build number and an exact-head-attested candidate merge;
+1.0.1 (13) is already used. Do not infer hosted Xcode 26.6 compatibility, Apple
+acceptance, TestFlight visibility or paired-device behaviour from local unsigned
+Xcode 27.0 and mocked-tool tests. #115 device acceptance, WeeklyHealthReport #80
+and physical/cross-repository #116 remain open dependent work.
+
+Exported IPA inspection is also bounded: only `Payload/PacePrompt.app` and its
+exact Watch child are accepted. Unknown top-level support directories or sibling
+apps fail closed before extraction/signature inspection. Any required Apple export
+layout extension needs its own reviewed policy update. Certificate, identity and
+exact-entitlement display checks explicitly select every Mach-O architecture;
+strict verification also covers all architectures.
