@@ -19,6 +19,12 @@ rg -n 'MARKETING_VERSION|CURRENT_PROJECT_VERSION' \
   PacePrompt.xcodeproj/project.pbxproj
 ```
 
+Keep the phone and Watch Debug/Release version and build settings equal. The
+release guard checks all four configurations against the tag. Verify that the
+reviewed tools pin supports the two-bundle graph and the separately validated
+Watch profile is configured before authorising a release. Issue #186 preparation
+does not perform that environment activation or establish actual signed export.
+
 Use semantic marketing versions such as `1.0` and monotonically increasing
 integer build numbers such as `8`. Form the tag as:
 
@@ -268,10 +274,11 @@ A green run proves these ordered stages passed:
 5. same-run/source/tag/attempt and archive SHA-256 verification, bounded extraction,
    unsigned app metadata/platform checks and trusted source recheck;
 6. App Store Connect app/group/tester preflight and unused build;
-7. certificate/profile validation, fixed trusted distribution entitlements,
+7. both certificate/profile validations, fixed role-specific distribution entitlements,
    signing without rebuilding the project, and internal-only export;
-8. signed IPA metadata, privacy manifest, purpose strings, Apple Distribution
-   signature, HealthKit entitlement and `get-task-allow=false`;
+8. bounded whole-IPA topology, both apps' metadata/privacy, and every architecture
+   against the fixed entitlements, approved Apple Distribution certificate and
+   strict signature verification;
 9. one accepted upload;
 10. Apple processing to a valid internal-only beta build;
 11. assignment visible in the unchanged sole-tester group's build list.

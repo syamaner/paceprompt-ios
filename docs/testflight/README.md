@@ -202,4 +202,14 @@ protection, HealthKit and physical treadmill acceptance are separate checks.
 
 ## Deferred Watch-primary acceptance
 
-Issue #114 freezes the [Watch/Health interchange contract](../../design/watch-primary-health-interchange-contract.md) and [paired-device runbook](../watch-health-interchange-runbook.md). It adds no Watch target or release. #115, WeeklyHealthReport #80 and #116 remain separate implementation/acceptance work; existing release receipts above do not establish Watch or cross-repository interoperability.
+Issue #114 freezes the [Watch/Health interchange contract](../../design/watch-primary-health-interchange-contract.md) and [paired-device runbook](../watch-health-interchange-runbook.md). It adds no Watch target or release. #115 now has a merged software implementation; its signed-device acceptance, WeeklyHealthReport #80 and #116 remain separate work; existing release receipts above do not establish Watch or cross-repository interoperability.
+
+
+### Watch release preparation (#186)
+
+The [two-bundle architecture and validation receipt](../../design/watch-release-preparation.md)
+records strict archive transfer, separate profiles, inside-out signing and both-app
+verification. This is preparation only: the environment tools pin and credentials
+are unchanged, no new build/tag is issued, and no signed export or upload is claimed.
+Follow [setup](setup.md#watch-companion-release-boundary-115) before a separately
+authorised fresh release. Earlier phone-only receipts do not validate Watch delivery.

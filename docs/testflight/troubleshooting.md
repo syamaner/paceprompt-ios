@@ -146,7 +146,7 @@ use the normal new-build recovery path after a reviewed repair.
 ### `Cloud signing permission error` or no profile found
 
 This workflow intentionally uses manual signing. Confirm the current workflow
-does not pass `-allowProvisioningUpdates`. Verify all three distribution secrets
+does not pass `-allowProvisioningUpdates`. Verify all four distribution secrets
 are present and use the dedicated Apple Distribution identity and matching App
 Store Connect profile described in [`setup.md`](setup.md).
 
@@ -154,12 +154,14 @@ Store Connect profile described in [`setup.md`](setup.md).
 
 Create a new App Store Connect profile selecting the same Apple Distribution
 certificate whose private key is inside the `.p12`. Replace `DIST_P12_B64`,
-`DIST_P12_PASSWORD` and `DIST_PROFILE_B64` as one set.
+`DIST_P12_PASSWORD`, `DIST_PROFILE_B64` and `DIST_WATCH_PROFILE_B64` as one set.
+Both profiles must select that certificate, with distinct UUIDs and exact phone/Watch IDs.
 
 ### Profile lacks HealthKit or allows debugging
 
-Stop. Select the explicit `com.otherweather.PromptPace` App ID with HealthKit
-enabled and regenerate the App Store Connect profile. `get-task-allow` must be
+Stop. Select the failing role's explicit `com.otherweather.PromptPace` or
+`com.otherweather.PromptPace.watchkitapp` App ID with HealthKit enabled and regenerate
+its App Store Connect profile. `get-task-allow` must be
 false. Do not alter app capabilities merely to make signing pass.
 
 ### `EXPORT_COMPLIANCE_TAG` mismatch
@@ -213,3 +215,16 @@ Report these as separate facts:
 
 None of these establishes HealthKit or physical FR30z behaviour unless those
 are separately exercised and recorded under their own authorised procedures.
+
+### Watch topology, profile or signature failure
+
+The supported nested path is exactly `Watch/PacePromptWatch.app`. Do not remove
+that app to make an old tools pin accept the archive, use the phone profile for
+Watch, broaden entitlements, or switch to recursive signing. Review the pin and
+both profile identities first. The trusted signer signs inside out and validates
+both exported apps; a failure in either must block upload. Unsigned inputs must
+contain no signature load commands. Device Mach-O slices must match iOS/watchOS,
+even if the plist claims the right platform. Watch requires its arm64_32 slice
+for the current minimum deployment target. Unexpected hosted output needs a
+reviewed repair and fresh release attempt; synthetic fixtures do not prove Apple
+will accept an export.

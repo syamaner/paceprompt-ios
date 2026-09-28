@@ -2,6 +2,7 @@
 import json
 import plistlib
 import stat
+import shutil
 import tempfile
 import unittest
 import zipfile
@@ -10,6 +11,7 @@ from unittest.mock import patch
 
 from scripts import testflight_handoff as handoff
 from scripts import testflight_signing as signing
+from scripts.tests import release_fixtures as fixtures
 
 
 class HandoffTests(unittest.TestCase):
@@ -21,12 +23,7 @@ class HandoffTests(unittest.TestCase):
         self.app = self.archive / 'Products/Applications/PacePrompt.app'
         self.app.mkdir(parents=True)
         self.context = handoff.identity('a' * 40, 'testflight/1.0-b1', '123', '1')
-        info = {'CFBundleIdentifier': 'com.otherweather.PromptPace',
-                'CFBundleExecutable': 'PacePrompt', 'CFBundlePackageType': 'APPL',
-                'CFBundleShortVersionString': '1.0', 'CFBundleVersion': '1',
-                'DTPlatformName': 'iphoneos', 'CFBundleSupportedPlatforms': ['iPhoneOS']}
-        (self.app / 'Info.plist').write_bytes(plistlib.dumps(info))
-        (self.app / 'PacePrompt').write_bytes(b'synthetic executable; never launched')
+        fixtures.app_tree(self.app, '1.0', '1')
         (self.archive / 'Info.plist').write_bytes(plistlib.dumps({
             'ArchiveVersion': 2, 'ApplicationProperties': {
                 'ApplicationPath': 'Applications/PacePrompt.app',
@@ -48,6 +45,7 @@ class HandoffTests(unittest.TestCase):
                 self.assertEqual(path.read_bytes(), (result / path.relative_to(self.archive)).read_bytes())
         executable = result / 'Products/Applications/PacePrompt.app/PacePrompt'
         self.assertEqual(executable.stat().st_mode & 0o777, 0o755)
+        self.assertEqual((executable.parent / 'Watch/PacePromptWatch.app/PacePromptWatch').stat().st_mode & 0o777, 0o755)
         self.assertEqual((executable.parent / 'Info.plist').stat().st_mode & 0o777, 0o644)
 
     def test_digest_mismatch_writes_nothing(self):
@@ -59,7 +57,7 @@ class HandoffTests(unittest.TestCase):
     def test_other_source_tag_run_or_attempt_is_rejected(self):
         digest = self.pack()
         for field, value in [('source_sha', 'b' * 40), ('tag', 'testflight/1.0-b2'),
-                             ('run_id', '456'), ('run_attempt', '2'), ('schema', 2)]:
+                             ('run_id', '456'), ('run_attempt', '2'), ('schema', 3)]:
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'another'):
                 self.unpack(digest, {**self.context, field: value})
         self.assertFalse(self.destination.exists())
@@ -140,6 +138,7 @@ class HandoffTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 self.pack()
             path.unlink()
+            if name.startswith("Frameworks/"): shutil.rmtree(self.app / "Frameworks")
         link = self.app / 'link'
         link.symlink_to('/private/tmp')
         with self.assertRaises(ValueError):
@@ -148,7 +147,7 @@ class HandoffTests(unittest.TestCase):
         info = plistlib.loads((self.app / 'Info.plist').read_bytes())
         info['DTPlatformName'] = 'iphonesimulator'
         (self.app / 'Info.plist').write_bytes(plistlib.dumps(info))
-        with self.assertRaisesRegex(ValueError, 'platform'):
+        with self.assertRaisesRegex(ValueError, 'DTPlatformName'):
             self.pack()
 
     def test_signing_entitlements_are_fixed_and_must_be_granted_by_profile(self):

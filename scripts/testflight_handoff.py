@@ -11,6 +11,11 @@ import sys
 import zipfile
 from pathlib import Path, PurePosixPath
 
+if __package__:
+    from . import testflight_policy as policy
+else:
+    import testflight_policy as policy
+
 ARCHIVE = 'PromptPace.xcarchive'
 APP = f'{ARCHIVE}/Products/Applications/PacePrompt.app'
 MAX_FILES = 20000
@@ -32,15 +37,15 @@ def digest_file(path: Path) -> str:
 def identity(sha: str, tag: str, run: str, attempt: str) -> dict:
     if not SHA.fullmatch(sha) or not TAG.fullmatch(tag) or not run.isdigit() or attempt != '1':
         raise ValueError('Invalid source/tag/run identity or repeated attempt')
-    return {'schema': 1, 'source_sha': sha, 'tag': tag, 'run_id': run, 'run_attempt': attempt}
+    return {'schema': 2, 'source_sha': sha, 'tag': tag, 'run_id': run, 'run_attempt': attempt}
 
 
 def permitted(name: str) -> bool:
     return (name == f'{ARCHIVE}/Info.plist' or name.startswith(APP + '/')
-            or name.startswith(f'{ARCHIVE}/dSYMs/PacePrompt.app.dSYM/'))
+            or any(name.startswith(f'{ARCHIVE}/dSYMs/{b["executable"]}.app.dSYM/') for b in policy.BUNDLES.values()))
 
 
-def names_and_sizes(entries: list[tuple[str, int]]) -> None:
+def names_and_sizes(entries: list[tuple[str, int]], allowed=permitted) -> None:
     if not entries or len(entries) > MAX_FILES:
         raise ValueError('Archive entry count exceeds policy')
     seen = set()
@@ -49,7 +54,7 @@ def names_and_sizes(entries: list[tuple[str, int]]) -> None:
         path = PurePosixPath(name)
         # Also reject macOS case-insensitive collisions and non-canonical paths.
         if (path.is_absolute() or '..' in path.parts or '\\' in name
-                or str(path) != name or name.casefold() in seen or not permitted(name)):
+                or str(path) != name or name.casefold() in seen or not allowed(name)):
             raise ValueError('Unexpected, duplicate or unsafe archive path')
         seen.add(name.casefold())
         if size < 0 or size > MAX_FILE:
@@ -64,29 +69,18 @@ def validate_archive(root: Path, tag: str) -> Path:
     if not match:
         raise ValueError('Invalid release tag')
     app = root / 'Products/Applications/PacePrompt.app'
-    info = plistlib.loads((app / 'Info.plist').read_bytes())
-    expected = {'CFBundleIdentifier': 'com.otherweather.PromptPace',
-                'CFBundleExecutable': 'PacePrompt',
-                'CFBundlePackageType': 'APPL',
-                'CFBundleShortVersionString': match[1], 'CFBundleVersion': match[2],
-                'DTPlatformName': 'iphoneos', 'CFBundleSupportedPlatforms': ['iPhoneOS']}
-    if any(info.get(key) != value for key, value in expected.items()):
-        raise ValueError('Unsigned app identity/platform differs from release')
-    if not (app / 'PacePrompt').is_file():
-        raise ValueError('Missing app executable')
+    bundles = policy.app_graph(app)
+    for name, bundle in bundles.items():
+        policy.metadata(plistlib.loads((bundle / 'Info.plist').read_bytes()), match[1], match[2], name)
+        policy.macho((bundle / policy.role(name)['executable']).read_bytes(), name)
     archive = plistlib.loads((root / 'Info.plist').read_bytes())
     props = archive.get('ApplicationProperties', {})
     if (props.get('ApplicationPath') != 'Applications/PacePrompt.app'
-            or props.get('CFBundleIdentifier') != expected['CFBundleIdentifier']
+            or props.get('CFBundleIdentifier') != policy.PHONE_ID
             or props.get('CFBundleShortVersionString') != match[1]
             or props.get('CFBundleVersion') != match[2]
             or archive.get('ArchiveVersion') != 2):
         raise ValueError('Archive metadata differs from release')
-    for path in app.rglob('*'):
-        relative = path.relative_to(app)
-        if (path.is_symlink() or path.name in {'embedded.mobileprovision', '_CodeSignature'}
-                or any(part.endswith(('.app', '.appex', '.framework', '.dylib')) for part in relative.parts)):
-            raise ValueError('Signed, linked or nested-code app content is not supported')
     return app
 
 
@@ -137,12 +131,50 @@ def unpack(bundle_path: Path, destination: Path, context: dict, expected_digest:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with bundle.open(entry) as source, path.open('xb') as target:
                     shutil.copyfileobj(source, target, length=1024 * 1024)
-                path.chmod(0o755 if entry.filename == APP + '/PacePrompt' else 0o644)
+                executables = {str(PurePosixPath(APP) / b['path'] / b['executable']) for b in policy.BUNDLES.values()}
+                path.chmod(0o755 if entry.filename in executables else 0o644)
             validate_archive(destination / ARCHIVE, context['tag'])
         except Exception:
             shutil.rmtree(destination)
             raise
     return destination / ARCHIVE
+
+
+def unpack_ipa(package: Path, destination: Path) -> Path:
+    """Exported IPA policy: exactly Payload/PacePrompt.app, no other support/code roots.
+
+    Unknown Apple export layouts require review; they are never silently accepted.
+    Directory entries are allowed, but all names/types/bounds are checked first.
+    """
+    app_name = "Payload/PacePrompt.app"
+    if package.stat().st_size > MAX_TOTAL:
+        raise ValueError("IPA exceeds size policy")
+    with zipfile.ZipFile(package) as bundle:
+        entries = bundle.infolist()
+        names_and_sizes([(e.filename[:-1] if e.is_dir() else e.filename, e.file_size) for e in entries],
+                        lambda name: name in ("Payload", app_name) or name.startswith(app_name + "/"))
+        for entry in entries:
+            mode = stat.S_IFMT(entry.external_attr >> 16)
+            if entry.flag_bits & 1 or mode not in ((0, stat.S_IFDIR) if entry.is_dir() else (0, stat.S_IFREG)):
+                raise ValueError("Encrypted, linked or special IPA entry")
+        destination.mkdir(mode=0o700, parents=False, exist_ok=False)
+        try:
+            executable_paths = {str(PurePosixPath(app_name) / b['path'] / b['executable']) for b in policy.BUNDLES.values()}
+            for entry in entries:
+                path = destination / entry.filename
+                if entry.is_dir():
+                    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+                    continue
+                path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                with bundle.open(entry) as source, path.open('xb') as target:
+                    shutil.copyfileobj(source, target, length=1024 * 1024)
+                path.chmod(0o755 if entry.filename in executable_paths else 0o644)
+            app = destination / app_name
+            policy.app_graph(app, signed=True)
+        except Exception:
+            shutil.rmtree(destination)
+            raise
+    return app
 
 
 def main() -> None:

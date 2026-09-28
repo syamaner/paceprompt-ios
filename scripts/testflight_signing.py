@@ -11,21 +11,31 @@ import subprocess
 import sys
 from pathlib import Path
 
-BUNDLE_ID = "com.otherweather.PromptPace"
+if __package__:
+    from . import testflight_policy as policy
+else:
+    import testflight_policy as policy
+
+BUNDLE_ID = policy.PHONE_ID
 
 
 def validate(profile: dict, identities: str, team: str,
-             now: dt.datetime | None = None) -> dict[str, str]:
+             now: dt.datetime | None = None, role: str = "phone") -> dict[str, str]:
+    bundle_id = policy.role(role)["id"]
     if profile.get("TeamIdentifier") != [team]:
         raise ValueError("Distribution profile team differs")
     if profile.get("ApplicationIdentifierPrefix") != [team]:
         raise ValueError("Distribution profile prefix differs")
-    if "iOS" not in profile.get("Platform", []):
-        raise ValueError("Distribution profile is not for iOS")
-    if "ProvisionedDevices" in profile or profile.get("ProvisionsAllDevices") is not None:
+    # Apple's profile family can be iOS for a Watch companion. The exact App ID,
+    # certificate and team bind the role; this is not a claim about a real profile.
+    platforms = profile.get("Platform")
+    allowed = [["iOS"]] if role == "phone" else [["iOS"], ["watchOS"], ["iOS", "watchOS"]]
+    if platforms not in allowed:
+        raise ValueError("Distribution profile platform family differs")
+    if "ProvisionedDevices" in profile or "ProvisionsAllDevices" in profile:
         raise ValueError("Distribution profile permits device or enterprise distribution")
     entitlements = profile.get("Entitlements", {})
-    if entitlements.get("application-identifier") != f"{team}.{BUNDLE_ID}":
+    if entitlements.get("application-identifier") != f"{team}.{bundle_id}":
         raise ValueError("Distribution profile app identifier differs")
     if entitlements.get("com.apple.developer.team-identifier") != team:
         raise ValueError("Distribution profile entitlement team differs")
@@ -57,22 +67,23 @@ def validate(profile: dict, identities: str, team: str,
     return {"uuid": uuid, "name": name, "certificate_sha1": fingerprint}
 
 
-def distribution_entitlements(profile: dict, team: str) -> dict:
+def distribution_entitlements(profile: dict, team: str, role: str = "phone") -> dict:
+    bundle_id = policy.role(role)["id"]
     # Consumer-owned fixed entitlement policy: candidate input cannot broaden it.
     desired = {
-        "application-identifier": f"{team}.{BUNDLE_ID}",
+        "application-identifier": f"{team}.{bundle_id}",
         "com.apple.developer.team-identifier": team,
         "com.apple.developer.healthkit": True,
         "get-task-allow": False,
         "beta-reports-active": True,
-        "keychain-access-groups": [f"{team}.{BUNDLE_ID}"],
+        "keychain-access-groups": [f"{team}.{bundle_id}"],
     }
     granted = profile.get("Entitlements", {})
     for key, value in desired.items():
         if key == "keychain-access-groups":
             groups = granted.get(key, [])
             if not isinstance(groups, list) or not any(
-                    group in (f"{team}.{BUNDLE_ID}", f"{team}.*") for group in groups):
+                    group in (f"{team}.{bundle_id}", f"{team}.*") for group in groups):
                 raise ValueError("Profile does not grant the app's default keychain group")
         elif granted.get(key) != value or type(granted.get(key)) is not type(value):
             raise ValueError(f"Profile does not grant required distribution entitlement {key}")
@@ -81,6 +92,7 @@ def distribution_entitlements(profile: dict, team: str) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--role", choices=tuple(policy.BUNDLES), required=True)
     parser.add_argument("--profile", type=Path, required=True)
     parser.add_argument("--keychain", type=Path, required=True)
     parser.add_argument("--team", required=True)
@@ -95,9 +107,9 @@ def main() -> None:
         identities = subprocess.check_output(
             ["security", "find-identity", "-v", "-p", "codesigning", str(args.keychain)],
             text=True, stderr=subprocess.DEVNULL)
-        result = validate(profile, identities, args.team)
+        result = validate(profile, identities, args.team, role=args.role)
         if args.entitlements_output is not None:
-            args.entitlements_output.write_bytes(plistlib.dumps(distribution_entitlements(profile, args.team)))
+            args.entitlements_output.write_bytes(plistlib.dumps(distribution_entitlements(profile, args.team, args.role)))
             args.entitlements_output.chmod(0o600)
         args.output.write_text(json.dumps(result))
         args.output.chmod(0o600)
