@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 28 Sep 2026 | `PP-20260928-03` | Issue #188 Watch internal TestFlight 1.0.1 (14) candidate and setup | `gpt-6-astra` | 14,577,998 (14,424,064; 0) | 21,014 | 14,599,012 | Unmeasured | Exact 130-request root candidate/setup/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-02` | Issue #186 strict Watch archive and signing preparation | `gpt-6-astra` | 10,909,958 (10,643,840; 0) | 42,878 | 10,952,836 | Unmeasured | Root implementation/review/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-01` | Issue #115 Watch-owned companion and zero-interval discard | `gpt-6-astra` | 26,587,444 (26,142,592; 0) | 103,517 | 26,690,961 | Unmeasured | Exact 196-request root implementation/review/validation phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260927-14` | Issue #114 Watch-primary ownership and Health interchange specification | `gpt-6-astra` | 14,486,362 (14,369,664; 0) | 51,969 | 14,538,331 | Unmeasured | Exact 108-request root specification/review/validation phase; independent reviewer and final numeric insertion/delivery excluded |
@@ -975,3 +976,43 @@ Independent working-diff review resolved two P2 findings: architecture-default s
 Focused evidence: 55 repository script tests, 24 accounting-helper tests, workflow lint, shell syntax, 41 local documentation links, 34 shell-snippet syntax checks and two embedded-Python compile checks pass. The Xcode 27.0 unsigned device confirmation archive completed with exit 0 and `ARCHIVE SUCCEEDED`; both apps pass the guard. An earlier quiet archive returned exit 0 with an ambiguous SwiftCompile diagnostic and is superseded by the explicit confirmation. Pack/unpack and both restored executable permissions were checked, including both dSYMs. Evidence: `/private/tmp/pp186-unsigned-confirm.log`, `/private/tmp/pp186-unsigned-confirm.xcarchive`, `/private/tmp/pp186-handoff-receipt.txt`. The complete local gate passed with 437 production unit tests, 72 UI tests, 16 developer-only evaluation tests, unsigned Release simulator build including Watch, static analysis and coverage. Offline HostEval completed 247 tests with 36 explicit private-evidence skips; the other offline checks passed. Full evidence is `/private/tmp/pp186-complete-gate` and `/private/tmp/pp186-complete-gate.log`. Its 417 non-Markdown inputs are frozen in `/private/tmp/pp186-frozen-inputs.json`. Actual Watch profile format, hosted Xcode 26.6 signed export, upload/Apple processing and paired-device/physical acceptance remain unperformed. Existing root-worktree scheme edits, other worktrees and local signing settings are preserved.
 
 Root session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`. Baseline `/private/tmp/pp-watch-release-baseline.json`, event 356 at `2026-09-28T10:19:58.428Z`: input 47,229,579; cached input 46,241,152; cache-write input 0; output 175,078 (reasoning subset 50,264); total 47,404,657. Final event 444 at `2026-09-28T11:13:38.974Z` follows implementation, independent working-diff review, complete validation and this ledger draft, immediately before commit: input 58,139,537; cached input 56,884,992; cache-write input 0; output 217,956; total 58,357,493. Exact delta: 83 requests; largest input 221,255; reasoning output 7,971 is included in output. The helper excluded 4 identical replay events and 1 repeated cumulative snapshots; no historical or in-boundary reset occurred. Final report: `/private/tmp/pp186-final-accounting.json`. Independent reviewer usage, final numeric insertion, exact-commit review and delivery are excluded. API-equivalent cost and long-context crossings remain unmeasured because no verified official rate/threshold for this exact model is supplied; no other model's rate or subscription bill is substituted.
+
+
+## PP-20260928-03 candidate and measurement boundary
+
+Issue #188 prepares the operator-authorised Watch companion internal TestFlight
+1.0.1 (14) candidate. All four production phone/Watch Debug/Release build numbers
+and matching synthetic release fixtures advance from 13 to 14. Runtime behaviour,
+privacy/encryption declarations, signing policy and workflow remain unchanged.
+The operator completed Watch App ID registration. The reviewed PR #187 tools merge
+`ab0ec096af74b79a498b7686fc87476781e612cc` was independently verified, tested in a
+clean separate checkout, activated in the protected release environment and read
+back. Existing credentials, sole-tester membership, other worktrees, root scheme
+edits and local signing settings are preserved. Watch profile generation remains
+pending explicit action-time confirmation; no tag or upload is claimed here.
+
+Independent working-diff review found no actionable findings in the candidate or
+setup documentation. Focused 55 script tests, release metadata, Watch boundary
+checks, workflow lint, ShellCheck, shell syntax and documentation checks pass.
+The complete gate passed with 437 production unit tests, 72 simulator UI tests,
+16 evaluation tests, unsigned Release simulator build including Watch, static
+analysis and coverage. Offline HostEval passed 247 tests with 36 explicit
+private-evidence skips; all 24 accounting-helper tests passed. Evidence:
+`/private/tmp/pp188-complete-gate` and `/private/tmp/pp188-complete-gate.log`. All
+417 frozen non-Markdown inputs in `/private/tmp/pp188-frozen-inputs.json` remained
+byte-identical. Documentation checks passed 42 local links, 34 shell snippets
+and two embedded Python snippets (syntax/compile only). An initial test of a plain tools archive failed because shell tests
+require Git metadata; the clean exact-commit checkout test passed all 55 tests.
+That setup error is not product failure or acceptance evidence. Real profile,
+actual signing/export, upload/processing, tester visibility, installation,
+HealthKit and physical acceptance remain separate evidence levels.
+
+Root session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`. Baseline
+`/private/tmp/pp-watch-upload-baseline.json`, event 463 at
+`2026-09-28T11:28:10.813Z`: input 60,941,945; cached input 59,664,512; cache-write
+input 0; output 225,549 (reasoning subset 60,737); total 61,167,494. Final event 596 at `2026-09-28T12:13:20.505Z` follows setup, review coordination, complete validation and the ledger draft, immediately before commit: input 75,519,943; cached input 74,088,576; cache-write input 0; output 246,563; total 75,766,506. Report `/private/tmp/pp188-final-accounting.json` records 130 requests, largest input 221,912; reasoning output 5,669 is included in output. Two identical replay events and one repeated cumulative snapshot were excluded; no historical or in-boundary reset occurred. Root candidate preparation, setup,
+review coordination and local validation are included. Independent reviewer,
+final numeric insertion and later exact-head review/delivery are excluded.
+API-equivalent cost and long-context crossings remain unmeasured because no
+verified official rate/threshold for this exact model is supplied; no other
+model's rate or subscription bill is substituted.
