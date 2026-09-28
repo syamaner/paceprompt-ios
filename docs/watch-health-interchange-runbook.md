@@ -158,3 +158,33 @@ paired-device and physical row above, which remains unperformed until observed.
 The schema/fixture amendment for zero intervals does not implement WHR #80 or
 complete #116. Resolve the nested Watch signing handoff before installing a
 later signed candidate; do not relax release checks to obtain one.
+
+## Durability acceptance (#198; unperformed on devices)
+
+Use a freshly installed candidate containing #198 on both devices, with a
+comfortable short plan. Record each observation separately; do not infer it from
+simulator tests or release availability. Keep all real diagnostics private.
+
+1. Connect with each app initially foreground, then background/foreground the
+   phone and Watch independently during startup and during a step. Confirm one
+   recording identity, no repeated execution start and responsive controls.
+2. During a recording, briefly interrupt the phone/Watch connection and restore it
+   within the reconnect window. Confirm same-workout reconnection, cumulative
+   interval recovery, sticky incomplete status and no treadmill command caused
+   by the Watch transition. Leave it disconnected past the window separately;
+   the phone must show unavailable, with iPhone saving still suppressed.
+3. Exercise **End recording & save** normally; confirm a single Health workout or
+   zero-interval discard as appropriate. Verify the Watch final result separately.
+4. Exercise **Stop recording** during connection and during a recording. Confirm
+   the treadmill is unaffected and the UI does not claim stopped until verified.
+   The old save remains uncertain if any mutation may have occurred.
+5. After verified stop, use **Prepare next workout**. Confirm the next deliberate
+   iPhone attempt connects under a new identity and the old workout is never
+   retried or duplicated. Existing ambiguous build-16 state must follow this path.
+6. Force quit/relaunch each app separately. Watch recovery may attach only to its
+   existing primary. A cold phone launch must never resume treadmill execution.
+   Verify the recovery/stop controls remain usable and late results cannot change
+   a new attempt. Check Health for a late old finish before drawing conclusions.
+7. Test device lock/protected-data availability, permission delays and storage
+   errors separately. An unavailable protected store must remain fail-closed with
+   a clear status; it must not erase uncertainty or claim a successful save.

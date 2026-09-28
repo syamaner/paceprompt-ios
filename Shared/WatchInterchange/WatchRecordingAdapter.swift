@@ -19,6 +19,7 @@ struct WatchRecoveredRecording {
     func pausePrimary() async throws -> Date
     func resumePrimary() async throws
     func endPrimary()
+    func stopPrimaryAndVerify() async throws
     func discardBuilder() throws
     func finishBuilder() async throws -> String?
 }
@@ -35,6 +36,8 @@ struct WatchRecoveredRecording {
     private var discarded = false
     private var finished = false
     private var assembled = false
+    private var stopVerified = false
+    private var released = false
     init(operations: any WatchSessionOperations) { self.operations = operations }
     private func check(_ token: UInt64) throws {
         guard token == generation, !cancelled else { throw WatchStoreError.ambiguous }
@@ -43,13 +46,13 @@ struct WatchRecoveredRecording {
         guard !created || discarded || finished else { throw WatchStoreError.ambiguous }
         try operations.resetForNewAttempt()
         generation &+= 1; let token = generation
-        cancelled = false; created = false; prepared = false; began = false; discarded = false; finished = false; assembled = false
+        released = false; cancelled = false; created = false; prepared = false; began = false; discarded = false; finished = false; assembled = false
         let authorized: Bool
         do { authorized = try await operations.authorize() } catch { try check(token); throw WatchStoreError.definite }
         try check(token)
         guard authorized else { throw WatchStoreError.definite }
         let existing = try await operations.recoverPrimary()
-        do { try check(token) } catch { operations.endPrimary(); throw error }
+        try check(token)
         guard existing == nil else { throw WatchStoreError.ambiguous }
         try operations.createPrimary(activity: activity); created = true
         try operations.configureCollection()
@@ -98,8 +101,24 @@ struct WatchRecoveredRecording {
     }
     func assemble(_ value: WatchAssembly) async throws {
         guard created, began, cancelled, !discarded, !finished, !assembled else { throw WatchStoreError.ambiguous }
-        try await WatchBuilderAssemblyWriter(builder: operations).assemble(value)
-        assembled = true
+        let token = generation
+        try await WatchBuilderAssemblyWriter(builder: operations, validate: { [weak self] in
+            guard let self, self.generation == token else { throw WatchStoreError.ambiguous }
+        }).assemble(value)
+        guard token == generation else { throw WatchStoreError.ambiguous }; assembled = true
+    }
+    func stopAndVerify() async throws {
+        generation &+= 1; let token = generation; cancelled = true; stopVerified = false; released = false
+        try await operations.stopPrimaryAndVerify()
+        guard token == generation else { throw WatchStoreError.ambiguous }
+        stopVerified = true
+    }
+    func releaseStopped() throws {
+        if released { return }
+        guard stopVerified else { throw WatchStoreError.ambiguous }
+        try operations.resetForNewAttempt()
+        generation &+= 1; created = false; prepared = false; began = false; assembled = false
+        discarded = false; finished = false; stopVerified = false; released = true
     }
     func finish() async throws -> String {
         guard assembled, !finished, !discarded else { throw WatchStoreError.ambiguous }
@@ -113,4 +132,32 @@ struct WatchRecoveredRecording {
 // A stale source cannot complete a waiter, deliver bytes or clear a newer session.
 enum WatchCallbackIdentity {
     static func accepts(_ incoming: AnyObject, current: AnyObject?) -> Bool { current.map { $0 === incoming } ?? false }
+}
+
+// SDK-independent stop proof: a request is not success. Only an empty active
+// session probe, an already-ended primary or its exact ended callback succeeds.
+@MainActor final class WatchStopVerifier {
+    private var generation: UInt64 = 0
+    private var expected: AnyObject?
+    private var waiter: CheckedContinuation<Void, Error>?
+    func cancel() {
+        generation &+= 1; expected = nil
+        waiter?.resume(throwing: WatchStoreError.ambiguous); waiter = nil
+    }
+    func verify(probe: () async throws -> AnyObject?, isEnded: (AnyObject) -> Bool,
+                end: (AnyObject) -> Void) async throws {
+        cancel(); let token = generation
+        let active = try await probe()
+        guard token == generation else { throw WatchStoreError.ambiguous }
+        guard let active else { return }
+        if isEnded(active) { return }
+        try await withCheckedThrowingContinuation { continuation in
+            expected = active; waiter = continuation; end(active)
+        }
+        guard token == generation else { throw WatchStoreError.ambiguous }
+    }
+    func observedEnded(_ session: AnyObject) {
+        guard WatchCallbackIdentity.accepts(session, current: expected) else { return }
+        expected = nil; waiter?.resume(); waiter = nil
+    }
 }

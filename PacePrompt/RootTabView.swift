@@ -115,6 +115,7 @@ struct RootTabView: View {
         .onChange(of: capabilities) { _, value in importer.updateCapabilities(value) }
         .onChange(of: scenePhase) { _, phase in
             importer.setForeground(phase == .active)
+            if phase == .active { workoutSession.applicationBecameActive() }
             treadmill.setApplicationActivity(captureActivity(for: phase))
             if phase != .active { credential.protectedDataLost() }
         }

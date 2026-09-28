@@ -6,6 +6,9 @@ import HealthKit
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
     private var source: HKLiveWorkoutDataSource?
+    private var generation: UInt64 = 0
+    private var stopVerified = false
+    private let stopVerifier = WatchStopVerifier()
     private var startWaiter: CheckedContinuation<Date, Error>?
     private var pauseWaiter: CheckedContinuation<Date, Error>?
     private var resumeWaiter: CheckedContinuation<Void, Error>?
@@ -40,7 +43,9 @@ import HealthKit
         // Keep genuine pause/resume events. This setting is not an activity-suppression mechanism.
     }
     func resetForNewAttempt() throws {
-        guard session == nil || ended else { throw WatchStoreError.ambiguous }
+        guard session == nil || session?.state == .ended || stopVerified else { throw WatchStoreError.ambiguous }
+        generation &+= 1; stopVerified = false; stopVerifier.cancel()
+        session?.delegate = nil; builder?.delegate = nil
         session = nil; builder = nil; source = nil; ended = false; discarded = false; finishAttempted = false; collectionStarted = false; preparedAssembly = nil
     }
     func authorize() async throws -> Bool {
@@ -49,7 +54,10 @@ import HealthKit
         return store.authorizationStatus(for: HKObjectType.workoutType()) == .sharingAuthorized
     }
     func recoverPrimary() async throws -> WatchRecoveredRecording? {
-        guard let primary = try await store.recoverActiveWorkoutSession() else { return nil }
+        let token = generation
+        let recovered = try await store.recoverActiveWorkoutSession()
+        guard token == generation else { throw WatchStoreError.ambiguous }
+        guard let primary = recovered else { return nil }
         session = primary; builder = primary.associatedWorkoutBuilder()
         guard let start = primary.startDate else { throw WatchStoreError.ambiguous }
         collectionStarted = true
@@ -89,11 +97,26 @@ import HealthKit
         try await withCheckedThrowingContinuation { continuation in resumeWaiter = continuation; session.resume() }
     }
     func endPrimary() {
+        generation &+= 1; stopVerified = false
+        stopVerifier.cancel()
         if ended, session == nil || WatchCallbackIdentity.accepts(session!, current: endedSession) { return }
         ended = true; endedSession = session; session?.end()
         startWaiter?.resume(throwing: WatchStoreError.ambiguous); startWaiter = nil
         pauseWaiter?.resume(throwing: WatchStoreError.ambiguous); pauseWaiter = nil
         resumeWaiter?.resume(throwing: WatchStoreError.ambiguous); resumeWaiter = nil
+    }
+    func stopPrimaryAndVerify() async throws {
+        endPrimary()
+        let token = generation
+        try await stopVerifier.verify(probe: { [store] in
+            try await store.recoverActiveWorkoutSession()
+        }, isEnded: { ($0 as? HKWorkoutSession)?.state == .ended }, end: { [self] object in
+            guard let active = object as? HKWorkoutSession else { return }
+            session = active; active.delegate = self
+            ended = true; endedSession = active; active.end()
+        })
+        guard token == generation else { throw WatchStoreError.ambiguous }
+        stopVerified = true
     }
     func discardBuilder() throws {
         guard !finishAttempted, !discarded else { throw WatchStoreError.ambiguous }
@@ -140,7 +163,14 @@ import HealthKit
     }
     func send(_ data: Data) {
         guard !ended else { return }
-        session?.sendToRemoteWorkoutSession(data: data) { _, _ in }
+        guard let session else { return }
+        session.sendToRemoteWorkoutSession(data: data) { [weak self, weak session] success, _ in
+            guard !success else { return }
+            Task { @MainActor in
+                guard let self, let session, WatchCallbackIdentity.accepts(session, current: self.session), !self.ended else { return }
+                self.disconnected?()
+            }
+        }
     }
     func publishMetrics() {
         guard let builder, collectionStarted, !ended else { return }
@@ -157,7 +187,10 @@ import HealthKit
                 self.resumeWaiter?.resume(); self.resumeWaiter = nil; self.paused?(false)
             } else if toState == .paused {
                 self.pauseWaiter?.resume(returning: date); self.pauseWaiter = nil; self.paused?(true)
-            } else if toState == .ended, !self.ended { await self.failed?() }
+            } else if toState == .ended {
+                self.stopVerifier.observedEnded(workoutSession)
+                if !self.ended { await self.failed?() }
+            }
         }
     }
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {

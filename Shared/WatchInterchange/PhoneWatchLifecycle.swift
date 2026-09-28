@@ -6,7 +6,7 @@ import Foundation
 }
 
 @MainActor final class PhoneWatchLifecycle {
-    enum Phase: Equatable { case idle, binding, bound, preparingEnd, awaitingAck, confirmed, unavailable }
+    enum Phase: Equatable { case idle, binding, bound, reconnecting, preparingEnd, awaitingAck, confirmed, unavailable }
     private let port: any PhoneWatchPort
     private let reserve: (UUID) throws -> Void
     private let makeID: () -> UUID
@@ -18,6 +18,9 @@ import Foundation
     private var sequence: Int64 = 0
     private var latestIntervals: [WatchInterval] = []
     private var lastSentIntervals: [WatchInterval]?
+    private var pendingManifest: WatchWireMessage?
+    private var acknowledgedRevision: Int64 = 0
+    private var lastManifestSend: TimeInterval?
     private var finalManifest: WatchWireMessage?
     private var terminalOutcome: String?
     private var terminalDistance = WatchDistance.unavailable
@@ -44,7 +47,20 @@ import Foundation
         status = "Connecting to Apple Watch… iPhone Health saving is disabled for this attempt."; changed?()
         do { try await port.launch(activity: activity) } catch { fail("Watch unavailable. End this attempt before starting another.") }
     }
-    func mirrorConnected() { if phase == .binding { sendBind() } }
+    var acceptsReplacementMirror: Bool { [.binding, .bound, .reconnecting].contains(phase) }
+    func acceptsMirror(activity: String, indoor: Bool, start: Date?) -> Bool {
+        guard acceptsReplacementMirror, indoor, activity == self.activity else { return false }
+        return phase == .binding || start.map { WatchWire.timestamp($0) == workoutStart } == true
+    }
+    func mirrorConnected() {
+        guard acceptsReplacementMirror else { return }
+        if phase == .bound { disconnect() }
+        sendBind()
+    }
+    func foreground() {
+        tick()
+        if [.binding, .bound, .reconnecting].contains(phase) { sendBind() }
+    }
     private func sendBind() {
         guard let id = summaryID else { return }
         var m = WatchWireMessage(.bind, summaryID: id); m.workoutActivity = activity
@@ -59,6 +75,12 @@ import Foundation
             if phase == .binding, let start = m.workoutStart, let uuid = UUID(uuidString: id) {
                 workoutStart = start; phase = .bound; deadline = nil
                 status = "Watch-owned; save result unavailable on iPhone"; changed?(); bound?(uuid)
+            } else if [.bound, .reconnecting].contains(phase), m.workoutStart == workoutStart {
+                let reconnecting = phase == .reconnecting
+                phase = .bound; deadline = nil; lastRecordingRequest = nil
+                if reconnecting { status = "Watch reconnected; previous connection gaps remain incomplete."; changed?() }
+                sendNonfinal()
+                if let outcome = terminalOutcome { update(intervals: latestIntervals, outcome: outcome, distance: terminalDistance) }
             } else if m.workoutStart != workoutStart { integrityFailed = true }
         case .endPrepared:
             guard phase == .preparingEnd, m.sequence == sequence, let end = m.workoutEnd else { return }
@@ -66,6 +88,9 @@ import Foundation
             finalManifest = manifest; phase = .awaitingAck
             if !transmit(manifest) { integrityFailed = true }
         case .ack:
+            if phase == .bound, let pendingManifest, m.revision == pendingManifest.revision {
+                acknowledgedRevision = m.revision!; return
+            }
             guard !integrityFailed, phase == .awaitingAck, let finalManifest, m.revision == finalManifest.revision else { return }
             var confirmation = WatchWireMessage(.finalize, summaryID: id); confirmation.revision = m.revision
             if transmit(confirmation) { phase = .confirmed; deadline = nil; changed?() }
@@ -73,9 +98,13 @@ import Foundation
         }
     }
     func update(intervals: [WatchInterval], outcome: String?, distance: WatchDistance = .unavailable) {
-        guard phase == .bound else { return }
+        guard [.bound, .reconnecting].contains(phase) else { return }
         guard intervals.starts(with: latestIntervals) else { integrityFailed = true; return }
         latestIntervals = intervals
+        if phase == .reconnecting {
+            if let outcome { terminalOutcome = outcome; terminalDistance = distance }
+            return
+        }
         if let outcome {
             terminalOutcome = outcome; terminalDistance = distance
             guard sequence < Int64.max, let id = summaryID else { fail("Watch interchange is incomplete."); return }
@@ -92,7 +121,7 @@ import Foundation
     }
     func cancel() {
         if phase == .bound { update(intervals: latestIntervals, outcome: "interrupted") }
-        else if phase == .binding { fail("Watch start is uncertain. End any recording on Apple Watch.") }
+        else if phase == .binding || phase == .reconnecting { fail("Watch start is uncertain. End any recording on Apple Watch.") }
     }
     func primaryEnded() {
         guard phase != .confirmed, phase != .unavailable else { return }
@@ -100,16 +129,28 @@ import Foundation
     }
     func disconnect() {
         guard phase != .confirmed, phase != .unavailable else { return }
-        fail("Watch disconnected. End recording on Watch. iPhone Health saving remains disabled.")
+        if phase == .bound {
+            phase = .reconnecting; deadline = monotonic() + 30
+            status = "Watch connection interrupted. Waiting for the same recording; iPhone Health saving remains disabled."
+            changed?()
+        } else if phase != .reconnecting && phase != .binding {
+            fail("Watch disconnected. End recording on Watch. iPhone Health saving remains disabled.")
+        }
     }
     func tick() {
         if let deadline, monotonic() >= deadline { fail("Watch interchange timed out. Save result unavailable on iPhone."); return }
-        if phase == .binding, lastBind.map({ monotonic() - $0 >= 5 }) ?? false { sendBind() }
+        if [.binding, .reconnecting].contains(phase), lastBind.map({ monotonic() - $0 >= 5 }) ?? false { sendBind() }
         if phase == .bound { sendNonfinal() }
     }
     private func sendNonfinal() {
-        guard !integrityFailed, latestIntervals != lastSentIntervals, let m = manifest(final: false, end: nil) else { return }
-        if transmit(m) { lastSentIntervals = latestIntervals }
+        guard phase == .bound, !integrityFailed else { return }
+        if latestIntervals != lastSentIntervals {
+            guard let message = manifest(final: false, end: nil) else { return }
+            pendingManifest = message; lastSentIntervals = latestIntervals
+        }
+        guard let message = pendingManifest, acknowledgedRevision < message.revision!,
+              lastManifestSend.map({ monotonic() - $0 >= 5 }) ?? true else { return }
+        if transmit(message) { lastManifestSend = monotonic() }
     }
     private func manifest(final: Bool, end: Date?) -> WatchWireMessage? {
         guard !integrityFailed, let id = summaryID, let start = workoutStart, manifestRevision < Int64.max else { return nil }

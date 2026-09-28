@@ -1,4 +1,4 @@
-# Watch-primary Health interchange contract v1 — revision 1.1
+# Watch-primary Health interchange contract v1 — revision 1.2
 
 Status: issue [#114](https://github.com/syamaner/paceprompt-ios/issues/114) specification; accepted when this document's reviewed PR merges. Parent [#7](https://github.com/syamaner/paceprompt-ios/issues/7) remains open. This contract freezes semantics for separately selected implementations [#115](https://github.com/syamaner/paceprompt-ios/issues/115) and [WeeklyHealthReport #80](https://github.com/syamaner/WeeklyHealthReport/issues/80); physical acceptance remains [#116](https://github.com/syamaner/paceprompt-ios/issues/116).
 
@@ -25,7 +25,7 @@ Composition roots supply clocks (UTC and monotonic), IDs, persistence, transport
 
 Before requesting Watch creation, the phone durably reserves a fresh summary UUID as `watchPrimary` in its protected ownership journal. This is the point of irrevocable iPhone Health-save suppression for this attempt, including UI, service, retry, crash recovery and History. Reserve failure sends nothing. Phone may then launch the companion using the HealthKit launch API. Watch creates at most one prepared, unbound primary session/builder to establish mirroring, but starts no collection yet. Its protected startup journal and active-session recovery prevent a duplicate launch from creating another primary. Over the mirror, phone sends `bind` for its reserved summary; Watch durably binds that identity before beginning recording. A busy/already-bound Watch rejects a different summary. Failure to bind discards the unrecorded prepared session. Ambiguous startup never creates another primary. After the actual session-start callback Watch returns `bound` with the immutable start date; phone must receive that matching response before beginning this Watch-assisted execution. Creation and its ambiguous outcomes are journalled; retry never creates a second builder. A lost ownership response leaves the phone suppressed, not free to save. Starting a separate iPhone-only attempt requires a new explicit user action and new summary ID after the first attempt is terminal; it is never a fallback copy.
 
-No transfer, automatic remirroring, automatic treadmill reconnect, durable message queue or WatchConnectivity channel exists in v1. Retain the phone mirror only while valid. Watch recovery restores the existing active session/delegates/builder through Apple's recovery API; if identity, journal or builder reconciliation is uncertain, quarantine saving as ambiguous. Never create a replacement session to repair uncertainty. Journal only identity, ownership, bounded intervals, revisions and result state; no raw sensor values in PacePrompt History. #115 must version retention and protected deletion with that envelope, including a suppression marker for every retained Watch-owned summary.
+No ownership transfer, app-driven automatic remirroring, automatic treadmill reconnect, durable message queue or WatchConnectivity channel exists in v1. Revision 1.2 permits HealthKit OS redelivery of the same primary session under the [durability amendment](watch-durable-recovery.md): validate activity, immutable start and reserved summary again, never restart execution. Register one phone handler at app construction and retain it across foreground/background transitions. Watch recovery restores the existing active session/delegates/builder through Apple's recovery API; if identity, journal or builder reconciliation is uncertain, quarantine saving as ambiguous. Never create a replacement session to repair uncertainty. Journal only identity, ownership, bounded intervals, revisions and result state; no raw sensor values in PacePrompt History. #115 must version retention and protected deletion with that envelope, including a suppression marker for every retained Watch-owned summary. Revision 1.2 adds explicit verified-stop and retirement controls: archive the uncertain journal immutably, persist retirement, and allow only a new explicitly reserved identity. Never retry the retired identity or claim its save was absent. See the durability amendment for bounded retention, storage-failure and callback-fencing rules.
 
 | State/event | Phone action | Watch action/result |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ No transfer, automatic remirroring, automatic treadmill reconnect, durable messa
 | Terminal assembly error before finish | Never save on phone | Discard builder on definite error; show failed, no replacement builder |
 | `finishWorkout` returns non-nil workout | Keep “Watch-owned; save result unavailable on iPhone” | Mark saved; one finish operation |
 | Finish error/nil/locked-device uncertainty or Watch receipt persistence failure | Show unknown, keep suppression | `saveAmbiguous`; never infer absence or retry finish/create automatically |
-| Recovered active workout with provable journal | Keep suppression; no remirror | Restore existing primary; continue incomplete if completion proof unavailable |
+| Recovered active workout with provable journal | Keep suppression; OS same-session redelivery only | Restore existing primary; continue incomplete if completion proof unavailable |
 
 Human console and safety key remain authoritative. No Watch/HealthKit event emits Request Control, Start, Stop, Pause, resume, target restoration or retry. Requests to pause/resume recording can originate only from the already accepted phone execution observation stream, never speed guesses, HealthKit callbacks or transport receipts. End recording cannot stop the belt; the UI must state this when relevant. Unknown treadmill state stays unknown. No accepted execution or FTMS semantics change in this slice.
 
@@ -149,3 +149,11 @@ receives only closed settled intervals. Passive console confirmation can produce
 Multiple intervals may share the original `segmentIndex`. Moving step time is not
 transmitted as HealthKit duration or distance. Revision 1.1, wire/metadata schema 1,
 fixture bytes, 64-interval bound, zero-prefix discard and ownership are unchanged.
+
+## Durability amendment (revision 1.2)
+
+[Watch durability and lifecycle revision 1](watch-durable-recovery.md) governs
+recording controls, verified stop, retained uncertain outcomes, generation fences,
+operation deadlines, app-lifetime mirroring ingress, same-identity OS redelivery
+and acknowledged cumulative retry. Wire v1 and Health metadata v1 remain unchanged.
+No Watch recording action sends a treadmill command.
