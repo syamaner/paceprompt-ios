@@ -409,3 +409,55 @@ non-Markdown inputs match `/private/tmp/pp-build16-frozen-inputs.json`.
 Documentation validation passed 10 local links and 11 shell snippets (syntax
 only). Independent working-diff and documentation reviews found no actionable
 findings; exact-head review and hosted CI are recorded on the candidate PR.
+
+### Console-override internal release: 1.0.1 (16), issue #195
+
+[PR #196](https://github.com/syamaner/paceprompt-ios/pull/196) protected-merged as
+`f416d485a05128204a7788affc951934a042e381`. Its independently reviewed second parent
+is `8ec006f0a0051a508aa40ad06f83a40937faed8a`; the merge tree is identical.
+Required [PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36488334600)
+and [exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36488472363)
+passed. Main protection was not bypassed. The release tag was created under the
+existing admin-only creation rule; the separate no-bypass update/deletion rules
+remain active. No protection settings changed.
+
+Immutable tag `testflight/1.0.1-b16` identifies that source. The reviewed tools pin
+remained `796819b21382ac7dd038fb989e79e1352aaf06ca`, and the unchanged encryption
+declaration was bound to this tag. The candidate workflow matches the reviewed
+workflow byte-for-byte. [Release run 36488598314](https://github.com/syamaner/paceprompt-ios/actions/runs/36488598314),
+attempt 1, passed source verification and the credential-free hosted Xcode 26.6
+archive. Normal protected-environment approval followed under the operator's
+explicit internal-upload authorisation.
+
+The trusted hosted preflight confirmed fresh build 16 and the existing app and
+sole-tester group. Both apps passed profile/certificate validation, inside-out
+signing, internal-only export, and whole-IPA/per-architecture signature,
+entitlement and privacy checks. The single upload returned
+`UPLOAD SUCCEEDED with no errors`. Apple API processing reached `VALID` with
+`INTERNAL_ONLY` audience; the existing group's build-list readback confirmed
+assignment. All release jobs succeeded. No tester was added.
+
+This is hosted App Store Connect API evidence. The separate browser visual check
+could not be completed because the existing App Store Connect session had expired;
+no credentials were extracted or copied. Tester-side visibility, installation,
+launch and build-16 paired-device behaviour remain unobserved. These boundaries
+are not changed by the green workflow.
+
+Unsigned archive SHA-256:
+`0abea11b54f595f488847cba9fd3fb23d48cb2a408b233fc495ddfa1a540f504`.
+It matches the hosted handoff digest and was revalidated against exact source,
+tag, run and attempt. The transfer and both phone/Watch dSYMs are retained in
+private local storage at
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-16/unsigned-release.zip`
+(file mode 600, containing directory 700), outside Git and the worktree.
+Temporary extraction is `/private/tmp/pp-build16-retained/PromptPace.xcarchive`.
+No signed IPA or signing asset was downloaded or published as an Actions artifact.
+Optional symbol submission remains disabled; Apple-side symbolication may be
+limited. The hosted unsigned artifact expires after one day.
+
+Build 16 contains the #193 repair; build 15 does not. Use the
+[console override acceptance procedure](../../design/console-overrides-and-step-clock.md)
+and [paired-device HealthKit procedure](../watch-health-interchange-runbook.md)
+for later testing. The separate Watch save-uncertain observation remains unresolved.
+#115 signed-device acceptance, #116 interoperability and WeeklyHealthReport #80
+reader implementation remain open. No hardware was operated in this release.
