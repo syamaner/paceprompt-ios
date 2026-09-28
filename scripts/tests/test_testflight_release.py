@@ -127,31 +127,31 @@ class ReleaseGuardTests(unittest.TestCase):
             signing.validate(profile, "0 valid identities found", team, now)
 
     def test_current_source_matches_fresh_tag(self):
-        self.assertEqual(guard.check_tag("testflight/1.0.1-b15", PROJECT), ("1.0.1", "15"))
+        self.assertEqual(guard.check_tag("testflight/1.0.1-b16", PROJECT), ("1.0.1", "16"))
 
     def test_rejects_wrong_tag_or_build(self):
-        for tag in ("testflight/1.0.1-b9", "testflight/1.1-b15", "testflight/1.0.1-b015",
-                    "testflight/1.0.1-b0", "testflight/1.0.1-b15/extra", "release/1.0.1-b15"):
+        for tag in ("testflight/1.0.1-b9", "testflight/1.1-b16", "testflight/1.0.1-b016",
+                    "testflight/1.0.1-b0", "testflight/1.0.1-b16/extra", "release/1.0.1-b16"):
             with self.subTest(tag=tag), self.assertRaises(ValueError):
                 guard.check_tag(tag, PROJECT)
 
     def test_rejects_release_debug_mismatch_and_bundle_change(self):
         with self.assertRaises(ValueError):
-            guard.check_tag("testflight/1.0.1-b15", PROJECT.replace("CURRENT_PROJECT_VERSION = 15;", "CURRENT_PROJECT_VERSION = 9;", 1))
+            guard.check_tag("testflight/1.0.1-b16", PROJECT.replace("CURRENT_PROJECT_VERSION = 16;", "CURRENT_PROJECT_VERSION = 9;", 1))
         with self.assertRaises(ValueError):
-            guard.check_tag("testflight/1.0.1-b15", PROJECT.replace("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;", "PRODUCT_BUNDLE_IDENTIFIER = other.app;", 1))
+            guard.check_tag("testflight/1.0.1-b16", PROJECT.replace("PRODUCT_BUNDLE_IDENTIFIER = com.otherweather.PromptPace;", "PRODUCT_BUNDLE_IDENTIFIER = other.app;", 1))
 
     def test_rejects_missing_purpose_and_changed_version(self):
         info = fixtures.info('phone')
-        guard.metadata(info, "1.0.1", "15")
+        guard.metadata(info, "1.0.1", "16")
         for invalid in ("NO", 0, True):
             with self.subTest(encryption=invalid), self.assertRaises(ValueError):
-                guard.metadata({**info, "ITSAppUsesNonExemptEncryption": invalid}, "1.0.1", "15")
+                guard.metadata({**info, "ITSAppUsesNonExemptEncryption": invalid}, "1.0.1", "16")
         for key in ("CFBundleIdentifier", "CFBundleVersion", "NSHealthShareUsageDescription", "NSHealthUpdateUsageDescription", "NSBluetoothAlwaysUsageDescription"):
             changed = dict(info)
             del changed[key]
             with self.subTest(key=key), self.assertRaises(ValueError):
-                guard.metadata(changed, "1.0.1", "15")
+                guard.metadata(changed, "1.0.1", "16")
 
     def test_der_signature_conversion(self):
         r = b"\x01" * 32
@@ -291,7 +291,7 @@ class ReleaseGuardTests(unittest.TestCase):
             if args[0] == "rev-parse":
                 return sha
             if args[0] == "ls-remote":
-                return f"{sha}\trefs/tags/testflight/1.0.1-b15"
+                return f"{sha}\trefs/tags/testflight/1.0.1-b16"
             if args[0] == "fetch":
                 return ""
             if args[0] == "rev-list" and "--first-parent" in args:
@@ -305,7 +305,7 @@ class ReleaseGuardTests(unittest.TestCase):
                 "base": {"ref": "main"}, "head": {"sha": "c" * 40}}
         with patch.object(guard, "git", side_effect=fake_git), patch.object(guard, "api", return_value=[pull]):
             with self.assertRaisesRegex(ValueError, "attestation"):
-                guard.source("testflight/1.0.1-b15", sha)
+                guard.source("testflight/1.0.1-b16", sha)
 
 
 if __name__ == "__main__":

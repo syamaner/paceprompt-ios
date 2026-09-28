@@ -378,3 +378,34 @@ implementation and #116 interoperability acceptance remain outstanding. No
 hardware was operated, Health data accessed, tester added or public/external
 release submitted. Contract revision 1.1, zero-interval discard, single Watch
 writer and permanent iPhone-save suppression remain unchanged.
+
+### Console-override release candidate: 1.0.1 (16), issue #195
+
+Build 16 includes the console-override and moving-step countdown repair from
+[PR #194](https://github.com/syamaner/paceprompt-ios/pull/194), merged as
+`ab08da04cbd8ec62712e3e7da1800e16e77d0fa1`. The release candidate changes only the
+four production phone/Watch build settings, matching synthetic release fixtures
+and release documentation/accounting. Marketing version remains `1.0.1`.
+Signing settings, release workflow, entitlements, privacy declarations and
+cryptography are unchanged. The reviewed signing-tools pin remains
+`796819b21382ac7dd038fb989e79e1352aaf06ca`.
+
+The operator authorised the next internal TestFlight upload. Candidate validation,
+exact-head review, protected merge and exact-main CI precede creation of the
+immutable `testflight/1.0.1-b16` tag. The protected hosted preflight must confirm
+the unused Apple build before signing/upload; no API key is copied locally.
+Upload, Apple processing and existing-group assignment are separate later gates.
+No tester is added and no external/public distribution or hardware operation is
+included. The separate Watch save-uncertain observation remains unresolved;
+#115 paired-device acceptance, #116 interoperability and WeeklyHealthReport #80
+reader work remain outstanding.
+
+The final candidate complete gate passed: 449 unit tests, 72 UI tests, 16
+evaluation tests, unsigned iPhone/Watch Release build, static analysis and
+coverage; 57 script, 41 scorer, 13 summary, 247 HostEval tests (36 explicit
+private-evidence skips), and 24 accounting tests. Evidence is retained at
+`/private/tmp/pp-build16-complete-gate` and its sibling `.log`. All 417 frozen
+non-Markdown inputs match `/private/tmp/pp-build16-frozen-inputs.json`.
+Documentation validation passed 10 local links and 11 shell snippets (syntax
+only). Independent working-diff and documentation reviews found no actionable
+findings; exact-head review and hosted CI are recorded on the candidate PR.

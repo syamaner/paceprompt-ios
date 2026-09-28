@@ -75,7 +75,10 @@ then **Build Settings**. Update:
 
 Do not change the separate test/evaluation target versions unless their own
 work requires it. Update the release-guard synthetic fixtures in
-`scripts/tests/test_testflight_release.py` to the same candidate.
+`scripts/tests/test_testflight_release.py`, `release_fixtures.py`,
+`test_watch_release.py` and `test_release_orchestration.py` to the same candidate.
+Keep mismatch fixtures effective by updating their source-version replacement
+strings as well as their tag expectations.
 
 Review production metadata whenever it changes:
 
