@@ -61,7 +61,11 @@ fake-store tests; do not deliberately corrupt real Health data to manufacture th
 2. Start and stop belt motion only at the physical console. Exercise one planned
    target transition and, only if selected safely, a manual override. Record
    pass/fail that prescribed, independently effective and observed values remain
-   distinct; do not publish the operator's metric values.
+   distinct; do not publish the operator's metric values. For a candidate containing
+   #193, use its [console/ramp checklist](../design/console-overrides-and-step-clock.md#deterministic-and-physical-acceptance):
+   keep three planned steps, split only settled intervals, count moving ramps and
+   confirm the following step clears overrides. App-command overlap remains an
+   explicit limitation; never waive the normal acknowledgement/timeout guards.
 3. At an accepted physical pause, observe recording pause; after accepted execution
    resume, observe recording resume. Distinguish API request, callback and physical
    observation. Separately observe that Watch recording pause/end never moves or

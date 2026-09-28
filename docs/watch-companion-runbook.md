@@ -50,3 +50,20 @@ once, confirmed Apple processing `VALID` and observed assignment to the existing
 sole-tester internal group. Tester visibility/install/launch and all signed-device
 HealthKit, physical FR30z and WeeklyHealthReport acceptance remain unperformed.
 The earlier software-only evidence above remains scoped to its original slice.
+
+## Console adjustments and countdown (#193)
+
+Use the [console and moving-clock policy](../design/console-overrides-and-step-clock.md)
+for app/console overrides and the physical acceptance checklist. A settled console
+change applies independently per axis for the current planned step; the next step
+clears overrides. Countdown includes moving ramps without resetting. History and
+Watch activities continue to contain settled intervals only. At zero, an unresolved
+command or unsettled setting displays **Step time complete** with an explanation.
+
+The build-15 operator subsequently reported Watch HR/calorie visibility and found
+the workout in Health/Fitness. That is user-reported evidence only and supersedes
+the earlier availability checkpoint for those narrow observations. The reported
+step stall is tracked by #193; the Watch save-uncertain state remains a separate
+unresolved observation. No raw values or diagnostics are published. Full signed
+paired-device, metadata, distance-source and WHR acceptance remain outstanding.
+This repair does not upload a newer candidate; build 15 does not contain it.

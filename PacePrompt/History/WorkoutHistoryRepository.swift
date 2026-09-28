@@ -485,7 +485,6 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
             var previousEnd: Date?
             var previousSegmentIndex: Int?
             var nextIntervalIndex: [Int: Int] = [:]
-            var duration: TimeInterval = 0
             for interval in intervals {
                 guard summary.planSnapshot.steps.indices.contains(interval.segmentIndex),
                       previousSegmentIndex.map({ interval.segmentIndex >= $0 }) ?? true,
@@ -516,10 +515,9 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
                 nextIntervalIndex[interval.segmentIndex, default: 0] += 1
                 previousEnd = interval.endedAt
                 previousSegmentIndex = interval.segmentIndex
-                duration += interval.endedAt.timeIntervalSince(interval.startedAt)
             }
             guard case let .measured(seconds) = summary.activeDuration else { return false }
-            return Int(floor(duration + 0.000_000_001)) == seconds
+            return WorkoutExecutedInterval.measuredSeconds(in: intervals) == seconds
         }
     }
 

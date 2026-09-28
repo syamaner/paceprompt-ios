@@ -3,6 +3,165 @@ import XCTest
 @testable import PacePrompt
 
 final class WorkoutExecutionReducerTests: XCTestCase {
+  func testAppSpeedChangePreservesAcceptedConsoleInclinationWithoutWritingItBack() throws {
+    let h = Harness(stepDuration: 30)
+    var state = try h.runningState()
+    let start = state.lastEventTime.seconds
+    for offset in [0.5, 1.0, 1.5] {
+      state = h.accept(h.send(at: start + offset, state, .telemetry(epoch: h.epoch, h.sample("5", "2")))).state
+    }
+    XCTAssertEqual(state.currentSegment?.inclinationOverride, Harness.inclination("2"))
+    var t = h.accept(h.send(state, .setSpeedOverride(epoch: h.epoch, Harness.speed("5.5"))))
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("5.5")))
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertTrue(t.effects.isEmpty, "The accepted console inclination must not be written back")
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("5.5", "2"))))
+    XCTAssertEqual(t.state.execution, .runningSegment)
+    XCTAssertEqual(t.state.currentSegment?.inclinationOverride, Harness.inclination("2"))
+    t = h.advanceRunningToBoundary(t.state)
+    XCTAssertNil(t.state.currentSegment?.inclinationOverride)
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertEqual(t.record?.intent, .setTargetInclination(Harness.inclination("1")))
+  }
+
+  func testDueStepWaitsForConsoleSettlingIncludingOffGridReports() throws {
+    let h = Harness(stepDuration: 5)
+    var state = try h.runningState()
+    let start = state.lastEventTime.seconds
+    for (offset, speed) in [(1.0, "4.43"), (2.0, "4.43"), (3.0, "4.43"),
+      (4.0, "4.43"), (5.0, "4.4"), (5.5, "4.4")] {
+      let t = h.accept(h.send(at: start + offset, state, .telemetry(epoch: h.epoch, h.sample(speed, "0"))))
+      XCTAssertEqual(t.state.currentSegment?.stepIndex, 0)
+      XCTAssertTrue(t.effects.isEmpty)
+      state = t.state
+    }
+    let confirmed = h.accept(h.send(at: start + 6, state, .telemetry(epoch: h.epoch, h.sample("4.4", "0"))))
+    XCTAssertEqual(confirmed.state.currentSegment?.stepIndex, 1)
+    XCTAssertEqual(confirmed.record?.intent, .setTargetSpeed(Harness.speed("7")))
+    XCTAssertEqual(confirmed.state.currentSegment?.movingClock.accumulatedSeconds, 0)
+  }
+
+  func testControlAcquisitionClockFreezesOnZeroOrUnavailableEvidence() throws {
+    for interruption in [WorkoutTelemetryInput.sample(speed: Harness.speed("0"), inclination: Harness.inclination("0"), totalDistanceMetres: nil), .unavailable("Synthetic gap")] {
+      let h = Harness(stepDuration: 30)
+      var state = h.accept(h.send(try h.waitingState(), .telemetry(epoch: h.epoch, h.sample("0.5", "0")))).state
+      let start = state.lastEventTime.seconds
+      let pending = state.procedure.unresolvedRecord?.id
+      state = h.accept(h.send(at: start + 0.1, state, .telemetry(epoch: h.epoch, interruption))).state
+      XCTAssertNil(state.currentSegment?.movingClock.lastMovingAt)
+      state = h.accept(h.send(at: start + 10, state, .telemetry(epoch: h.epoch, h.sample("0.5", "0")))).state
+      XCTAssertEqual(state.currentSegment!.movingClock.accumulatedSeconds, 0.1, accuracy: 0.0001)
+      XCTAssertEqual(state.procedure.unresolvedRecord?.id, pending)
+    }
+  }
+
+  func testAppChoiceWhileCheckingCannotBeReinterpretedAsConsoleOverride() throws {
+    let h = Harness(stepDuration: 30)
+    var state = try h.runningState()
+    state = h.accept(h.send(at: state.lastEventTime.seconds + 3, state, .tick(epoch: h.epoch))).state
+    state = h.accept(h.send(state, .setSpeedOverride(epoch: h.epoch, Harness.speed("5.5")))).state
+    let resumed = h.accept(h.send(state, .telemetry(epoch: h.epoch, h.sample("5", "0"))))
+    XCTAssertEqual(resumed.record?.intent, .setTargetSpeed(Harness.speed("5.5")))
+    XCTAssertEqual(resumed.state.currentSegment?.speedOverride, Harness.speed("5.5"))
+    XCTAssertNil(resumed.state.currentSegment?.consoleCandidate)
+  }
+
+  func testConsoleOverrideCoalescesChangesWithoutWritebackAndKeepsIndependentAxes() throws {
+    let h = Harness(stepDuration: 30)
+    var state = try h.runningState()
+    let start = state.lastEventTime.seconds
+    for (offset, speed, incline) in [(0.5, "4.8", "0"), (1.0, "4.6", "0"),
+      (1.5, "4.4", "0"), (2.0, "4.4", "0"), (2.5, "4.4", "0")] {
+      let t = h.accept(h.send(at: start + offset, state, .telemetry(epoch: h.epoch, h.sample(speed, incline))))
+      XCTAssertTrue(t.effects.isEmpty)
+      state = t.state
+      if offset < 2.5 { XCTAssertNil(state.currentSegment?.speedOverride) }
+    }
+    XCTAssertEqual(state.currentSegment?.speedOverride, Harness.speed("4.4"))
+    XCTAssertNil(state.currentSegment?.inclinationOverride)
+    XCTAssertEqual(state.lastConfirmedTarget?.speed, Harness.speed("4.4"))
+    XCTAssertEqual(state.currentSegment?.activeStartedAt?.seconds, start + 2.5)
+    let clockBefore = state.currentSegment!.movingClock.accumulatedSeconds
+    for offset in [3.0, 3.5, 4.0] {
+      let t = h.accept(h.send(at: start + offset, state, .telemetry(epoch: h.epoch, h.sample("4.4", "2"))))
+      XCTAssertTrue(t.effects.isEmpty)
+      state = t.state
+    }
+    XCTAssertEqual(state.currentSegment?.speedOverride, Harness.speed("4.4"))
+    XCTAssertEqual(state.currentSegment?.inclinationOverride, Harness.inclination("2"))
+    XCTAssertGreaterThan(state.currentSegment!.movingClock.accumulatedSeconds, clockBefore)
+    let boundary = h.advanceRunningToBoundary(state)
+    XCTAssertEqual(boundary.state.currentSegment?.stepIndex, 1)
+    XCTAssertNil(boundary.state.currentSegment?.speedOverride)
+    XCTAssertNil(boundary.state.currentSegment?.inclinationOverride)
+    XCTAssertEqual(boundary.record?.intent, .setTargetSpeed(Harness.speed("7")))
+  }
+
+  func testConsoleDetectorRejectsOffGridDuplicateReportsAndResetsAcrossPauseAndGap() throws {
+    let h = Harness(stepDuration: 60)
+    var state = try h.runningState()
+    var time = state.lastEventTime.seconds
+    for speed in ["4.45", "4.45", "4.45", "4.4"] {
+      time += 0.5
+      state = h.accept(h.send(at: time, state, .telemetry(epoch: h.epoch, h.sample(speed, "0")))).state
+      XCTAssertNil(state.currentSegment?.speedOverride)
+    }
+    for _ in 0..<4 {
+      state = h.accept(h.send(at: time, state, .telemetry(epoch: h.epoch, h.sample("4.4", "0")))).state
+    }
+    XCTAssertNil(state.currentSegment?.speedOverride)
+    time += 4
+    state = h.accept(h.send(at: time, state, .telemetry(epoch: h.epoch, h.sample("4.4", "0")))).state
+    XCTAssertEqual(state.currentSegment?.consoleCandidate?.sampleCount, 1)
+    state = h.accept(h.send(state, .telemetry(epoch: h.epoch, h.sample("0", "0")))).state
+    XCTAssertNil(state.currentSegment?.consoleCandidate)
+    XCTAssertNil(state.currentSegment?.movingClock.lastMovingAt)
+  }
+
+  func testAppRampCountsMovingTimeWithoutConsoleInferenceOrCompetingBoundary() throws {
+    let h = Harness(stepDuration: 5)
+    var state = try h.runningState()
+    let initialMoving = state.currentSegment!.movingClock.accumulatedSeconds
+    var t = h.accept(h.send(state, .setSpeedOverride(epoch: h.epoch, Harness.speed("6"))))
+    let pending = try XCTUnwrap(t.record)
+    let start = t.state.lastEventTime.seconds
+    state = t.state
+    for second in 1...5 {
+      t = h.accept(h.send(at: start + Double(second), state, .telemetry(epoch: h.epoch, h.sample("5.5", "0"))))
+      state = t.state
+      XCTAssertTrue(t.effects.isEmpty)
+      XCTAssertEqual(state.currentSegment?.stepIndex, 0)
+      XCTAssertEqual(state.currentSegment?.speedOverride, Harness.speed("6"))
+      XCTAssertNil(state.currentSegment?.consoleCandidate)
+      XCTAssertEqual(state.procedure.unresolvedRecord?.id, pending.id)
+    }
+    XCTAssertGreaterThan(state.currentSegment!.movingClock.accumulatedSeconds, initialMoving + 4)
+    t = try h.acknowledgeCurrent(t)
+    XCTAssertTrue(t.effects.isEmpty)
+    t = h.accept(h.send(t.state, .telemetry(epoch: h.epoch, h.sample("6", "0"))))
+    XCTAssertEqual(t.state.currentSegment?.stepIndex, 1)
+    XCTAssertEqual(t.record?.intent, .setTargetSpeed(Harness.speed("7")))
+    XCTAssertEqual(t.state.currentSegment?.movingClock.accumulatedSeconds, 0)
+  }
+
+  func testMovingClockStartsAtPhysicalMovementAndExcludesPauseAndStaleGap() throws {
+    let h = Harness(stepDuration: 60)
+    var state = try h.runningState()
+    let start = state.lastEventTime.seconds
+    let initial = state.currentSegment!.movingClock.accumulatedSeconds
+    XCTAssertGreaterThan(initial, 0, "Initial target ramp is part of step time")
+    state = h.accept(h.send(at: start + 3, state, .tick(epoch: h.epoch))).state
+    XCTAssertEqual(state.currentSegment!.movingClock.accumulatedSeconds, initial + 2, accuracy: 0.0001)
+    state = h.accept(h.send(at: start + 30, state, .telemetry(epoch: h.epoch, h.sample("5", "0")))).state
+    XCTAssertEqual(state.currentSegment!.movingClock.accumulatedSeconds, initial + 2, accuracy: 0.0001)
+    state = h.accept(h.send(at: start + 31, state, .telemetry(epoch: h.epoch, h.sample("0", "0")))).state
+    let paused = state.currentSegment!.movingClock.accumulatedSeconds
+    state = h.accept(h.send(at: start + 45, state, .telemetry(epoch: h.epoch, h.sample("0.5", "0")))).state
+    XCTAssertEqual(state.currentSegment!.movingClock.accumulatedSeconds, paused, accuracy: 0.0001)
+    state = h.accept(h.send(at: start + 46, state, .telemetry(epoch: h.epoch, h.sample("1", "0")))).state
+    XCTAssertEqual(state.currentSegment!.movingClock.accumulatedSeconds, paused + 1, accuracy: 0.0001)
+  }
+
   func testCapabilityChangeDuringPreflightRejectsBeginWithNoCommandEffects() throws {
     let h = Harness()
     let preflight = try h.preflightState()
@@ -231,8 +390,8 @@ final class WorkoutExecutionReducerTests: XCTestCase {
     state = t.state
     XCTAssertEqual(state.execution, .runningSegment)
     XCTAssertEqual(state.currentSegment?.accumulatedActiveSeconds ?? -1, 2, accuracy: 0.0001)
-    XCTAssertEqual(
-      state.currentSegment?.activeStartedAt?.seconds ?? -1, sampleAt + 8, accuracy: 0.0001)
+    XCTAssertNil(state.currentSegment?.activeStartedAt, "A divergent report is not settled evidence")
+    XCTAssertEqual(state.currentSegment?.movingClock.lastMovingAt?.seconds, sampleAt + 8)
     XCTAssertTrue(t.effects.isEmpty)
   }
 
@@ -428,6 +587,7 @@ final class WorkoutExecutionReducerTests: XCTestCase {
         )
       )
       state = boundary!.state
+      if state.currentSegment?.stepIndex != 0 { break }
     }
     XCTAssertEqual(state.currentSegment?.stepIndex, 1)
     XCTAssertEqual(boundary?.record?.intent, .setTargetSpeed(Harness.speed("7")))
@@ -1495,6 +1655,8 @@ extension WorkoutExecutionReducerTests {
           )
         )
         state = transition!.state
+        if state.currentSegment?.stepIndex != segment.stepIndex
+          || state.execution == .awaitingPhysicalStopForCompletion { break }
       }
       return transition!
     }

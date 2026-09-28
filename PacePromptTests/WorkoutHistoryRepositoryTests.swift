@@ -3,6 +3,19 @@ import XCTest
 @testable import PacePrompt
 
 final class WorkoutHistoryRepositoryTests: XCTestCase {
+    func testFractionalIntervalRoundingAgreesAcrossHistoryAndHealthProjection() throws {
+        let precise = versionTwoSummary(id: uuid(193), endOffset: -0.000_000_2)
+        let repository = WorkoutHistoryRepository(fileSystem: MemoryWorkoutHistoryFileSystem())
+        XCTAssertNoThrow(try repository.record(precise))
+        guard case let .eligible(payload) = WorkoutHealthPayloadFactory.make(summary: precise, syncVersion: 1) else {
+            return XCTFail("Sub-microsecond Date representation must use the producer's duration rule")
+        }
+        XCTAssertEqual(payload.activeDurationSeconds, 10)
+        let genuinelyShort = versionTwoSummary(id: uuid(194), endOffset: -0.001)
+        XCTAssertThrowsError(try repository.record(genuinelyShort))
+        XCTAssertEqual(WorkoutHealthPayloadFactory.make(summary: genuinelyShort, syncVersion: 1), .ineligible)
+    }
+
     func testCodecRoundTripsMeasuredZeroUnavailableValuesAndHumanConfirmation() throws {
         let summaries = [
             summary(id: uuid(1), activeDuration: .measured(seconds: 0), distance: .measured(metres: 0)),
@@ -223,14 +236,14 @@ final class WorkoutHistoryRepositoryTests: XCTestCase {
         return summaries
     }
 
-    private func versionTwoSummary(id: UUID, activeSeconds: Int = 10) -> WorkoutExecutionSummary {
+    private func versionTwoSummary(id: UUID, activeSeconds: Int = 10, endOffset: TimeInterval = 0) -> WorkoutExecutionSummary {
         let suppliedPlan = plan()
         let step = suppliedPlan.steps[0]
         let interval = WorkoutExecutedInterval(
             segmentIndex: 0,
             intervalIndex: 0,
             startedAt: date(10),
-            endedAt: date(20),
+            endedAt: date(20).addingTimeInterval(endOffset),
             prescribed: .init(
                 kind: step.kind,
                 speedKilometresPerHour: step.targetSpeed.value,
@@ -269,7 +282,7 @@ final class WorkoutHistoryRepositoryTests: XCTestCase {
             physicalStopConfirmation: .humanConfirmed(at: date(20)),
             activityTimeline: .recorded(
                 startedAt: date(10),
-                endedAt: date(20),
+                endedAt: date(20).addingTimeInterval(endOffset),
                 timingProvenance: .executionClock,
                 executedIntervals: [interval]
             ),

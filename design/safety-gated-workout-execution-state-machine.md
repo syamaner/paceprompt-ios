@@ -2,6 +2,11 @@
 
 Status: product design originally delivered by GitHub issue [#4](https://github.com/syamaner/paceprompt-ios/issues/4), revised by issue [#57](https://github.com/syamaner/paceprompt-ios/issues/57) for the accepted physical-console FR30z workflow and by issue [#131](https://github.com/syamaner/paceprompt-ios/issues/131) for same-process background continuity. The accepted executable #49 reducer remains a historical implementation snapshot; issue [#81](https://github.com/syamaner/paceprompt-ios/issues/81) owns its pure successor. Together with the accepted FR30z profile, this defines current production execution semantics rather than a future unauthorised capability. It does not by itself direct a physical treadmill session or permit behaviour beyond that profile.
 
+The [issue #193 console and step-clock amendment](console-overrides-and-step-clock.md)
+is the current timing/override policy: moving ramps count toward a planned step,
+while persisted active duration remains settled interval time. It preserves this
+state machine's procedure guards and changes no FTMS opcode.
+
 ## Current authority
 
 This design is constrained by:
@@ -24,9 +29,9 @@ The profile supersedes the old product assumptions that PacePrompt would send St
 6. At most one Control Point procedure is in flight.
 7. Request Control, speed and inclination are the only permitted production procedures.
 8. Intent, submission, ATT acceptance, FTMS acknowledgement, treadmill report and human observation remain separate.
-9. A target is confirmed only by its required acknowledgement plus a later fresh joint exact speed/inclination report.
+9. An app-command target is confirmed only by its required acknowledgement plus a later fresh joint exact speed/inclination report. A passive console pair is accepted only by the separate bounded settling rule when no app sequence is unresolved; no acknowledgement is invented.
 10. Planned, effective and actual targets remain separate. Current-segment manual overrides survive pause/resume and clear at the next segment.
-11. A physical resume restores the last effective speed then inclination and resumes timing only after later joint target observation.
+11. A physical resume restores the last effective speed then inclination. Moving step time resumes from fresh movement; a settled interval resumes only after later joint target observation.
 12. Failure, interruption or uncertainty emits no automatic retry, reconnect, control reacquisition or compensating command.
 13. Simulator/software evidence is never physical FR30z evidence.
 14. Inactive, background, screen lock and unlock are lifecycle context, not evidence that the connection or workout ended.
@@ -181,7 +186,7 @@ The [profile](fr30z-physical-console-execution-profile.md) determines the next a
 3. emit Set Target Inclination if inclination must change or be restored;
 4. wait for ATT acceptance and matching `80 03 01`;
 5. wait for one later fresh `0x2ACD` packet reporting both exact effective targets;
-6. start/resume segment timing at that final observation.
+6. open/resume a settled execution interval at that final observation. The separate moving step clock already counts fresh reported movement during the ramp.
 
 Only one axis is sent when only that axis changes. When neither changes, current fresh joint exact telemetry is required but no procedure is emitted.
 
@@ -189,24 +194,32 @@ A different fresh value before confirmation is ramp evidence and leaves the targ
 
 ### Planned transitions
 
-The segment duration is evaluated only while processing accepted moving telemetry. Timer callbacks and a later foreground timestamp cannot finish a segment. When evidence-backed active duration finishes:
+The segment duration is evaluated only while processing accepted moving telemetry. Timer callbacks and a later foreground timestamp cannot finish a segment. When the movement-backed step duration finishes and the current setting is settled with no unresolved procedure:
 
-- freeze its active duration;
+- freeze its step clock and close its settled interval;
 - if another segment exists, clear current-segment overrides and apply the next segment's planned targets;
 - if it was final, enter `awaitingPhysicalStopForCompletion`, emit no treadmill Stop and instruct the operator to press physical Stop.
 
 While backgrounded, the fresh telemetry callback that reaches one boundary may submit that one transition through the existing target-only path if every connection, epoch, permission, capability, subscription, capability-bound, freshness and one-procedure guard still passes immediately before the write. An acknowledgement callback may settle the current axis but cannot submit the next axis while backgrounded; another fresh telemetry notification is required. Missed execution opportunities delay progress. Multiple missed steps and wall-clock catch-up sequences do not exist.
+
+A due boundary while app confirmation or console settling is pending is retained
+with **Step time complete** shown. Normal timeout guards still apply. A fresh
+settled report can advance once; elapsed excess never carries to later steps.
 
 ### Manual override
 
 While the attempt is active, the user may increment/decrement speed or inclination inside current inclusive capability ranges and exact increments. Reject invalid values without rounding or clamping.
 
 - From `runningStep`, update that axis's current-segment override and emit only the changed target procedure.
-- Preserve the segment's accumulated active time; do not restart its duration.
-- Resume active timing after the required acknowledgement and later joint exact observation.
+- Preserve the segment's accumulated moving time; do not restart its countdown.
+- Count fresh moving ramp time immediately; reopen a settled interval only after the required acknowledgement and later joint exact observation.
 - **Return to plan** removes overrides and uses the same procedure/observation rules.
 - From `waitingForPhysicalStart`, `checkingTreadmill` or `paused`, update pending effective targets but emit nothing.
 - While one target procedure is active, update pending effective targets, let the current procedure settle, then recompute the remaining sequence. Never cancel it or emit a competing write.
+
+Console changes use the [bounded passive settling rule](console-overrides-and-step-clock.md#app-and-console-settings)
+without command writeback. Close the settled interval on first divergence; open a
+new interval at confirmation, without changing the prescribed step count.
 
 ### Physical Stop, checking and pause
 
@@ -227,10 +240,10 @@ The UI tells the operator to wait for **Paused** before pressing physical Start 
 
 From `paused`, a fresh current-epoch non-zero report means the treadmill reported physical resume. Resume restoration remains an interactive foreground-only path. If connection, control, profile, capability, foreground and procedure guards remain valid:
 
-- preserve the same segment, accumulated active duration and overrides;
+- preserve the same segment, accumulated moving step time, settled duration and overrides;
 - enter `restoringTargets`;
 - reapply effective speed then inclination sequentially;
-- resume the timer only after matching acknowledgements and one later joint exact report.
+- resume the step countdown with fresh observed movement during restoration; reopen settled timing only after matching acknowledgements and one later joint exact report.
 
 Any failed guard leaves the workout interrupted and emits no target. No Request Control reacquisition or reconnect occurs automatically.
 

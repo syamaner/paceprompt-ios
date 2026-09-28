@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 28 Sep 2026 | `PP-20260928-07` | Issue #193 console overrides and moving step time | `gpt-6-astra` | 15,654,883 (15,386,752; 0) | 46,337 | 15,701,220 | Unmeasured | Exact 103-request root implementation/review/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-06` | Issue #188 successful Watch internal release receipt | `gpt-6-astra` | 5,596,196 (5,510,272; 0) | 12,989 | 5,609,185 | Unmeasured | Exact 54-request root delivery/receipt phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-05` | Issue #188 build 15 symbol-package export recovery | `gpt-6-astra` | 14,394,490 (14,192,640; 0) | 21,177 | 14,415,667 | Unmeasured | Exact 120-request root release diagnosis/repair/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-04` | Issue #188 actual Apple profile-family compatibility | `gpt-6-astra` | 19,884,033 (19,818,752; 0) | 15,654 | 19,899,687 | Unmeasured | Exact 118-request root setup/repair/validation phase; independent reviewer and final insertion/delivery excluded |
@@ -1138,3 +1139,60 @@ and receipt preparation. Independent reviewer, final numeric insertion and later
 receipt delivery are excluded. Final event 920 at `2026-09-28T14:27:42.553Z` follows receipt preparation, review and documentation checks immediately before commit: input 118,714,678; cached input 116,878,208; cache-write input 0; output 307,519; total 119,022,197. Exact report `/private/tmp/pp188-build15-receipt-accounting.json`: 54 requests, largest input 122,147; reasoning output 1,962 is included in output. No counter resets or repeated cumulative snapshots occurred. Three exact replays (events 866 of 865, 917 of 916, 919 of 918) were validated and excluded from usage.
 API-equivalent estimate and long-context threshold remain unmeasured without
 verified official rates/threshold for this exact model.
+
+
+## PP-20260928-07 console overrides and moving step time
+
+Issue #193 separates movement-backed step timing from settled execution intervals.
+The countdown includes fresh moving ramps without resetting on overrides. Stable
+console pairs adopt only changed current-step axes without command writeback;
+app commands retain the one-procedure acknowledgement/observation sequence. The
+next planned step clears overrides. A due step waits for settled confirmation;
+pauses and unknown gaps cannot invent progress. Immutable plan steps, closed
+interval provenance, Watch single-writer ownership, zero-prefix discard and
+single-source distance are preserved. A shared pure duration rule removes a
+producer/History/Health-projection rounding mismatch for fractional intervals.
+No new SDK call, opcode, hardware operation, signing change or upload is included.
+
+The architecture gate and physical acceptance procedure are in
+[the versioned policy amendment](design/console-overrides-and-step-clock.md).
+The primary execution/profile/Health contracts and both Watch runbooks are
+reconciled. Build-15 user observations are identified as user-reported, not
+metadata, distance-source or cross-repository acceptance. The separate Watch
+save-uncertain observation remains unresolved; #115, #116 and WeeklyHealthReport
+#80 retain their unfinished work.
+
+Independent working-diff review found and verified repairs for premature
+progression on an unsettled report, stationary acquisition-clock accounting and
+identical-target plan-transition provenance. Deterministic regressions also cover
+rapid console changes, exact-grid rejection, mixed app/console axes, stale/pause
+boundaries, pending commands, three-step completion and fractional duration
+validation. The complete production unit pass recorded 448 tests; a subsequently
+added mixed-axis regression passed separately. The final complete gate passed on Xcode 27.0 (27A266a), iOS 26.5 simulator:
+449 unit tests, 72 UI tests and 16 evaluation tests, unsigned Release build including
+Watch, static analysis and coverage. Offline checks passed: 57 repository script
+tests, 41 scorer tests, 13 summary tests, 247 HostEval tests with 36 explicit
+private-evidence skips, and 24 accounting tests. Evidence is
+`/private/tmp/pp193-complete-gate` and `/private/tmp/pp193-complete-gate.log`.
+Thirteen shared Watch contract tests also passed separately; fixture bytes are
+unchanged. Documentation checks passed 39 local links. The independent reviewer
+confirmed the documentation correction and final mixed-input regression; exact
+committed-head review and required hosted CI will be recorded on the PR. All 417 non-Markdown
+inputs are frozen in `/private/tmp/pp193-frozen-inputs.json`; later documentation
+and ledger edits must leave them byte-identical. Existing root scheme changes,
+other worktrees and ignored local signing settings remain untouched.
+
+Measurement scope: root Desktop session
+`01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`, baseline
+`/private/tmp/pp-console-overrides-baseline.json`, event 954 at
+`2026-09-28T18:35:04.541Z`. Baseline counters: input 123,916,743; cached input
+121,969,408; cache-write input 0; output 321,325 (reasoning subset 83,880); total
+124,238,068. The phase covers architecture, implementation, deterministic tests,
+review repairs, documentation, validation and ledger preparation. The independent
+reviewer's separate usage, final numeric insertion, commit and later delivery are
+excluded. Final counters are captured immediately before commit. API-equivalent
+estimate and long-context threshold remain Unmeasured because verified official
+rates/threshold for this exact model were not verified; no other model's prices
+are substituted and this is not a subscription bill.
+
+Final snapshot: event 1061 at `2026-09-28T20:58:10.802Z`; input 139,571,626, cached input 137,356,160, cache-write input 0, output 367,662, total 139,939,288. Exact report `/private/tmp/pp193-final-accounting.json`: 103 measured requests; largest input 222,354. Phase reasoning output 15,999 is a subset of output, not added again. Counter resets inside the boundary: 0; historical resets: 0; validated excluded exact replay events: 3; repeated cumulative snapshots: 1. Threshold crossings remain unmeasured without a verified exact-model threshold. This numeric insertion and subsequent delivery are excluded.

@@ -159,12 +159,14 @@
       )
       state.currentSegment = .init(
         stepIndex: 1,
-        accumulatedActiveSeconds: 21,
-        activeStartedAt: .init(seconds: 90),
+        accumulatedActiveSeconds: 30,
+        activeStartedAt: .init(seconds: 99),
         speedOverride: nil,
         inclinationOverride: nil
       )
+      state.currentSegment?.movingClock = .init(accumulatedSeconds: 30, lastMovingAt: .init(seconds: 99))
       state.completedActiveSeconds = 120
+      state.completedStepCount = 1
       state.motionPossible = true
       state.lastEventTime = now
       state.telemetry = .fresh(sample(speed: 7, inclination: 2, at: 99.5))
@@ -222,6 +224,7 @@
         state.telemetry = .stale(stale)
         state.observedMachine = .unknown
         state.currentSegment?.activeStartedAt = nil
+        state.currentSegment?.movingClock.lastMovingAt = nil
         state.execution = .checkingTreadmill(
           .init(
             origin: .runningSegment,
@@ -233,6 +236,7 @@
         state.telemetry = .fresh(stationary)
         state.observedMachine = .reportedStationary(stationary)
         state.currentSegment?.activeStartedAt = nil
+        state.currentSegment?.movingClock.lastMovingAt = nil
         state.execution = .paused(.telemetry(stationary))
       case .restoring:
         let record = procedure(
@@ -251,11 +255,13 @@
           observationDeadline: nil
         )
         state.currentSegment?.activeStartedAt = nil
+        state.currentSegment?.movingClock.lastMovingAt = nil
         state.execution = .restoringTargets
       case .ending:
         let stationary = sample(speed: 0, inclination: 2, at: 99.5)
         state.telemetry = .fresh(stationary)
         state.currentSegment?.activeStartedAt = nil
+        state.currentSegment?.movingClock.lastMovingAt = nil
         state.execution = .ending(
           .init(
             reason: .endedFromPause,
@@ -266,9 +272,11 @@
         )
       case .failed:
         state.currentSegment?.activeStartedAt = nil
+        state.currentSegment?.movingClock.lastMovingAt = nil
         state.execution = .failed(.targetObservationTimeout)
       case .interrupted:
         state.currentSegment?.activeStartedAt = nil
+        state.currentSegment?.movingClock.lastMovingAt = nil
         state.telemetry = .stale(sample(speed: 7, inclination: 2, at: 85))
         state.observedMachine = .unknown
         state.execution = .interrupted(.telemetryStreamTimedOut)

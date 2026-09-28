@@ -643,6 +643,19 @@ final class WorkoutExecutionOrchestrator {
       openExecutedInterval = nil
     }
 
+    if let open = openExecutedInterval, transition.disposition == .accepted,
+       case .telemetry = event, let sample = freshTelemetrySample(transition.state),
+       (sample.speed.value != open.effectiveSpeed.kilometresPerHour
+        || sample.inclination.value != open.effectiveInclination.percent
+        || original.currentSegment?.stepIndex != transition.state.currentSegment?.stepIndex) {
+      let end = intervalEnd(original: original, transition: transition, reading: reading)
+      let reason: WorkoutExecutedIntervalEndReason =
+        original.currentSegment?.stepIndex != transition.state.currentSegment?.stepIndex
+        ? .planTransition : intervalEndReason(event, transition)
+      closeExecutedInterval(open, at: end, reason: reason)
+      openExecutedInterval = nil
+    }
+
     if case .runningSegment = original.execution,
        !isRunning(transition.state.execution),
        let open = openExecutedInterval {
@@ -651,7 +664,10 @@ final class WorkoutExecutionOrchestrator {
         transition: transition,
         reading: reading
       )
-      closeExecutedInterval(open, at: end, reason: intervalEndReason(event, transition))
+      let reason: WorkoutExecutedIntervalEndReason =
+        original.currentSegment?.stepIndex != transition.state.currentSegment?.stepIndex
+        ? .planTransition : intervalEndReason(event, transition)
+      closeExecutedInterval(open, at: end, reason: reason)
       openExecutedInterval = nil
     }
 
@@ -731,14 +747,6 @@ final class WorkoutExecutionOrchestrator {
   ) -> Date {
     if case .checkingTreadmill(let checking) = transition.state.execution {
       let instant = checking.freshnessBoundary
-      return wallClock(for: instant, reading: reading)
-    }
-    if case .awaitingPhysicalStopForCompletion = transition.state.execution,
-       let segment = original.currentSegment,
-       let activeStart = segment.activeStartedAt,
-       let step = frozenAttempt?.plan.plan.steps[safe: segment.stepIndex] {
-      let remaining = max(0, TimeInterval(step.duration.value) - segment.accumulatedActiveSeconds)
-      let instant = activeStart.advanced(by: remaining)
       return wallClock(for: instant, reading: reading)
     }
     if case .runningSegment = original.execution,
@@ -919,10 +927,7 @@ final class WorkoutExecutionOrchestrator {
 
   private func measuredTotalSeconds(_ state: WorkoutExecutionState) -> Int {
     if case .recorded(_, _, _, let intervals) = activityTimeline() {
-      let executedSeconds = intervals.reduce(0.0) {
-        $0 + $1.endedAt.timeIntervalSince($1.startedAt)
-      }
-      return max(0, Int(floor(executedSeconds + 0.000_001)))
+      return WorkoutExecutedInterval.measuredSeconds(in: intervals)
     }
 
     var total = state.completedActiveSeconds
@@ -965,10 +970,7 @@ final class WorkoutExecutionOrchestrator {
 
   private func activePlanIsComplete(_ state: WorkoutExecutionState) -> Bool {
     guard let attempt = frozenAttempt else { return false }
-    let plannedSeconds = attempt.plan.plan.steps.reduce(0.0) {
-      $0 + TimeInterval($1.duration.value)
-    }
-    return state.completedActiveSeconds + 0.000_000_001 >= plannedSeconds
+    return state.completedStepCount == attempt.plan.plan.steps.count
   }
 
   private func pendingEvidenceSeconds(
