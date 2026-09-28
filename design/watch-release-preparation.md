@@ -63,3 +63,21 @@ ignored private evidence; the remaining offline checks passed. Full receipt:
 `/private/tmp/pp186-complete-gate.log`, with results in
 `/private/tmp/pp186-complete-gate`. Exact committed-head review and required hosted
 CI are recorded on the delivery PR. This gate establishes software evidence only.
+
+
+## Optional symbol-package export (#188)
+
+The trusted export options set `uploadSymbols = false`. Xcode's `-help` documents
+that App Store packages include optional symbols by default; a local reproduction
+of the first Watch release export contained a `Symbols/` root outside `Payload/`.
+Disabling that optional package produced an IPA that passed the unchanged strict
+whole-IPA and both-app signature guards. This preserves the closed application
+graph rather than admitting an unvalidated support-file format.
+
+Trade-off: Apple does not receive the optional symbol package, which may limit
+Apple-side crash symbolication. Matching phone/Watch dSYMs remain in the verified
+unsigned archive, whose hosted artifact has one-day retention; retain that archive
+locally if later crash analysis is needed. `stripSwiftSymbols` is not changed.
+Local export/verification proves local Xcode compatibility only; hosted Xcode
+26.6 and Apple acceptance require the fresh build-15 release. The failed build-14
+tag/run remains immutable and is never rerun or moved.

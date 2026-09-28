@@ -284,3 +284,50 @@ affected Health export UI tests passed unchanged on a fresh dedicated simulator
 (`/private/tmp/pp188-profile-focused.log`). The replacement gate uses that fresh
 simulator and unchanged executable inputs. The failed run is retained at
 `/private/tmp/pp188-profile-gate.log` and is not acceptance evidence.
+
+
+### Build 14 stopped before upload; build 15 recovery (#188)
+
+[PR #190](https://github.com/syamaner/paceprompt-ios/pull/190) merged the real
+profile-family correction as `7da0f8e0369bebb605a78a4185423ea361526942`, from
+independently approved head `6fd0bb0edff1a72b0072fc81466bf43824fed17d`. Required PR
+and exact-main CI passed; the exact merged tools passed their focused tests and
+were activated with readback.
+
+Immutable tag `testflight/1.0.1-b14` started
+[run 36427295439](https://github.com/syamaner/paceprompt-ios/actions/runs/36427295439).
+Source verification, credential-free hosted Xcode 26.6 archive, normal protected
+environment approval, Apple fresh-build/sole-tester preflight, both real profile
+and CI certificate checks, inside-out signing and internal-only export passed.
+The whole-IPA path guard then failed before the single upload command was reached.
+No Apple build processing or tester delivery is claimed. Preserve the failed
+tag/run; do not rerun or move it.
+
+Local diagnosis reproduced export from the exact hosted unsigned archive, using
+an existing matching distribution identity without exporting keys or changing
+keychain settings. Temporary profile installations were removed and pre-existing
+profiles preserved. Xcode 27.0 added optional `Symbols/` files outside `Payload/`.
+Its documented `uploadSymbols=false` option removed those files; the resulting
+actual signed phone/Watch IPA passed the unchanged whole-IPA, profile, privacy,
+per-architecture certificate/entitlement and strict-signature guard. This is local
+signed-export evidence, not hosted 26.6 or Apple upload acceptance. Local evidence:
+`/private/tmp/pp188-local-export-v3/export.log`; the signed IPA and private
+inspection files remain outside Git and public artifacts.
+
+Build 15 applies that explicit export option, keeping the strict archive policy
+unchanged and retaining symbol-package refusal tests. Apple-side symbolication
+may be limited because optional symbol submission is disabled; both matching
+dSYMs remain in the verified unsigned archive with one-day hosted retention.
+The fresh build requires complete validation, independent exact-head review,
+protected merge and deliberate tools-pin activation before its new tag.
+
+Build-15 complete local gate passed on the frozen inputs: 437 unit, 72 UI and
+16 evaluation tests; unsigned Release simulator build including Watch, static
+analysis and coverage; 57 release-script and 24 accounting tests; HostEval 247
+tests with 36 explicit private-evidence skips. Evidence is retained at
+`/private/tmp/pp188-build15-gate.log` and `/private/tmp/pp188-build15-gate`.
+All 417 non-documentation inputs match
+`/private/tmp/pp188-build15-frozen-inputs.json`. Documentation checks passed
+42 local links, 34 shell snippets (syntax only) and two embedded Python snippets
+(compilation only). Independent complete-diff review found no actionable findings.
+Exact committed-head review and hosted CI will be recorded on the delivery PR.

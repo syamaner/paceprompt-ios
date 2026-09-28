@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 28 Sep 2026 | `PP-20260928-05` | Issue #188 build 15 symbol-package export recovery | `gpt-6-astra` | 14,394,490 (14,192,640; 0) | 21,177 | 14,415,667 | Unmeasured | Exact 120-request root release diagnosis/repair/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-04` | Issue #188 actual Apple profile-family compatibility | `gpt-6-astra` | 19,884,033 (19,818,752; 0) | 15,654 | 19,899,687 | Unmeasured | Exact 118-request root setup/repair/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-03` | Issue #188 Watch internal TestFlight 1.0.1 (14) candidate and setup | `gpt-6-astra` | 14,577,998 (14,424,064; 0) | 21,014 | 14,599,012 | Unmeasured | Exact 130-request root candidate/setup/validation phase; independent reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-02` | Issue #186 strict Watch archive and signing preparation | `gpt-6-astra` | 10,909,958 (10,643,840; 0) | 42,878 | 10,952,836 | Unmeasured | Root implementation/review/validation phase; independent reviewer and final insertion/delivery excluded |
@@ -1059,3 +1060,48 @@ affected Health export UI tests passed unchanged on a fresh dedicated simulator
 (`/private/tmp/pp188-profile-focused.log`). The replacement gate uses that fresh
 simulator and unchanged executable inputs. The failed run is retained at
 `/private/tmp/pp188-profile-gate.log` and is not acceptance evidence.
+
+
+## PP-20260928-05 build 15 recovery and measurement boundary
+
+Issue #188 continues the authorised internal release after the immutable build-14
+run stopped before upload. Hosted Xcode 26.6 source/archive, real profile/certificate
+checks, inside-out signing and internal-only export passed; whole-IPA inspection
+rejected a support path. Local Xcode 27.0 reproduction from the exact verified
+hosted archive identified optional Symbols files. Setting the documented
+`uploadSymbols=false` option produced an actual signed IPA passing the unchanged
+whole-IPA and both-app per-architecture signature/entitlement guard. Existing
+matching local keychain identity was selected without exporting keys or changing
+keychain settings; temporary profile installs were removed, preserving pre-existing
+profiles. Local diagnosis did not upload or operate hardware.
+
+The recovery advances all four app builds to 15 and matching fixtures, explicitly
+omits optional symbol submission, and tests the exact Boolean option and refusal
+if Symbols unexpectedly reappears. Apple-side crash symbolication may be limited;
+matching phone/Watch dSYMs remain in the verified unsigned archive. The strict
+application graph, signature checks, protected-source and one-upload boundaries
+are unchanged. Focused 57 script tests, release metadata and lint pass; complete
+gate passed as recorded below; exact-head review will be recorded on the delivery PR. Build 14's
+failed tag/run remains immutable; hosted build 15 and Apple acceptance are pending.
+
+
+Build-15 complete local gate passed on the frozen inputs: 437 unit, 72 UI and
+16 evaluation tests; unsigned Release simulator build including Watch, static
+analysis and coverage; 57 release-script and 24 accounting tests; HostEval 247
+tests with 36 explicit private-evidence skips. Evidence is retained at
+`/private/tmp/pp188-build15-gate.log` and `/private/tmp/pp188-build15-gate`.
+All 417 non-documentation inputs match
+`/private/tmp/pp188-build15-frozen-inputs.json`. Documentation checks passed
+42 local links, 34 shell snippets (syntax only) and two embedded Python snippets
+(compilation only). Independent complete-diff review found no actionable findings.
+Exact committed-head review and hosted CI will be recorded on the delivery PR.
+
+Root session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`. Baseline
+`/private/tmp/pp188-final-release-baseline.json`, event 738 at
+`2026-09-28T13:13:21.383Z`: input 98,467,559; cached input 96,926,336; cache-write input 0;
+output 271,666 (reasoning subset 71,111); total 98,739,225. Includes repair delivery
+coordination, failed build 14 release, diagnosis, build 15 implementation and
+validation. Independent reviewer, final numeric insertion and later delivery are
+excluded. Final event 860 at `2026-09-28T14:04:37.057Z` follows the completed gate and ledger draft immediately before commit: input 112,862,049; cached input 111,118,976; cache-write input 0; output 292,843; total 113,154,892. Exact report `/private/tmp/pp188-build15-final-accounting.json`: 120 requests, largest input 217,841; reasoning output 5,191 is included in output. No counter resets occurred. One exact replay (event 781 of 780) and one unchanged cumulative snapshot (event 787) were validated and excluded from usage. API-equivalent cost
+and long-context crossings remain unmeasured without verified official rates
+and threshold for this exact model.
