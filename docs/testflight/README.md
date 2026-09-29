@@ -494,3 +494,51 @@ non-Markdown inputs, including the tracked skill symlink, match
 13 local links and 11 shell snippets (syntax only). Exact-head review and
 required hosted CI are recorded on the delivery PR. These results do not claim
 signed export, upload, Apple processing, tester installation or device acceptance.
+
+### Watch durability internal release: 1.0.1 (17), issue #200
+
+[PR #201](https://github.com/syamaner/paceprompt-ios/pull/201) merged through normal
+main protection as `5114c65b1a3fd5441ca8e5e0a835f5c77845d33b`. Its independently
+reviewed second parent is `983752c6f9f81ef547ee9f3019e0329aa830cff7`; the trees
+are identical and the merge records the exact-head attestation. Required
+[PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36542275631) and
+[exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36542368498)
+passed. Main protection was not bypassed. The lightweight immutable tag
+`testflight/1.0.1-b17` was created using the existing admin-only tag-creation
+exception; separate no-bypass tag update/deletion rules remain unchanged.
+
+[Release run 36542470238](https://github.com/syamaner/paceprompt-ios/actions/runs/36542470238),
+attempt 1, succeeded from that source. The reviewed tools pin remained
+`796819b21382ac7dd038fb989e79e1352aaf06ca`; candidate workflow/tools, signing
+policy, profiles, privacy and encryption declarations were unchanged. Source and
+credential-free unsigned archive verification passed before normal protected
+environment approval under the operator's internal-upload authorisation.
+
+Hosted preflight confirmed fresh build 17 and the existing app/sole-tester group.
+Both bundles passed profile/certificate, inside-out signing, internal-only export,
+whole-IPA/per-architecture signature, entitlement and privacy checks. Exactly one
+upload-success marker was recorded: `UPLOAD SUCCEEDED with no errors`. Trusted
+Apple API checks established processing `VALID`, audience `INTERNAL_ONLY`, and
+existing-group build-list readback. No tester was added or external/public
+release submitted. The browser session expired, so no separate visual Apple
+verification was completed. Tester visibility, installation/launch and build-17
+paired-device observations remain unverified.
+
+Unsigned archive SHA-256:
+`497563e4078f7679d634a23c43aa23e5d52af40438d05d0fdc82f59582f384c1`.
+The retained transfer matches the hosted digest and passes source/tag/run/attempt
+identity, bounded unpacking and both unsigned-device bundle checks. The archive
+and both phone/Watch dSYMs are retained privately at
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-17/unsigned-release.zip`
+(file mode 600, directory 700). Temporary extraction is
+`/private/tmp/pp-build17-retained/PromptPace.xcarchive`. Optional symbol submission
+remains disabled. No signed IPA, signing material or Health data was retained
+as an Actions artifact.
+
+Build 17 contains #198; build 16 does not. Update both phone and Watch before
+following the [durability acceptance procedure](../watch-health-interchange-runbook.md#durability-acceptance-198-unperformed-on-devices).
+Check foreground/background transitions and the recording controls separately
+from normal single-workout Health saving. Stop recording affects recording only;
+the treadmill must still be stopped at its console. #115 paired-device acceptance,
+#116 interoperability and WeeklyHealthReport #80 reader/privacy work remain open.
+No hardware was operated during this release.

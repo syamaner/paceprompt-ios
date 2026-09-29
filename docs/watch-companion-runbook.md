@@ -105,3 +105,13 @@ If recovery says previous state is unavailable, an archive cannot be written or
 retention is full, preserve it and report the status. Do not erase local files.
 These software guarantees require paired-device acceptance for actual scheduling,
 locked-device protected storage, OS reconnection and Health result visibility.
+
+## Build 17 availability (#200)
+
+Internal TestFlight **1.0.1 (17)** includes the #198 recording controls and app
+lifecycle repair; build 16 does not. [Release run 36542470238](https://github.com/syamaner/paceprompt-ios/actions/runs/36542470238)
+passed one upload, valid internal-only Apple processing and existing-group API
+readback. Update both apps before following the [durability procedure](watch-health-interchange-runbook.md#durability-acceptance-198-unperformed-on-devices).
+Tester installation, real background delivery/recovery and Health result readback
+remain unobserved for build 17. The [release receipt](testflight/README.md#watch-durability-internal-release-101-17-issue-200)
+records source, review, CI and archive evidence. No hardware was operated.

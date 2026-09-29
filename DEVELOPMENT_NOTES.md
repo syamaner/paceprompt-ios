@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 29 Sep 2026 | `PP-20260929-02` | Issue #200 successful internal build 17 release receipt | `gpt-6-astra` | 5,481,197 (5,458,048; 0) | 12,442 | 5,493,639 | Unmeasured | Exact 32-request root release/receipt phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260929-01` | Issue #200 internal build 17 candidate | `gpt-6-astra` | 11,355,206 (11,283,584; 0) | 13,925 | 11,369,131 | Unmeasured | Exact 76-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260928-10` | Issue #198 durable Watch controls and app lifecycle recovery | `gpt-6-astra` | 10,939,119 (10,766,080; 0) | 44,514 | 10,983,633 | Unmeasured | Exact 99-request root implementation phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-09` | Issue #195 successful internal build 16 release receipt | `gpt-6-astra` | 3,979,321 (3,954,176; 0) | 10,892 | 3,990,213 | Unmeasured | Exact 37-request root delivery/receipt phase; reviewer and final insertion/delivery excluded |
@@ -1373,3 +1374,35 @@ required hosted CI are recorded on the delivery PR. These results do not claim
 signed export, upload, Apple processing, tester installation or device acceptance.
 
 Final snapshot: event 1424 at `2026-09-29T08:20:46.932Z`; input 181,623,177, cached input 178,840,704, cache-write input 0, output 471,750, total 182,094,927. Report `/private/tmp/pp-build17-candidate-accounting.json`: 76 measured requests; largest input 161,507. Reasoning output 4,191 is a subset of output. Historical and in-boundary resets: 0 and 0; excluded exact replay events: 0; repeated cumulative snapshots: 0. Threshold crossings remain unmeasured without an exact-model threshold. Final numeric insertion and subsequent release delivery are excluded.
+
+## PP-20260929-02 build 17 release receipt and measurement boundary
+
+Issue #200 delivered internal TestFlight 1.0.1 (17) from protected merge
+`5114c65b1a3fd5441ca8e5e0a835f5c77845d33b`, independently reviewed parent
+`983752c6f9f81ef547ee9f3019e0329aa830cff7`, immutable tag `testflight/1.0.1-b17`.
+Required PR CI 36542275631 and exact-main CI 36542368498 passed. Main protection
+was not bypassed; tag creation used the existing admin-only exception, with
+immutable update/deletion rules preserved. Release run 36542470238 attempt 1
+passed source/unsigned archive validation, normal environment approval, unchanged
+pinned tools, both-app signing/IPA/privacy checks, one upload, Apple processing
+and existing sole-tester-group readback. The unchanged encryption declaration
+was bound to this tag. No hardware, added tester or external/public release occurred.
+
+The retained unsigned archive and both dSYMs match hosted digest
+`497563e4078f7679d634a23c43aa23e5d52af40438d05d0fdc82f59582f384c1`. Source,
+tag, run, attempt, bounded unpacking and device bundle metadata were revalidated.
+Private durable retention uses file mode 600 and directory 700. No signed IPA or
+signing asset was retained as an Actions artifact. The expired Apple browser
+session prevented separate visual verification; trusted hosted API evidence
+remains distinct from tester installation and paired-device acceptance.
+
+The receipt/runbook and #7/#115/#116/WHR #80 trackers distinguish availability from
+device acceptance and reader implementation. Independent working-diff review
+verified the receipt, one upload marker, archive identity and both dSYMs. This
+commit changes documentation/accounting only; all 418 frozen non-Markdown inputs
+match the passing candidate gate. Exact-head review and required CI are recorded
+on the receipt PR.
+
+Measurement scope: root Desktop session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`, baseline `/private/tmp/pp-build17-receipt-baseline.json`, event 1424 at `2026-09-29T08:20:46.932Z`. Baseline counters: input 181,623,177; cached input 178,840,704; cache-write input 0; output 471,750 (reasoning subset 123,743); total 182,094,927. The phase covers candidate delivery, protected release, archive retention, tracker reconciliation and receipt preparation/review coordination. Independent reviewer usage, final numeric insertion, commit and subsequent receipt delivery are excluded. API-equivalent estimate and long-context threshold remain Unmeasured because verified official rates/threshold for this exact model are unavailable; no other model's rates are substituted and this is not a ChatGPT subscription bill.
+
+Final snapshot: event 1456 at `2026-09-29T08:35:16.961Z`; input 187,104,374, cached input 184,298,752, cache-write input 0, output 484,192, total 187,588,566. Report `/private/tmp/pp-build17-receipt-accounting.json`: 32 measured requests; largest input 178,959. Reasoning output 2,974 is a subset of output, not added again. Historical/in-boundary resets: 0/0; excluded exact replay events: 0; repeated cumulative snapshots: 0. Threshold crossings remain unmeasured. Final numeric insertion and subsequent receipt delivery are excluded.
