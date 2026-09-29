@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 29 Sep 2026 | `PP-20260929-01` | Issue #200 internal build 17 candidate | `gpt-6-astra` | 11,355,206 (11,283,584; 0) | 13,925 | 11,369,131 | Unmeasured | Exact 76-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260928-10` | Issue #198 durable Watch controls and app lifecycle recovery | `gpt-6-astra` | 10,939,119 (10,766,080; 0) | 44,514 | 10,983,633 | Unmeasured | Exact 99-request root implementation phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-09` | Issue #195 successful internal build 16 release receipt | `gpt-6-astra` | 3,979,321 (3,954,176; 0) | 10,892 | 3,990,213 | Unmeasured | Exact 37-request root delivery/receipt phase; reviewer and final insertion/delivery excluded |
 | 28 Sep 2026 | `PP-20260928-08` | Issue #195 internal TestFlight build 16 candidate | `gpt-6-astra` | 7,151,357 (7,070,848; 0) | 11,913 | 7,163,270 | Unmeasured | Exact 86-request root candidate/review/validation phase; reviewer and final insertion/delivery excluded |
@@ -1334,3 +1335,41 @@ primary checkout's existing scheme edits and local signing settings are preserve
 Device/background/HealthKit/FR30z acceptance remains unperformed for this repair.
 
 Final snapshot: event 1331 at `2026-09-28T23:05:47.078Z`; input 168,742,664, cached input 166,135,680, cache-write input 0, output 451,139, total 169,193,803. Exact report `/private/tmp/pp198-final-accounting.json`: 99 measured requests; largest input 225,659. Phase reasoning output 12,413 is a subset of output, not added again. Historical and in-boundary counter resets: 0; validated excluded exact replays: 0; repeated cumulative snapshots: 1. Threshold crossings remain unmeasured without a verified exact-model threshold. This final numeric insertion and subsequent delivery are excluded. The stable change ID retains the implementation start date; the commit ledger date is 29 September.
+
+## PP-20260929-01 build 17 candidate and measurement boundary
+
+Issue #200 prepares internal TestFlight 1.0.1 (17) containing the merged #198
+Watch durability repair. Only four production phone/Watch build settings,
+matching synthetic release fixtures and candidate documentation change. The
+candidate preserves app behaviour, signing, profiles, trusted tools, workflow,
+permissions, privacy and encryption declarations. Independent working-diff review
+approved the freeze with no actionable findings; 57 focused script tests,
+release metadata, workflow lint, shell syntax, ShellCheck and whitespace passed.
+Existing primary-checkout scheme edits, other worktrees and local signing remain
+untouched. Upload, Apple processing, group assignment and signed-device acceptance
+are separate evidence stages. No hardware is operated by this release.
+
+Measurement scope: root Desktop session
+`01a0e504-8937-7c80-9128-08ad4b305f87`, exact model `gpt-6-astra`, baseline
+`/private/tmp/pp-build17-baseline.json`, event 1348 at
+`2026-09-29T07:46:37.874Z`. Baseline: input 170,267,971; cached input 167,557,120;
+cache-write input 0; output 457,825 (reasoning subset 119,552); total 170,725,796.
+This phase covers candidate preparation, focused and complete validation,
+working-diff review coordination and documentation. Independent reviewer usage,
+final numeric insertion, commit and subsequent release delivery are excluded.
+API-equivalent estimate and long-context threshold remain Unmeasured because
+verified official rates/threshold for this exact model are unavailable. No other
+model's prices are substituted and this is not a ChatGPT subscription bill.
+
+The complete candidate gate passed on Xcode 27.0 (27A266a), iOS 26.5 simulator:
+475 unit, 72 UI and 16 evaluation tests; unsigned Release including Watch; static
+analysis and coverage; 57 script, 41 scorer, 13 summary, 247 offline HostEval tests
+(36 explicit private-evidence skips), and 24 accounting tests. Evidence is
+`/private/tmp/pp-build17-complete-gate` and its sibling `.log`. All 418 frozen
+non-Markdown inputs, including the tracked skill symlink, match
+`/private/tmp/pp-build17-frozen-inputs.json`. Documentation validation passed
+13 local links and 11 shell snippets (syntax only). Exact-head review and
+required hosted CI are recorded on the delivery PR. These results do not claim
+signed export, upload, Apple processing, tester installation or device acceptance.
+
+Final snapshot: event 1424 at `2026-09-29T08:20:46.932Z`; input 181,623,177, cached input 178,840,704, cache-write input 0, output 471,750, total 182,094,927. Report `/private/tmp/pp-build17-candidate-accounting.json`: 76 measured requests; largest input 161,507. Reasoning output 4,191 is a subset of output. Historical and in-boundary resets: 0 and 0; excluded exact replay events: 0; repeated cumulative snapshots: 0. Threshold crossings remain unmeasured without an exact-model threshold. Final numeric insertion and subsequent release delivery are excluded.
