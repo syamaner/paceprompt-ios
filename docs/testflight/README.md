@@ -461,3 +461,36 @@ and [paired-device HealthKit procedure](../watch-health-interchange-runbook.md)
 for later testing. The separate Watch save-uncertain observation remains unresolved.
 #115 signed-device acceptance, #116 interoperability and WeeklyHealthReport #80
 reader implementation remain open. No hardware was operated in this release.
+
+### Watch durability release candidate: 1.0.1 (17), issue #200
+
+The operator authorised the next internal TestFlight release containing #198,
+merged in [PR #199](https://github.com/syamaner/paceprompt-ios/pull/199) as
+`a497c78b5816f8a67673fcec86d356efc7cd23e2`. Build 17 includes visible recording
+controls, verified-stop recovery and background/foreground reconciliation.
+Build 16 does not contain this repair. Marketing version remains `1.0.1`; all
+four phone/Watch build settings and matching synthetic fixtures advance to 17.
+App behaviour, signing settings, profiles, workflow, privacy and encryption
+declarations are unchanged in the release candidate. The reviewed tools pin
+remains `796819b21382ac7dd038fb989e79e1352aaf06ca`.
+
+Candidate validation, independent exact-head review, protected merge and exact-
+main CI precede the immutable `testflight/1.0.1-b17` tag. The hosted protected
+preflight checks Apple build freshness and the existing sole-tester group before
+signing or upload; no API key is copied locally. Upload, valid Apple processing
+and group assignment are separate release gates. No new tester, public/external
+distribution, hardware operation or dependent reader implementation is included.
+Use the [durability acceptance procedure](../watch-health-interchange-runbook.md#durability-acceptance-198-unperformed-on-devices)
+on both updated devices; #115/#116 acceptance and WeeklyHealthReport #80 remain
+separate work. Availability never proves installation or physical behaviour.
+
+The complete candidate gate passed on Xcode 27.0 (27A266a), iOS 26.5 simulator:
+475 unit, 72 UI and 16 evaluation tests; unsigned Release including Watch; static
+analysis and coverage; 57 script, 41 scorer, 13 summary, 247 offline HostEval tests
+(36 explicit private-evidence skips), and 24 accounting tests. Evidence is
+`/private/tmp/pp-build17-complete-gate` and its sibling `.log`. All 418 frozen
+non-Markdown inputs, including the tracked skill symlink, match
+`/private/tmp/pp-build17-frozen-inputs.json`. Documentation validation passed
+13 local links and 11 shell snippets (syntax only). Exact-head review and
+required hosted CI are recorded on the delivery PR. These results do not claim
+signed export, upload, Apple processing, tester installation or device acceptance.
