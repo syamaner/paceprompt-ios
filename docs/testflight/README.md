@@ -542,3 +542,43 @@ from normal single-workout Health saving. Stop recording affects recording only;
 the treadmill must still be stopped at its console. #115 paired-device acceptance,
 #116 interoperability and WeeklyHealthReport #80 reader/privacy work remain open.
 No hardware was operated during this release.
+
+
+### Watch startup/shutdown release candidate: 1.0.1 (18), issue #205
+
+The operator authorised an internal release containing #203, merged in
+[PR #204](https://github.com/syamaner/paceprompt-ios/pull/204) as
+`c8cd1866aa95d38b7f3ecd79eafab4c92cdb328d`. Build 18 contains stable startup
+progress, foreground/unlock capability refresh, verified native end before Watch
+saving, late-callback isolation and bounded terminal-message retries. Build 17
+does not contain this repair. Both phone and Watch must be updated for testing.
+
+The candidate changes only the four phone/Watch build settings to 18 and matching
+synthetic release fixtures, plus documentation/accounting. Marketing version stays
+`1.0.1`. Signing configuration, profiles, workflow, privacy/encryption declarations
+and trusted tools pin `796819b21382ac7dd038fb989e79e1352aaf06ca` are unchanged.
+The existing sole-tester internal group is the only destination. No new tester,
+external/public distribution, hardware operation or reader implementation is included.
+
+Complete candidate validation, independent exact-head review, protected merge with
+attestation, exact-main CI and tree equality precede the immutable
+`testflight/1.0.1-b18` tag. Hosted preflight checks Apple build freshness before
+importing signing assets or uploading; no Apple key is copied locally. The standing
+no-non-exempt-encryption decision applies because encryption behaviour is unchanged.
+Normal protected-environment approval is submitted under this explicit release
+instruction only after source and unsigned archive checks pass.
+
+Upload, Apple processing, existing-group assignment, tester installation and paired-
+device acceptance remain distinct. Use the [startup/shutdown acceptance procedure](../watch-health-interchange-runbook.md#startupshutdown-acceptance-203-unperformed-on-repaired-devices)
+after both devices update. Contract revision 1.3, unchanged wire/metadata v1 and
+fixture bytes do not establish device acceptance. #115/#116 and WeeklyHealthReport
+#80 remain open dependent work. Release outcome will be recorded separately.
+
+Candidate local validation passed at `/private/tmp/pp-build18-complete-gate`
+(log `/private/tmp/pp-build18-complete-gate.log`): 490 unit, 72 UI and 16 evaluation
+tests; Release simulator build including Watch; static analysis and coverage;
+57 script, 41 corpus, 13 summary, 247 offline host tests (36 explicitly skipped
+private-evidence cases), and 24 accounting tests. No application test was skipped.
+All 418 frozen non-Markdown inputs, including the skill symlink, remained identical.
+Independent pre-commit diff/documentation review found no actionable issues;
+exact-head review and protected hosted gates remain required before release.
