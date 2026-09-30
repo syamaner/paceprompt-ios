@@ -189,7 +189,18 @@ simulator tests or release availability. Keep all real diagnostics private.
    errors separately. An unavailable protected store must remain fail-closed with
    a clear status; it must not erase uncertainty or claim a successful save.
 
-## Startup/shutdown acceptance (#203, unperformed on repaired devices)
+<a id="startupshutdown-acceptance-203-unperformed-on-repaired-devices"></a>
+
+## Startup/shutdown acceptance (#203; blocked by #212)
+
+The operator confirmed both devices had finished updating to build 18 before a
+failed attempt: iPhone showed blocked Preflight with a Watch interchange timeout,
+and Watch remained at an uncertain save result. This is failure evidence, not
+acceptance or proof that Health did or did not save an earlier workout. The
+[simulator investigation and bounded ordering repairs](watch-companion-runbook.md#simulator-investigation-and-bounded-repairs-212)
+do not resolve the device report by themselves. Repeat this procedure on a later
+installed candidate containing the #212 repair, recording its actual build numbers.
+The remaining rows below are not marked passed by that report or by simulator tests.
 
 Internal TestFlight **1.0.1 (18)** contains this repair in both apps. The
 [release receipt](testflight/README.md#watch-startupshutdown-internal-release-101-18-issue-205)

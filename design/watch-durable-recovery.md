@@ -138,3 +138,32 @@ waits for session end before ending collection and finishing the builder.
 addresses reattachment after a crash; an attached session already supplies the
 identity needed to observe termination. Neither document proves this device report's
 root cause.
+
+## Recovery and next-attempt ordering repair (#212)
+
+The build 18 operator report remains a failed paired-device attempt with an
+unconfirmed cause. Synthetic regressions identified two independent ordering
+failures, now repaired without changing wire, metadata or journal versions:
+
+- While reattaching a retained recording, ingress and foreground publication wait
+  for native recovery verification. No `bound` or manifest acknowledgement is sent
+  during that wait. Retries after verification use the existing protocol budgets.
+  Recovery reads the current same-generation journal after the await, preserving
+  pause and disconnection state recorded by native callbacks. Stop/timeout cancels
+  the gate; an older completion cannot clear a newer recovery gate.
+- Discard requests native end asynchronously. Before a subsequent attempt resets
+  the adapter, a previously created and discarded primary must pass the existing
+  native stop verifier. The existing startup deadline remains in force. A failed
+  proof or cancellation prevents reset, authorisation and new primary creation;
+  late proof cannot revive a cancelled attempt. Saved workouts already pass native
+  end verification in their assembly path.
+
+The architecture remains the pure lifecycle for durable state and ingress, the
+recording adapter for native-operation ordering, and the HealthKit adapter for
+identity-specific termination proof. Regression tests suspend both boundaries and
+exercise successful retry, callback state preservation, cancellation and failed
+stop proof. Phone failure instructions now include the existing **Prepare next
+workout** step after verified Stop when the previous result is uncertain. This does
+not remove confirmations, automatically retire uncertain results, or permit a
+replacement save. Unreadable retained state and native startup errors remain
+separate investigation cases; these repairs do not establish the device root cause.

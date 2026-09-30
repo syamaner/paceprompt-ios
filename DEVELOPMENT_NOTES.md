@@ -41,6 +41,16 @@ API-equivalent =
 
 Pricing authority: [OpenAI GPT-5.6 Sol model documentation](https://developers.openai.com/api/docs/models/gpt-5.6-sol).
 
+For the 1 October 2026 #212 phase, GPT-6 Astra (`gpt-6-astra`) standard text
+rates were checked against the [official model documentation](https://developers.openai.com/api/docs/models/gpt-6-astra):
+$10.00 per million uncached input, $1.00 cached input, $12.50 cache writes
+(1.25 times base input), and $50.00 output. Requests above 272,000 input tokens
+use 2 times input/cache rates and 1.5 times output rates for the entire request.
+This is an explicitly standard-tier token-only API-equivalent comparison, not the
+subscription's bill or a claim about its processing tier. Historical Unmeasured
+rows are not repriced.
+
+
 For Claude Fable 5.1 (`claude-fable-5-1`), the official rates checked on 4 September 2026 are $10.00 per million uncached input tokens, $0.25 per million cache-read input tokens, $12.50 per million five-minute-TTL cache-write input tokens (1.25 times the input rate), $20.00 per million one-hour-TTL cache-write input tokens (2 times the input rate) and $50.00 per million output tokens. Claude Code sessions in this repository use the one-hour cache TTL, and the session JSONL reports cache writes per TTL, so each cache write is priced at its TTL-specific rate. Claude Code counters come from the session file under `~/.claude/projects/<project>/<session-id>.jsonl`: assistant records are deduplicated by `message.id` because one API response is written as several lines that repeat the same usage; `input_tokens` is the uncached input; total input is uncached input plus cache reads plus cache writes; thinking tokens are already a subset of output.
 
 For a Claude Code phase with TTL-specific cache writes:
@@ -60,6 +70,8 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 1 Oct 2026 | `PP-20261001-01` | Issue #212 Watch recovery ordering and simulator investigation | `gpt-6-astra` | 21,364,951 (21,144,064; 0) | 52,921 | 21,417,872 | USD 26.00 (standard-tier API-equivalent) | Exact 125-request root repair phase; reviewer and final numeric insertion/delivery excluded |
+| 1 Oct 2026 | `PP-20261001-02` | Preserve Watch acceptance runbook anchor | `gpt-6-astra` | 135,788 (110,592; 0) | 1,009 | 136,797 | USD 0.41 (standard-tier API-equivalent) | Exact 3-request root documentation phase; reviewer and final numeric insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-03` | Issue #205 successful internal build 18 release receipt | `gpt-6-astra` | 3,860,524 (3,822,208; 0) | 10,660 | 3,871,184 | Unmeasured | Exact 45-request root release/receipt phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-02` | Issue #205 internal build 18 candidate | `gpt-6-astra` | 5,435,635 (5,353,344; 0) | 10,490 | 5,446,125 | Unmeasured | Exact 69-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-01` | Issue #203 Watch startup and automatic shutdown repair | `gpt-6-astra` | 15,985,988 (15,843,072; 0) | 39,355 | 16,025,343 | Unmeasured | Exact 108-request root implementation phase; reviewer and final insertion/delivery excluded |
@@ -1542,3 +1554,64 @@ operation is claimed. This receipt adds the build-18 pointer to the existing
 acceptance procedure; #115/#116 and WeeklyHealthReport #80 remain open.
 
 Final snapshot: event 1728 at `2026-09-30T21:22:29.722Z`; input 219,382,203, cached input 215,974,912, cache-write input 0, output 561,047 (reasoning subset 147,605), total 219,943,250. Exact phase: 3,860,524 input, 3,822,208 cached, 0 cache-write, 10,660 output (reasoning subset 964), 3,871,184 total across 45 reconciled requests; largest input 100,425. Historical resets 0; in-boundary resets 0; exact replay events 1; repeated cumulative snapshots 0. Threshold crossings remain Unmeasured. Independent working-diff review found no actionable findings. Local document links, whitespace, single-upload marker and all 418 frozen inputs passed verification.
+
+
+## PP-20261001-01 — Watch recovery ordering and simulator investigation (#212)
+
+Bounded phase: root investigation and repair from the pre-implementation snapshot
+through tests, independent working-diff review and pre-ledger accounting. Selected
+root session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`.
+Baseline event 1792 at `2026-09-30T22:43:43.964Z`: input 228,273,458,
+cached input 224,608,640, cache-write input 0, output 593,193 (reasoning subset
+151,709), total 228,866,651. Independent reviewer usage is excluded because its
+separate exact accounting was not supplied. Final numeric insertion, exact-head
+review, commit/push/merge and later delivery are outside this phase.
+
+Both ordering defects were reproduced with synthetic failing regressions before
+repair. The final focused Watch suite passed 95 tests. Isolated native simulators
+reached the Watch Health permission sheet through phone Begin, reproduced an
+uncertain startup after unanswered permissions, and exercised verified Stop then
+Prepare next back to Ready. This is distinct from physical-device observations,
+Health save/readback, sensors and paired-device acceptance. Temporary UI probe code
+was removed before executable freeze. Existing signing settings and other
+worktrees were preserved. #212 remains open for the device failure investigation;
+#115/#116 and WeeklyHealthReport #80 remain separate outstanding acceptance/reader
+work. No release upload or hardware operation is included.
+
+The final complete local gate passed on Xcode 27.0 (27A266a), iOS 26.5
+simulator: 494 production unit tests, 72 UI tests, 16 evaluation tests, unsigned
+Release build including Watch, static analysis and coverage. The 57 repository
+script tests, 41 corpus tests, 13 summary tests and 247 offline HostEval tests
+passed (36 explicit HostEval skips for absent private evidence). All 24 accounting
+helper tests passed. Whitespace, updated local links and 417 frozen non-Markdown
+inputs were verified. Independent pre-gate review found no remaining P1/P2 issues.
+The exact-head review and hosted CI are delivery gates after this measured phase.
+
+Final snapshot: event 1923 at `2026-09-30T23:35:30.520Z`; input 249,638,409, cached input 245,752,704, cache-write input 0, output 646,114 (reasoning subset 176,169), total 250,284,523. Exact phase: 21,364,951 input, 21,144,064 cached, 0 cache-write, 52,921 output (reasoning subset 24,460), 21,417,872 total across 125 reconciled requests. Largest input 222,800; requests above 272,000 input tokens: 0. Historical resets 0; in-boundary resets 0; exact replay events 6; repeated cumulative snapshots 0. Standard-tier token-only API-equivalent: USD 26.00 (unrounded 25.998984), using the exact model and official 1 October 2026 pricing basis above; this is not a ChatGPT subscription bill. Final numeric insertion and delivery are excluded.
+
+## PP-20261001-02 — Preserve the Watch acceptance runbook anchor
+
+Independent exact-head review found that the revised #203/#212 acceptance heading
+broke two TestFlight receipt links. Preserve the prior explicit anchor so those
+receipts and external references continue to reach the acceptance procedure.
+Only documentation changes; all 417 frozen executable/test/build inputs remain
+byte-identical, so the complete PP-20261001-01 gate remains applicable. Validate
+the anchor against both inbound receipt links and run `git diff --check`.
+
+The measured phase covers the root documentation correction and its checks from
+the captured baseline through the pre-ledger snapshot. Independent reviewer usage,
+final numeric insertion and delivery are excluded. Use the verified 1 October
+2026 standard-tier gpt-6-astra pricing basis above; the API-equivalent estimate is
+not a ChatGPT subscription bill.
+
+Baseline event 1930 at `2026-09-30T23:40:35.196Z`: input 250,766,349,
+cached input 246,875,904, cache-write input 0, output 648,751 (reasoning subset
+177,065), total 251,415,100. Final event 1933 at `2026-09-30T23:41:18.667Z`:
+input 250,902,137, cached input 246,986,496, cache-write input 0, output 649,760
+(reasoning subset 177,122), total 251,551,897. Selected root session
+`01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`. Exact delta:
+135,788 input, 110,592 cached, 0 cache-write, 1,009 output (reasoning subset 57),
+136,797 total across 3 requests. Largest input 47,343; threshold crossings,
+resets, exact replay events and repeated snapshots all 0. Standard-tier
+API-equivalent USD 0.41 (unrounded 0.413002). All four receipt anchors resolve
+and all 417 frozen inputs match. Final numeric insertion and delivery excluded.

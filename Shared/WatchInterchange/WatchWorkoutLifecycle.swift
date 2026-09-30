@@ -63,6 +63,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
     private let send: (Data) -> Void
     private let makeID: () -> UUID
     private var generation: UInt64 = 0
+    private var recoveryGeneration: UInt64?
     private var operationDeadline: TimeInterval?
     private(set) var stopping = false
     private(set) var stopVerified = false
@@ -126,7 +127,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
         catch { quarantine() }
     }
     private func recoverLoaded(_ original: WatchWorkoutJournal) async {
-        var value = original; journal = value
+        let value = original; journal = value
         guard [1, 2].contains(value.formatVersion) else { quarantine(); return }
         if value.phase == .retired { display = "Ready. Start a new workout on iPhone."; changed?(); return }
         if [.saved, .discarded].contains(value.phase) {
@@ -134,6 +135,8 @@ enum WatchStoreError: Error { case definite, ambiguous }
             changed?(); return
         }
         generation &+= 1; let token = generation
+        recoveryGeneration = token
+        defer { if recoveryGeneration == token { recoveryGeneration = nil } }
         operationDeadline = monotonic() + 15
         display = "Checking previous Watch recording…"; changed?()
         do {
@@ -143,14 +146,20 @@ enum WatchStoreError: Error { case definite, ambiguous }
             guard acceptCompletion(token) else { return }; operationDeadline = nil
             recordingAttached = true
             guard WatchWire.timestamp(recovered.start) == start, recovered.sourceExclusion else { throw WatchStoreError.ambiguous }
-            value.incomplete = value.incomplete || !value.confirmed
-            guard persist(value) else { recording.end(); return }
+            // Native callbacks may have persisted pause/disconnection state while
+            // recovery was suspended. Never replace it with the pre-await snapshot.
+            guard var current = journal, current.phase == .recording,
+                  current.summaryID == value.summaryID, current.startedAt == start else { throw WatchStoreError.ambiguous }
+            current.incomplete = current.incomplete || !current.confirmed
+            guard persist(current) else { recording.end(); return }
+            recoveryGeneration = nil
             display = "Recovered recording. End on Watch when finished."; changed?()
-            if value.prepareSequence != nil || value.confirmed { await endWorkout() }
+            if current.prepareSequence != nil || current.confirmed { await endWorkout() }
         } catch { guard acceptCompletion(token) else { return }; operationDeadline = nil; quarantine(); recording.end(); recordingAttached = false; changed?() }
     }
     func receive(_ data: Data) async {
         await tick()
+        guard recoveryGeneration == nil else { return }
         guard let current = journal, [.creating, .unbound, .starting, .recording].contains(current.phase) else { return }
         let message: WatchWireMessage
         do { message = try WatchWire.decode(data) }
@@ -317,7 +326,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
     func foreground() async {
         await recover()
         await tick()
-        if let value = journal, value.phase == .recording, let id = value.summaryID, let start = value.startedAt {
+        if recoveryGeneration == nil, let value = journal, value.phase == .recording, let id = value.summaryID, let start = value.startedAt {
             var response = WatchWireMessage(.bound, summaryID: id); response.workoutStart = start; transmit(response)
             acknowledge()
         }
@@ -325,6 +334,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
     func forceStop() async {
         guard canStop else { return }
         generation &+= 1; let token = generation
+        recoveryGeneration = nil
         stopping = true; stopVerified = false
         startupDeadline = nil; endDeadline = nil; operationDeadline = monotonic() + 15
         pendingBind = nil; pauseInFlight = false; resumeInFlight = false; desiredRecordingState = nil
@@ -355,7 +365,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
         changed?()
     }
     private func expireOperation() {
-        generation &+= 1; operationDeadline = nil; stopping = false; stopVerified = false
+        generation &+= 1; recoveryGeneration = nil; operationDeadline = nil; stopping = false; stopVerified = false
         quarantine(); recording.end(); recordingAttached = false
         display = "Watch operation timed out. Use Stop recording to recover."; changed?()
     }

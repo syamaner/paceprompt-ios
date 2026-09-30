@@ -143,3 +143,53 @@ Repair validation: the final #203 complete local gate passed 490 production unit
 coverage and offline checks. Independent working-diff review cleared the repaired
 edge cases before executable freeze. The PR records exact-head review and required
 CI. These results do not establish repaired-device acceptance or release availability.
+
+## Simulator investigation and bounded repairs (#212)
+
+Build 18 was reported installed on both devices, but the operator's phone remained
+in blocked Preflight while Watch reported an uncertain save. Issue #212 and signed
+acceptance #115 remain open; do not treat the following simulator evidence as a
+successful device retest or a Health save receipt.
+
+Two deterministic failures were reproduced before repair: recovery could publish
+`bound`/ACK before verifying the native primary and overwrite concurrent state;
+starting again immediately after discard could reset before native end was proved.
+The recovery/adapter ordering changes and regression tests are described in the
+[durability amendment](../design/watch-durable-recovery.md#recovery-and-next-attempt-ordering-repair-212).
+
+For native simulator work, create a dedicated iPhone/Watch pair and install both
+apps. The usual unsigned full validation gate checks software but cannot exercise
+HealthKit: the native service rejects missing HealthKit entitlements. Use a
+separate simulator-only build with `CODE_SIGNING_ALLOWED=YES` and
+`CODE_SIGN_IDENTITY=-`; preserve the repository's signing configuration and inspect
+Xcode's simulated entitlement output rather than interpreting an empty ad-hoc
+signature entitlement dictionary as the effective simulator entitlement. No Apple
+Developer account change or distribution signing is required.
+
+An isolated iOS/watchOS 26.5 pair with an ad-hoc signed Debug build reached the
+native Watch Health permission sheet through the phone's normal Watch selection
+and Begin path, using the existing synthetic treadmill UI fixture. Leaving that
+sheet unanswered exceeded the startup deadline and reproduced Watch's uncertain
+state and phone's blocked Preflight. A temporary Watch XCTest UI probe then
+exercised **Stop recording → confirmation → Prepare next workout → confirmation**
+and observed Ready. This establishes that recovery path only in that synthetic
+experiment. No sensor, real treadmill, nonempty Health save or background delivery
+acceptance follows. A first phone probe that did not successfully toggle Watch
+selection is excluded from connection evidence.
+
+When testing manually, confirm the Watch toggle is actually on and the preflight
+shows **Apple Watch owns this recording** before Begin. Complete Health permissions
+on Watch promptly. After an uncertain attempt, updating the app alone does not
+retire its retained journal. Follow Stop recording on Watch, wait for verified stop,
+then Prepare next workout if offered, and cancel the old phone preflight before
+preparing again. Preserve uncertain outcomes; never uninstall or delete ownership
+files to clear them. The phone now names that missing preparation step explicitly.
+
+
+The #212 bounded repair's full local gate passed 494 production unit tests, 72 UI
+tests, 16 evaluation tests, Release build including Watch, static analysis and
+coverage. Offline checks passed 57 script, 41 corpus, 13 summary and 247 HostEval
+tests, with 36 explicit HostEval skips for absent private evidence; all 24 accounting
+helper tests passed. Independent pre-gate review found no remaining P1/P2 issues.
+Permission-granted native startup and a nonempty Health save remain unverified;
+the exact-head review/hosted CI and later device acceptance are separate gates.
