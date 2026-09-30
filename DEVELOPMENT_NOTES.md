@@ -71,6 +71,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
 | 1 Oct 2026 | `PP-20261001-01` | Issue #212 Watch recovery ordering and simulator investigation | `gpt-6-astra` | 21,364,951 (21,144,064; 0) | 52,921 | 21,417,872 | USD 26.00 (standard-tier API-equivalent) | Exact 125-request root repair phase; reviewer and final numeric insertion/delivery excluded |
+| 1 Oct 2026 | `PP-20261001-02` | Preserve Watch acceptance runbook anchor | `gpt-6-astra` | 135,788 (110,592; 0) | 1,009 | 136,797 | USD 0.41 (standard-tier API-equivalent) | Exact 3-request root documentation phase; reviewer and final numeric insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-03` | Issue #205 successful internal build 18 release receipt | `gpt-6-astra` | 3,860,524 (3,822,208; 0) | 10,660 | 3,871,184 | Unmeasured | Exact 45-request root release/receipt phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-02` | Issue #205 internal build 18 candidate | `gpt-6-astra` | 5,435,635 (5,353,344; 0) | 10,490 | 5,446,125 | Unmeasured | Exact 69-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-01` | Issue #203 Watch startup and automatic shutdown repair | `gpt-6-astra` | 15,985,988 (15,843,072; 0) | 39,355 | 16,025,343 | Unmeasured | Exact 108-request root implementation phase; reviewer and final insertion/delivery excluded |
@@ -1587,3 +1588,30 @@ inputs were verified. Independent pre-gate review found no remaining P1/P2 issue
 The exact-head review and hosted CI are delivery gates after this measured phase.
 
 Final snapshot: event 1923 at `2026-09-30T23:35:30.520Z`; input 249,638,409, cached input 245,752,704, cache-write input 0, output 646,114 (reasoning subset 176,169), total 250,284,523. Exact phase: 21,364,951 input, 21,144,064 cached, 0 cache-write, 52,921 output (reasoning subset 24,460), 21,417,872 total across 125 reconciled requests. Largest input 222,800; requests above 272,000 input tokens: 0. Historical resets 0; in-boundary resets 0; exact replay events 6; repeated cumulative snapshots 0. Standard-tier token-only API-equivalent: USD 26.00 (unrounded 25.998984), using the exact model and official 1 October 2026 pricing basis above; this is not a ChatGPT subscription bill. Final numeric insertion and delivery are excluded.
+
+## PP-20261001-02 — Preserve the Watch acceptance runbook anchor
+
+Independent exact-head review found that the revised #203/#212 acceptance heading
+broke two TestFlight receipt links. Preserve the prior explicit anchor so those
+receipts and external references continue to reach the acceptance procedure.
+Only documentation changes; all 417 frozen executable/test/build inputs remain
+byte-identical, so the complete PP-20261001-01 gate remains applicable. Validate
+the anchor against both inbound receipt links and run `git diff --check`.
+
+The measured phase covers the root documentation correction and its checks from
+the captured baseline through the pre-ledger snapshot. Independent reviewer usage,
+final numeric insertion and delivery are excluded. Use the verified 1 October
+2026 standard-tier gpt-6-astra pricing basis above; the API-equivalent estimate is
+not a ChatGPT subscription bill.
+
+Baseline event 1930 at `2026-09-30T23:40:35.196Z`: input 250,766,349,
+cached input 246,875,904, cache-write input 0, output 648,751 (reasoning subset
+177,065), total 251,415,100. Final event 1933 at `2026-09-30T23:41:18.667Z`:
+input 250,902,137, cached input 246,986,496, cache-write input 0, output 649,760
+(reasoning subset 177,122), total 251,551,897. Selected root session
+`01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`. Exact delta:
+135,788 input, 110,592 cached, 0 cache-write, 1,009 output (reasoning subset 57),
+136,797 total across 3 requests. Largest input 47,343; threshold crossings,
+resets, exact replay events and repeated snapshots all 0. Standard-tier
+API-equivalent USD 0.41 (unrounded 0.413002). All four receipt anchors resolve
+and all 417 frozen inputs match. Final numeric insertion and delivery excluded.

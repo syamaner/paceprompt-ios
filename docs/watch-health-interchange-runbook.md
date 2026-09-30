@@ -189,6 +189,8 @@ simulator tests or release availability. Keep all real diagnostics private.
    errors separately. An unavailable protected store must remain fail-closed with
    a clear status; it must not erase uncertainty or claim a successful save.
 
+<a id="startupshutdown-acceptance-203-unperformed-on-repaired-devices"></a>
+
 ## Startup/shutdown acceptance (#203; blocked by #212)
 
 The operator confirmed both devices had finished updating to build 18 before a
