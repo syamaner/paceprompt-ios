@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 30 Sep 2026 | `PP-20260930-02` | Issue #205 internal build 18 candidate | `gpt-6-astra` | 5,435,635 (5,353,344; 0) | 10,490 | 5,446,125 | Unmeasured | Exact 69-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-01` | Issue #203 Watch startup and automatic shutdown repair | `gpt-6-astra` | 15,985,988 (15,843,072; 0) | 39,355 | 16,025,343 | Unmeasured | Exact 108-request root implementation phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260929-02` | Issue #200 successful internal build 17 release receipt | `gpt-6-astra` | 5,481,197 (5,458,048; 0) | 12,442 | 5,493,639 | Unmeasured | Exact 32-request root release/receipt phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260929-01` | Issue #200 internal build 17 candidate | `gpt-6-astra` | 11,355,206 (11,283,584; 0) | 13,925 | 11,369,131 | Unmeasured | Exact 76-request root candidate phase; reviewer and final insertion/delivery excluded |
@@ -1469,3 +1470,41 @@ private evidence. All 417 frozen non-Markdown inputs still match; current main i
 not installed-device, HealthKit readback or physical acceptance.
 
 Final snapshot: event 1595 at `2026-09-30T20:08:32.522Z`; input 207,126,860, cached input 203,863,040, cache-write input 0, output 531,864, total 207,658,724. Exact report `/private/tmp/pp-watch-transparent-accounting.json`: 108 measured requests, largest input 174,316; reasoning output 13,960 is a subset of output and is not added twice. Historical/in-boundary resets: 0/0; excluded exact replay events: 5; repeated cumulative snapshots: 0. Threshold crossings remain unmeasured. Final numeric insertion and subsequent delivery are excluded.
+
+
+### PP-20260930-02 — internal TestFlight build 18 candidate (#205)
+
+The operator requested release of #203 after protected PR #204 merged as
+`c8cd1866aa95d38b7f3ecd79eafab4c92cdb328d`. This release candidate advances only
+four phone/Watch Debug/Release build values to 18 and matching synthetic guard
+fixtures. Marketing version 1.0.1, app behaviour, signing settings, workflow, trusted
+tools pin, privacy/encryption declarations and sole-tester audience remain unchanged.
+Main, environment and immutable-tag protections were refreshed live; no settings
+were relaxed. Apple build freshness remains a hosted preflight check because keys
+stay in the protected environment. No hardware or Health data is operated here.
+
+Focused release checks include 57 synthetic script tests, production metadata,
+workflow lint, shell syntax/lint and full-diff whitespace. The complete local gate,
+independent exact-head review and required CI precede the candidate merge and tag.
+A separate release receipt will record upload, Apple processing and group readback;
+those do not establish installation or paired-device acceptance.
+
+Measurement scope: root Desktop session `01a0e504-8937-7c80-9128-08ad4b305f87`,
+exact model `gpt-6-astra`; baseline `/private/tmp/pp-build18-baseline.json`, event
+1611 at `2026-09-30T20:31:07.429Z`. Baseline input 210,015,756; cached input
+206,729,600; cache-write input 0; output 539,135 (reasoning subset 145,098); total
+210,554,891. Root candidate preparation, documentation, local validation and review
+coordination are included. Independent reviewer usage, final numeric insertion,
+commit/push and later release delivery are excluded. API-equivalent estimate and
+long-context threshold remain Unmeasured because verified official rates/threshold
+for this exact model are unavailable. No other model's rates are substituted; this
+is not a ChatGPT subscription bill.
+
+The complete candidate gate passed at `/private/tmp/pp-build18-complete-gate`
+(log `/private/tmp/pp-build18-complete-gate.log`): 490 unit, 72 UI, 16 evaluation,
+57 script, 41 corpus, 13 summary, 247 offline host tests (36 explicit private-evidence
+skips) and 24 accounting tests, with Release simulator build, analysis and coverage.
+All 418 frozen non-Markdown entries matched. Independent pre-commit executable
+and documentation review found no actionable issues. No physical acceptance is claimed.
+
+Final snapshot: event 1681 at `2026-09-30T21:05:28.172Z`; input 215,451,391, cached input 212,082,944, cache-write input 0, output 549,625 (reasoning subset 146,620), total 216,001,016. Exact delta: 5,435,635 input, 5,353,344 cached, 0 cache-write, 10,490 output (reasoning subset 1,522), 5,446,125 total across 69 reconciled requests; largest input 216,392. No historical or in-boundary counter resets; no exact replay events; one unchanged cumulative snapshot (event 1619) excluded from usage. Threshold crossings remain Unmeasured.
