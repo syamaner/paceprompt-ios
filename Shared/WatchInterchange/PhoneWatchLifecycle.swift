@@ -22,6 +22,10 @@ import Foundation
     private var acknowledgedRevision: Int64 = 0
     private var lastManifestSend: TimeInterval?
     private var finalManifest: WatchWireMessage?
+    private var terminalMessage: WatchWireMessage?
+    private var lastTerminalSend: TimeInterval?
+    private var confirmationDeadline: TimeInterval?
+    var isEnding: Bool { phase == .preparingEnd || phase == .awaitingAck }
     private var terminalOutcome: String?
     private var terminalDistance = WatchDistance.unavailable
     private var lastRecordingRequest: String?
@@ -86,14 +90,18 @@ import Foundation
             guard phase == .preparingEnd, m.sequence == sequence, let end = m.workoutEnd else { return }
             guard let manifest = manifest(final: true, end: end) else { return }
             finalManifest = manifest; phase = .awaitingAck
-            if !transmit(manifest) { integrityFailed = true }
+            terminalMessage = manifest; lastTerminalSend = nil; sendTerminal()
         case .ack:
             if phase == .bound, let pendingManifest, m.revision == pendingManifest.revision {
                 acknowledgedRevision = m.revision!; return
             }
             guard !integrityFailed, phase == .awaitingAck, let finalManifest, m.revision == finalManifest.revision else { return }
             var confirmation = WatchWireMessage(.finalize, summaryID: id); confirmation.revision = m.revision
-            if transmit(confirmation) { phase = .confirmed; deadline = nil; changed?() }
+            if transmit(confirmation) {
+                terminalMessage = confirmation; lastTerminalSend = monotonic()
+                confirmationDeadline = deadline; phase = .confirmed; deadline = nil
+                status = "Watch recording end sent. Check the save result on Apple Watch."; changed?()
+            }
         case .bind, .manifest, .prepareEnd, .finalize, .recordingState: integrityFailed = true
         }
     }
@@ -110,7 +118,8 @@ import Foundation
             guard sequence < Int64.max, let id = summaryID else { fail("Watch interchange is incomplete."); return }
             sequence += 1; phase = .preparingEnd; deadline = monotonic() + 5
             var m = WatchWireMessage(.prepareEnd, summaryID: id); m.sequence = sequence
-            if !transmit(m) { integrityFailed = true }
+            status = "Ending Watch recording…"; changed?()
+            terminalMessage = m; lastTerminalSend = nil; sendTerminal()
         } else { sendNonfinal() }
     }
     func requestRecording(_ state: String, observedAt: Date) {
@@ -124,6 +133,7 @@ import Foundation
         else if phase == .binding || phase == .reconnecting { fail("Watch start is uncertain. End any recording on Apple Watch.") }
     }
     func primaryEnded() {
+        terminalMessage = nil; confirmationDeadline = nil
         guard phase != .confirmed, phase != .unavailable else { return }
         fail("Watch recording ended; save result unavailable on iPhone. iPhone Health saving remains disabled.")
     }
@@ -141,6 +151,17 @@ import Foundation
         if let deadline, monotonic() >= deadline { fail("Watch interchange timed out. Save result unavailable on iPhone."); return }
         if [.binding, .reconnecting].contains(phase), lastBind.map({ monotonic() - $0 >= 5 }) ?? false { sendBind() }
         if phase == .bound { sendNonfinal() }
+        if isEnding { sendTerminal() }
+        if phase == .confirmed {
+            if let until = confirmationDeadline, monotonic() < until { sendTerminal() }
+            else { terminalMessage = nil; confirmationDeadline = nil }
+        }
+    }
+    private func sendTerminal() {
+        guard let message = terminalMessage,
+              message.kind != .finalize || !integrityFailed,
+              lastTerminalSend.map({ monotonic() - $0 >= 1 }) ?? true else { return }
+        if transmit(message) { lastTerminalSend = monotonic() }
     }
     private func sendNonfinal() {
         guard phase == .bound, !integrityFailed else { return }
@@ -169,5 +190,5 @@ import Foundation
             port.send(data); return true
         } catch { integrityFailed = true; return false }
     }
-    private func fail(_ text: String) { phase = .unavailable; deadline = nil; status = text; changed?() }
+    private func fail(_ text: String) { phase = .unavailable; deadline = nil; terminalMessage = nil; confirmationDeadline = nil; status = text; changed?() }
 }

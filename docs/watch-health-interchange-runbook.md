@@ -72,7 +72,7 @@ fake-store tests; do not deliberately corrupt real Health data to manufacture th
    changes treadmill targets. Never resume a belt to test a HealthKit callback.
 4. End execution and perform the accepted end-preparation, final-manifest, ack,
    confirmation sequence while mirroring remains valid. Record whether each leg
-   was observed before the deadline. Watch ends collection and finishes once. Confirm the Watch shows the actual save result, while iPhone keeps “Watch-owned; save result unavailable on iPhone”; a final-manifest ack is not a save receipt.
+   was observed before the deadline. Watch ends collection and finishes once. Confirm the Watch shows the actual save result, while iPhone reports end sent and directs save-result checking to Watch; a final-manifest ack is not a save receipt.
 5. Using direct HealthKit readback (not just Fitness UI), assert exactly one workout
    for this summary, matching explicit identity, `watchPrimary`, complete status,
    final revision and stable sync keys/version. Assert exact interval count,
@@ -188,3 +188,36 @@ simulator tests or release availability. Keep all real diagnostics private.
 7. Test device lock/protected-data availability, permission delays and storage
    errors separately. An unavailable protected store must remain fail-closed with
    a clear status; it must not erase uncertainty or claim a successful save.
+
+## Startup/shutdown acceptance (#203, unperformed on repaired devices)
+
+Record both installed build numbers before this check. The operator's earlier report
+of flickering and Stop returning after confirmation is a failure observation; it
+does not establish complete device cause or repair acceptance.
+
+1. Prepare a Watch-assisted attempt and tap Begin once. Expect stable Connecting
+   progress, then exercise readiness. Repeated taps must not create extra attempts.
+2. Independently background/foreground phone and Watch during preparation. The phone
+   must refresh stale checks without issuing a treadmill command or automatically
+   starting execution. Include lock/unlock with active state preceding protected-data
+   availability; stale checks must clear once both return. A Watch binding received while phone is inactive requires a
+   deliberate Begin when foreground checks pass. Normal active binding may complete
+   the already-requested Begin once.
+3. During a separately authorised conservative exercise, end on phone and stop the
+   belt at the console. Leave both apps open. Expect Watch Ending, Saving, then saved
+   or discarded (zero usable intervals). No Watch tap should be needed; the normal
+   End action must disappear during handoff and both recording actions disappear
+   after successful completion. Phone end-sent is not a Health save receipt.
+4. If the Watch requires emergency Stop, confirm once. Expect Stopping, then a
+   verified stopped state with Prepare next workout, or a bounded explicit failure.
+   A late callback must not silently return to the same Stop prompt. Do not relaunch
+   or delete data to mask a failed stop; retain the exact visible status privately.
+5. Exercise app foreground changes after a terminal result. The result must remain
+   stable. Check Health for at most one workout and direct metadata/statistics using
+   the authorised reader procedure. An uncertain result stays uncertain.
+
+Lost-message/callback ordering and storage corruption are synthetic regression cases,
+not instructions to inject faults into real Health data. #115 remains paired-device
+acceptance, WeeklyHealthReport #80 reader implementation, and #116 the cross-repository
+physical acceptance boundary. This software repair authorises no release or hardware
+operation.

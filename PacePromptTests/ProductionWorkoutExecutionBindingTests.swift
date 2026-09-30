@@ -364,6 +364,78 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart); XCTAssertTrue(h.link.writes.isEmpty)
   }
 
+  func testPreflightForegroundRefreshesStaleEvidenceWithoutStartingExecution() throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController())
+    c.begin(SavedPlanRecord(id: UUID(), createdAt: Date(), modifiedAt: Date(), plan: h.plan.plan)); c.prepareWorkout()
+    h.binding.setApplicationActivity(.inactive)
+    XCTAssertNotNil(c.liveFailure)
+    h.binding.setApplicationActivity(.active); c.applicationBecameActive()
+    XCTAssertNil(c.liveFailure); XCTAssertNil(c.preflightProgress)
+    XCTAssertEqual(c.stage, .preflight); XCTAssertTrue(try XCTUnwrap(c.preflightPresentation).canBeginWorkout)
+    XCTAssertTrue(h.link.writes.isEmpty); XCTAssertNil(h.binding.orchestrator.frozenAttempt)
+  }
+
+  func testPreflightActiveBeforeUnlockRefreshesAfterProtectedDataReturns() throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController())
+    c.begin(SavedPlanRecord(id: UUID(), createdAt: Date(), modifiedAt: Date(), plan: h.plan.plan)); c.prepareWorkout()
+    h.binding.setApplicationActivity(.inactive); h.binding.setProtectedDataAvailable(false)
+    h.binding.setApplicationActivity(.active); c.applicationBecameActive()
+    XCTAssertNotNil(c.liveFailure); XCTAssertNil(c.preflightProgress)
+    h.binding.setProtectedDataAvailable(true); c.applicationBecameActive()
+    XCTAssertNil(c.liveFailure); XCTAssertEqual(c.stage, .preflight)
+    XCTAssertTrue(try XCTUnwrap(c.preflightPresentation).canBeginWorkout)
+    XCTAssertNil(h.binding.orchestrator.frozenAttempt); XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testWatchStartupProgressAndTimeoutNeverBecomeSilentBeginRetry() async throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let port = BindingWatchPort(); var time: TimeInterval = 0
+    let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: UUID.init, monotonic: { time })
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController(), watchFactory: { phone })
+    c.begin(SavedPlanRecord(id: UUID(), createdAt: Date(), modifiedAt: Date(), plan: h.plan.plan)); c.useAppleWatch = true; c.prepareWorkout()
+    c.handlePreflight(.beginWorkout); c.handlePreflight(.beginWorkout); await Task.yield()
+    XCTAssertEqual(port.launches, 1); XCTAssertEqual(c.preflightProgress, "Connecting to Apple Watch…")
+    time = 30; phone.tick()
+    XCTAssertNil(c.preflightProgress); XCTAssertNotNil(c.liveFailure)
+    c.handlePreflight(.beginWorkout); await Task.yield()
+    XCTAssertEqual(port.launches, 1); XCTAssertEqual(c.stage, .preflight); XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testWatchBoundAfterReadinessLossExposesFailureInsteadOfEndlessProgress() async throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let id = UUID(); let port = BindingWatchPort()
+    let phone = PhoneWatchLifecycle(port: port, reserve: { id in
+      guard h.binding.orchestrator.reserveWatchAttempt(id: id) else { throw WatchStoreError.definite }
+    }, makeID: { id }, monotonic: { 0 })
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController(), watchFactory: { phone }, clock: h.clock)
+    c.begin(SavedPlanRecord(id: UUID(), createdAt: Date(), modifiedAt: Date(), plan: h.plan.plan)); c.useAppleWatch = true; c.prepareWorkout()
+    c.handlePreflight(.beginWorkout); await Task.yield()
+    h.publishTelemetry(speedRaw: 400)
+    var b = WatchWireMessage(.bound, summaryID: id.uuidString.lowercased()); b.workoutStart = Date(timeIntervalSince1970: 100)
+    phone.receive(try WatchWire.encode(b))
+    XCTAssertEqual(phone.phase, .bound); XCTAssertNil(c.preflightProgress); XCTAssertNotNil(c.liveFailure)
+    XCTAssertEqual(c.stage, .preflight); XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
+  func testWatchBoundWhileInactiveRequiresForegroundReadAndDeliberateBegin() async throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let id = UUID(); let port = BindingWatchPort()
+    let phone = PhoneWatchLifecycle(port: port, reserve: { id in
+      guard h.binding.orchestrator.reserveWatchAttempt(id: id) else { throw WatchStoreError.definite }
+    }, makeID: { id }, monotonic: { 0 })
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController(), watchFactory: { phone })
+    c.begin(SavedPlanRecord(id: UUID(), createdAt: Date(), modifiedAt: Date(), plan: h.plan.plan)); c.useAppleWatch = true; c.prepareWorkout()
+    c.handlePreflight(.beginWorkout); await Task.yield(); h.binding.setApplicationActivity(.inactive)
+    var b = WatchWireMessage(.bound, summaryID: id.uuidString.lowercased()); b.workoutStart = Date(timeIntervalSince1970: 100)
+    phone.receive(try WatchWire.encode(b))
+    h.binding.setApplicationActivity(.active); c.applicationBecameActive()
+    XCTAssertEqual(c.stage, .preflight); XCTAssertNil(c.liveFailure); XCTAssertTrue(h.link.writes.isEmpty)
+    c.handlePreflight(.beginWorkout)
+    XCTAssertEqual(c.stage, .exercise); XCTAssertEqual(port.launches, 1); XCTAssertTrue(h.link.writes.isEmpty)
+  }
+
   func testNormalSessionCoordinatorCanCancelPreparedWorkoutAndPrepareAgain() {
     let h = Harness()
     h.makeReadyWithFreshStationaryTelemetry()

@@ -1,4 +1,4 @@
-# Watch durability and lifecycle amendment — revision 1
+# Watch durability and lifecycle amendment — revision 2
 
 Authorised by the operator after build 16 startup timeout/disconnection and a stuck
 Watch screen: durable recovery, explicit recording controls and reliable
@@ -76,3 +76,65 @@ This is distinct from the app creating or starting another primary or calling an
 app-driven remirroring loop. The adapter uses Apple's active-session recovery to
 probe the existing primary and observes its ended callback for verified stop.
 Native compilation and fake-port tests cannot establish physical delivery timing.
+
+## Startup and automatic shutdown repair (#203)
+
+On 30 September 2026 the operator reported flickering startup/recovery screens and
+Watch Stop returning to the same action after phone completion. A prior remote
+phone observation showed stale capability evidence and an interchange timeout;
+these observations do not identify the full device failure cause or confirm
+installed build parity. This repair extends contract revision 1.3, retaining wire,
+Health metadata and local journal versions and the original synthetic fixture bytes.
+
+The architecture remains the same: the phone coordinator owns explicit Begin and
+fresh capability validation, the pure interchange lifecycle owns identity and
+bounded retries, the recording adapter sequences native stop proof before builder
+assembly, and the SDK adapter owns session identity/callbacks. Presentation commits
+one coherent Watch status/action snapshot and publishes metrics only when changed.
+No new transport, permission, treadmill command or persistence schema is added.
+
+Startup displays progress while reading capabilities or awaiting the Watch. Repeated
+Begin taps cannot launch additional tasks. A Watch timeout displays an actionable
+failure requiring cancellation of the old attempt. Foreground first restores the
+binding's activity state, then refreshes unavailable preflight capabilities. This
+refresh cannot arm, start or resume execution; a binding received while inactive
+requires a subsequent deliberate Begin. If active arrives before protected data
+becomes available, the later unlock event also triggers validation while active. A deferred launch is cancelled when its
+coordinator attempt has been dismissed or replaced.
+
+Phone end preparation, final manifest and final confirmation may be retransmitted
+at most once per second within the original five-second deadline, always subject
+to the unchanged send budget. Repeats keep the exact sequence/revision/content;
+no retry extends a deadline or manufactures an acknowledgement. Large manifests
+may exhaust the final-message budget and fall back to the existing incomplete
+policy. A foreground app-lifetime timer services pending handoff after the workout
+screen is dismissed; this is not durable background delivery or a new transport.
+The terminal screen waits for the bounded interchange handoff before dismissal.
+The phone's end-sent status remains explicitly separate from the Watch save result.
+
+Normal Watch finalisation waits for the already-attached primary's exact ended
+callback or ended state before builder assembly. Only an unattached adapter uses
+active-session recovery probing. A request to end is not stop proof. Operation
+deadlines and generation fences still reject missing and late completions. Late
+native errors during requested end do not cancel the verifier; lifecycle errors
+during stop, save or after a terminal outcome do not re-enter end or overwrite it.
+A failed proof still times out and exposes explicit recovery, never fake success.
+
+Once phone end preparation arrives, Watch shows Ending workout and removes the
+normal End action, retaining emergency Stop. A successful save/discard removes both
+recording controls and allows the next explicitly launched phone workout without
+Watch recovery steps. Uncertain outcomes still require verified Stop and explicit
+Prepare next workout; archival and permanent suppression remain unchanged.
+
+Regression tests exercise native-end suspension/cancellation, callbacks during and
+after verified stop/save, attached-primary proof without a recovery probe, terminal
+message loss/retry/deadline, stable ending state, duplicate Begin, foreground refresh
+and inactive binding without execution. Full local validation and independent review
+are software evidence only. The paired-device checklist remains required.
+
+Apple's [Watch workout example](https://developer.apple.com/videos/play/wwdc2021/10009/)
+waits for session end before ending collection and finishing the builder.
+[Active workout recovery](https://developer.apple.com/documentation/watchkit/wkapplicationdelegate/handleactiveworkoutrecovery())
+addresses reattachment after a crash; an attached session already supplies the
+identity needed to observe termination. Neither document proves this device report's
+root cause.

@@ -108,7 +108,8 @@ import HealthKit
     func stopPrimaryAndVerify() async throws {
         endPrimary()
         let token = generation
-        try await stopVerifier.verify(probe: { [store] in
+        // Verify the primary we already own; recovery is for an unattached app.
+        try await stopVerifier.verify(current: session, probe: { [store] in
             try await store.recoverActiveWorkoutSession()
         }, isEnded: { ($0 as? HKWorkoutSession)?.state == .ended }, end: { [self] object in
             guard let active = object as? HKWorkoutSession else { return }
@@ -196,6 +197,9 @@ import HealthKit
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
         Task { @MainActor [weak self] in
             guard let self, WatchCallbackIdentity.accepts(workoutSession, current: self.session) else { return }
+            // end() can itself produce a delayed failure. Do not cancel an active
+            // stop verifier or re-enter finalisation; its bounded deadline remains.
+            guard !self.ended else { return }
             self.endPrimary(); await self.failed?()
         }
     }
