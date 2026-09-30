@@ -214,6 +214,33 @@ import XCTest
         }
         XCTAssertEqual(recording.creates, 0); XCTAssertEqual(recording.finishes, 0)
     }
+    func testRecoveryDoesNotAcknowledgeBeforeVerificationOrOverwriteConcurrentState() async throws {
+        try await bound(); try await receive(manifest(1))
+        recording.holdRecovery = true
+        var replies: [WatchWireMessage] = []
+        let recovered = WatchWorkoutLifecycle(store: store, recording: recording, now: { self.start },
+            monotonic: { self.clock.time }, send: { if let m = try? WatchWire.decode($0) { replies.append(m) } })
+        let task = Task { await recovered.recover() }
+        while recording.recoveryWaiter == nil { await Task.yield() }
+        var bind = message(.bind); bind.workoutActivity = "indoorWalking"
+        await recovered.receive(try WatchWire.encode(bind))
+        await recovered.receive(try WatchWire.encode(manifest(2, intervals: [interval(), interval(1)])))
+        await recovered.foreground()
+        XCTAssertTrue(replies.isEmpty, "Recovery has not verified the primary; no bound or ACK may escape")
+        XCTAssertEqual(recovered.journal?.manifest?.revision, 1)
+        recovered.disconnected()
+        recovered.recordingState(paused: true)
+        recording.recoveryWaiter?.resume(returning: (start, true)); recording.recoveryWaiter = nil
+        await task.value
+        XCTAssertTrue(recovered.journal?.incomplete == true, "Recovery must preserve a connection gap observed while suspended")
+        XCTAssertTrue(recovered.journal?.paused == true)
+        await recovered.receive(try WatchWire.encode(bind))
+        await recovered.receive(try WatchWire.encode(manifest(2, intervals: [interval(), interval(1)])))
+        XCTAssertEqual(replies.filter { $0.kind == .bound }.count, 1)
+        XCTAssertEqual(replies.filter { $0.kind == .ack }.last?.revision, 2)
+        XCTAssertEqual(store.value?.manifest?.intervals?.count, 2)
+    }
+
     func testRecoveryWithUnknownDistanceSourceIsQuarantined() async throws {
         var j = WatchWorkoutJournal(activity: "indoorWalking"); j.phase = .recording; j.summaryID = id; j.startedAt = start; j.sourceExclusionEstablished = true
         store.value = j; recording.recoverySource = false; await sut.recover()
@@ -343,6 +370,47 @@ import XCTest
             XCTAssertFalse(WatchCallbackIdentity.accepts(old, current: nil))
         }
     }
+    func testNextAttemptAfterDiscardWaitsForVerifiedNativeEnd() async throws {
+        let ops = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: ops)
+        try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
+        adapter.end(); try adapter.discard(); ops.holdStop = true
+        let before = ops.calls
+        var completed = false
+        let next = Task { defer { completed = true }; try await adapter.prepare(activity: "indoorWalking") }
+        while ops.stopWaiter == nil && !completed { await Task.yield() }
+        XCTAssertEqual(ops.calls, before + ["verifiedStop"])
+        ops.stopWaiter?.resume(); ops.stopWaiter = nil
+        try await next.value
+        XCTAssertEqual(ops.calls.filter { $0 == "create" }.count, 2)
+        XCTAssertEqual(ops.calls.suffix(8), ["verifiedStop", "reset", "authorize", "recover", "create", "configure", "prepare", "mirror"])
+    }
+    func testCancelledNextAttemptCannotResetAfterLateDiscardStopProof() async throws {
+        let ops = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: ops)
+        try await adapter.prepare(activity: "indoorWalking"); adapter.end(); try adapter.discard(); ops.holdStop = true
+        var completed = false
+        let next = Task { defer { completed = true }; try await adapter.prepare(activity: "indoorWalking") }
+        while ops.stopWaiter == nil && !completed { await Task.yield() }
+        adapter.end(); let cancelled = ops.calls
+        ops.stopWaiter?.resume(); ops.stopWaiter = nil
+        do { try await next.value; XCTFail("Cancelled preparation must fail") } catch {}
+        XCTAssertEqual(ops.calls, cancelled)
+        XCTAssertEqual(ops.calls.filter { $0 == "create" }.count, 1)
+    }
+
+    func testFailedDiscardStopProofCannotResetOrCreateNextPrimary() async throws {
+        let ops = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: ops)
+        try await adapter.prepare(activity: "indoorWalking"); adapter.end(); try adapter.discard(); ops.holdStop = true
+        var completed = false
+        let next = Task { defer { completed = true }; try await adapter.prepare(activity: "indoorWalking") }
+        while ops.stopWaiter == nil && !completed { await Task.yield() }
+        let pending = ops.calls
+        ops.stopWaiter?.resume(throwing: WatchStoreError.ambiguous); ops.stopWaiter = nil
+        do { try await next.value; XCTFail("Unverified stop must fail preparation") } catch {}
+        XCTAssertEqual(ops.calls, pending)
+        XCTAssertEqual(ops.calls.filter { $0 == "reset" }.count, 1)
+        XCTAssertEqual(ops.calls.filter { $0 == "create" }.count, 1)
+    }
+
     func testAdapterDelayedAuthorizationCannotCreateAfterCancellation() async throws {
         let backend = TestSessionOperations(); backend.holdAuthorization = true
         let adapter = WatchRecordingAdapter(operations: backend)

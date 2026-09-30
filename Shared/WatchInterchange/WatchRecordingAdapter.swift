@@ -44,9 +44,16 @@ struct WatchRecoveredRecording {
     }
     func prepare(activity: String) async throws {
         guard !created || discarded || finished else { throw WatchStoreError.ambiguous }
-        try operations.resetForNewAttempt()
         generation &+= 1; let token = generation
-        released = false; cancelled = false; created = false; prepared = false; began = false; discarded = false; finished = false; assembled = false
+        cancelled = false
+        // Discard ends the old primary asynchronously. A new attempt must not
+        // reset it until native termination is verified, even if discard returned.
+        if created && discarded {
+            try await operations.stopPrimaryAndVerify()
+            try check(token)
+        }
+        try operations.resetForNewAttempt()
+        released = false; created = false; prepared = false; began = false; discarded = false; finished = false; assembled = false
         let authorized: Bool
         do { authorized = try await operations.authorize() } catch { try check(token); throw WatchStoreError.definite }
         try check(token)

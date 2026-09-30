@@ -117,7 +117,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
       if self.watch?.phase == .unavailable {
         self.isStartingWatch = false
         if self.stage == .preflight, let plan = self.selectedPlan?.plan {
-          self.liveFailure = .init(plan: plan, reason: "Apple Watch could not complete this attempt. End any recording on Watch, then Cancel here before preparing a new workout.", issues: [], readComplete: true)
+          self.liveFailure = .init(plan: plan, reason: "Check Apple Watch. If the previous result is uncertain, use Stop recording, then Prepare next workout. Cancel here before preparing again.", issues: [], readComplete: true)
         }
       }
     }
@@ -178,7 +178,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
       }
       if useAppleWatch, watch?.phase == .unavailable {
         isStartingWatch = false
-        liveFailure = .init(plan: record.plan, reason: "Apple Watch could not complete this attempt. End any recording on Watch, then Cancel here before preparing a new workout.", issues: [], readComplete: true)
+        liveFailure = .init(plan: record.plan, reason: "Check Apple Watch. If the previous result is uncertain, use Stop recording, then Prepare next workout. Cancel here before preparing again.", issues: [], readComplete: true)
       }
       if liveFailure != nil { isStartingWatch = false }
       if liveFailure == nil, let action {
