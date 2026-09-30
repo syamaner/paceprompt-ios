@@ -191,6 +191,13 @@ simulator tests or release availability. Keep all real diagnostics private.
 
 ## Startup/shutdown acceptance (#203, unperformed on repaired devices)
 
+Internal TestFlight **1.0.1 (18)** contains this repair in both apps. The
+[release receipt](testflight/README.md#watch-startupshutdown-internal-release-101-18-issue-205)
+records source, protected delivery and Apple API availability. Update both devices
+before this procedure; release availability does not establish installation or
+acceptance. Build 17 does not contain #203.
+
+
 Record both installed build numbers before this check. The operator's earlier report
 of flickering and Stop returning after confirmation is a failure observation; it
 does not establish complete device cause or repair acceptance.
