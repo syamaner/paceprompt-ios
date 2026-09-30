@@ -582,3 +582,52 @@ private-evidence cases), and 24 accounting tests. No application test was skippe
 All 418 frozen non-Markdown inputs, including the skill symlink, remained identical.
 Independent pre-commit diff/documentation review found no actionable issues;
 exact-head review and protected hosted gates remain required before release.
+
+
+### Watch startup/shutdown internal release: 1.0.1 (18), issue #205
+
+Candidate [PR #206](https://github.com/syamaner/paceprompt-ios/pull/206) merged
+through normal protected main as `acc547420aa6b3703951ca8195cd03c374849927`,
+with exact-head attestation for independently approved
+`afb8364b718cfec9fab5c098765d93868a1dcf64` and equal Git trees. Required
+[PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36777295499) and
+[exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36777420767)
+passed. The complete local gate is recorded above.
+
+Immutable lightweight tag `testflight/1.0.1-b18` identifies that merge.
+[Release run 36777559090](https://github.com/syamaner/paceprompt-ios/actions/runs/36777559090)
+is attempt 1. The existing administrator exception admitted tag creation; main
+protection and immutable-tag update/delete rules were not bypassed or changed.
+Normal required environment review approved only this internal release after
+source verification and unsigned archive success. The reviewed workflow and
+trusted tools pin `796819b21382ac7dd038fb989e79e1352aaf06ca` remain unchanged.
+
+Hosted preflight confirmed the fresh build and existing sole-tester group. Both
+phone and Watch passed profile/certificate checks, inside-out signing, internal-only
+export, whole-IPA/per-architecture signature, entitlement and privacy verification.
+Exactly one upload-success marker was recorded: `UPLOAD SUCCEEDED with no errors`.
+Trusted Apple API checks confirmed processing `VALID`, audience `INTERNAL_ONLY`
+and existing-group build-list readback. No tester was added or external/public
+release submitted. No separate Apple browser visual check was performed; tester
+visibility, installation/launch and build-18 paired-device observations remain
+unverified.
+
+Unsigned archive SHA-256:
+`5c4d8c60cfcfda8955faafd904b3e13f8298bdc560a7a1f75e0218ca58e31f03`.
+The retained transfer matches the hosted digest and passes source/tag/run/attempt
+identity, bounded extraction and both unsigned-device bundle checks. The archive
+and both phone/Watch dSYMs are retained privately at
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-18/unsigned-release.zip`
+(file mode 600, directory 700). Temporary extraction is
+`/private/tmp/pp-build18-retained/PromptPace.xcarchive`. Optional symbol submission
+remains disabled; no signed IPA or signing asset was retained as an Actions artifact.
+
+Build 18 includes #203; build 17 does not. Update both phone and Watch before the
+[startup/shutdown acceptance procedure](../watch-health-interchange-runbook.md#startupshutdown-acceptance-203-unperformed-on-repaired-devices).
+Check a single Begin action, background/foreground recovery, automatic Watch
+completion after phone end, and one saved Health workout or explicit zero-interval
+discard. Emergency Stop recording affects recording only; stop treadmill motion
+at its console. Contract revision 1.3, wire/metadata v1, journal v2 and shared
+fixture bytes are unchanged. #115 signed paired-device acceptance, #116
+interoperability and WeeklyHealthReport #80 reader/schema-v4/privacy work remain
+open. No hardware was operated during this release.

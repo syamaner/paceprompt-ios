@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 30 Sep 2026 | `PP-20260930-03` | Issue #205 successful internal build 18 release receipt | `gpt-6-astra` | 3,860,524 (3,822,208; 0) | 10,660 | 3,871,184 | Unmeasured | Exact 45-request root release/receipt phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-02` | Issue #205 internal build 18 candidate | `gpt-6-astra` | 5,435,635 (5,353,344; 0) | 10,490 | 5,446,125 | Unmeasured | Exact 69-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-01` | Issue #203 Watch startup and automatic shutdown repair | `gpt-6-astra` | 15,985,988 (15,843,072; 0) | 39,355 | 16,025,343 | Unmeasured | Exact 108-request root implementation phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260929-02` | Issue #200 successful internal build 17 release receipt | `gpt-6-astra` | 5,481,197 (5,458,048; 0) | 12,442 | 5,493,639 | Unmeasured | Exact 32-request root release/receipt phase; reviewer and final insertion/delivery excluded |
@@ -1508,3 +1509,36 @@ All 418 frozen non-Markdown entries matched. Independent pre-commit executable
 and documentation review found no actionable issues. No physical acceptance is claimed.
 
 Final snapshot: event 1681 at `2026-09-30T21:05:28.172Z`; input 215,451,391, cached input 212,082,944, cache-write input 0, output 549,625 (reasoning subset 146,620), total 216,001,016. Exact delta: 5,435,635 input, 5,353,344 cached, 0 cache-write, 10,490 output (reasoning subset 1,522), 5,446,125 total across 69 reconciled requests; largest input 216,392. No historical or in-boundary counter resets; no exact replay events; one unchanged cumulative snapshot (event 1619) excluded from usage. Threshold crossings remain Unmeasured.
+
+
+### PP-20260930-03 — internal build 18 release receipt (#205)
+
+This documentation phase covers delivery of candidate PR #206 through normal
+protected merge, exact-main CI, immutable tag, required environment approval,
+the single internal release attempt and its verified receipt. No application,
+test, build, release-tool, workflow, signing or privacy input is changed here.
+The candidate's complete local gate remains valid across this documentation-only
+commit when the 418 frozen input entries still match. Independent exact-head
+review, documentation/whitespace checks and required CI precede receipt merge.
+
+Measurement includes the selected root Desktop session only, model `gpt-6-astra`,
+from `/private/tmp/pp-build18-receipt-baseline.json`, event 1682 at
+`2026-09-30T21:05:58.555Z`: input 215,521,679; cached input 212,152,704;
+cache-write input 0; output 550,387 (reasoning subset 146,641); total 216,072,066.
+Independent reviewer usage, final numeric insertion and later commit/push/tracker
+operations are excluded. API-equivalent cost and long-context threshold remain
+Unmeasured because verified official exact-model rates are unavailable; no
+substitute rate or ChatGPT subscription bill is inferred.
+
+Release run 36777559090 attempt 1 succeeded from
+`acc547420aa6b3703951ca8195cd03c374849927`: both signed apps verified, one accepted
+upload, Apple API `VALID` / `INTERNAL_ONLY`, and unchanged sole-tester-group
+build-list readback. Source and unsigned archive passed before normal protected
+environment approval. The existing admin-only tag-creation exception admitted
+the fresh tag; main and tag update/delete protections were unchanged. Verified
+unsigned archive/dSYMs are retained privately with restricted permissions. No
+browser visual readback, tester installation, paired-device acceptance or hardware
+operation is claimed. This receipt adds the build-18 pointer to the existing
+acceptance procedure; #115/#116 and WeeklyHealthReport #80 remain open.
+
+Final snapshot: event 1728 at `2026-09-30T21:22:29.722Z`; input 219,382,203, cached input 215,974,912, cache-write input 0, output 561,047 (reasoning subset 147,605), total 219,943,250. Exact phase: 3,860,524 input, 3,822,208 cached, 0 cache-write, 10,660 output (reasoning subset 964), 3,871,184 total across 45 reconciled requests; largest input 100,425. Historical resets 0; in-boundary resets 0; exact replay events 1; repeated cumulative snapshots 0. Threshold crossings remain Unmeasured. Independent working-diff review found no actionable findings. Local document links, whitespace, single-upload marker and all 418 frozen inputs passed verification.
