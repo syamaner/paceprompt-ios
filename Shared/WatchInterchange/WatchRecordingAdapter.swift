@@ -102,6 +102,9 @@ struct WatchRecoveredRecording {
     func assemble(_ value: WatchAssembly) async throws {
         guard created, began, cancelled, !discarded, !finished, !assembled else { throw WatchStoreError.ambiguous }
         let token = generation
+        // end() is a request. Wait for native termination before touching the builder.
+        try await operations.stopPrimaryAndVerify()
+        guard token == generation else { throw WatchStoreError.ambiguous }
         try await WatchBuilderAssemblyWriter(builder: operations, validate: { [weak self] in
             guard let self, self.generation == token else { throw WatchStoreError.ambiguous }
         }).assemble(value)
@@ -144,10 +147,11 @@ enum WatchCallbackIdentity {
         generation &+= 1; expected = nil
         waiter?.resume(throwing: WatchStoreError.ambiguous); waiter = nil
     }
-    func verify(probe: () async throws -> AnyObject?, isEnded: (AnyObject) -> Bool,
+    func verify(current: AnyObject? = nil, probe: () async throws -> AnyObject?, isEnded: (AnyObject) -> Bool,
                 end: (AnyObject) -> Void) async throws {
         cancel(); let token = generation
-        let active = try await probe()
+        let active: AnyObject?
+        if let current { active = current } else { active = try await probe() }
         guard token == generation else { throw WatchStoreError.ambiguous }
         guard let active else { return }
         if isEnded(active) { return }

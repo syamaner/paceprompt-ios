@@ -115,8 +115,8 @@ struct RootTabView: View {
         .onChange(of: capabilities) { _, value in importer.updateCapabilities(value) }
         .onChange(of: scenePhase) { _, phase in
             importer.setForeground(phase == .active)
-            if phase == .active { workoutSession.applicationBecameActive() }
             treadmill.setApplicationActivity(captureActivity(for: phase))
+            if phase == .active { workoutSession.applicationBecameActive() }
             if phase != .active { credential.protectedDataLost() }
         }
         .onAppear {
@@ -136,6 +136,7 @@ struct RootTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataDidBecomeAvailableNotification)) { _ in
             importer.setProtectedDataAvailable(true)
             treadmill.setProtectedDataAvailable(true)
+            if scenePhase == .active { workoutSession.applicationBecameActive() }
         }
     }
 

@@ -4,6 +4,7 @@ import HealthKit
 @MainActor final class PhoneWatchSessionAdapter: NSObject, PhoneWatchPort, HKWorkoutSessionDelegate {
     private let healthStore = HKHealthStore()
     private var mirror: HKWorkoutSession?
+    private var timer: Timer?
     weak var lifecycle: PhoneWatchLifecycle? {
         didSet {
             if oldValue !== lifecycle { mirror?.delegate = nil; mirror = nil }
@@ -11,6 +12,11 @@ import HealthKit
     }
     override init() {
         super.init()
+        // Finish handoff retries must survive dismissal of the workout screen.
+        timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.lifecycle?.tick() }
+        }
+        if let timer { RunLoop.main.add(timer, forMode: .common) }
         healthStore.workoutSessionMirroringStartHandler = { [weak self] session in
             Task { @MainActor in
                 guard let self, let lifecycle = self.lifecycle else { return }

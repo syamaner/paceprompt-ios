@@ -1,6 +1,6 @@
 # Watch companion operation and evidence (#115)
 
-Authority: [contract v1, revision 1.2](../design/watch-primary-health-interchange-contract.md), [architecture gate](../design/watch-companion-implementation-gate.md), and the operator's zero-interval discard decision. Minimum versions are iOS 17 and watchOS 10. This document describes the implemented path; software checks do not establish signed-device acceptance.
+Authority: [contract v1, revision 1.3](../design/watch-primary-health-interchange-contract.md), [architecture gate](../design/watch-companion-implementation-gate.md), and the operator's zero-interval discard decision. Minimum versions are iOS 17 and watchOS 10. This document describes the implemented path; software checks do not establish signed-device acceptance.
 
 ## Start and ownership
 
@@ -115,3 +115,31 @@ readback. Update both apps before following the [durability procedure](watch-hea
 Tester installation, real background delivery/recovery and Health result readback
 remain unobserved for build 17. The [release receipt](testflight/README.md#watch-durability-internal-release-101-17-issue-200)
 records source, review, CI and archive evidence. No hardware was operated.
+
+## Startup and shutdown repair (#203)
+
+Normal use should need only the phone workflow: Begin, exercise, then end on phone
+and stop belt motion at the console. Watch displays Connecting, Recording, Ending,
+Saving, then its actual saved/discarded result. No separate Watch confirmation is
+needed for a successful handoff. Stop recording remains an emergency recording-only
+control; uncertain results still need verified stop and explicit retirement.
+
+The phone now keeps a progress screen during startup checks, prevents duplicate
+Begin work and rereads stale preflight evidence after foreground restoration without
+starting execution. A timeout gives cancellation/recovery guidance. End messages
+retry unchanged within their original five-second deadline/budget. The phone waits
+for this handoff before enabling terminal dismissal and labels end-sent separately
+from save success. Native Watch end proof precedes builder assembly. Late native
+failure callbacks cannot cancel an in-progress Stop verification or overwrite a
+completed result. A native stop timeout remains visibly unresolved.
+
+The operator reported fiddly startup and a Stop confirmation loop after earlier
+release availability. This is device feedback, not successful acceptance or proof
+that all devices had the same installed build. The repair's tests, review and merge
+are separate from a future signed release and the paired-device procedure below.
+
+Repair validation: the final #203 complete local gate passed 490 production unit,
+72 UI and 16 evaluation tests, unsigned Release including Watch, static analysis,
+coverage and offline checks. Independent working-diff review cleared the repaired
+edge cases before executable freeze. The PR records exact-head review and required
+CI. These results do not establish repaired-device acceptance or release availability.

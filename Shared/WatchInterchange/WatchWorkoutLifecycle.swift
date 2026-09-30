@@ -73,7 +73,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
     private var pauseInFlight = false
     private var resumeInFlight = false
     private var desiredRecordingState: String?
-    var canEnd: Bool { !stopping && recordingAttached && [.unbound, .recording].contains(journal?.phase) }
+    var canEnd: Bool { !stopping && recordingAttached && journal?.prepareSequence == nil && [.unbound, .recording].contains(journal?.phase) }
     var canStop: Bool { !stopping && !stopVerified && (recoveryRequired || journal.map { ![.saved, .discarded, .retired].contains($0.phase) } == true) }
     var canPrepareNext: Bool { !stopping && stopVerified && journal != nil }
     private var pendingBind: WatchWireMessage?
@@ -235,6 +235,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
         guard seq > value.lastSequence else { return }
         value.lastSequence = seq; value.prepareSequence = seq
         endDeadline = monotonic() + 5
+        display = "Ending workout…"
         desiredRecordingState = nil
         guard persist(value) else { recording.end(); return }
         if pauseInFlight || resumeInFlight { return } // Complete the pending transition before establishing the end boundary.
@@ -294,9 +295,9 @@ enum WatchStoreError: Error { case definite, ambiguous }
         var m = WatchWireMessage(.endPrepared, summaryID: id); m.sequence = seq; m.workoutEnd = end; transmit(m)
     }
     func recordingState(paused: Bool) {
-        guard var value = journal, value.phase == .recording else { return }
+        guard !stopping, !stopVerified, var value = journal, value.phase == .recording else { return }
         value.paused = paused
-        display = paused ? "Recording paused on Apple Watch." : "Recording on Apple Watch"
+        if value.prepareSequence == nil { display = paused ? "Recording paused on Apple Watch." : "Recording on Apple Watch" }
         _ = persist(value)
     }
     func disconnected() {
@@ -306,7 +307,13 @@ enum WatchStoreError: Error { case definite, ambiguous }
         display = phase == .recording ? "iPhone disconnected. Recording continues until you end it." : "iPhone disconnected. Recording start is unavailable or uncertain."
         changed?()
     }
-    func failed() async { latchIncomplete(); await endWorkout() }
+    func failed() async {
+        // A late native failure must not cancel stop proof, overwrite a receipt,
+        // or re-enter an already-running save.
+        guard !stopping, !stopVerified, let phase = journal?.phase,
+              [.creating, .unbound, .starting, .recording].contains(phase) else { return }
+        latchIncomplete(); await endWorkout()
+    }
     func foreground() async {
         await recover()
         await tick()

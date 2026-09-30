@@ -41,18 +41,27 @@ final class WorkoutSessionCoordinator: ObservableObject {
   private var watch: PhoneWatchLifecycle?
   var watchAvailable: Bool { watchFactory != nil }
 
-  private enum PendingRead { case preparation, begin }
+  private enum PendingRead { case preparation, begin, refresh }
+  @Published private(set) var isStartingWatch = false
+  var preflightProgress: String? {
+    if isStartingWatch || (useAppleWatch && watch?.phase == .binding) { return "Connecting to Apple Watch…" }
+    if pendingRead != nil { return "Checking treadmill…" }
+    return nil
+  }
   private var pendingRead: PendingRead?
 
   let binding: ProductionWorkoutExecutionBinding
   private let displayWakeController: any WorkoutDisplayWakeControlling
+  private let clock: any WorkoutOrchestrationClock
   private var displayWakeIsEnabled: Bool?
 
   init(
     binding: ProductionWorkoutExecutionBinding,
     displayWakeController: any WorkoutDisplayWakeControlling,
-    watchFactory: (() -> PhoneWatchLifecycle)? = nil
+    watchFactory: (() -> PhoneWatchLifecycle)? = nil,
+    clock: any WorkoutOrchestrationClock = SystemWorkoutOrchestrationClock()
   ) {
+    self.clock = clock
     self.watchFactory = watchFactory
     self.binding = binding
     self.displayWakeController = displayWakeController
@@ -69,7 +78,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
 
   var isPresented: Bool { stage != .inactive }
 
-  var canLeaveExercise: Bool { exercisePresentation.allowsDismissal }
+  var canLeaveExercise: Bool { exercisePresentation.allowsDismissal && watch?.isEnding != true }
 
   var preflightPresentation: WorkoutPreflightPresentation? {
     guard liveFailure == nil, pendingRead == nil, let record = selectedPlan,
@@ -85,7 +94,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
         profile: profile,
         executionState: binding.orchestrator.state
       ),
-      at: SystemWorkoutOrchestrationClock().read().monotonic,
+      at: clock.read().monotonic,
       locale: .autoupdatingCurrent
     )
   }
@@ -93,7 +102,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
   var exercisePresentation: WorkoutExercisePresentation {
     .init(
       context: .init(orchestrator: binding.orchestrator),
-      at: SystemWorkoutOrchestrationClock().read().monotonic,
+      at: clock.read().monotonic,
       locale: .autoupdatingCurrent
     )
   }
@@ -102,11 +111,25 @@ final class WorkoutSessionCoordinator: ObservableObject {
     guard stage == .inactive else { return }
     selectedPlan = record
     watch = watchFactory?()
-    watch?.changed = { [weak self] in self?.watchStatus = self?.watch?.status }
+    watch?.changed = { [weak self] in
+      guard let self else { return }
+      self.watchStatus = self.watch?.status
+      if self.watch?.phase == .unavailable {
+        self.isStartingWatch = false
+        if self.stage == .preflight, let plan = self.selectedPlan?.plan {
+          self.liveFailure = .init(plan: plan, reason: "Apple Watch could not complete this attempt. End any recording on Watch, then Cancel here before preparing a new workout.", issues: [], readComplete: true)
+        }
+      }
+    }
     watch?.bound = { [weak self] _ in
       guard let self, self.stage == .preflight else { return }
+      guard self.binding.applicationActivity == .active, self.binding.protectedDataAvailable else {
+        self.isStartingWatch = false
+        return
+      }
       self.requestCapabilityRead(.begin)
     }
+    isStartingWatch = false
     watchStatus = nil
     notice = nil
     stage = .preparation
@@ -153,6 +176,11 @@ final class WorkoutSessionCoordinator: ObservableObject {
       if liveFailure == nil, action == nil, binding.orchestrator.state.armedWorkout == nil {
         liveFailure = .init(plan: record.plan, reason: "A new deliberate preparation is required. Choose another treadmill to return to setup.", issues: [], readComplete: true)
       }
+      if useAppleWatch, watch?.phase == .unavailable {
+        isStartingWatch = false
+        liveFailure = .init(plan: record.plan, reason: "Apple Watch could not complete this attempt. End any recording on Watch, then Cancel here before preparing a new workout.", issues: [], readComplete: true)
+      }
+      if liveFailure != nil { isStartingWatch = false }
       if liveFailure == nil, let action {
         switch action {
         case .preparation:
@@ -162,17 +190,27 @@ final class WorkoutSessionCoordinator: ObservableObject {
               liveFailure = .init(plan: record.plan, reason: "The exact plan fails current capability range or increment validation.", issues: [], readComplete: true)
               revision &+= 1; return
           }
+        case .refresh:
+          break // Foreground validation never starts or re-arms execution.
         case .begin:
           if useAppleWatch, let watch, watch.phase != .bound {
-            if watch.phase == .idle { Task { await watch.start(activity: record.plan.activity.rawValue) } }
+            if watch.phase == .idle {
+              isStartingWatch = true
+              Task { [weak self, weak watch] in
+                guard let self, let watch, self.watch === watch, self.stage == .preflight, self.isStartingWatch else { return }
+                await watch.start(activity: record.plan.activity.rawValue)
+              }
+            }
             revision &+= 1
             return
           }
           guard preflightPresentation?.canBeginWorkout == true,
             let result = binding.beginWorkout(), result.reducerDisposition == .accepted else {
+              isStartingWatch = false
               liveFailure = .init(plan: record.plan, reason: "Current execution readiness changed. Begin a new deliberate preparation.", issues: [], readComplete: true)
               revision &+= 1; return
           }
+          isStartingWatch = false
           stage = .exercise
         }
       }
@@ -183,7 +221,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
   }
 
   func handlePreflight(_ intent: WorkoutPreflightIntent) {
-    guard stage == .preflight, intent == .beginWorkout,
+    guard stage == .preflight, !isStartingWatch, watch?.phase != .binding, intent == .beginWorkout,
       preflightPresentation?.canBeginWorkout == true else { return }
     requestCapabilityRead(.begin)
   }
@@ -227,6 +265,10 @@ final class WorkoutSessionCoordinator: ObservableObject {
 
   func applicationBecameActive() {
     watch?.foreground()
+    if stage == .preflight, pendingRead == nil, binding.applicationActivity == .active,
+       binding.protectedDataAvailable, watch?.phase != .unavailable {
+      if case .unavailable = binding.preflightRead { requestCapabilityRead(.refresh) }
+    }
     projectWatchExecution()
   }
 
@@ -241,7 +283,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
   private func projectWatchExecution() {
     guard useAppleWatch, let watch, [.bound, .reconnecting].contains(watch.phase) else { return }
     let orchestrator = binding.orchestrator
-    let reading = SystemWorkoutOrchestrationClock().read()
+    let reading = clock.read()
     if case let .fresh(sample) = orchestrator.state.telemetry {
       let observedAt = reading.wallClock.addingTimeInterval(sample.receivedAt.seconds - reading.monotonic.seconds)
       switch orchestrator.state.execution {
@@ -262,6 +304,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
 
   private func reset() {
     stage = .inactive
+    isStartingWatch = false
     pendingRead = nil
     liveFailure = nil
     selectedPlan = nil
@@ -299,7 +342,13 @@ struct WorkoutSessionHost: View {
       case .preparation:
         preparation
       case .preflight:
-        if let failure = coordinator.liveFailure {
+        if let progress = coordinator.preflightProgress {
+          VStack(spacing: 16) {
+            ProgressView(progress)
+            Text("Keep both devices nearby. The workout will wait for current readiness.").font(.caption)
+            Button("Cancel") { coordinator.cancelBeforeExercise() }
+          }.padding().accessibilityIdentifier("workout.preflight.progress")
+        } else if let failure = coordinator.liveFailure {
           LivePreflightFailureView(failure: failure, treadmillName: treadmill.connectionState.title, cancel: coordinator.cancelBeforeExercise, edit: {
             let record = coordinator.selectedPlan
             coordinator.cancelBeforeExercise()

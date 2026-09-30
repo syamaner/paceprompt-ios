@@ -4,13 +4,16 @@ import HealthKit
 
 @MainActor final class WatchWorkoutModel: ObservableObject {
     static let shared = WatchWorkoutModel()
-    @Published var status = "Start a Watch-assisted workout on iPhone."
+    struct Presentation: Equatable {
+        var status = "Start a Watch-assisted workout on iPhone."
+        var canEnd = false
+        var canStop = false
+        var canPrepareNext = false
+    }
+    @Published var presentation = Presentation()
     @Published var heartRate: Double?
     @Published var activeEnergy: Double?
     @Published var elapsed: TimeInterval = 0
-    @Published var canEnd = false
-    @Published var canStop = false
-    @Published var canPrepareNext = false
     let adapter = WatchHealthKitAdapter()
     lazy var recording = WatchRecordingAdapter(operations: adapter)
     lazy var lifecycle = WatchWorkoutLifecycle(store: ProtectedWatchJournal(), recording: recording,
@@ -21,10 +24,17 @@ import HealthKit
         adapter.paused = { [weak self] in self?.lifecycle.recordingState(paused: $0) }
         adapter.disconnected = { [weak self] in self?.lifecycle.disconnected() }
         adapter.failed = { [weak self] in await self?.lifecycle.failed() }
-        adapter.metrics = { [weak self] heart, energy, time in self?.heartRate = heart; self?.activeEnergy = energy; self?.elapsed = time }
+        adapter.metrics = { [weak self] heart, energy, time in
+            guard let self else { return }
+            if self.heartRate != heart { self.heartRate = heart }
+            if self.activeEnergy != energy { self.activeEnergy = energy }
+            if self.elapsed != time { self.elapsed = time }
+        }
         lifecycle.changed = { [weak self] in
-            guard let self else { return }; self.status = self.lifecycle.display; self.canEnd = self.lifecycle.canEnd
-            self.canStop = self.lifecycle.canStop; self.canPrepareNext = self.lifecycle.canPrepareNext
+            guard let self else { return }
+            let next = Presentation(status: self.lifecycle.display, canEnd: self.lifecycle.canEnd,
+                                    canStop: self.lifecycle.canStop, canPrepareNext: self.lifecycle.canPrepareNext)
+            if self.presentation != next { self.presentation = next }
         }
         timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.lifecycle.tick(); self?.adapter.publishMetrics() }
@@ -58,20 +68,20 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
             ScrollView {
                 VStack(spacing: 12) {
                     Text("PacePrompt").font(.headline)
-                    Text(model.status).accessibilityIdentifier("watch-recording-state")
-                    if model.canEnd {
+                    Text(model.presentation.status).accessibilityIdentifier("watch-recording-state")
+                    if model.presentation.canEnd {
                         Button("End recording & save") { Task { await model.lifecycle.endWorkout() } }
                             .accessibilityIdentifier("watch-end-recording")
                     }
-                    if model.canStop {
+                    if model.presentation.canStop {
                         Button("Stop recording", role: .destructive) { confirmStop = true }
                             .accessibilityIdentifier("watch-stop-recording")
                     }
-                    if model.canPrepareNext {
+                    if model.presentation.canPrepareNext {
                         Button("Prepare next workout") { confirmNext = true }
                             .accessibilityIdentifier("watch-prepare-next")
                     }
-                    if model.canEnd || model.canStop || model.canPrepareNext {
+                    if model.presentation.canEnd || model.presentation.canStop || model.presentation.canPrepareNext {
                         Text("Recording controls only. Stop the treadmill at its console.").font(.caption2)
                     }
                     Text(Duration.seconds(model.elapsed).formatted(.time(pattern: .minuteSecond)))

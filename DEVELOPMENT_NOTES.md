@@ -60,6 +60,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 30 Sep 2026 | `PP-20260930-01` | Issue #203 Watch startup and automatic shutdown repair | `gpt-6-astra` | 15,985,988 (15,843,072; 0) | 39,355 | 16,025,343 | Unmeasured | Exact 108-request root implementation phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260929-02` | Issue #200 successful internal build 17 release receipt | `gpt-6-astra` | 5,481,197 (5,458,048; 0) | 12,442 | 5,493,639 | Unmeasured | Exact 32-request root release/receipt phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260929-01` | Issue #200 internal build 17 candidate | `gpt-6-astra` | 11,355,206 (11,283,584; 0) | 13,925 | 11,369,131 | Unmeasured | Exact 76-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 29 Sep 2026 | `PP-20260928-10` | Issue #198 durable Watch controls and app lifecycle recovery | `gpt-6-astra` | 10,939,119 (10,766,080; 0) | 44,514 | 10,983,633 | Unmeasured | Exact 99-request root implementation phase; reviewer and final insertion/delivery excluded |
@@ -1406,3 +1407,65 @@ on the receipt PR.
 Measurement scope: root Desktop session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`, baseline `/private/tmp/pp-build17-receipt-baseline.json`, event 1424 at `2026-09-29T08:20:46.932Z`. Baseline counters: input 181,623,177; cached input 178,840,704; cache-write input 0; output 471,750 (reasoning subset 123,743); total 182,094,927. The phase covers candidate delivery, protected release, archive retention, tracker reconciliation and receipt preparation/review coordination. Independent reviewer usage, final numeric insertion, commit and subsequent receipt delivery are excluded. API-equivalent estimate and long-context threshold remain Unmeasured because verified official rates/threshold for this exact model are unavailable; no other model's rates are substituted and this is not a ChatGPT subscription bill.
 
 Final snapshot: event 1456 at `2026-09-29T08:35:16.961Z`; input 187,104,374, cached input 184,298,752, cache-write input 0, output 484,192, total 187,588,566. Report `/private/tmp/pp-build17-receipt-accounting.json`: 32 measured requests; largest input 178,959. Reasoning output 2,974 is a subset of output, not added again. Historical/in-boundary resets: 0/0; excluded exact replay events: 0; repeated cumulative snapshots: 0. Threshold crossings remain unmeasured. Final numeric insertion and subsequent receipt delivery are excluded.
+
+
+### PP-20260930-01 — Watch startup and automatic shutdown repair (#203)
+
+The operator reported fiddly/flickering startup and a Watch Stop confirmation loop
+after phone workout completion. Remote phone observation and user-reported Watch
+status are retained as narrow failure evidence; installed build parity and the full
+physical cause were not established. No real device, treadmill or Health data was
+operated or modified by this implementation phase.
+
+The phone coordinator presents stable progress, rejects duplicate Begin tasks,
+refreshes unavailable capabilities after foreground restoration without starting
+execution, and exposes a terminal startup failure. The Watch verifies native end
+before assembly, uses the attached primary for stop proof, and fences late native
+failures during stop/save and after terminal outcomes. Identical terminal messages
+retry within the original deadline and bandwidth budget. Watch status/action state
+publishes atomically, and normal ending removes its ordinary End action. Recovery
+of uncertain outcomes still needs verified stop and explicit archival/retirement.
+
+Independent working-diff review identified two P2 edge cases (stuck progress after
+readiness loss and confirmation retry after integrity failure); both were repaired
+and covered by deterministic regressions. A clock seam makes readiness freshness
+reproducible. The replacement focused suite passed 120 tests, followed by one paired
+lifecycle test covering loss of each terminal leg with one complete save and no Watch
+tap. The active-before-unlock regression also passed; a later protected-data
+notification refreshes preflight without beginning execution. The first full gate
+was deliberately stopped during offline checks after this executable correction;
+only the replacement final gate is eligible for acceptance. Its 417 non-Markdown
+tracked inputs are frozen in `/private/tmp/pp-watch-transparent-inputs.json`.
+The complete gate and exact-head review are recorded on the repair PR.
+
+Contract revision 1.3 and durability amendment revision 2 update both runbooks.
+Wire/Health metadata v1, local journal v2, original interchange fixtures, Watch-only
+writer, phone-save suppression, zero-prefix discard and single-source distance are
+unchanged. No signing configuration, release number, upload, treadmill command,
+automatic reconnect or dependent reader implementation changed. #115 and #116
+remain paired-device/interoperability acceptance; WeeklyHealthReport #80 remains
+reader implementation. A future signed candidate and device checks are still needed.
+
+Measurement scope: root Desktop session `01a0e504-8937-7c80-9128-08ad4b305f87`,
+exact model `gpt-6-astra`; baseline `/private/tmp/pp-watch-transparent-baseline.json`,
+event 1482 at `2026-09-30T19:20:28.425Z`. Baseline input 191,140,872; cached input
+188,019,968; cache-write input 0; output 492,509 (reasoning subset 128,696); total
+191,633,381. Root implementation, documentation, review coordination and local
+validation are included. Independent reviewer usage, final numeric ledger insertion,
+commit/push and subsequent delivery are excluded. API-equivalent estimate and
+long-context threshold remain Unmeasured because verified official rates/threshold
+for this exact model are unavailable; no other model's rates are substituted and
+this is not a ChatGPT subscription bill.
+
+Final replacement gate: `scripts/validate_local.sh` exited 0 with evidence at
+`/private/tmp/pp-watch-transparent-validation-final` and log
+`/private/tmp/pp-watch-transparent-validation-final.log`. Xcode 27.0 (27A266a), iOS
+26.5 simulator: 490 production unit, 72 UI and 16 evaluation tests passed without
+application test skips. Unsigned Release including Watch, static analysis, coverage,
+57 script tests, 41 corpus tests, 13 summary tests and 24 accounting-helper tests
+passed. Offline HostEval ran 247 tests with 36 expected skips for absent ignored
+private evidence. All 417 frozen non-Markdown inputs still match; current main is
+`b119113a5387bd57cd04f0412bdf26f8fc02f0d7`. These are software/simulator results,
+not installed-device, HealthKit readback or physical acceptance.
+
+Final snapshot: event 1595 at `2026-09-30T20:08:32.522Z`; input 207,126,860, cached input 203,863,040, cache-write input 0, output 531,864, total 207,658,724. Exact report `/private/tmp/pp-watch-transparent-accounting.json`: 108 measured requests, largest input 174,316; reasoning output 13,960 is a subset of output and is not added twice. Historical/in-boundary resets: 0/0; excluded exact replay events: 5; repeated cumulative snapshots: 0. Threshold crossings remain unmeasured. Final numeric insertion and subsequent delivery are excluded.
