@@ -73,6 +73,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 | 1 Oct 2026 | `PP-20261001-01` | Issue #212 Watch recovery ordering and simulator investigation | `gpt-6-astra` | 21,364,951 (21,144,064; 0) | 52,921 | 21,417,872 | USD 26.00 (standard-tier API-equivalent) | Exact 125-request root repair phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-02` | Preserve Watch acceptance runbook anchor | `gpt-6-astra` | 135,788 (110,592; 0) | 1,009 | 136,797 | USD 0.41 (standard-tier API-equivalent) | Exact 3-request root documentation phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-03` | Internal TestFlight 1.0.1 (19) candidate | `gpt-6-astra` | 13,921,413 (13,782,272; 0) | 11,247 | 13,932,660 | USD 15.74 (standard-tier API-equivalent) | Exact 77-request root candidate phase; reviewer and final numeric insertion/delivery excluded |
+| 1 Oct 2026 | `PP-20261001-04` | Internal TestFlight build 19 release receipt | `gpt-6-astra` | 1,045,316 (1,038,464; 0) | 3,362 | 1,048,678 | USD 1.28 (standard-tier API-equivalent) | Exact 5-request root receipt phase; reviewer and final numeric insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-03` | Issue #205 successful internal build 18 release receipt | `gpt-6-astra` | 3,860,524 (3,822,208; 0) | 10,660 | 3,871,184 | Unmeasured | Exact 45-request root release/receipt phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-02` | Issue #205 internal build 18 candidate | `gpt-6-astra` | 5,435,635 (5,353,344; 0) | 10,490 | 5,446,125 | Unmeasured | Exact 69-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-01` | Issue #203 Watch startup and automatic shutdown repair | `gpt-6-astra` | 15,985,988 (15,843,072; 0) | 39,355 | 16,025,343 | Unmeasured | Exact 108-request root implementation phase; reviewer and final insertion/delivery excluded |
@@ -1647,3 +1648,30 @@ Start snapshot: event 2004 at `2026-10-01T07:08:21.107Z`; input 257,369,151, cac
 End snapshot: event 2082 at `2026-10-01T07:43:05.243Z`; input 271,290,564, cached input 267,095,296, cache-write input 0, output 683,172 (reasoning subset 182,574), total 271,973,736.
 
 Exact delta: 13,921,413 input, 13,782,272 cached, 0 cache-write, 11,247 output (reasoning subset 2,185), 13,932,660 total across 77 requests. Largest input 192,637; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 1; repeated snapshots 0. Standard-tier API-equivalent USD 15.74 (unrounded 15.736032); final numeric insertion and delivery excluded.
+
+## PP-20261001-04 — Internal build 19 release receipt (#214)
+
+Root documentation-only phase from the post-release baseline through receipt
+preparation, evidence checks and independent working-diff review. Selected
+session `01a0e504-8937-7c80-9128-08ad4b305f87`, model `gpt-6-astra`. The
+independent reviewer has no supplied separate exact counters and is excluded.
+Final numeric insertion, exact-head review and delivery are excluded. Use the
+verified 1 October standard-tier API-equivalent pricing basis above; this is not
+a ChatGPT subscription bill. No production, test, workflow or signing change.
+
+The receipt binds candidate PR #215, exact source/tag/run, one successful
+upload, Apple VALID/INTERNAL_ONLY processing and unchanged group assignment.
+The verified unsigned archive and both dSYMs were retained privately; browser
+visual verification was unavailable and device acceptance remains unclaimed.
+All 417 frozen candidate inputs remain unchanged, preserving its complete gate.
+
+Independent working-diff review verified the reviewed merge parent/tree and
+attestation, one upload-success marker, both signed-app guards, internal-only
+group readback, retained digest, restricted permissions and both dSYMs. No
+actionable findings. Whitespace and acceptance links passed.
+
+Start snapshot: event 2115 at `2026-10-01T07:58:32.408Z`; input 277,886,524, cached input 273,672,064, cache-write input 0, output 691,738 (reasoning subset 184,734), total 278,578,262.
+
+End snapshot: event 2120 at `2026-10-01T08:01:01.175Z`; input 278,931,840, cached input 274,710,528, cache-write input 0, output 695,100 (reasoning subset 185,317), total 279,626,940.
+
+Exact delta: 1,045,316 input, 1,038,464 cached, 0 cache-write, 3,362 output (reasoning subset 583), 1,048,678 total across 5 requests. Largest input 211,509; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 0; repeated snapshots 0. Standard-tier API-equivalent USD 1.28 (unrounded 1.275084); final numeric insertion and delivery excluded.

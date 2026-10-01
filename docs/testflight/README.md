@@ -656,3 +656,44 @@ Record installed builds, startup, normal phone end, single-workout save or expli
 empty discard, and background/foreground recovery separately. #212/#115 remain
 open; #116 and WeeklyHealthReport #80 retain their independent acceptance/reader
 work. No physical operation or new tester is included in this release.
+
+## Internal build 19 release receipt (#214)
+
+On 1 October 2026, candidate [PR #215](https://github.com/syamaner/paceprompt-ios/pull/215)
+merged through normal protected main as
+`ec6f2bd7b2300755abf60b0da760da06d4b7ee90`, from independently approved head
+`937f117c3f5028787ad74c92b3837f3cb594a245`. The merge includes its exact-head
+attestation, has the reviewed head as second parent and has an identical tree.
+Required [PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36832075767)
+and [exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/36832194527)
+passed. Immutable lightweight tag: `testflight/1.0.1-b19`. Main protection was
+not bypassed; tag creation used its existing admin-only creation exception,
+with tag update/deletion protection unchanged.
+
+[Release run 36832307430](https://github.com/syamaner/paceprompt-ios/actions/runs/36832307430),
+attempt 1, succeeded through the normal protected environment approval. The
+unchanged tools pin is `796819b21382ac7dd038fb989e79e1352aaf06ca`. Source and
+unsigned archive verification, fresh Apple build/group preflight, both profiles,
+both signed apps, privacy, exact entitlements and internal-only export passed.
+The log records exactly one accepted upload, then Apple API processing
+`VALID` / `INTERNAL_ONLY` and assignment visible in the unchanged sole-tester
+group. The standing no-non-exempt-encryption declaration is unchanged. No
+external/public release, new tester or physical operation occurred.
+
+Unsigned archive SHA-256:
+`96d9fbdc3e435c1d6140dad4696b4e444188aab5b7f440bbaf1b6caf244af124`.
+The retained package matches the hosted archive digest and passed bounded
+extraction plus source/tag/run/attempt identity and device-bundle checks. Both
+phone and Watch dSYMs are present. Private retention:
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-19/unsigned-release.zip`
+(file mode 600, directory 700). No signed IPA or signing material was retained
+as an Actions artifact. Optional symbol upload remains disabled.
+
+These are hosted release and Apple API observations. Browser visual verification
+was unavailable because the Apple session expired. Tester visibility, installation,
+launch and signed-device acceptance were not observed. Update both companions
+to **1.0.1 (19)** before testing. This release contains #213; build 18 does not.
+An older uncertain attempt remains preserved and may still require verified
+Stop recording then Prepare next workout before a fresh phone start. Updating
+does not silently retire it. #212/#115 remain open; #116 and WeeklyHealthReport
+#80 remain separate interoperability/reader work.
