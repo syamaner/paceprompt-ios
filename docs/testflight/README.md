@@ -631,3 +631,28 @@ at its console. Contract revision 1.3, wire/metadata v1, journal v2 and shared
 fixture bytes are unchanged. #115 signed paired-device acceptance, #116
 interoperability and WeeklyHealthReport #80 reader/schema-v4/privacy work remain
 open. No hardware was operated during this release.
+
+## Internal build 19 candidate (#214)
+
+The operator requested a new internal release on 1 October 2026 to test the Watch
+recovery/startup ordering repair from #212 / protected PR #213. Candidate
+**1.0.1 (19)** keeps phone and Watch versions equal and updates the matching
+release-guard fixtures. App code, workflow, signing tools, privacy declarations,
+entitlements and the standing no-non-exempt-encryption decision are unchanged.
+The protected candidate merge, tag and hosted receipt are recorded separately
+after their gates pass; this candidate entry does not claim upload or processing.
+
+Build 18 does not contain #213. That repair addresses two deterministic races,
+but the real-device failure remains open. With explicit approval, the isolated
+iOS/watchOS 26.5 pair completed its exact Health permissions and recovered an old
+timeout through Stop recording and Prepare next workout. Two fresh native starts
+(including one pair restart) failed because the simulator HealthKit transport
+could not find its companion. Empty attempts were discarded. This does not
+establish the cause on the user's Watch or a successful native save.
+
+After build 19 is actually available, install both companions and repeat the
+[startup/shutdown acceptance procedure](../watch-health-interchange-runbook.md#startupshutdown-acceptance-203-unperformed-on-repaired-devices).
+Record installed builds, startup, normal phone end, single-workout save or explicit
+empty discard, and background/foreground recovery separately. #212/#115 remain
+open; #116 and WeeklyHealthReport #80 retain their independent acceptance/reader
+work. No physical operation or new tester is included in this release.

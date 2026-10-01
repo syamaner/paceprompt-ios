@@ -72,6 +72,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
 | 1 Oct 2026 | `PP-20261001-01` | Issue #212 Watch recovery ordering and simulator investigation | `gpt-6-astra` | 21,364,951 (21,144,064; 0) | 52,921 | 21,417,872 | USD 26.00 (standard-tier API-equivalent) | Exact 125-request root repair phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-02` | Preserve Watch acceptance runbook anchor | `gpt-6-astra` | 135,788 (110,592; 0) | 1,009 | 136,797 | USD 0.41 (standard-tier API-equivalent) | Exact 3-request root documentation phase; reviewer and final numeric insertion/delivery excluded |
+| 1 Oct 2026 | `PP-20261001-03` | Internal TestFlight 1.0.1 (19) candidate | `gpt-6-astra` | 13,921,413 (13,782,272; 0) | 11,247 | 13,932,660 | USD 15.74 (standard-tier API-equivalent) | Exact 77-request root candidate phase; reviewer and final numeric insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-03` | Issue #205 successful internal build 18 release receipt | `gpt-6-astra` | 3,860,524 (3,822,208; 0) | 10,660 | 3,871,184 | Unmeasured | Exact 45-request root release/receipt phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-02` | Issue #205 internal build 18 candidate | `gpt-6-astra` | 5,435,635 (5,353,344; 0) | 10,490 | 5,446,125 | Unmeasured | Exact 69-request root candidate phase; reviewer and final insertion/delivery excluded |
 | 30 Sep 2026 | `PP-20260930-01` | Issue #203 Watch startup and automatic shutdown repair | `gpt-6-astra` | 15,985,988 (15,843,072; 0) | 39,355 | 16,025,343 | Unmeasured | Exact 108-request root implementation phase; reviewer and final insertion/delivery excluded |
@@ -1615,3 +1616,34 @@ input 250,902,137, cached input 246,986,496, cache-write input 0, output 649,760
 resets, exact replay events and repeated snapshots all 0. Standard-tier
 API-equivalent USD 0.41 (unrounded 0.413002). All four receipt anchors resolve
 and all 417 frozen inputs match. Final numeric insertion and delivery excluded.
+
+## PP-20261001-03 — Internal TestFlight 1.0.1 (19) candidate (#214)
+
+Bounded root candidate phase: fresh branch from protected main, production
+phone/Watch build increment and matching release fixtures, release documentation,
+focused checks, independent working-diff review and complete local validation.
+The selected session is `01a0e504-8937-7c80-9128-08ad4b305f87`, model
+`gpt-6-astra`. Independent reviewer usage is excluded because separate exact
+counters were not supplied. Final numeric insertion, exact-head review and
+commit/push/merge/upload delivery are excluded. The 1 October 2026 standard-tier
+pricing basis above applies; the API-equivalent is not a subscription bill.
+
+The release contains #213 but does not claim #212 device resolution or close
+#115/#116 or WeeklyHealthReport #80. Signing settings and unrelated work remain
+untouched. All 57 focused repository/release tests and release metadata, workflow,
+shell syntax, ShellCheck and whitespace checks passed. Independent pre-gate
+review approved the executable diff with no actionable findings.
+
+The complete final-input gate passed on Xcode 27.0 (27A266a), iOS 26.5:
+494 production unit tests, 72 UI tests, 16 evaluation tests, unsigned Release
+build including Watch, static analysis and coverage. Offline checks passed
+57 script, 41 corpus, 13 summary and 247 HostEval tests (36 explicit skips
+for absent private evidence). All 24 accounting-helper tests passed. The
+417 frozen non-Markdown inputs remain identical; acceptance anchors and
+`git diff --check` passed. Hosted CI and exact-head approval follow this phase.
+
+Start snapshot: event 2004 at `2026-10-01T07:08:21.107Z`; input 257,369,151, cached input 253,313,024, cache-write input 0, output 671,925 (reasoning subset 180,389), total 258,041,076.
+
+End snapshot: event 2082 at `2026-10-01T07:43:05.243Z`; input 271,290,564, cached input 267,095,296, cache-write input 0, output 683,172 (reasoning subset 182,574), total 271,973,736.
+
+Exact delta: 13,921,413 input, 13,782,272 cached, 0 cache-write, 11,247 output (reasoning subset 2,185), 13,932,660 total across 77 requests. Largest input 192,637; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 1; repeated snapshots 0. Standard-tier API-equivalent USD 15.74 (unrounded 15.736032); final numeric insertion and delivery excluded.
