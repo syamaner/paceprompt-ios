@@ -209,3 +209,21 @@ collection, assembly, finish and receipt errors. It contains no raw SDK errors o
 sensor logging. Legacy journals remain readable; known pre-finish failure says
 not saved, while uncertain finish/receipt outcomes remain uncertain. Full device
 acceptance is still required; the current build 19 report failed saving.
+
+## Active collection during interval assembly (#212; build 20 follow-up)
+
+The [revision 2 finish/save amendment](../design/watch-finish-save.md#build-20-collection-closure-follow-up)
+repairs a native simulator-reproduced ordering defect. Verify stopped activity,
+add and exactly verify execution intervals while the builder remains active,
+then end collection and recheck the activity list/distance-source invariants
+before the existing distance/metadata and single finish. Ending collection
+before adding intervals produced HealthKit error 3 in the isolated simulator.
+The repaired native three-interval probe returned a finish receipt with three
+closed indoor-walking activities; no Health queries or physical devices were used.
+
+This does not establish the user's exact device failure stage or paired-device
+acceptance. Build 20 still lacks the repair. Keep #212/#115 open; after a later
+installed candidate repeat the existing foreground phone-end procedure, leave
+Watch untouched and verify one nonempty Health workout separately from History.
+Retain failed/uncertain attempts; no finish retry, phone replacement export or
+Health deletion. Keep personal diagnostics and images out of Git/tracker records.

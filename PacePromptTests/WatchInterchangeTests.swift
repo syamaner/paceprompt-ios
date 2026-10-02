@@ -39,6 +39,34 @@ import XCTest
         try await prepared(); try await receive(m ?? manifest(1, final: true))
         var confirmation = message(.finalize); confirmation.revision = m?.revision ?? 1; try await receive(confirmation)
     }
+    func testIntervalsAreAddedBeforeCollectionEndsAfterVerifiedActivityStop() async throws {
+        let backend = TestSessionOperations()
+        let adapter = WatchRecordingAdapter(operations: backend)
+        try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
+        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(90),
+                                  intervals: [interval(0), interval(1), interval(2)], revision: 1, complete: true, distance: .unavailable)
+        try await adapter.assemble(value)
+        XCTAssertEqual(Array(backend.calls.suffix(6)), ["verifiedActivityStop", "activity", "activity", "activity", "endCollection", "metadata"])
+        XCTAssertEqual(backend.activities.count, 3)
+        XCTAssertFalse(backend.calls.contains("end")); XCTAssertFalse(backend.calls.contains("finish"))
+        _ = try await adapter.finish()
+        XCTAssertEqual(backend.calls.filter { $0 == "finish" }.count, 1)
+    }
+    func testCollectionClosureCannotIntroduceExtraActivitiesOrAutomaticDistance() async throws {
+        for extraActivity in [false, true] {
+            let backend = TestSessionOperations()
+            backend.addActivityOnCollectionEnd = extraActivity; backend.addDistanceOnCollectionEnd = !extraActivity
+            let adapter = WatchRecordingAdapter(operations: backend)
+            try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
+            let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60),
+                                      intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+            do { try await adapter.assemble(value); XCTFail("Unexpected native mutation accepted") } catch {}
+            XCTAssertTrue(backend.calls.contains("endCollection"))
+            XCTAssertFalse(backend.calls.contains("metadata")); XCTAssertFalse(backend.calls.contains("finish"))
+            do { _ = try await adapter.finish(); XCTFail("Unverified assembly finished") } catch {}
+            XCTAssertFalse(backend.calls.contains("finish"))
+        }
+    }
     func testNormalSaveKeepsSessionAliveUntilReceipt() async throws {
         let backend = TestSessionOperations(); backend.rejectCollectionAfterEnd = true
         let adapter = WatchRecordingAdapter(operations: backend)
@@ -70,7 +98,7 @@ import XCTest
         await lifecycle.receive(try WatchWire.encode(final))
         XCTAssertEqual(lifecycle.journal?.phase, .saved)
         XCTAssertEqual(backend.stoppedAt, recording.pauseDate)
-        XCTAssertEqual(Array(backend.calls.suffix(5)), ["endCollection", "activity", "metadata", "finish", "end"])
+        XCTAssertEqual(Array(backend.calls.suffix(5)), ["activity", "endCollection", "metadata", "finish", "end"])
         XCTAssertEqual(backend.calls.filter { $0 == "finish" }.count, 1)
         // The next identity must wait for cleanup termination rather than resetting a stopped primary.
         backend.onEnd = nil; backend.holdStop = true
@@ -1139,6 +1167,8 @@ import XCTest
     var holdEndCollection = false, holdActivity = false
     var builderWaiter: CheckedContinuation<Void, Error>?
     var rejectCollectionAfterEnd = false
+    var collectionEnded = false
+    var addActivityOnCollectionEnd = false, addDistanceOnCollectionEnd = false
     var holdRecovery = false
     var recoveryWaiter: CheckedContinuation<WatchRecoveredRecording?, Error>?
     var recovered: WatchRecoveredRecording?
@@ -1146,7 +1176,7 @@ import XCTest
     var onEnd: (() -> Void)?
     var stoppedAt: Date?
     var metadataDistance: Bool?
-    func resetForNewAttempt() throws { calls.append("reset") }
+    func resetForNewAttempt() throws { calls.append("reset"); collectionEnded = false }
     func authorize() async throws -> Bool { calls.append("authorize"); if holdAuthorization { return try await withCheckedThrowingContinuation { authorizationWaiter = $0 } }; return authorized }
     func recoverPrimary() async throws -> WatchRecoveredRecording? { calls.append("recover"); if holdRecovery { return try await withCheckedThrowingContinuation { recoveryWaiter = $0 } }; return recovered }
     func createPrimary(activity: String) throws { calls.append("create") }
@@ -1163,9 +1193,9 @@ import XCTest
     func stopPrimaryAndVerify() async throws { calls.append("verifiedStop"); if holdStop { try await withCheckedThrowingContinuation { stopWaiter = $0 } }; ended = true; recovered = nil }
     func discardBuilder() throws { calls.append("discard") }
     func finishBuilder() async throws -> String? { calls.append("finish"); return nilFinish ? nil : UUID().uuidString }
-    func endCollection(at: Date) async throws { if rejectCollectionAfterEnd && ended { throw WatchStoreError.ambiguous }; calls.append("endCollection"); if failedStage == .endCollection { throw WatchStoreError.ambiguous }; if holdEndCollection { try await withCheckedThrowingContinuation { builderWaiter = $0 } } }
+    func endCollection(at: Date) async throws { if rejectCollectionAfterEnd && ended { throw WatchStoreError.ambiguous }; calls.append("endCollection"); if failedStage == .endCollection { throw WatchStoreError.ambiguous }; if holdEndCollection { try await withCheckedThrowingContinuation { builderWaiter = $0 } }; collectionEnded = true; if addActivityOnCollectionEnd, let item = activities.first { activities.append(item) }; if addDistanceOnCollectionEnd { hasDistance = true } }
     func addActivity(_ interval: WatchInterval, summaryID: String, activity: String) async throws {
-        calls.append("activity"); if failedStage == .activities { throw WatchStoreError.ambiguous }; if holdActivity { try await withCheckedThrowingContinuation { builderWaiter = $0 } }; let item = WatchBuilderActivity(start: interval.startedAt, end: interval.endedAt, activity: activity, indoor: true)
+        calls.append("activity"); guard !collectionEnded else { throw WatchStoreError.ambiguous }; if failedStage == .activities { throw WatchStoreError.ambiguous }; if holdActivity { try await withCheckedThrowingContinuation { builderWaiter = $0 } }; let item = WatchBuilderActivity(start: interval.startedAt, end: interval.endedAt, activity: activity, indoor: true)
         activities.append(item); if addExtraActivity { activities.append(item) }
     }
     func addDistance(metres: Decimal, summaryID: String, start: Date, end: Date) async throws { calls.append("distance"); if failedStage == .distance { throw WatchStoreError.ambiguous } }
