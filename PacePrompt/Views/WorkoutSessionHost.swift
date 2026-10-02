@@ -252,6 +252,14 @@ final class WorkoutSessionCoordinator: ObservableObject {
           note: "Operator confirmed the treadmill stationary"
         )
       )
+    case .confirmStationaryAndEndWorkout:
+      guard exercisePresentation.canConfirmStationaryAndEnd else { return }
+      let stationary = binding.handle(.humanConfirmsStationary(epoch: epoch, note: "Operator observed the treadmill stopped and requested workout end"))
+      if case .accepted = stationary.reducerDisposition {
+        result = binding.handle(.userEndsWorkout(epoch: epoch))
+      } else {
+        result = stationary
+      }
     case .endWorkout:
       result = binding.handle(.userEndsWorkout(epoch: epoch))
     }

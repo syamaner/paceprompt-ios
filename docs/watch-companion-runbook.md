@@ -193,3 +193,19 @@ tests, with 36 explicit HostEval skips for absent private evidence; all 24 accou
 helper tests passed. Independent pre-gate review found no remaining P1/P2 issues.
 Permission-granted native startup and a nonempty Health save remain unverified;
 the exact-head review/hosted CI and later device acceptance are separate gates.
+
+## Ordinary finish and failure recovery
+
+The [finish/save amendment](../design/watch-finish-save.md) keeps the normal Watch
+session active until its workout receipt is saved locally, then ends the session.
+Phone ending has one action: **Treadmill stopped — end workout** when direct
+stationary observation is needed, or **End workout** when current stationary
+evidence is already accepted. Stop the treadmill using its console first. Healthy
+normal completion needs no Watch tap. Watch **Stop recording** is recovery, not a
+save retry, and **Prepare next workout** preserves the previous outcome.
+
+The new optional protected-journal failure stage distinguishes stopped-activity,
+collection, assembly, finish and receipt errors. It contains no raw SDK errors or
+sensor logging. Legacy journals remain readable; known pre-finish failure says
+not saved, while uncertain finish/receipt outcomes remain uncertain. Full device
+acceptance is still required; the current build 19 report failed saving.
