@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 2 Oct 2026 | `PP-20261002-02` | Internal TestFlight build 20 candidate | `gpt-6.1-sol` | 9,411,831 (9,325,184; 0) | 22,207 | 9,434,038 | USD 1.33 (standard-tier API-equivalent) | Exact 59-request root candidate phase; reviewer and final numeric insertion/delivery excluded |
 | 2 Oct 2026 | `PP-20261002-01` | Watch finish/save reliability and ordinary ending | `gpt-6.1-sol` | 18,157,375 (17,817,984; 0) | 66,382 | 18,223,757 | USD 3.12 (standard-tier API-equivalent) | Exact 157-request root repair/validation phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-01` | Issue #212 Watch recovery ordering and simulator investigation | `gpt-6-astra` | 21,364,951 (21,144,064; 0) | 52,921 | 21,417,872 | USD 26.00 (standard-tier API-equivalent) | Exact 125-request root repair phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-02` | Preserve Watch acceptance runbook anchor | `gpt-6-astra` | 135,788 (110,592; 0) | 1,009 | 136,797 | USD 0.41 (standard-tier API-equivalent) | Exact 3-request root documentation phase; reviewer and final numeric insertion/delivery excluded |
@@ -1745,3 +1746,36 @@ hardware, native nonempty Health save/readback or physical acceptance is claimed
 End snapshot: event 2310 at `2026-10-02T20:10:39.836Z`; input 299,811,769, cached input 294,988,672, cache-write input 0, output 770,274 (reasoning subset 217,436), total 300,582,043.
 
 Exact delta: 18,157,375 input, 17,817,984 cached, 0 cache-write, 66,382 output (reasoning subset 31,009), 18,223,757 total across 157 requests. Largest input 221,037; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 9; repeated snapshots 1. Every measured event verifies `gpt-6.1-sol`. Standard-tier API-equivalent USD 3.12 (unrounded 3.1244004); final numeric insertion and delivery excluded.
+
+## PP-20261002-02 — Internal TestFlight build 20 candidate
+
+Authorised internal 1.0.1 (20) candidate for #218, containing protected #217.
+Only the four phone/Watch production build settings, matching synthetic release
+fixtures and release/accounting documentation change. Existing source behaviour,
+workflow/tools pin, signing, privacy and permissions stay unchanged. Complete
+local validation, independent exact-head review and required CI precede normal
+protected merge. A later immutable tag and protected environment gate perform
+one upload; this candidate note claims neither upload nor paired-device acceptance.
+
+Root-only selected session `01a0e504-8937-7c80-9128-08ad4b305f87`; exact model and
+phase model correlation use the PP-20261002-01 methodology and separately verified
+2 October official standard-tier rates above. Reviewer usage, final numeric
+insertion, exact-head review and later delivery are excluded. Candidate baseline
+is `/private/tmp/pp-b20-baseline.json`, event 2328 at `2026-10-02T20:46:32.430Z`:
+input 301,803,372, cached input 296,926,080, cache-write input 0, output 778,968
+(reasoning subset 219,972), total 302,582,340. Final counters and validation are recorded below.
+
+Validation: complete `scripts/validate_local.sh` passed on the final frozen
+candidate inputs: 510 unit, 72 UI and 16 evaluation tests; unsigned Release
+including Watch; static analysis; coverage export; 57 repository, 41 corpus,
+13 summary, 247 HostEval (36 unavailable-evidence skips) and 24 accounting-helper
+tests. Evidence: `/private/tmp/pp-b20-gate`. Focused release checks, actionlint,
+bash syntax, shellcheck, documentation links and accounting-skill validation
+also passed. Independent working-diff/safety review approved the seven-file
+candidate diff; all 417 frozen non-Markdown inputs remain unchanged. Exact-head
+review and protected CI follow the commit. No signed-device Health acceptance,
+physical operation or release upload is claimed by these software checks.
+
+End snapshot: event 2388 at `2026-10-02T21:22:32.094Z`; input 311,215,203, cached input 306,251,264, cache-write input 0, output 801,175 (reasoning subset 234,352), total 312,016,378.
+
+Exact delta: 9,411,831 input, 9,325,184 cached, 0 cache-write, 22,207 output (reasoning subset 14,380), 9,434,038 total across 59 requests. Largest input 172,649; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 1; repeated snapshots 0. Every measured event verifies `gpt-6.1-sol`. Standard-tier API-equivalent USD 1.33 (unrounded 1.3278824); reviewer and final numeric insertion/delivery excluded.
