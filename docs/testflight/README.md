@@ -697,3 +697,26 @@ An older uncertain attempt remains preserved and may still require verified
 Stop recording then Prepare next workout before a fresh phone start. Updating
 does not silently retire it. #212/#115 remain open; #116 and WeeklyHealthReport
 #80 remain separate interoperability/reader work.
+
+## Internal build 20 candidate (#218)
+
+The user authorised internal TestFlight **1.0.1 (20)** on 2 October 2026 to test
+[PR #217](https://github.com/syamaner/paceprompt-ios/pull/217)'s Watch finish/save
+repair and one-tap ordinary phone ending. The candidate starts from protected main
+`f79c1429cda8372ad16a3cf19353dc5e0a49f13b`, keeps phone/Watch Debug and Release
+versions equal and updates the release-guard fixtures. Production code, workflow,
+trusted tools pin, signing configuration, permissions, privacy declarations,
+entitlements and the standing no-non-exempt-encryption decision are unchanged.
+The tag is unused; hosted trusted preflight must establish Apple build freshness
+and the unchanged app/group/tester before signing/upload. This candidate entry
+does not claim an upload, processing, installation or Health save.
+
+Build 19 does not contain #217. After build 20 is actually processed and available,
+update both companions and follow the [finish/save acceptance procedure](../watch-health-interchange-runbook.md).
+Use one explicit ordinary phone end and leave Watch untouched; require exactly
+one nonempty Health workout and check local History separately. Repeat background/
+foreground and manual overrides only after basic foreground completion passes.
+Retained uncertain attempts are not silently retired or replaced by an update.
+#212/#115 remain open, #211 remains the wider UX audit, and #116/WeeklyHealthReport
+#80 remain separate reader/interchange work. No hardware, real Health readback,
+new tester or external/public release is included in this candidate delivery.
