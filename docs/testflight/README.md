@@ -720,3 +720,51 @@ Retained uncertain attempts are not silently retired or replaced by an update.
 #212/#115 remain open, #211 remains the wider UX audit, and #116/WeeklyHealthReport
 #80 remain separate reader/interchange work. No hardware, real Health readback,
 new tester or external/public release is included in this candidate delivery.
+
+## Internal build 20 release receipt (#218)
+
+On 2 October 2026, [candidate PR #219](https://github.com/syamaner/paceprompt-ios/pull/219)
+merged normally through protected main as
+`575a86e3842b94e02ba648d015a4684f3e0c7a33`, from independently approved exact head
+`742677dd0e210485fc35e4c0b63488b707ba6bd5`. The merge has that head as its second
+parent, an identical reviewed tree and the exact-head attestation. Required
+[PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/37066613998) and
+[exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/37066754913)
+passed. All 417 frozen candidate inputs match the merged blobs. Immutable
+lightweight tag: `testflight/1.0.1-b20`. Main protection was not bypassed; tag
+creation used its existing admin-only creation exception, with update/deletion
+protection unchanged.
+
+[Release run 37066974021](https://github.com/syamaner/paceprompt-ios/actions/runs/37066974021),
+attempt 1, succeeded through normal protected environment approval. Exact tag,
+source, unchanged trusted tools pin `796819b21382ac7dd038fb989e79e1352aaf06ca`
+and export allowlist readback were checked before approval. The standing
+no-non-exempt-encryption declaration remains unchanged. Source verification,
+unsigned archive verification, fresh Apple build/app/group/tester preflight,
+both profiles, both signed apps, privacy, exact entitlements and whole-IPA
+verification passed. One `UPLOAD SUCCEEDED` marker was observed. The trusted
+Apple API guard permits its processed-build success only after `VALID` and
+`INTERNAL_ONLY`, then confirms membership in the unchanged sole-tester group's
+build list. Its final processed/internal-group success was observed; no second
+upload or workflow rerun occurred.
+
+Unsigned archive SHA-256:
+`94d90ecf1d7971d6690b5ed98f8a479d58f1d4b551c885b54ac32aedf53a338c`.
+The privately retained package matches the hosted digest and passed bounded
+extraction with exact source/tag/run/attempt identity and both unsigned device
+bundle checks. Both `PacePrompt.app.dSYM` and `PacePromptWatch.app.dSYM` are present.
+Private retention: `~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-20/unsigned-release.zip`
+(package mode 600, directory mode 700). No signed IPA/signing asset was retained
+as an Actions artifact; optional symbol upload remains disabled.
+
+These are hosted release and Apple API guard observations. Browser visual
+verification, tester-side visibility, installation, launch and signed-device
+Health saving were not observed. No hardware, real Health readback, added tester
+or external/public release occurred. Update both companions to **1.0.1 (20)**
+and follow the [finish/save acceptance procedure](../watch-health-interchange-runbook.md).
+Build 20 contains #217; build 19 does not. Normal phone ending should require one
+explicit eligible action and no Watch tap; require exactly one nonempty Health
+workout and check PacePrompt History separately. An update does not silently
+retire or replace an older uncertain attempt. #212/#115 remain open, #211 remains
+the wider UX audit, and #116/WeeklyHealthReport #80 remain separate reader and
+interoperability acceptance work.
