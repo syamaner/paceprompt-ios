@@ -768,3 +768,19 @@ workout and check PacePrompt History separately. An update does not silently
 retire or replace an older uncertain attempt. #212/#115 remain open, #211 remains
 the wider UX audit, and #116/WeeklyHealthReport #80 remain separate reader and
 interoperability acceptance work.
+
+## Build 20 device follow-up: save failure (#212)
+
+After a newly completed build 20 workout, the operator's private Watch photo
+reports a known pre-finish save failure; the phone reports local ending and
+Watch end sent. This fails save acceptance and does not invalidate the separate
+upload/processing/group evidence above. No personal metrics or images are stored
+here and no Health database readback was inspected.
+
+The [revision 2 save amendment](../../design/watch-finish-save.md#build-20-collection-closure-follow-up)
+repairs a native simulator-reproduced interval-insertion order defect. Build 20
+does not contain that repair. A later reviewed internal candidate is required
+before repeating the existing foreground acceptance procedure. Retain old failed/
+uncertain outcomes; no finish retry, phone replacement export or Health deletion.
+Native paired simulator binding still failed separately; successful standalone
+native saving is not full paired-device acceptance. Keep #212/#115 open.

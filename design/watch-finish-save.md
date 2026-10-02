@@ -1,7 +1,8 @@
-# Watch finish/save and ordinary ending — revision 1
+# Watch finish/save and ordinary ending — revision 2
 
-Change: PP-20261002-01. Authorised after the build 19 operator report in #212
-and the request to remove repetitive ordinary-end confirmations in #211.
+Changes: PP-20261002-01 and PP-20261002-04. Authorised maintenance after the
+build 19/20 operator reports in #212 and the request to remove repetitive
+ordinary-end confirmations in #211.
 
 ## Evidence and scope
 
@@ -12,7 +13,47 @@ the workout; no Health workout was observed, and Watch offered Prepare next work
 This is operator evidence, without independently inspected native diagnostics or
 Health readback. It fails successful automatic completion/nonempty Health-save
 acceptance. It does not identify the native failure stage or prove a zero-prefix
-result. Build 19 remains the current released build; this repair is not uploaded.
+result. That report preceded #217 and the internal build 20 release.
+
+## Build 20 collection-closure follow-up
+
+After a new completed build 20 attempt, the operator supplied a private Watch photo
+reporting “Workout was not saved. Stop recording, then prepare your next workout.”
+The phone screenshot shows all programme steps completed, local ending and a Watch
+end message sent. Live Watch values were reported, but no native diagnostic stage
+or Health database was inspected. This fails successful save acceptance; the
+exact physical-device cause remains unconfirmed. Personal values and images stay private.
+
+An isolated, previously authorised watchOS 26.5 simulator used the native primary,
+collection, pause and verified stopped state. The old order produced HealthKit
+error 3, “Activity cannot start or end, builder is not active”, at first interval
+insertion after collection closure. Activity counts were zero before and after
+closure: automatic extra activity was not the reproduced cause. Moving interval
+assembly before collection closure passed the same discard-only probe. A separate
+synthetic three-interval probe then returned one native finish receipt with exactly
+three closed indoor-walking activities. It used existing simulator permissions,
+no new authorisation request and no Health queries. The native probe used distance
+unavailable; accepted-distance insertion and reader associations remain unverified.
+This is native simulator save evidence, not real-device Health readback or a
+complete native paired round trip.
+
+A separate native paired startup test used both companion apps with native
+HealthKit adapters and the existing synthetic treadmill fixture on the connected
+isolated iPhone/watchOS simulator pair. It failed before binding with
+Rapport -6727 (paired companion not found) and HealthKit 300 (remote unreachable).
+The empty Watch attempt ended/discarded. This repeats the previous simulator
+transport failure; it is not a passed paired test or the cause of the user's
+successful-start/failed-save report. The standalone native save probe above
+excluded mirroring deliberately and cannot substitute for paired acceptance.
+
+Revision 2 keeps the verified stopped boundary, inserts and verifies intervals
+while collection is active, then closes collection and rechecks the exact activity
+list, source exclusion and absence of automatic distance. Existing accepted
+cumulative-distance and metadata handling follow closure. Writer, identity,
+metadata/wire/journal versions, receipt ordering and single-finish semantics do
+not change. Build 20 lacks this amendment; a later reviewed release and device
+acceptance remain separate requirements. An older failed/uncertain attempt is
+never retried or replaced by this repair.
 
 ## Architecture gate
 
@@ -35,9 +76,10 @@ schema v1 or journal v2 compatibility. Old records omit the new optional field.
 ## Normal saving versus recovery
 
 Normal nonempty finalisation uses `stopActivity(with:)` at the agreed end boundary,
-waits for the attached primary's exact `.stopped` state/callback, ends collection,
-assembles validated activities/distance/metadata, persists finish intent, and calls
-`finishWorkout` once. It persists the returned workout receipt before calling
+waits for the attached primary's exact `.stopped` state/callback, assembles and
+verifies intervals while collection is active, ends collection and rechecks
+activity/source/distance invariants, adds accepted distance/metadata, persists
+finish intent, and calls `finishWorkout` once. It persists the returned workout receipt before calling
 native `end()`. Session mode remains available while saving. A subsequent attempt
 waits for verified native end before resetting the saved primary. Cold recovery of
 a saved journal first probes the prior primary: start/activity/indoor provenance
@@ -63,7 +105,8 @@ coarse stages are local troubleshooting evidence, not a Health-save receipt.
 Apple's current [Running workout sessions](https://developer.apple.com/documentation/healthkit/running-workout-sessions)
 guidance specifies stopped activity, collection/save, then session end. Older
 examples used end before finishing; the mismatch is a concrete source finding,
-not proof of this device cause. Native activity-list behaviour remains unverified:
+not proof of this device cause. Native activity-list behaviour on physical devices
+remains unverified:
 extra activities still fail closed, and `shouldCollectWorkoutEvents` is not used as
 an undocumented activity-suppression mechanism.
 

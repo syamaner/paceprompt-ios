@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 3 Oct 2026 | `PP-20261002-04` | Keep Watch builder active through interval insertion | `gpt-6.1-sol` | 11,737,948 (11,567,232; 0) | 57,292 | 11,795,240 | USD 2.07 (standard-tier API-equivalent) | Exact 70-request root investigation/repair/validation phase; reviewer, final numeric insertion and later delivery/release excluded |
 | 2026-10-02 | PP-20261002-03 | Internal build 20 delivery and release receipt | gpt-6.1-sol | 5,602,168 (5,514,624; 0) | 23,513 | 5,625,681 | USD 0.96 | Exact root delta across 33 requests from candidate pre-ledger snapshot; includes subsequent candidate completion and release delivery. Reviewer, final numeric insertion and later receipt delivery excluded. API-equivalent only. |
 | 2 Oct 2026 | `PP-20261002-02` | Internal TestFlight build 20 candidate | `gpt-6.1-sol` | 9,411,831 (9,325,184; 0) | 22,207 | 9,434,038 | USD 1.33 (standard-tier API-equivalent) | Exact 59-request root candidate phase; reviewer and final numeric insertion/delivery excluded |
 | 2 Oct 2026 | `PP-20261002-01` | Watch finish/save reliability and ordinary ending | `gpt-6.1-sol` | 18,157,375 (17,817,984; 0) | 66,382 | 18,223,757 | USD 3.12 (standard-tier API-equivalent) | Exact 157-request root repair/validation phase; reviewer and final numeric insertion/delivery excluded |
@@ -1811,3 +1812,48 @@ exact-head review precede normal protected receipt merge.
 End snapshot: event 2423 at `2026-10-02T21:45:24.031Z`; input 316,817,371, cached input 311,765,888, cache-write input 0, output 824,688 (reasoning subset 246,621), total 317,642,059.
 
 Exact delta: 5,602,168 input, 5,514,624 cached, 0 cache-write, 23,513 output (reasoning subset 12,269), 5,625,681 total across 33 requests. Largest input 201,124; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 1; repeated snapshots 1. Every measured event verifies `gpt-6.1-sol`. Standard-tier API-equivalent USD 0.96 (unrounded 0.9616804); reviewer, final numeric insertion and later receipt exact-head review/delivery excluded.
+
+## PP-20261002-04 — Keep Watch builder active through interval insertion
+
+Authorised maintenance of the existing Watch-owned save capability after the
+build 20 operator failure. Selected root session
+`01a0e504-8937-7c80-9128-08ad4b305f87`; reviewer usage and later delivery are
+excluded. Baseline `/private/tmp/pp-b20-failure-baseline.json`, event 2451 at
+`2026-10-02T22:18:16.154Z`: input 318,622,589, cached input 313,533,824,
+cache-write input 0, output 833,897 (reasoning subset 248,144), total 319,456,486.
+Phase model verification and the API-equivalent estimate use the independently
+checked PP-20261002-01 methodology. Official [GPT-6.1 Sol rates](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
+were refreshed on 3 October 2026: standard-tier USD/M input 2, cached input 0.10,
+cache-write 2.50 and output 10; prompts over 272,000 input tokens use 2x input/
+cache rates and 1.5x output for the full request. The basis is unchanged from
+2 October. Historical session models outside this phase remain excluded. Final numeric
+insertion, exact-head delivery and any later release are excluded.
+
+An isolated previously authorised native Watch simulator reproduced HealthKit
+error 3 when activity insertion followed collection closure. Reordering passed
+the same discard-only probe; a separate synthetic three-interval native save
+returned one receipt and exactly three closed indoor-walking activities. No
+new permission request, Health queries or real devices were used by the probes;
+personal diagnostic files remain private. A native-like regression first failed the old order; the revised
+code passed all 112 focused Watch tests, including cancellation and post-closure
+activity/distance mutation checks. Native paired startup failed before binding
+with Rapport -6727/HealthKit 300
+while the dedicated simulator pair reported connected; the empty attempt
+ended/discarded. That failure is separate from the successful standalone native
+save and is not counted as acceptance. The complete local gate passed: 512 unit, 72 UI and 16 evaluation tests;
+unsigned Release including Watch, static analysis, coverage and repository/offline
+checks. Evidence: `/private/tmp/pp-b20-activity-fix-gate`; all 417 frozen
+non-Markdown inputs remain identical. Independent working-diff/safety review
+approved before this final gate. Documentation links and whitespace pass;
+independent exact-head review and required CI follow commit.
+
+The fixed domain writer stages and verifies intervals while collection remains
+active after stopped proof, then closes collection and repeats exact-list/source/
+distance checks. Identity, one finish, receipt-before-session-end, iPhone save
+suppression, wire/metadata/journal versions and treadmill control remain unchanged.
+Device root cause/readback and release acceptance are not inferred from simulator
+observations. Failed/uncertain attempts are retained and never retried/replaced.
+
+End snapshot: event 2526 at `2026-10-02T23:07:12.902Z`; input 330,360,537, cached input 325,101,056, cache-write input 0, output 891,189 (reasoning subset 284,552), total 331,251,726.
+
+Exact delta: 11,737,948 input, 11,567,232 cached, 0 cache-write, 57,292 output (reasoning subset 36,408), 11,795,240 total across 70 requests. Largest input 223,122; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 5; repeated snapshots 0. Every measured event verifies `gpt-6.1-sol`. Standard-tier API-equivalent USD 2.07 (unrounded 2.0710752, official rates checked 3 October 2026); reviewer, final numeric insertion and later exact-head delivery/release excluded.

@@ -162,8 +162,9 @@ No Watch recording action sends a treadmill command.
 
 ## Finish/save ordering amendment (revision 1.4)
 
-[Watch finish/save and ordinary ending revision 1](watch-finish-save.md) specifies
-normal stopped-activity proof, durable receipt before native session cleanup,
+[Watch finish/save and ordinary ending revision 2](watch-finish-save.md) specifies
+normal stopped-activity proof, interval insertion before collection closure,
+durable receipt before native session cleanup,
 optional local failure-stage diagnostics and the one-action phone ending flow.
 Wire v1, namespaced Health metadata v1, single-writer suppression, exact activity
 mapping, single-source distance and complete/incomplete fixtures remain unchanged.

@@ -33,9 +33,6 @@ struct WatchBuilderActivity: Equatable {
               value.end > value.start, builder.activities.isEmpty, !builder.hasDistance,
               builder.sourceExcludesDistance else { throw WatchStoreError.definite }
         // SDK callback failures may leave partial mutation; never retry them in another builder.
-        stage(.endCollection)
-        do { try await builder.endCollection(at: value.end) } catch { throw WatchStoreError.ambiguous }
-        try validate()
         stage(.activities)
         for interval in value.intervals {
             guard interval.startedAt >= value.start, interval.endedAt <= value.end else { throw WatchStoreError.definite }
@@ -44,6 +41,12 @@ struct WatchBuilderActivity: Equatable {
             try validate()
         }
         let expected = value.intervals.map { WatchBuilderActivity(start: $0.startedAt, end: $0.endedAt, activity: value.activity, indoor: true) }
+        guard builder.activities == expected, !builder.hasDistance, builder.sourceExcludesDistance else { throw WatchStoreError.definite }
+        // HealthKit requires an active builder when adding workout activities.
+        // Keep collection open through exact interval assembly, then close it.
+        stage(.endCollection)
+        do { try await builder.endCollection(at: value.end) } catch { throw WatchStoreError.ambiguous }
+        try validate()
         guard builder.activities == expected, !builder.hasDistance, builder.sourceExcludesDistance else { throw WatchStoreError.definite }
         stage(.distance)
         var included = false
