@@ -341,6 +341,31 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     XCTAssertTrue(h.link.writes.isEmpty)
   }
 
+  func testCombinedStationaryEndRejectsFreshMotionAndRepeatedCompletion() throws {
+    let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
+    let c = WorkoutSessionCoordinator(binding: h.binding, displayWakeController: RecordingWorkoutDisplayWakeController(), clock: h.clock)
+    let record = SavedPlanRecord(id: UUID(), createdAt: Date(), modifiedAt: Date(), plan: h.plan.plan)
+    c.begin(record); c.prepareWorkout(); c.handlePreflight(.beginWorkout)
+    h.publishTelemetry(speedRaw: 50)
+    h.link.send(.writeAccepted); h.link.send(.indication(Data([0x80, 0x00, 0x01])))
+    h.link.send(.writeAccepted); h.link.send(.indication(Data([0x80, 0x02, 0x01])))
+    h.link.send(.writeAccepted); h.link.send(.indication(Data([0x80, 0x03, 0x01])))
+    h.clock.advance(by: 0.001); h.publishTelemetry(speedRaw: 500)
+    XCTAssertEqual(c.exercisePresentation.stage, .running)
+    let writes = h.link.writes
+    c.handleExercise(.confirmStationaryAndEndWorkout)
+    XCTAssertEqual(c.exercisePresentation.stage, .running)
+    XCTAssertEqual(h.link.writes, writes)
+    h.clock.advance(by: FR30zExecutionProfile.telemetryFreshnessInterval + 0.01)
+    XCTAssertTrue(c.exercisePresentation.canConfirmStationaryAndEnd)
+    c.handleExercise(.confirmStationaryAndEndWorkout)
+    XCTAssertEqual(c.exercisePresentation.stage, .finished)
+    let summary = h.binding.orchestrator.lastPersistedSummary
+    c.handleExercise(.confirmStationaryAndEndWorkout); c.handleExercise(.endWorkout)
+    XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary, summary)
+    XCTAssertEqual(h.link.writes, writes, "Ending may never send a treadmill command")
+  }
+
   func testWatchBindingIsRequiredBeforeExecutionAndCannotDriveTreadmill() async throws {
     let h = Harness(); h.makeReadyWithFreshStationaryTelemetry()
     let id = UUID(uuidString: "00000000-0000-0000-0000-000000000115")!

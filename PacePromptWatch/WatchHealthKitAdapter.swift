@@ -9,6 +9,8 @@ import HealthKit
     private var generation: UInt64 = 0
     private var stopVerified = false
     private let stopVerifier = WatchStopVerifier()
+    private let activityStopVerifier = WatchStopVerifier()
+    var activityStopped: Bool { session?.state == .stopped }
     private var startWaiter: CheckedContinuation<Date, Error>?
     private var pauseWaiter: CheckedContinuation<Date, Error>?
     private var resumeWaiter: CheckedContinuation<Void, Error>?
@@ -44,7 +46,7 @@ import HealthKit
     }
     func resetForNewAttempt() throws {
         guard session == nil || session?.state == .ended || stopVerified else { throw WatchStoreError.ambiguous }
-        generation &+= 1; stopVerified = false; stopVerifier.cancel()
+        generation &+= 1; stopVerified = false; stopVerifier.cancel(); activityStopVerifier.cancel()
         session?.delegate = nil; builder?.delegate = nil
         session = nil; builder = nil; source = nil; ended = false; discarded = false; finishAttempted = false; collectionStarted = false; preparedAssembly = nil
     }
@@ -96,9 +98,24 @@ import HealthKit
         guard session.state == .paused, resumeWaiter == nil else { throw WatchStoreError.ambiguous }
         try await withCheckedThrowingContinuation { continuation in resumeWaiter = continuation; session.resume() }
     }
+    func cancelPendingOperations() {
+        generation &+= 1; stopVerifier.cancel(); activityStopVerifier.cancel()
+        startWaiter?.resume(throwing: WatchStoreError.ambiguous); startWaiter = nil
+        pauseWaiter?.resume(throwing: WatchStoreError.ambiguous); pauseWaiter = nil
+        resumeWaiter?.resume(throwing: WatchStoreError.ambiguous); resumeWaiter = nil
+    }
+    func stopActivityAndVerify(at date: Date) async throws {
+        guard let session, !ended else { throw WatchStoreError.ambiguous }
+        let token = generation
+        try await activityStopVerifier.verify(current: session, probe: { throw WatchStoreError.ambiguous },
+            isEnded: { ($0 as? HKWorkoutSession)?.state == .stopped }, end: { object in
+                (object as? HKWorkoutSession)?.stopActivity(with: date)
+            })
+        guard token == generation, !ended else { throw WatchStoreError.ambiguous }
+    }
     func endPrimary() {
         generation &+= 1; stopVerified = false
-        stopVerifier.cancel()
+        stopVerifier.cancel(); activityStopVerifier.cancel()
         if ended, session == nil || WatchCallbackIdentity.accepts(session!, current: endedSession) { return }
         ended = true; endedSession = session; session?.end()
         startWaiter?.resume(throwing: WatchStoreError.ambiguous); startWaiter = nil
@@ -188,6 +205,8 @@ import HealthKit
                 self.resumeWaiter?.resume(); self.resumeWaiter = nil; self.paused?(false)
             } else if toState == .paused {
                 self.pauseWaiter?.resume(returning: date); self.pauseWaiter = nil; self.paused?(true)
+            } else if toState == .stopped {
+                self.activityStopVerifier.observedEnded(workoutSession)
             } else if toState == .ended {
                 self.stopVerifier.observedEnded(workoutSession)
                 if !self.ended { await self.failed?() }

@@ -95,28 +95,13 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
     }
   }
 
-  func testLandscapeConfirmationCancellationKeepsOriginalState() {
-    for (scenario, identifier, confirmation, title) in [
-      ("paused", "exercise.end", "End and save local attempt",
-       "Workout paused — press Start on the treadmill to resume"),
-      ("checking", "exercise.confirm-stationary", "Confirm treadmill is stationary",
-       "Checking treadmill"),
-    ] {
-      launch(scenario: scenario, orientation: .landscapeLeft)
-      let action = app.buttons[identifier]
-      action.tap()
-      XCTAssertTrue(app.buttons[confirmation].waitForExistence(timeout: 2))
-      // A passthrough would open the plan sheet, a distinct observable side effect.
-      app.buttons["exercise.plan.open"]
-        .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-      XCTAssertFalse(element("exercise.plan.sheet").exists)
-      XCTAssertTrue(app.buttons[confirmation].exists)
-      XCTAssertTrue(app.staticTexts[title].exists)
-      app.buttons["Cancel"].tap()
-      XCTAssertTrue(app.buttons[confirmation].waitForNonExistence(timeout: 2))
-      XCTAssertTrue(app.staticTexts[title].exists)
-      XCTAssertTrue(action.isHittable)
-    }
+  func testLandscapeRecoveryObservationCanBeCancelled() {
+    launch(scenario: "interrupted", orientation: .landscapeLeft)
+    app.buttons["exercise.confirm-stationary"].tap()
+    XCTAssertTrue(app.buttons["Confirm treadmill is stationary"].waitForExistence(timeout: 2))
+    app.buttons["Cancel"].tap()
+    XCTAssertTrue(app.staticTexts["Workout interrupted"].exists)
+    XCTAssertFalse(app.buttons["exercise.end"].exists)
   }
 
   func testLandscapeFullPlanOpensUsingAccessibleButton() {
@@ -175,52 +160,25 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
     }
   }
 
-  func testLandscapeEndKeepsExistingLocalOnlyConfirmation() {
+  func testLandscapeEndNeedsOneTapAndNoConfirmation() {
     launch(scenario: "paused", orientation: .landscapeLeft)
-
-    let initialRegionFrames = landscapeRegionFrames()
     let end = app.buttons["exercise.end"]
-    XCTAssertTrue(end.isHittable)
-    XCTAssertGreaterThanOrEqual(end.frame.height, 48)
+    XCTAssertTrue(end.isHittable); XCTAssertGreaterThanOrEqual(end.frame.height, 48)
     end.tap()
-
-    let confirmEnd = app.buttons["End and save local attempt"]
-    XCTAssertTrue(confirmEnd.waitForExistence(timeout: 2))
-    XCTAssertEqual(landscapeRegionFrames(), initialRegionFrames)
-    XCTAssertTrue(
-      app.staticTexts[
-        "This sends no FTMS Stop. The treadmill remains under physical-console control."
-      ].exists
-    )
-    confirmEnd.tap()
     XCTAssertTrue(app.staticTexts["Ending workout"].waitForExistence(timeout: 2))
+    XCTAssertFalse(app.buttons["End and save local attempt"].exists)
+    XCTAssertFalse(app.buttons["exercise.end"].exists)
   }
 
-  func testLandscapeCheckingKeepsOperatorObservationConfirmation() {
+  func testLandscapeStationaryAndEndNeedsOneExplicitTap() {
     launch(scenario: "checking", orientation: .landscapeLeft)
-
-    let initialRegionFrames = landscapeRegionFrames()
-    let observedStationary = app.buttons["exercise.confirm-stationary"]
-    XCTAssertTrue(observedStationary.isHittable)
-    XCTAssertGreaterThanOrEqual(observedStationary.frame.height, 48)
-    observedStationary.tap()
-
-    let confirmStationary = app.buttons["Confirm treadmill is stationary"]
-    XCTAssertTrue(confirmStationary.waitForExistence(timeout: 2))
-    XCTAssertEqual(landscapeRegionFrames(), initialRegionFrames)
-    XCTAssertTrue(
-      app.staticTexts.matching(
-        NSPredicate(
-          format: "label == %@",
-          "Confirm only after directly observing that the treadmill is stationary. Silence, stale telemetry and disconnection are not stationary evidence."
-        )
-      ).firstMatch.exists
-    )
-    confirmStationary.tap()
-    XCTAssertTrue(
-      app.staticTexts["Workout paused — press Start on the treadmill to resume"]
-        .waitForExistence(timeout: 2)
-    )
+    let end = app.buttons["exercise.confirm-stationary"]
+    XCTAssertTrue(end.isHittable); XCTAssertGreaterThanOrEqual(end.frame.height, 48)
+    XCTAssertEqual(end.label, "Treadmill stopped — end workout")
+    end.tap()
+    XCTAssertTrue(app.staticTexts["Ending workout"].waitForExistence(timeout: 2))
+    XCTAssertFalse(app.buttons["Confirm treadmill is stationary"].exists)
+    XCTAssertFalse(app.buttons["exercise.confirm-stationary"].exists)
   }
 
   func testLandscapeAccessibilityDynamicTypeRemainsFixedAndNonScrolling() {
@@ -285,62 +243,23 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
     XCTAssertTrue(app.staticTexts["Current"].exists)
   }
 
-  func testPausedEndConfirmationStatesNoFTMSStopAndEndsLocally() {
+  func testPortraitEndNeedsOneTapAndNoConfirmation() {
     launch(scenario: "paused", orientation: .portrait)
-
-    app.swipeUp()
-    app.swipeUp()
-    let end = app.buttons["exercise.end"]
-    scrollTo(end)
-    XCTAssertTrue(end.isHittable)
-    XCTAssertGreaterThanOrEqual(end.frame.height, 56)
-    end.tap()
-    let confirmEnd = app.buttons["End and save local attempt"]
-    XCTAssertTrue(confirmEnd.waitForExistence(timeout: 2))
-    XCTAssertTrue(
-      app.staticTexts[
-        "This sends no FTMS Stop. The treadmill remains under physical-console control."
-      ].exists
-    )
-    app.swipeUp()
-    scrollTo(confirmEnd)
-    confirmEnd.tap()
-    app.swipeDown()
-    app.swipeDown()
+    let end = app.buttons["exercise.end"]; scrollTo(end)
+    XCTAssertTrue(end.isHittable); XCTAssertGreaterThanOrEqual(end.frame.height, 56)
+    end.tap(); app.swipeDown(); app.swipeDown()
     XCTAssertTrue(app.staticTexts["Ending workout"].waitForExistence(timeout: 2))
+    XCTAssertFalse(app.buttons["End and save local attempt"].exists)
   }
 
-  func testCheckingUsesSeparatelyConfirmedOperatorFallback() {
+  func testPortraitStationaryAndEndNeedsOneExplicitTap() {
     launch(scenario: "checking", orientation: .portrait)
-
-    XCTAssertTrue(element("exercise.stationary-fallback").exists)
     XCTAssertFalse(app.buttons["exercise.end"].exists)
-    app.swipeUp()
-    app.swipeUp()
-    let stationaryConfirmation = app.buttons["exercise.confirm-stationary"]
-    scrollTo(stationaryConfirmation)
-    stationaryConfirmation.tap()
-    let confirmStationary = app.buttons["Confirm treadmill is stationary"]
-    XCTAssertTrue(confirmStationary.waitForExistence(timeout: 2))
-    XCTAssertTrue(
-      app.staticTexts.matching(
-        NSPredicate(
-          format: "label == %@",
-          "Confirm only after directly observing that the treadmill is stationary. Silence, stale telemetry and disconnection are not stationary evidence."
-        )
-      ).firstMatch.exists
-    )
-    app.swipeUp()
-    scrollTo(confirmStationary)
-    confirmStationary.tap()
-    app.swipeDown()
-    app.swipeDown()
-    XCTAssertTrue(
-      app.staticTexts["Workout paused — press Start on the treadmill to resume"].waitForExistence(
-        timeout: 2))
-    app.swipeUp()
-    app.swipeUp()
-    XCTAssertTrue(app.buttons["exercise.end"].exists)
+    let end = app.buttons["exercise.confirm-stationary"]; scrollTo(end)
+    XCTAssertEqual(end.label, "Treadmill stopped — end workout")
+    end.tap(); app.swipeDown(); app.swipeDown()
+    XCTAssertTrue(app.staticTexts["Ending workout"].waitForExistence(timeout: 2))
+    XCTAssertFalse(app.buttons["Confirm treadmill is stationary"].exists)
   }
 
   func testInterruptedWorkoutCanRecordStationaryObservationWithoutChangingOutcome() {
@@ -417,6 +336,12 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
       .merging(extraEnvironment) { _, replacement in replacement }
     app.launch()
     XCTAssertTrue(element("exercise.screen").waitForExistence(timeout: 3), scenario)
+    // Launch may restore a cached portrait orientation after the device was
+    // rotated. Request the test layout once the app is ready, then verify it.
+    XCUIDevice.shared.orientation = orientation
+    if orientation.isLandscape {
+      XCTAssertTrue(element("exercise.landscape.left").waitForExistence(timeout: 5), scenario)
+    }
   }
 
   private func attachScreenshot(named name: String) {

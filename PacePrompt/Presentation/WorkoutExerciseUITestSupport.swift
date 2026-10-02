@@ -96,6 +96,10 @@
         segment.inclinationOverride = nil
         state.currentSegment = segment
         state.execution = .runningSegment
+      case .confirmStationaryAndEndWorkout:
+        handle(.confirmOperatorStationary)
+        handle(.endWorkout)
+        return
       case .confirmOperatorStationary:
         let evidence = WorkoutHumanStationaryEvidence(
           confirmedAt: now,

@@ -51,6 +51,16 @@ subscription's bill or a claim about its processing tier. Historical Unmeasured
 rows are not repriced.
 
 
+For the 2 October 2026 PP-20261002-01 phase, session metadata verifies
+`gpt-6.1-sol` throughout the measured boundary. Rates checked against the
+[official GPT-6.1 Sol model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
+are USD 2.00 per million uncached input, 0.10 cached input, 2.50 cache writes
+(1.25 times base input), and 10.00 output. Requests above 272,000 input tokens
+use 2 times input/cache rates and 1.5 times output rates for the entire request.
+This is a standard-tier token-only API-equivalent comparison, not a subscription
+bill or an inference about the session's processing tier. Prior Astra entries
+remain unchanged.
+
 For Claude Fable 5.1 (`claude-fable-5-1`), the official rates checked on 4 September 2026 are $10.00 per million uncached input tokens, $0.25 per million cache-read input tokens, $12.50 per million five-minute-TTL cache-write input tokens (1.25 times the input rate), $20.00 per million one-hour-TTL cache-write input tokens (2 times the input rate) and $50.00 per million output tokens. Claude Code sessions in this repository use the one-hour cache TTL, and the session JSONL reports cache writes per TTL, so each cache write is priced at its TTL-specific rate. Claude Code counters come from the session file under `~/.claude/projects/<project>/<session-id>.jsonl`: assistant records are deduplicated by `message.id` because one API response is written as several lines that repeat the same usage; `input_tokens` is the uncached input; total input is uncached input plus cache reads plus cache writes; thinking tokens are already a subset of output.
 
 For a Claude Code phase with TTL-specific cache writes:
@@ -70,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 2 Oct 2026 | `PP-20261002-01` | Watch finish/save reliability and ordinary ending | `gpt-6.1-sol` | 18,157,375 (17,817,984; 0) | 66,382 | 18,223,757 | USD 3.12 (standard-tier API-equivalent) | Exact 157-request root repair/validation phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-01` | Issue #212 Watch recovery ordering and simulator investigation | `gpt-6-astra` | 21,364,951 (21,144,064; 0) | 52,921 | 21,417,872 | USD 26.00 (standard-tier API-equivalent) | Exact 125-request root repair phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-02` | Preserve Watch acceptance runbook anchor | `gpt-6-astra` | 135,788 (110,592; 0) | 1,009 | 136,797 | USD 0.41 (standard-tier API-equivalent) | Exact 3-request root documentation phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-03` | Internal TestFlight 1.0.1 (19) candidate | `gpt-6-astra` | 13,921,413 (13,782,272; 0) | 11,247 | 13,932,660 | USD 15.74 (standard-tier API-equivalent) | Exact 77-request root candidate phase; reviewer and final numeric insertion/delivery excluded |
@@ -1675,3 +1686,62 @@ Start snapshot: event 2115 at `2026-10-01T07:58:32.408Z`; input 277,886,524, cac
 End snapshot: event 2120 at `2026-10-01T08:01:01.175Z`; input 278,931,840, cached input 274,710,528, cache-write input 0, output 695,100 (reasoning subset 185,317), total 279,626,940.
 
 Exact delta: 1,045,316 input, 1,038,464 cached, 0 cache-write, 3,362 output (reasoning subset 583), 1,048,678 total across 5 requests. Largest input 211,509; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 0; repeated snapshots 0. Standard-tier API-equivalent USD 1.28 (unrounded 1.275084); final numeric insertion and delivery excluded.
+
+## PP-20261002-01 — Watch finish/save reliability and ordinary ending
+
+Issue #212 normal saving now verifies stopped activity while retaining session
+mode through collection, assembly, single finish and durable receipt persistence;
+only then is native end requested. Saved-journal cold recovery cleans up a matching
+prior primary before a new identity; failure/timeout cannot downgrade its receipt
+or terminate a mismatched session. Cancellation always fences late builder work.
+Optional protected local stage diagnostics distinguish pre-finish failures from
+uncertain writes, retaining legacy decoding, no replacement/retry, zero-prefix
+discard, permanent phone suppression and exact activity/distance invariants.
+
+The authorised ordinary-end row of #211 now uses one explicit stationary-and-end
+or current-evidence end action, with portrait/landscape coverage. Existing reducer
+eligibility rejects fresh movement and repeated completion. No treadmill command,
+new permission, Watch target, release upload or dependent reader implementation.
+Contracts and runbooks distinguish build-19 operator partial success from later
+candidate acceptance; #212/#115 remain open and wider #211 work remains pending.
+
+Measurement: selected root Desktop session
+`01a0e504-8937-7c80-9128-08ad4b305f87`, exact model `gpt-6.1-sol`, baseline
+`/private/tmp/pp212-finish-baseline.json`, token event 2143 at
+`2026-10-02T18:43:48.611Z`. Start input 281,654,394; cached input 277,170,688;
+cache-write input 0; output 703,892 (reasoning subset 186,427); total 282,358,286.
+The phase covers implementation, synthetic tests, documentation, independent
+working-diff review coordination and complete local validation through pre-ledger
+snapshot. Independent reviewer usage is excluded without its exact session data;
+final numeric insertion, exact-head review and delivery are excluded. Use the
+verified 2 October GPT-6.1 Sol standard-tier basis above. The unchanged session
+also contains historical Astra turns outside this boundary, so the stock helper's
+whole-session single-model pricing guard does not apply. Exact counters and
+request reconciliation use the unchanged helper; a separate read-only check
+correlates every measured token event with its preceding turn-context model,
+requires only `gpt-6.1-sol`, and applies the helper's request-level Decimal cost
+arithmetic only to those validated phase events. No transcript is rewritten or
+historical usage repriced. Final counters and validation evidence are recorded below.
+
+Validation: the replacement complete `scripts/validate_local.sh` gate passed
+510 production unit tests, 72 UI tests, 16 evaluation tests, unsigned Release
+including Watch, static analysis, coverage export and offline checks (57 repository,
+41 corpus, 13 summary, 247 HostEval with 36 unavailable-evidence skips, and 24
+accounting-helper tests). Evidence is retained at `/private/tmp/pp212-finish-gate2`.
+The first run exposed a Simulator launch-orientation race in the new landscape
+UI test. A test-only bounded layout-readiness check was independently reviewed;
+the affected focused tests and replacement full run passed without weakening
+action assertions. The failed/interrupted first run is not counted as a pass.
+
+The ordering regressions first failed on the previous implementation. Final
+focused 142 unit tests (110 Watch and 32 production binding), 20 exercise UI
+checks, 13 Watch interchange fixture checks and documentation links passed.
+The final complete run contains the later orientation-readiness repair. All 417
+frozen non-Markdown executable/test/build inputs must remain identical through
+commit and merge. Independent working-diff/safety and accounting-method reviews
+found no actionable P1/P2 findings; exact-head review follows the commit. No
+hardware, native nonempty Health save/readback or physical acceptance is claimed.
+
+End snapshot: event 2310 at `2026-10-02T20:10:39.836Z`; input 299,811,769, cached input 294,988,672, cache-write input 0, output 770,274 (reasoning subset 217,436), total 300,582,043.
+
+Exact delta: 18,157,375 input, 17,817,984 cached, 0 cache-write, 66,382 output (reasoning subset 31,009), 18,223,757 total across 157 requests. Largest input 221,037; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 9; repeated snapshots 1. Every measured event verifies `gpt-6.1-sol`. Standard-tier API-equivalent USD 3.12 (unrounded 3.1244004); final numeric insertion and delivery excluded.

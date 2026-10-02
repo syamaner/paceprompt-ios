@@ -124,6 +124,7 @@ enum WorkoutExerciseIntent: Equatable {
   case setInclination(WorkoutInclination)
   case returnToPlan
   case confirmOperatorStationary
+  case confirmStationaryAndEndWorkout
   case endWorkout
 }
 
@@ -147,6 +148,9 @@ struct WorkoutExercisePresentation: Equatable {
   let canReturnToPlan: Bool
   let canConfirmOperatorStationary: Bool
   let canEndWorkout: Bool
+  var canConfirmStationaryAndEnd: Bool {
+    canConfirmOperatorStationary && ![.interrupted, .failed].contains(stage)
+  }
   let allowsDismissal: Bool
 
   init(

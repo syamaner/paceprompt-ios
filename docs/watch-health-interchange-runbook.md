@@ -239,3 +239,36 @@ not instructions to inject faults into real Health data. #115 remains paired-dev
 acceptance, WeeklyHealthReport #80 reader implementation, and #116 the cross-repository
 physical acceptance boundary. This software repair authorises no release or hardware
 operation.
+
+## Build 19 finish/save follow-up — 2 October 2026
+
+Operator reports successful startup/pairing and live Watch values, followed by an
+uncertain Watch save after ordinary phone ending. Watch Stop was pressed after
+uncertainty appeared. PacePrompt History retained the workout; no Health workout
+was observed; Watch then offered Prepare next workout. Native errors, installed
+build metadata and Health readback were not independently inspected. This is failed
+finish/save acceptance, not a confirmed root cause or successful zero-prefix discard.
+
+The [finish/save amendment](../design/watch-finish-save.md) defines the bounded
+source repair. It is not part of released build 19. On a later installed candidate:
+
+1. Record both installed builds and start one conservative Watch-assisted attempt.
+2. Keep apps open for the first run and verify interval progression.
+3. Stop the belt physically. If stationary fallback is needed, tap **Treadmill
+   stopped — end workout** only after observing belt stop. Otherwise use **End
+   workout** with current stationary evidence. No second ordinary-end confirm.
+4. Leave Watch untouched: expect Ending/Saving then Saved for a nonempty workout,
+   or the explicit no-usable-interval discard only for an empty attempt.
+5. Check local History separately from Health/Fitness. Confirm exactly one Health
+   workout for the nonempty attempt. An interchange acknowledgement is not save proof.
+6. If failure recurs, record exact phone/Watch wording and the protected local
+   failed-save stage through separately authorised private diagnostics. Do not
+   retry finish, export a replacement on phone, or delete retained uncertain state.
+7. Repeat background/foreground and manual-override cases separately after the
+   basic foreground completion passes. Simulator/native compile evidence cannot
+   establish signed paired-device acceptance.
+
+#212/#115 remain open. #211 remains the wider confirmation audit; this slice only
+simplifies ordinary ending. #116 and WeeklyHealthReport #80 retain their independent
+reader/round-trip acceptance requirements. Do not publish device diagnostics or
+personal health/workout values in issue records.

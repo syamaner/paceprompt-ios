@@ -167,3 +167,13 @@ workout** step after verified Stop when the previous result is uncertain. This d
 not remove confirmations, automatically retire uncertain results, or permit a
 replacement save. Unreadable retained state and native startup errors remain
 separate investigation cases; these repairs do not establish the device root cause.
+
+## Normal finish/save amendment (#212, revision 3)
+
+[Watch finish/save and ordinary ending](watch-finish-save.md) supersedes the earlier
+normal-save requirement to end the primary before assembly. Normal saving now
+verifies stopped activity and persists its single save receipt before native end.
+Emergency verified termination, archival, late-callback fences and uncertainty
+rules remain unchanged. Saved next-attempt reset also verifies native end first.
+The same amendment removes only redundant ordinary phone-end confirmations;
+Watch emergency/recovery confirmations remain independently assessed.

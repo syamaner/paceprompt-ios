@@ -159,3 +159,13 @@ recording controls, verified stop, retained uncertain outcomes, generation fence
 operation deadlines, app-lifetime mirroring ingress, same-identity OS redelivery
 and acknowledged cumulative retry. Wire v1 and Health metadata v1 remain unchanged.
 No Watch recording action sends a treadmill command.
+
+## Finish/save ordering amendment (revision 1.4)
+
+[Watch finish/save and ordinary ending revision 1](watch-finish-save.md) specifies
+normal stopped-activity proof, durable receipt before native session cleanup,
+optional local failure-stage diagnostics and the one-action phone ending flow.
+Wire v1, namespaced Health metadata v1, single-writer suppression, exact activity
+mapping, single-source distance and complete/incomplete fixtures remain unchanged.
+This amendment supersedes the older normal-save ended-primary ordering, without
+changing emergency verified termination or allowing retries after uncertain finish.

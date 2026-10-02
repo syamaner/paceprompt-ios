@@ -7,7 +7,6 @@ struct WorkoutExerciseView: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var showingPlan = false
-  @State private var showingEndConfirmation = false
   @State private var showingStationaryConfirmation = false
 
   var body: some View {
@@ -230,9 +229,7 @@ struct WorkoutExerciseView: View {
       .frame(maxWidth: .infinity, alignment: .leading)
 
       if presentation.canConfirmOperatorStationary {
-        Button("I observed the treadmill stationary") {
-          showingStationaryConfirmation = true
-        }
+        Button(stationaryActionTitle) { stationaryAction() }
         .landscapeExerciseActionStyle(tint: .orange)
         .accessibilityIdentifier("exercise.confirm-stationary")
       } else {
@@ -243,9 +240,9 @@ struct WorkoutExerciseView: View {
         }
 
         if presentation.canEndWorkout {
-          Button("End workout") { showingEndConfirmation = true }
+          Button("End workout") { send(.endWorkout) }
             .landscapeExerciseActionStyle(tint: .red)
-            .accessibilityHint("Confirms and saves the local app attempt. Sends no FTMS Stop.")
+            .accessibilityHint("Ends this workout using the current stopped-treadmill evidence. Stop the belt at its console.")
             .accessibilityIdentifier("exercise.end")
         }
       }
@@ -274,21 +271,6 @@ struct WorkoutExerciseView: View {
           send(.confirmOperatorStationary)
         } cancel: {
           showingStationaryConfirmation = false
-        }
-      }
-    } else if presentation.canEndWorkout && showingEndConfirmation {
-      landscapeConfirmationBackdrop {
-        confirmationPanel(
-          title: "End workout?",
-          message:
-            "This sends no FTMS Stop. The treadmill remains under physical-console control.",
-          actionTitle: "End and save local attempt",
-          tint: .red
-        ) {
-          showingEndConfirmation = false
-          send(.endWorkout)
-        } cancel: {
-          showingEndConfirmation = false
         }
       }
     }
@@ -529,6 +511,15 @@ struct WorkoutExerciseView: View {
     )
   }
 
+  private var stationaryActionTitle: String {
+    presentation.canConfirmStationaryAndEnd ? "Treadmill stopped — end workout" : "I observed the treadmill stationary"
+  }
+
+  private func stationaryAction() {
+    if presentation.canConfirmStationaryAndEnd { send(.confirmStationaryAndEndWorkout) }
+    else { showingStationaryConfirmation = true }
+  }
+
   private var actionRegion: some View {
     VStack(spacing: 12) {
       if let overrideLabel = presentation.overrideLabel {
@@ -547,17 +538,15 @@ struct WorkoutExerciseView: View {
 
       if presentation.canConfirmOperatorStationary {
         VStack(alignment: .leading, spacing: 8) {
-          Text("Operator-confirmed stationary fallback")
+          Text(presentation.canConfirmStationaryAndEnd ? "Finish your workout" : "Confirm the treadmill is stopped")
             .font(.caption.weight(.bold))
           Text(
-            "Use only after directly observing that the treadmill is stationary. Never infer this from silence or stale data."
+            "Stop the treadmill at its console. Only tap below once you have seen the belt stop."
           )
           .font(.caption2)
           .foregroundStyle(WorkoutExercisePalette.muted)
           .fixedSize(horizontal: false, vertical: true)
-          Button("I observed the treadmill stationary") {
-            showingStationaryConfirmation = true
-          }
+          Button(stationaryActionTitle) { stationaryAction() }
           .exerciseActionStyle(tint: .orange)
           .accessibilityIdentifier("exercise.confirm-stationary")
 
@@ -583,25 +572,10 @@ struct WorkoutExerciseView: View {
       }
 
       if presentation.canEndWorkout {
-        Button("End workout") { showingEndConfirmation = true }
+        Button("End workout") { send(.endWorkout) }
           .exerciseActionStyle(tint: .red)
-          .accessibilityHint("Confirms and saves the local app attempt. Sends no FTMS Stop.")
+          .accessibilityHint("Ends this workout using the current stopped-treadmill evidence. Stop the belt at its console.")
           .accessibilityIdentifier("exercise.end")
-
-        if showingEndConfirmation {
-          confirmationPanel(
-            title: "End workout?",
-            message:
-              "This sends no FTMS Stop. The treadmill remains under physical-console control.",
-            actionTitle: "End and save local attempt",
-            tint: .red
-          ) {
-            showingEndConfirmation = false
-            send(.endWorkout)
-          } cancel: {
-            showingEndConfirmation = false
-          }
-        }
       }
 
       Label(

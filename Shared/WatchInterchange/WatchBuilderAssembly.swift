@@ -11,7 +11,7 @@ struct WatchBuilderActivity: Equatable {
 // All SDK objects stay inside the implementation of this port.
 @MainActor protocol WatchBuilderOperations: AnyObject {
     var collectionStarted: Bool { get }
-    var ended: Bool { get }
+    var activityStopped: Bool { get }
     var sourceExcludesDistance: Bool { get }
     var hasDistance: Bool { get }
     var distanceAuthorized: Bool { get }
@@ -24,15 +24,19 @@ struct WatchBuilderActivity: Equatable {
 
 @MainActor struct WatchBuilderAssemblyWriter {
     let builder: any WatchBuilderOperations
+    var stage: (WatchSaveStage) -> Void = { _ in }
     var validate: () throws -> Void = {}
     func assemble(_ value: WatchAssembly) async throws {
         try validate()
-        guard builder.collectionStarted, builder.ended, !value.intervals.isEmpty,
+        stage(.assemblyValidation)
+        guard builder.collectionStarted, builder.activityStopped, !value.intervals.isEmpty,
               value.end > value.start, builder.activities.isEmpty, !builder.hasDistance,
               builder.sourceExcludesDistance else { throw WatchStoreError.definite }
         // SDK callback failures may leave partial mutation; never retry them in another builder.
+        stage(.endCollection)
         do { try await builder.endCollection(at: value.end) } catch { throw WatchStoreError.ambiguous }
         try validate()
+        stage(.activities)
         for interval in value.intervals {
             guard interval.startedAt >= value.start, interval.endedAt <= value.end else { throw WatchStoreError.definite }
             do { try await builder.addActivity(interval, summaryID: value.summaryID, activity: value.activity) }
@@ -41,6 +45,7 @@ struct WatchBuilderActivity: Equatable {
         }
         let expected = value.intervals.map { WatchBuilderActivity(start: $0.startedAt, end: $0.endedAt, activity: value.activity, indoor: true) }
         guard builder.activities == expected, !builder.hasDistance, builder.sourceExcludesDistance else { throw WatchStoreError.definite }
+        stage(.distance)
         var included = false
         if value.distance.state == "accepted", let metres = value.distance.metres, metres.isFinite, metres > 0,
            value.distance.provenance == "fr30zCumulativeDistanceDelta", builder.distanceAuthorized {
@@ -49,6 +54,7 @@ struct WatchBuilderActivity: Equatable {
             try validate()
             included = true
         }
+        stage(.metadata)
         // Metadata failure is documented as non-mutating by HKWorkoutBuilder.
         do { try await builder.addMetadata(value, distanceIncluded: included) } catch { throw WatchStoreError.definite }
         try validate()

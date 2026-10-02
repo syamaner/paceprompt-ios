@@ -39,6 +39,186 @@ import XCTest
         try await prepared(); try await receive(m ?? manifest(1, final: true))
         var confirmation = message(.finalize); confirmation.revision = m?.revision ?? 1; try await receive(confirmation)
     }
+    func testNormalSaveKeepsSessionAliveUntilReceipt() async throws {
+        let backend = TestSessionOperations(); backend.rejectCollectionAfterEnd = true
+        let adapter = WatchRecordingAdapter(operations: backend)
+        try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
+        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+        try await adapter.assemble(value)
+        XCTAssertFalse(backend.calls.contains("end"))
+        _ = try await adapter.finish()
+        XCTAssertFalse(backend.calls.contains("end"), "Receipt must be persisted before native session cleanup")
+    }
+    func testLifecycleDoesNotEndPrimaryBeforeSaving() async throws {
+        try await bound(); try await complete()
+        XCTAssertFalse(recording.order.contains("end"))
+        XCTAssertEqual(sut.journal?.phase, .saved)
+    }
+    func testNormalStoppedProofUsesAgreedBoundaryAndCleanupFollowsDurableReceipt() async throws {
+        let backend = TestSessionOperations(); backend.rejectCollectionAfterEnd = true
+        let adapter = WatchRecordingAdapter(operations: backend)
+        let disk = TestJournal()
+        let lifecycle = WatchWorkoutLifecycle(store: disk, recording: adapter, now: { self.start.addingTimeInterval(60) }, monotonic: { 0 }, send: { _ in })
+        backend.onEnd = { XCTAssertEqual(disk.value?.phase, .saved); XCTAssertNotNil(disk.value?.savedWorkoutID) }
+        await lifecycle.launch(activity: "indoorWalking")
+        var bind = message(.bind); bind.workoutActivity = "indoorWalking"
+        await lifecycle.receive(try WatchWire.encode(bind))
+        var prepare = message(.prepareEnd); prepare.sequence = 1
+        await lifecycle.receive(try WatchWire.encode(prepare))
+        await lifecycle.receive(try WatchWire.encode(manifest(1, final: true)))
+        var final = message(.finalize); final.revision = 1
+        await lifecycle.receive(try WatchWire.encode(final))
+        XCTAssertEqual(lifecycle.journal?.phase, .saved)
+        XCTAssertEqual(backend.stoppedAt, recording.pauseDate)
+        XCTAssertEqual(Array(backend.calls.suffix(5)), ["endCollection", "activity", "metadata", "finish", "end"])
+        XCTAssertEqual(backend.calls.filter { $0 == "finish" }.count, 1)
+        // The next identity must wait for cleanup termination rather than resetting a stopped primary.
+        backend.onEnd = nil; backend.holdStop = true
+        let next = Task { try await adapter.prepare(activity: "indoorWalking") }
+        while backend.stopWaiter == nil { await Task.yield() }
+        XCTAssertEqual(backend.calls.last, "verifiedStop")
+        backend.stopWaiter?.resume(); backend.stopWaiter = nil; try await next.value
+        XCTAssertEqual(backend.calls.filter { $0 == "create" }.count, 2)
+    }
+    func testTimeoutEndInvalidatesEveryPendingAssemblyMutation() async throws {
+        for activity in [false, true] {
+            let backend = TestSessionOperations(); backend.holdEndCollection = !activity; backend.holdActivity = activity
+            let adapter = WatchRecordingAdapter(operations: backend)
+            try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
+            let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+            let pending = Task { try await adapter.assemble(value) }
+            while backend.builderWaiter == nil { await Task.yield() }
+            adapter.end(); let before = backend.calls
+            backend.builderWaiter?.resume(); backend.builderWaiter = nil
+            do { try await pending.value; XCTFail("timed-out assembly continued") } catch {}
+            XCTAssertEqual(backend.calls, before)
+            XCTAssertFalse(backend.calls.contains("metadata")); XCTAssertFalse(backend.calls.contains("finish"))
+        }
+    }
+    private func savedJournal() -> WatchWorkoutJournal {
+        var j = WatchWorkoutJournal(activity: "indoorWalking"); j.phase = .saved; j.summaryID = id; j.startedAt = start
+        j.savedWorkoutID = "11400000-0000-4000-8000-000000000099"; return j
+    }
+    func testColdSavedReceiptWaitsForMatchingNativeCleanupBeforeNewIdentity() async throws {
+        let disk = TestJournal(); let saved = savedJournal(); disk.value = saved
+        let backend = TestSessionOperations(); backend.recovered = .init(start: start, activity: "indoorWalking", indoor: true); backend.holdStop = true
+        let adapter = WatchRecordingAdapter(operations: backend)
+        let lifecycle = WatchWorkoutLifecycle(store: disk, recording: adapter, now: { self.start }, monotonic: { 0 }, send: { _ in })
+        let next = Task { await lifecycle.launch(activity: "indoorWalking") }
+        while backend.stopWaiter == nil { await Task.yield() }
+        XCTAssertEqual(disk.value, saved); XCTAssertFalse(backend.calls.contains("create")); XCTAssertFalse(backend.calls.contains("finish"))
+        backend.stopWaiter?.resume(); backend.stopWaiter = nil; await next.value
+        XCTAssertEqual(backend.calls.filter { $0 == "create" }.count, 1)
+        XCTAssertFalse(backend.calls.contains("finish"))
+        XCTAssertEqual(disk.saved.first?.phase, .creating)
+    }
+    func testSavedCleanupMismatchNeverEndsUnrelatedPrimaryOrDowngradesReceipt() async throws {
+        for mismatch in ["time", "activity", "indoor"] {
+            let disk = TestJournal(); let saved = savedJournal(); disk.value = saved
+            let backend = TestSessionOperations(); backend.recovered = .init(start: mismatch == "time" ? start.addingTimeInterval(1) : start,
+                activity: mismatch == "activity" ? "indoorRunning" : "indoorWalking", indoor: mismatch != "indoor")
+            let lifecycle = WatchWorkoutLifecycle(store: disk, recording: WatchRecordingAdapter(operations: backend), now: { self.start }, monotonic: { 0 }, send: { _ in })
+            await lifecycle.launch(activity: "indoorWalking")
+            XCTAssertEqual(lifecycle.journal, saved); XCTAssertEqual(disk.value, saved)
+            XCTAssertFalse(backend.calls.contains("verifiedStop")); XCTAssertFalse(backend.calls.contains("end"))
+            XCTAssertFalse(backend.calls.contains("create")); XCTAssertFalse(backend.calls.contains("finish"))
+            XCTAssertFalse(lifecycle.canStop); XCTAssertTrue(lifecycle.display.contains("Workout saved"))
+        }
+    }
+    func testSavedCleanupTimeoutCancelsLateProbeWithoutEndingItsSession() async throws {
+        let disk = TestJournal(); let saved = savedJournal(); disk.value = saved
+        let backend = TestSessionOperations(); backend.holdRecovery = true
+        let lifecycle = WatchWorkoutLifecycle(store: disk, recording: WatchRecordingAdapter(operations: backend), now: { self.start }, monotonic: { self.clock.time }, send: { _ in })
+        let pending = Task { await lifecycle.foreground() }
+        while backend.recoveryWaiter == nil { await Task.yield() }
+        clock.time = 15; await lifecycle.tick()
+        let cancelled = backend.calls
+        backend.recoveryWaiter?.resume(returning: .init(start: start, activity: "indoorRunning", indoor: true)); backend.recoveryWaiter = nil
+        await pending.value
+        XCTAssertEqual(backend.calls, cancelled); XCTAssertEqual(disk.value, saved); XCTAssertEqual(lifecycle.journal, saved)
+        XCTAssertFalse(backend.calls.contains("end")); XCTAssertFalse(backend.calls.contains("finish"))
+        backend.holdRecovery = false; await lifecycle.foreground()
+        XCTAssertTrue(lifecycle.display.contains("Workout saved")); XCTAssertEqual(disk.value, saved)
+        await lifecycle.launch(activity: "indoorWalking"); XCTAssertEqual(backend.calls.filter { $0 == "create" }.count, 1)
+    }
+    func testSavedCleanupFailureAndRetryPreserveReceiptWithoutFinishingAgain() async throws {
+        let disk = TestJournal(); let saved = savedJournal(); disk.value = saved
+        let backend = TestSessionOperations(); backend.recovered = .init(start: start, activity: "indoorWalking", indoor: true); backend.holdStop = true
+        let lifecycle = WatchWorkoutLifecycle(store: disk, recording: WatchRecordingAdapter(operations: backend), now: { self.start }, monotonic: { 0 }, send: { _ in })
+        let pending = Task { await lifecycle.foreground() }; while backend.stopWaiter == nil { await Task.yield() }
+        backend.stopWaiter?.resume(throwing: WatchStoreError.ambiguous); backend.stopWaiter = nil; await pending.value
+        XCTAssertEqual(disk.value, saved); XCTAssertEqual(lifecycle.journal, saved)
+        XCTAssertFalse(lifecycle.canStop); XCTAssertFalse(backend.calls.contains("create"))
+        backend.holdStop = false; await lifecycle.foreground()
+        XCTAssertEqual(disk.value, saved); XCTAssertFalse(backend.calls.contains("finish"))
+    }
+    func testUnexpectedActivitiesAndDistanceIdentifyAssemblyValidation() async throws {
+        for distance in [false, true] {
+            let backend = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: backend)
+            try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
+            if distance { backend.hasDistance = true }
+            else { backend.activities = [.init(start: start, end: start.addingTimeInterval(60), activity: "indoorWalking", indoor: true)] }
+            let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+            do { try await adapter.assemble(value); XCTFail("unexpected automatic data accepted") } catch {}
+            XCTAssertEqual(adapter.finalizationStage, .assemblyValidation)
+            XCTAssertFalse(backend.calls.contains("endCollection")); XCTAssertFalse(backend.calls.contains("finish"))
+        }
+    }
+    func testEachAssemblyFailureIdentifiesStageAndCannotFinish() async throws {
+        for stage in [WatchSaveStage.stopActivity, .endCollection, .activities, .distance, .metadata] {
+            let backend = TestSessionOperations(); backend.failedStage = stage
+            let adapter = WatchRecordingAdapter(operations: backend)
+            try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
+            let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true,
+                distance: .init(state: "accepted", metres: 100, provenance: "fr30zCumulativeDistanceDelta"))
+            do { try await adapter.assemble(value); XCTFail("failure was ignored: \(stage)") } catch {}
+            XCTAssertEqual(adapter.finalizationStage, stage)
+            do { _ = try await adapter.finish(); XCTFail("unassembled builder finished") } catch {}
+            XCTAssertFalse(backend.calls.contains("finish")); XCTAssertFalse(backend.calls.contains("end"))
+        }
+    }
+    func testPreFinishFailureIsRetainedWithoutClaimingAnUncertainWrite() async throws {
+        try await bound(); recording.assemblyFailure = .ambiguous; recording.finalizationStage = .endCollection
+        try await complete()
+        XCTAssertEqual(sut.journal?.failedSaveStage, .endCollection)
+        XCTAssertEqual(store.value?.failedSaveStage, .endCollection)
+        XCTAssertEqual(recording.finishes, 0); XCTAssertTrue(sut.display.contains("was not saved"))
+        await sut.forceStop(); XCTAssertTrue(sut.display.contains("was not saved"))
+        sut.prepareNextWorkout(); XCTAssertEqual(store.archives.first?.failedSaveStage, .endCollection)
+    }
+    func testFinishFailureRetainsGenuineWriteUncertainty() async throws {
+        try await bound(); recording.finishFailure = true; recording.finalizationStage = .finish
+        try await complete()
+        XCTAssertEqual(store.value?.failedSaveStage, .finish)
+        XCTAssertTrue(sut.display.contains("Save result uncertain")); XCTAssertEqual(recording.finishes, 1)
+        await sut.endWorkout(); XCTAssertEqual(recording.finishes, 1)
+    }
+    func testTimedOutAssemblyCapturesStageAndLateCompletionCannotFinish() async throws {
+        try await bound(); try await prepared(); try await receive(manifest(1, final: true))
+        recording.holdAssembly = true; recording.finalizationStage = .activities
+        var final = message(.finalize); final.revision = 1
+        let pending = Task { try await self.receive(final) }; while recording.assemblyWaiter == nil { await Task.yield() }
+        clock.time = 15; await sut.tick()
+        XCTAssertEqual(store.value?.failedSaveStage, .activities)
+        recording.assemblyWaiter?.resume(); recording.assemblyWaiter = nil; try await pending.value
+        XCTAssertEqual(recording.finishes, 0); XCTAssertEqual(sut.journal?.phase, .ambiguous)
+    }
+    func testReceiptFailureEndsSessionButNeverRetriesSavedBuilder() async throws {
+        try await bound(); store.failPhase = .saved; try await complete()
+        XCTAssertEqual(sut.journal?.failedSaveStage, .receiptPersistence)
+        XCTAssertTrue(sut.display.contains("Save result uncertain")); XCTAssertTrue(recording.order.contains("end"))
+        XCTAssertFalse(recording.order.contains("completeSaved"))
+        await sut.endWorkout(); XCTAssertEqual(recording.finishes, 1)
+    }
+    func testJournalStageIsOptionalForLegacyRecordsAndSurvivesRoundTrip() throws {
+        var j = WatchWorkoutJournal(activity: "indoorWalking"); j.failedSaveStage = .metadata
+        let data = try JSONEncoder().encode(j)
+        XCTAssertEqual(try JSONDecoder().decode(WatchWorkoutJournal.self, from: data).failedSaveStage, .metadata)
+        var object = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        object.removeValue(forKey: "failedSaveStage")
+        let legacy = try JSONSerialization.data(withJSONObject: object)
+        XCTAssertNil(try JSONDecoder().decode(WatchWorkoutJournal.self, from: legacy).failedSaveStage)
+    }
     func testBindingPersistsBeforeCollectionAndDuplicateIsIdempotent() async throws {
         try await bound(); var bind = message(.bind); bind.workoutActivity = "indoorWalking"
         try await receive(bind); await sut.launch(activity: "indoorWalking")
@@ -130,7 +310,7 @@ import XCTest
     func testCompleteRequiresFinalAckConfirmationAndFinishesOnce() async throws {
         try await bound(); try await complete(); await sut.endWorkout()
         XCTAssertEqual(recording.finishes, 1); XCTAssertEqual(recording.assemblies.count, 1); XCTAssertTrue(recording.assemblies[0].complete)
-        XCTAssertEqual(recording.order.suffix(3), ["end", "assemble", "finish"]); XCTAssertEqual(sut.journal?.phase, .saved)
+        XCTAssertEqual(recording.order.suffix(3), ["assemble", "finish", "completeSaved"]); XCTAssertEqual(sut.journal?.phase, .saved)
         XCTAssertEqual(sent.last?.kind, .ack) // No save-result message exists after end.
     }
     func testLostFinalizeTimeoutSavesIncompleteAndOmitsDistance() async throws {
@@ -430,7 +610,6 @@ import XCTest
         let backend = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: backend)
         try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
         XCTAssertEqual(backend.calls, ["reset", "authorize", "recover", "create", "configure", "prepare", "mirror", "start", "collect"])
-        adapter.end()
         let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
         try await adapter.assemble(value); backend.nilFinish = true
         do { _ = try await adapter.finish(); XCTFail("nil receipt") } catch { }
@@ -449,13 +628,13 @@ import XCTest
         let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 4, complete: true,
             distance: .init(state: "accepted", metres: 100, provenance: "fr30zCumulativeDistanceDelta"))
         for permission in [false, true] {
-            let backend = TestSessionOperations(); backend.collectionStarted = true; backend.ended = true; backend.distanceAuthorized = permission
+            let backend = TestSessionOperations(); backend.collectionStarted = true; backend.activityStopped = true; backend.distanceAuthorized = permission
             try await WatchBuilderAssemblyWriter(builder: backend).assemble(value)
             XCTAssertEqual(backend.calls.contains("distance"), permission); XCTAssertEqual(backend.metadataDistance, permission)
             XCTAssertEqual(backend.activities.count, 1)
         }
         for failure in ["source", "distance", "extra", "mutated"] {
-            let backend = TestSessionOperations(); backend.collectionStarted = true; backend.ended = true
+            let backend = TestSessionOperations(); backend.collectionStarted = true; backend.activityStopped = true
             if failure == "source" { backend.sourceExcludesDistance = false }
             if failure == "distance" { backend.hasDistance = true }
             if failure == "extra" { backend.activities = [.init(start: start, end: nil, activity: "indoorWalking", indoor: true)] }
@@ -539,9 +718,9 @@ import XCTest
         try await receive(m)
         XCTAssertEqual(sut.journal?.phase, .saved); XCTAssertFalse(sut.canStop)
     }
-    func testAssemblyWaitsForNativeEndAndCancellationFencesLateProof() async throws {
+    func testAssemblyWaitsForNativeStoppedAndCancellationFencesLateProof() async throws {
         let backend = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: backend)
-        try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin(); adapter.end()
+        try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
         backend.holdStop = true
         let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
         let task = Task { try await adapter.assemble(value) }; await Task.yield()
@@ -552,9 +731,9 @@ import XCTest
         do { try await task.value; XCTFail("old save continued") } catch {}
         XCTAssertFalse(backend.calls.contains("endCollection")); XCTAssertFalse(backend.calls.contains("finish"))
     }
-    func testAssemblyContinuesOnlyAfterVerifiedNativeEnd() async throws {
+    func testAssemblyContinuesOnlyAfterVerifiedNativeStopped() async throws {
         let backend = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: backend)
-        try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin(); adapter.end()
+        try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
         backend.holdStop = true
         let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
         let task = Task { try await adapter.assemble(value) }; await Task.yield()
@@ -721,7 +900,7 @@ import XCTest
     func testNativeAdapterAssemblyFenceStopsAfterEachSuspension() async throws {
         for stopAtActivity in [false, true] {
             let ops = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: ops)
-            try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin(); adapter.end()
+            try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
             ops.holdEndCollection = !stopAtActivity; ops.holdActivity = stopAtActivity
             let assembly = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: false, distance: .unavailable)
             let old = Task { try await adapter.assemble(assembly) }; await Task.yield()
@@ -934,6 +1113,10 @@ import XCTest
     func begin() async throws -> Date { begins += 1; if holdBegin { return try await withCheckedThrowingContinuation { startWaiter = $0 } }; return start }
     func pause() async throws -> Date { pauses += 1; if holdPause { return try await withCheckedThrowingContinuation { pauseWaiter = $0 } }; return pauseDate }
     func resume() async throws { resumes += 1; if holdResume { try await withCheckedThrowingContinuation { resumeWaiter = $0 } } }
+    var finalizationStage: WatchSaveStage?
+    func cancelSavedCleanup() { order.append("cancelCleanup") }
+    func cleanupSaved(activity: String, start: Date) async throws { order.append("cleanupSaved") }
+    func completeSaved() { order.append("completeSaved") }
     func end() { order.append("end") }
     func discard() throws { discards += 1; if discardFailure { throw WatchStoreError.ambiguous } }
     func assemble(_ value: WatchAssembly) async throws { order.append("assemble"); assemblies.append(value); if holdAssembly { try await withCheckedThrowingContinuation { assemblyWaiter = $0 } }; if let assemblyFailure { throw assemblyFailure } }
@@ -947,7 +1130,7 @@ import XCTest
 
 @MainActor private final class TestSessionOperations: WatchSessionOperations {
     var calls: [String] = []
-    var collectionStarted = false, ended = false, sourceExcludesDistance = true, hasDistance = false, distanceAuthorized = true
+    var collectionStarted = false, ended = false, activityStopped = false, sourceExcludesDistance = true, hasDistance = false, distanceAuthorized = true
     var activities: [WatchBuilderActivity] = []
     var authorized = true, configuredSourceExcludesDistance = true, addExtraActivity = false, nilFinish = false
     var holdAuthorization = false, holdMirror = false, holdStop = false
@@ -955,27 +1138,36 @@ import XCTest
     var authorizationWaiter: CheckedContinuation<Bool, Error>?, mirrorWaiter: CheckedContinuation<Void, Error>?
     var holdEndCollection = false, holdActivity = false
     var builderWaiter: CheckedContinuation<Void, Error>?
+    var rejectCollectionAfterEnd = false
+    var holdRecovery = false
+    var recoveryWaiter: CheckedContinuation<WatchRecoveredRecording?, Error>?
+    var recovered: WatchRecoveredRecording?
+    var failedStage: WatchSaveStage?
+    var onEnd: (() -> Void)?
+    var stoppedAt: Date?
     var metadataDistance: Bool?
     func resetForNewAttempt() throws { calls.append("reset") }
     func authorize() async throws -> Bool { calls.append("authorize"); if holdAuthorization { return try await withCheckedThrowingContinuation { authorizationWaiter = $0 } }; return authorized }
-    func recoverPrimary() async throws -> WatchRecoveredRecording? { calls.append("recover"); return nil }
+    func recoverPrimary() async throws -> WatchRecoveredRecording? { calls.append("recover"); if holdRecovery { return try await withCheckedThrowingContinuation { recoveryWaiter = $0 } }; return recovered }
     func createPrimary(activity: String) throws { calls.append("create") }
     func configureCollection() throws { calls.append("configure"); sourceExcludesDistance = configuredSourceExcludesDistance }
     func preparePrimary() { calls.append("prepare") }
     func mirrorPrimary() async throws { calls.append("mirror"); if holdMirror { try await withCheckedThrowingContinuation { mirrorWaiter = $0 } } }
     func startPrimary() async throws -> Date { calls.append("start"); return Date(timeIntervalSince1970: 1_780_000_000) }
     func beginCollection(at: Date) async throws { calls.append("collect"); collectionStarted = true }
-    func pausePrimary() async throws -> Date { calls.append("pause"); return Date() }
+    func pausePrimary() async throws -> Date { calls.append("pause"); return Date(timeIntervalSince1970: 1_780_000_060) }
     func resumePrimary() async throws { calls.append("resume") }
-    func endPrimary() { calls.append("end"); ended = true }
-    func stopPrimaryAndVerify() async throws { calls.append("verifiedStop"); if holdStop { try await withCheckedThrowingContinuation { stopWaiter = $0 } }; ended = true }
+    func cancelPendingOperations() { calls.append("cancelPending") }
+    func stopActivityAndVerify(at date: Date) async throws { calls.append("verifiedActivityStop"); stoppedAt = date; if failedStage == .stopActivity { throw WatchStoreError.ambiguous }; if holdStop { try await withCheckedThrowingContinuation { stopWaiter = $0 } }; activityStopped = true }
+    func endPrimary() { onEnd?(); calls.append("end"); ended = true }
+    func stopPrimaryAndVerify() async throws { calls.append("verifiedStop"); if holdStop { try await withCheckedThrowingContinuation { stopWaiter = $0 } }; ended = true; recovered = nil }
     func discardBuilder() throws { calls.append("discard") }
     func finishBuilder() async throws -> String? { calls.append("finish"); return nilFinish ? nil : UUID().uuidString }
-    func endCollection(at: Date) async throws { calls.append("endCollection"); if holdEndCollection { try await withCheckedThrowingContinuation { builderWaiter = $0 } } }
+    func endCollection(at: Date) async throws { if rejectCollectionAfterEnd && ended { throw WatchStoreError.ambiguous }; calls.append("endCollection"); if failedStage == .endCollection { throw WatchStoreError.ambiguous }; if holdEndCollection { try await withCheckedThrowingContinuation { builderWaiter = $0 } } }
     func addActivity(_ interval: WatchInterval, summaryID: String, activity: String) async throws {
-        calls.append("activity"); if holdActivity { try await withCheckedThrowingContinuation { builderWaiter = $0 } }; let item = WatchBuilderActivity(start: interval.startedAt, end: interval.endedAt, activity: activity, indoor: true)
+        calls.append("activity"); if failedStage == .activities { throw WatchStoreError.ambiguous }; if holdActivity { try await withCheckedThrowingContinuation { builderWaiter = $0 } }; let item = WatchBuilderActivity(start: interval.startedAt, end: interval.endedAt, activity: activity, indoor: true)
         activities.append(item); if addExtraActivity { activities.append(item) }
     }
-    func addDistance(metres: Decimal, summaryID: String, start: Date, end: Date) async throws { calls.append("distance") }
-    func addMetadata(_ value: WatchAssembly, distanceIncluded: Bool) async throws { calls.append("metadata"); metadataDistance = distanceIncluded }
+    func addDistance(metres: Decimal, summaryID: String, start: Date, end: Date) async throws { calls.append("distance"); if failedStage == .distance { throw WatchStoreError.ambiguous } }
+    func addMetadata(_ value: WatchAssembly, distanceIncluded: Bool) async throws { calls.append("metadata"); if failedStage == .metadata { throw WatchStoreError.ambiguous }; metadataDistance = distanceIncluded }
 }

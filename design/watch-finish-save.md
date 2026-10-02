@@ -1,0 +1,101 @@
+# Watch finish/save and ordinary ending — revision 1
+
+Change: PP-20261002-01. Authorised after the build 19 operator report in #212
+and the request to remove repetitive ordinary-end confirmations in #211.
+
+## Evidence and scope
+
+The operator reports startup, pairing and live Watch values working. After console
+stop, stationary confirmation and exercise-end confirmation, Watch reported an
+uncertain result; the operator then used Watch Stop. PacePrompt History retained
+the workout; no Health workout was observed, and Watch offered Prepare next workout.
+This is operator evidence, without independently inspected native diagnostics or
+Health readback. It fails successful automatic completion/nonempty Health-save
+acceptance. It does not identify the native failure stage or prove a zero-prefix
+result. Build 19 remains the current released build; this repair is not uploaded.
+
+## Architecture gate
+
+The Foundation lifecycle owns identity, durable finish intent/receipt, deadlines
+and generation fencing. The recording adapter owns normal stop/assembly/save order;
+consumer-owned operations separate stopped activity from emergency session end.
+The SDK adapter translates exact native session callbacks, while the assembly
+writer retains closed activity/distance invariants. Presentation sends an explicit
+stationary-and-end intent; the coordinator applies existing reducer actions in
+order and ends only after accepted stationary evidence. Neither view calls HealthKit
+or Bluetooth, and no new treadmill command or automatic reconnect is introduced.
+
+Stable invariants: one Watch writer, permanent phone-save suppression, one finish
+attempt, no replacement after uncertainty, zero-usable-interval discard, exact
+activity mapping and one accepted distance source. Native timing, errors and
+callbacks are volatile; injected fake ports/clocks supply deterministic tests.
+Local optional failure-stage diagnostics do not change wire v1, Health metadata
+schema v1 or journal v2 compatibility. Old records omit the new optional field.
+
+## Normal saving versus recovery
+
+Normal nonempty finalisation uses `stopActivity(with:)` at the agreed end boundary,
+waits for the attached primary's exact `.stopped` state/callback, ends collection,
+assembles validated activities/distance/metadata, persists finish intent, and calls
+`finishWorkout` once. It persists the returned workout receipt before calling
+native `end()`. Session mode remains available while saving. A subsequent attempt
+waits for verified native end before resetting the saved primary. Cold recovery of
+a saved journal first probes the prior primary: start/activity/indoor provenance
+must match before terminating it. Cleanup failure or timeout preserves the saved
+receipt and blocks new primary creation; foreground may retry cleanup without
+finishing again. A mismatched session is never ended by saved cleanup. Cleanup cannot
+reclassify a durable saved receipt; unknown cleanup timing cannot become proof of
+Health absence or authorise another write.
+
+Emergency Stop retains its separate `.ended`/no-active-primary proof, invalidates
+pending work and preserves the previous result. Every native await and builder
+mutation is generation-fenced. The existing bounded deadline exposes recovery if
+stop, assembly or finish stalls. Old callbacks cannot finish or overwrite a later
+attempt. No write retry, replacement builder or Health deletion is added.
+
+On failure/timeout the protected local journal records only a closed operation
+stage: stopActivity, assemblyValidation, endCollection, activities, distance, metadata, finish or
+receiptPersistence. It stores no raw SDK error text, sensor values or transport
+payloads for diagnostics. A known failure before finish is presented as not saved;
+finish/receipt uncertainty and legacy unknown outcomes remain uncertain. These
+coarse stages are local troubleshooting evidence, not a Health-save receipt.
+
+Apple's current [Running workout sessions](https://developer.apple.com/documentation/healthkit/running-workout-sessions)
+guidance specifies stopped activity, collection/save, then session end. Older
+examples used end before finishing; the mismatch is a concrete source finding,
+not proof of this device cause. Native activity-list behaviour remains unverified:
+extra activities still fail closed, and `shouldCollectWorkoutEvents` is not used as
+an undocumented activity-suppression mechanism.
+
+## Ordinary ending decision
+
+| Flow | Previous phone taps | New phone taps | Preserved condition |
+| --- | ---: | ---: | --- |
+| Stationary fallback then end | 4 | 1 | Explicit **Treadmill stopped — end workout** attests observed belt stop; accepted stationary evidence must precede end |
+| End with current stationary evidence | 2 | 1 | Existing reducer end eligibility; inline console authority |
+| Interrupted/failed stationary recovery | 2 | 2 | Observation remains distinct from successful ending |
+| Watch emergency Stop / Prepare next | unchanged | unchanged | Explicit recovery and retained uncertain outcome |
+
+Counts exclude physical console operation. Fresh moving telemetry hides the
+combined action and still prevents end. Stale or missing telemetry does not prove
+stationary: the labelled action is the operator's explicit observation. Repeated
+end taps after transition are rejected; no extra local finalisation or Watch save
+is created. Portrait and landscape retain accessible controls. Normal end has no
+second app confirmation; other permission, deletion, privacy and recovery flows
+remain in the wider #211 audit.
+
+## Validation and remaining acceptance
+
+Two ordering regressions first failed on the previous implementation. Deterministic
+contracts cover verified stopped activity before builder operations, receipt before
+cleanup, following-attempt native end, failures by stage, missing/late callbacks,
+cancellation, saved-journal crash recovery/mismatch/timeout, unchanged zero-prefix/idempotency and optional journal decoding.
+UI tests cover one-tap ordinary ending in both orientations and unchanged recovery
+confirmation. Required local/CI and independent exact-head review evidence is
+recorded in the PR and development ledger.
+
+A later installed candidate must repeat normal completion with no Watch tap and
+exactly one nonempty Health workout, plus foreground/background and recovery.
+#212 and #115 remain open for device acceptance; #116 and WeeklyHealthReport #80
+remain separate interchange/reader work. No hardware, real Health-data inspection,
+release upload or implementation of those dependent issues occurs in this slice.
