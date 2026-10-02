@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 2026-10-02 | PP-20261002-03 | Internal build 20 delivery and release receipt | gpt-6.1-sol | 5,602,168 (5,514,624; 0) | 23,513 | 5,625,681 | USD 0.96 | Exact root delta across 33 requests from candidate pre-ledger snapshot; includes subsequent candidate completion and release delivery. Reviewer, final numeric insertion and later receipt delivery excluded. API-equivalent only. |
 | 2 Oct 2026 | `PP-20261002-02` | Internal TestFlight build 20 candidate | `gpt-6.1-sol` | 9,411,831 (9,325,184; 0) | 22,207 | 9,434,038 | USD 1.33 (standard-tier API-equivalent) | Exact 59-request root candidate phase; reviewer and final numeric insertion/delivery excluded |
 | 2 Oct 2026 | `PP-20261002-01` | Watch finish/save reliability and ordinary ending | `gpt-6.1-sol` | 18,157,375 (17,817,984; 0) | 66,382 | 18,223,757 | USD 3.12 (standard-tier API-equivalent) | Exact 157-request root repair/validation phase; reviewer and final numeric insertion/delivery excluded |
 | 1 Oct 2026 | `PP-20261001-01` | Issue #212 Watch recovery ordering and simulator investigation | `gpt-6-astra` | 21,364,951 (21,144,064; 0) | 52,921 | 21,417,872 | USD 26.00 (standard-tier API-equivalent) | Exact 125-request root repair phase; reviewer and final numeric insertion/delivery excluded |
@@ -1779,3 +1780,34 @@ physical operation or release upload is claimed by these software checks.
 End snapshot: event 2388 at `2026-10-02T21:22:32.094Z`; input 311,215,203, cached input 306,251,264, cache-write input 0, output 801,175 (reasoning subset 234,352), total 312,016,378.
 
 Exact delta: 9,411,831 input, 9,325,184 cached, 0 cache-write, 22,207 output (reasoning subset 14,380), 9,434,038 total across 59 requests. Largest input 172,649; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 1; repeated snapshots 0. Every measured event verifies `gpt-6.1-sol`. Standard-tier API-equivalent USD 1.33 (unrounded 1.3278824); reviewer and final numeric insertion/delivery excluded.
+
+## PP-20261002-03 — Internal build 20 delivery and release receipt
+
+Root-only release-delivery/receipt phase begins at the candidate pre-ledger
+snapshot and includes subsequent candidate completion, exact-head coordination,
+candidate protected PR delivery,
+exact-main/tag/export checks, normal environment approval, the single release
+attempt, Apple guard observations, private archive/dSYM retention and this
+receipt. Selected session `01a0e504-8937-7c80-9128-08ad4b305f87`; model correlation
+and pricing use the independently checked PP-20261002-01 methodology and 2 October
+standard-tier basis above. Reviewer usage, final numeric insertion and later
+receipt exact-head review/delivery are excluded; no subscription/API bill or
+hardware/Health acceptance is inferred.
+
+Baseline `/private/tmp/pp-b20-receipt-baseline.json`: event 2388 at
+`2026-10-02T21:22:32.094Z`; input 311,215,203, cached input 306,251,264,
+cache-write input 0, output 801,175 (reasoning subset 234,352), total 312,016,378.
+The receipt binds protected candidate #219, immutable tag/source/run/attempt,
+one accepted upload, Apple VALID/INTERNAL_ONLY guard success and unchanged-group
+readback. Retained package/dSYMs passed hosted digest, bounded extraction,
+source identity, both device bundles and private permissions checks. Browser
+visual verification and device acceptance remain unperformed.
+
+This receipt changes only non-executable documentation and accounting. All 417
+frozen candidate inputs remain byte-identical, preserving the complete gate.
+Documentation links and whitespace are checked; independent working-diff and
+exact-head review precede normal protected receipt merge.
+
+End snapshot: event 2423 at `2026-10-02T21:45:24.031Z`; input 316,817,371, cached input 311,765,888, cache-write input 0, output 824,688 (reasoning subset 246,621), total 317,642,059.
+
+Exact delta: 5,602,168 input, 5,514,624 cached, 0 cache-write, 23,513 output (reasoning subset 12,269), 5,625,681 total across 33 requests. Largest input 201,124; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 1; repeated snapshots 1. Every measured event verifies `gpt-6.1-sol`. Standard-tier API-equivalent USD 0.96 (unrounded 0.9616804); reviewer, final numeric insertion and later receipt exact-head review/delivery excluded.
