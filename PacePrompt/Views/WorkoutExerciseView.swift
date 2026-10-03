@@ -209,17 +209,6 @@ struct WorkoutExerciseView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.75)
             .accessibilityIdentifier("exercise.override-state")
-        } else {
-          Text(
-            shouldReduceMotion
-              ? "Animation off" : "Gentle status animation"
-          )
-          .font(.caption2)
-          .foregroundStyle(WorkoutExercisePalette.muted)
-          .lineLimit(2)
-          .minimumScaleFactor(0.75)
-          .accessibilityIdentifier("exercise.motion")
-          .accessibilityValue(shouldReduceMotion ? "Static guidance" : "Gentle pulse")
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -540,14 +529,7 @@ struct WorkoutExerciseView: View {
       .fixedSize(horizontal: false, vertical: true)
       .accessibilityIdentifier("exercise.console-authority")
 
-      Text(
-        shouldReduceMotion
-          ? "Animation off" : "Gentle status animation"
-      )
-      .font(.caption2)
-      .foregroundStyle(WorkoutExercisePalette.muted)
-      .accessibilityIdentifier("exercise.motion")
-      .accessibilityValue(shouldReduceMotion ? "Static guidance" : "Gentle pulse")
+
     }
     .frame(maxWidth: .infinity)
   }
