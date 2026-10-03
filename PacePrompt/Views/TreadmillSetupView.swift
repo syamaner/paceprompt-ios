@@ -3,8 +3,6 @@ import UIKit
 
 struct TreadmillSetupView: View {
     @ObservedObject var treadmill: TreadmillSetupViewModel
-    @State private var copiedDiagnostics = false
-    @State private var copiedFreshnessCapture = false
 
     var body: some View {
         List {
@@ -22,15 +20,19 @@ struct TreadmillSetupView: View {
                         .frame(minHeight: 44).accessibilityIdentifier("profiles.manage")
                 }
             }
-            capabilitySection
-            subscriptionSection
-            freshnessCaptureSection
-            diagnosticSection
-
-            if !treadmill.characteristics.isEmpty {
-                characteristicSection
+            supportedSettingsSection
+            readingAvailabilitySection
+            Section {
+                NavigationLink {
+                    TreadmillTroubleshootingView(treadmill: treadmill)
+                } label: {
+                    Label("Troubleshooting", systemImage: "wrench.and.screwdriver")
+                        .frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("setup.troubleshooting")
+            } footer: {
+                Text("Connection details and diagnostic captures for investigating a problem.")
             }
-
             safetySection
         }
         .modifier(OptionalPlanningProfileDiscoveryPresentation(model: treadmill.planningProfiles))
@@ -54,8 +56,8 @@ struct TreadmillSetupView: View {
                 symbol: treadmill.canDisconnect ? "link.circle.fill" : "link.badge.plus",
                 colour: treadmill.canDisconnect ? .green : .secondary
             )
-            if let error = treadmill.lastError {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
+            if treadmill.lastError != nil {
+                Label("Could not complete the treadmill check. Check Bluetooth, then reconnect to try again. Details are in Troubleshooting.", systemImage: "exclamationmark.triangle.fill")
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
@@ -76,7 +78,7 @@ struct TreadmillSetupView: View {
                 treadmill.toggleScan()
             } label: {
                 Label(
-                    treadmill.isScanning ? "Stop scanning" : "Scan for FTMS treadmills",
+                    treadmill.isScanning ? "Stop scanning" : "Find treadmills",
                     systemImage: treadmill.isScanning ? "stop.circle" : "dot.radiowaves.left.and.right"
                 )
             }
@@ -85,7 +87,7 @@ struct TreadmillSetupView: View {
             if treadmill.isScanning && treadmill.devices.isEmpty {
                 HStack {
                     ProgressView()
-                    Text("Looking for Fitness Machine Service 0x1826")
+                    Text("Looking for nearby treadmills")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -95,25 +97,15 @@ struct TreadmillSetupView: View {
                     treadmill.connect(to: device)
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(device.name)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text("\(device.rssi) dBm")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(device.id.uuidString)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
+                        Text(device.name)
+                            .foregroundStyle(.primary)
                     }
                 }
             }
         } header: {
             Text("Discovery")
         } footer: {
-            Text("Scanning starts only when you press the button and is restricted to devices advertising FTMS.")
+            Text("Find nearby treadmills, then choose yours. Supported settings are checked after connecting.")
         }
     }
 
@@ -123,6 +115,107 @@ struct TreadmillSetupView: View {
                 treadmill.disconnect()
             }
         }
+    }
+
+    private var supportedSettingsSection: some View {
+        Section("Supported settings") {
+            settingSummary("Speed", support: treadmill.speedTargetSettingText,
+                           range: treadmill.speedRangeText, rangeUnreadable: treadmill.speedRange.issue != nil)
+            settingSummary("Incline", support: treadmill.inclinationTargetSettingText,
+                           range: treadmill.inclinationRangeText, rangeUnreadable: treadmill.inclinationRange.issue != nil)
+        }
+    }
+
+    private func settingSummary(_ title: String, support: String, range: String, rangeUnreadable: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.headline)
+            Text("Adjustment: \(treadmill.featureFlags.issue != nil ? "Could not read" : support)")
+            Text(rangeUnreadable ? "Could not read the limits. Reconnect to try again." : range)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("setup.\(title.lowercased()).limits")
+    }
+
+    private var readingAvailabilitySection: some View {
+        Section {
+            ForEach(treadmill.subscriptions) { subscription in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(readingTitle(subscription.uuid)).font(.headline)
+                    Text(readingStatus(subscription.state))
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("setup.reading.\(subscription.uuid)")
+            }
+        } header: {
+            Text("Reading availability")
+        } footer: {
+            Text("Ready to receive means updates are enabled. It does not confirm a current reading or that the belt has stopped.")
+        }
+    }
+
+    private func readingTitle(_ uuid: String) -> String {
+        switch uuid {
+        case FTMSUUID.treadmillData: "Speed and distance"
+        case FTMSUUID.trainingStatus: "Workout status"
+        default: "Treadmill status"
+        }
+    }
+
+    private func readingStatus(_ state: FTMSSubscriptionState) -> String {
+        switch state {
+        case .subscribed: "Ready to receive updates"
+        case .subscribing: "Connecting to readings…"
+        case .failed: "Could not receive updates. Reconnect to try again."
+        case .inactive: "Not receiving updates"
+        case .unsupported: "Live updates not available"
+        }
+    }
+
+    private var safetySection: some View {
+        Section {
+            Label("Setup does not control the belt", systemImage: "lock.shield")
+        } footer: {
+            Text("Start a workout separately from a saved plan. Always use the treadmill console and safety key to start or stop the belt.")
+        }
+    }
+}
+
+private struct TreadmillTroubleshootingView: View {
+    @ObservedObject var treadmill: TreadmillSetupViewModel
+    @State private var copiedDiagnostics = false
+    @State private var copiedFreshnessCapture = false
+
+    var body: some View {
+        List {
+            Section {
+                Text("Captures can include treadmill names, device identifiers, timestamps and readings. They stay in memory until you explicitly copy or share them. Choose a recipient you trust.")
+                    .accessibilityIdentifier("troubleshooting.privacy")
+            }
+            if let error = treadmill.lastError {
+                Section("Last reported error") {
+                    Text(error).textSelection(.enabled)
+                        .accessibilityIdentifier("troubleshooting.error")
+                }
+            }
+            freshnessCaptureSection
+            Section("Discovered devices") {
+                ForEach(treadmill.devices) { device in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(device.name)
+                        Text(device.id.uuidString).font(.caption.monospaced()).textSelection(.enabled)
+                        Text("Signal: \(device.rssi) dBm").font(.caption)
+                    }
+                }
+            }
+            capabilitySection
+            subscriptionSection
+            if !treadmill.characteristics.isEmpty { characteristicSection }
+            diagnosticSection
+        }
+        .navigationTitle("Troubleshooting")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var capabilitySection: some View {
@@ -241,10 +334,11 @@ struct TreadmillSetupView: View {
             } label: {
                 Label("Record operator observation", systemImage: "person.crop.circle.badge.checkmark")
             }
+            .accessibilityIdentifier("troubleshooting.observation")
             .disabled(!treadmill.canRecordOperatorObservation)
 
             ShareLink(item: treadmill.treadmillDataFreshnessReport) {
-                Label("Share issue #52 capture", systemImage: "square.and.arrow.up")
+                Label("Share reading capture", systemImage: "square.and.arrow.up")
             }
 
             Button {
@@ -252,14 +346,14 @@ struct TreadmillSetupView: View {
                 copiedFreshnessCapture = true
             } label: {
                 Label(
-                    copiedFreshnessCapture ? "Issue #52 capture copied" : "Copy issue #52 capture",
+                    copiedFreshnessCapture ? "Reading capture copied" : "Copy reading capture",
                     systemImage: "doc.on.doc"
                 )
             }
         } header: {
-            Text("Issue #52 · Read-only timing capture")
+            Text("Reading capture")
         } footer: {
-            Text("Markers record only when you press them; they do not verify treadmill state. Packet intervals use a monotonic clock. This measurement view applies no freshness or target deadline and cannot issue a Control Point procedure.")
+            Text("Observations record what you report; they do not verify belt state or allow a workout to begin or end. Timing uses a monotonic clock. These tools do not control the treadmill or change workout safety checks.")
         }
     }
 
@@ -273,14 +367,6 @@ struct TreadmillSetupView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-        }
-    }
-
-    private var safetySection: some View {
-        Section {
-            Label("Read-only capability check", systemImage: "lock.shield")
-        } footer: {
-            Text("This capability view cannot write FTMS Control Point 0x2AD9. Workout execution is started separately from a saved plan; the physical console and safety key stay authoritative.")
         }
     }
 

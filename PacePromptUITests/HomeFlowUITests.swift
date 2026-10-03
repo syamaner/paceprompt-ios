@@ -95,9 +95,116 @@ final class HomeFlowUITests: XCTestCase {
         )
     }
 
-    private func launch(scenario: String) {
+    func testSetupKeepsLimitsAndReadingAvailabilityOutsideDiagnostics() throws {
+        launch(scenario: "setup-diagnostics")
+        app.buttons["home.setup"].tap()
+        let speed = app.descendants(matching: .any)["setup.speed.limits"]
+        reveal(speed)
+        XCTAssertTrue(speed.label.contains("0.80–16.00 km/h"))
+        XCTAssertFalse(app.staticTexts["Raw"].exists)
+        XCTAssertFalse(app.buttons["Share reading capture"].exists)
+        XCTAssertFalse(app.staticTexts["00000000-0000-0000-0000-000000000107"].exists)
+        let readings = app.descendants(matching: .any)["setup.reading.2ACD"]
+        reveal(readings)
+        XCTAssertTrue(readings.label.contains("Ready to receive updates"))
+        let failed = app.descendants(matching: .any)["setup.reading.2AD3"]
+        reveal(failed)
+        XCTAssertTrue(failed.label.contains("Could not receive updates"))
+        let unsupported = app.descendants(matching: .any)["setup.reading.2ADA"]
+        reveal(unsupported)
+        XCTAssertTrue(unsupported.label.contains("Live updates not available"))
+        let link = app.buttons["setup.troubleshooting"]
+        reveal(link)
+        try app.performAccessibilityAudit(for: [.sufficientElementDescription, .trait])
+        capture("setup-reading-availability")
+        link.tap()
+        XCTAssertTrue(app.navigationBars["Troubleshooting"].waitForExistence(timeout: 2))
+        try app.performAccessibilityAudit(for: [.sufficientElementDescription, .trait])
+        capture("troubleshooting-capture")
+        XCTAssertTrue(app.staticTexts["troubleshooting.privacy"].label.contains("device identifiers"))
+        let share = app.buttons["Share reading capture"]
+        reveal(share)
+        XCTAssertFalse(app.buttons["Share issue #52 capture"].exists)
+        app.buttons["Copy reading capture"].tap()
+        XCTAssertTrue(app.buttons["Reading capture copied"].exists)
+        app.navigationBars["Troubleshooting"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.navigationBars["Treadmill"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.buttons["Share reading capture"].exists)
+    }
+
+    func testUnreadableSetupLimitStaysActionableWithDetailsSecondary() {
+        launch(scenario: "setup-malformed")
+        app.buttons["home.setup"].tap()
+        let speed = app.descendants(matching: .any)["setup.speed.limits"]
+        reveal(speed)
+        XCTAssertTrue(speed.label.contains("Could not read the limits. Reconnect to try again."))
+        XCTAssertFalse(speed.label.contains("16.00"))
+        XCTAssertFalse(app.staticTexts["Raw"].exists)
+        let reason = "Supported Speed Range expected exactly 6 bytes, received 1."
+        XCTAssertFalse(app.staticTexts[reason].exists)
+        let link = app.buttons["setup.troubleshooting"]
+        reveal(link)
+        link.tap()
+        XCTAssertEqual(app.staticTexts["troubleshooting.error"].label, reason)
+    }
+
+    func testReadOnlyStatusDoesNotClaimAllReadingsUnavailable() {
+        launch(scenario: "setup-read-only")
+        app.buttons["home.setup"].tap()
+        let status = app.descendants(matching: .any)["setup.reading.2AD3"]
+        reveal(status)
+        XCTAssertTrue(status.label.contains("Live updates not available"))
+        let link = app.buttons["setup.troubleshooting"]
+        reveal(link)
+        link.tap()
+        let copy = app.buttons["Copy reading capture"]
+        reveal(copy)
+        copy.tap()
+        XCTAssertTrue(app.buttons["Reading capture copied"].exists)
+    }
+
+    func testLargeTextTroubleshootingNavigationAndDisabledObservation() throws {
+        launch(scenario: "idle", largeText: true)
+        app.buttons["home.setup"].tap()
+        let link = app.buttons["setup.troubleshooting"]
+        reveal(link)
+        XCTAssertGreaterThanOrEqual(link.frame.height, 44)
+        link.tap()
+        XCTAssertTrue(app.navigationBars["Troubleshooting"].waitForExistence(timeout: 2))
+        let observation = app.buttons["troubleshooting.observation"]
+        reveal(observation)
+        XCTAssertFalse(observation.isEnabled)
+        let copy = app.buttons["Copy reading capture"]
+        reveal(copy)
+        XCTAssertTrue(copy.isHittable)
+        try app.performAccessibilityAudit(for: [.sufficientElementDescription, .trait])
+        capture("troubleshooting-large-text")
+        app.navigationBars["Troubleshooting"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.navigationBars["Treadmill"].waitForExistence(timeout: 2))
+    }
+
+    private func capture(_ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        for _ in 0..<12 {
+            if element.exists && element.isHittable { return }
+            app.swipeUp()
+        }
+        XCTFail("Expected reachable control: \(element)", file: file, line: line)
+    }
+
+    private func launch(scenario: String, largeText: Bool = false) {
         app = XCUIApplication()
         app.launchArguments = ["--paceprompt-home-ui-testing"]
+        if largeText {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName",
+                                    "UICTContentSizeCategoryAccessibilityXXXL"]
+        }
         app.launchEnvironment = ["PACEPROMPT_HOME_SCENARIO": scenario]
         app.launch()
         XCTAssertTrue(status("bluetooth").waitForExistence(timeout: 3))

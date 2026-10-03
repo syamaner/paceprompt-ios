@@ -2,6 +2,12 @@
 
 Status: historical issue #52 measurement procedure. Later sanitised physical evidence and the adopted policy are recorded in the [11 September characterisation](fr30z-console-target-characterisation-2026-09-11.md) and [FR30z physical-console execution profile](../../design/fr30z-physical-console-execution-profile.md). This document grants no physical-session authority.
 
+Current UI navigation is documented in [Treadmill setup and troubleshooting](issue210-treadmill-troubleshooting.md).
+The former Issue #52 capture controls now appear as Reading capture under
+Treadmill → Troubleshooting; the report format is unchanged. The historical
+build restrictions below describe the original measurement slice, not the
+current production app or fresh permission to operate hardware.
+
 This procedure supports [issue #52](https://github.com/syamaner/paceprompt-ios/issues/52). It measures passive `0x2ACD` delivery so a later review can propose a conservative telemetry-freshness window, stream-interruption rule, and target-observation deadline. It does not adopt any of those values.
 
 ## Non-write build boundary
