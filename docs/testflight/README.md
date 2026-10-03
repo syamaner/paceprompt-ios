@@ -909,3 +909,54 @@ two direct Watch recovery actions and one-tap phone recovery when needed. See
 and limits. Interactive Watch scrolling/VoiceOver, tester installation and physical
 Health/treadmill acceptance remain unobserved until tested. Preserve older uncertain
 attempts without save retry or replacement. #210 remains separate diagnostics work.
+
+## Internal build 22 release receipt (#227)
+
+On 3 October 2026, [candidate PR #228](https://github.com/syamaner/paceprompt-ios/pull/228)
+merged through protected main as `0ce59ce60cc6698e4ddc0f850a5a791240bf131d`,
+from independently approved head `66c6c3c053ebd06713fec86e9813b91b1eb9aeb9`.
+Required [PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/37149217739)
+and [exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/37149291870)
+passed. The merge has the reviewed head as its second parent, with an identical
+tree and all 417 frozen candidate inputs unchanged. The complete gate is recorded
+above. Immutable lightweight tag `testflight/1.0.1-b22` points to that merge.
+Creation used the existing admin-only tag-creation exception; no tag update or
+deletion occurred and main protection was not bypassed.
+
+[Release run 37149375064](https://github.com/syamaner/paceprompt-ios/actions/runs/37149375064),
+attempt 1, succeeded. Source verification and the credential-free Xcode 26.6
+archive passed before normal protected-environment approval under the operator's
+internal-release authorisation. Workflow, trusted tools
+`796819b21382ac7dd038fb989e79e1352aaf06ca`, signing configuration and destination
+were unchanged. The exact-tag export-compliance allowlist used the standing
+no-non-exempt-encryption decision for unchanged encryption behaviour.
+
+Trusted preflight verified the existing app, unused build and sole-tester internal
+group. Both signing profiles, signed phone/Watch metadata, privacy and fixed
+entitlements passed. The log records one `UPLOAD SUCCEEDED with no errors` marker.
+The Apple guard verified `VALID`, `INTERNAL_ONLY`, an eligible internal beta state
+and assignment in the unchanged sole-tester group's build list. No rerun or second
+upload occurred; no external testers or public release were added.
+
+The Actions wrapper digest is
+`a9a4a3196b47f07d1552724762534b6027842003abaed8ca0b8601eefea5d1d6`.
+The inner unsigned archive digest is
+`94bd88cb4d8b488aaef6c78bf08160cba4dca733f17c963a01081112d9f6dddd`.
+Both match hosted evidence. Bounded extraction verified source/tag/run/attempt,
+and both unsigned device bundles passed validation. The package, matching archive
+and both dSYMs are retained privately under
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-22/` with directory
+mode 700 and file mode 600. No signed IPA or signing asset was retained as an
+Actions artifact; optional symbol upload remains disabled.
+
+These are hosted-release and Apple API observations. TestFlight visibility on the
+tester's phone, installation, interactive Watch scrolling/VoiceOver and physical
+Health/treadmill acceptance were not observed. Update both companions to
+**1.0.1 (22)**. Complete a short nonempty workout, stop the belt physically and
+end on phone; leave Watch untouched and check its saved result, local History and
+exactly one Health workout separately. Check direct recovery only when needed,
+following [confirmation decisions](../../design/confirmation-decisions.md).
+
+#209 and #211 are now included in this internal release. #208 remains open for
+#210 diagnostics placement and runtime/device acceptance. #115/#212 repeated and
+background/recovery acceptance, #116 and WeeklyHealthReport #80 remain separate.
