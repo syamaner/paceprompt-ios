@@ -60,6 +60,25 @@ private final class HomeUITestFTMSClient: FTMSClientProtocol {
             send(.value(uuid: FTMSUUID.fitnessMachineFeature, data: Data([0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00]), source: .initialRead))
             send(.value(uuid: FTMSUUID.supportedSpeedRange, data: Data([0x50, 0x00, 0x40, 0x06, 0x0A, 0x00]), source: .initialRead))
             send(.value(uuid: FTMSUUID.supportedInclinationRange, data: Data([0x00, 0x00, 0x78, 0x00, 0x05, 0x00]), source: .initialRead))
+        case "setup-diagnostics", "setup-malformed", "setup-read-only":
+            seed(scenario: "connected-evidence")
+            send(.devices([.init(id: connectedPeripheralIdentifier!, name: "Synthetic treadmill", rssi: -50)]))
+            send(.subscription(uuid: FTMSUUID.treadmillData, state: .subscribed))
+            send(.subscription(uuid: FTMSUUID.trainingStatus, state: .failed(message: "Synthetic subscription failure")))
+            send(.subscription(uuid: FTMSUUID.fitnessMachineStatus, state: .unsupported(reason: "Synthetic unsupported stream")))
+            if scenario == "setup-read-only" {
+                send(.characteristics([
+                    .init(uuid: FTMSUUID.trainingStatus, properties: ["Read"]),
+                    .init(uuid: FTMSUUID.fitnessMachineFeature, properties: ["Read"]),
+                    .init(uuid: FTMSUUID.supportedSpeedRange, properties: ["Read"]),
+                    .init(uuid: FTMSUUID.supportedInclinationRange, properties: ["Read"]),
+                ]))
+                send(.value(uuid: FTMSUUID.trainingStatus, data: Data([0, 1]), source: .initialRead))
+                send(.subscription(uuid: FTMSUUID.trainingStatus, state: .unsupported(reason: "Notify is not supported; initial read remains available")))
+            }
+            if scenario == "setup-malformed" {
+                send(.value(uuid: FTMSUUID.supportedSpeedRange, data: Data([0xFF]), source: .initialRead))
+            }
         case "workout-ready":
             workoutReady = true
             send(.availability(.poweredOn))
