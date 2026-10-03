@@ -62,8 +62,7 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
 @main struct PacePromptWatchApp: App {
     @WKApplicationDelegateAdaptor(WatchAppDelegate.self) var delegate
     @Environment(\.scenePhase) private var scenePhase
-    @State private var confirmStop = false
-    @State private var confirmNext = false
+    private let stopExplanation = "Stops recording without finishing it. A save already in progress may still complete. Stop the treadmill at its console."
     @StateObject private var model = WatchWorkoutModel.shared
     var body: some Scene {
         WindowGroup {
@@ -76,12 +75,25 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
                             .accessibilityIdentifier("watch-end-recording")
                     }
                     if model.presentation.canStop {
-                        Button("Stop recording", role: .destructive) { confirmStop = true }
-                            .accessibilityIdentifier("watch-stop-recording")
+                        VStack(spacing: 6) {
+                            Text("Recording recovery").font(.headline)
+                            if model.presentation.canEnd {
+                                Text("To finish normally, use End recording & save above.").font(.caption2)
+                            }
+                            Text(stopExplanation)
+                                .font(.caption2)
+                            Button("Stop recording", role: .destructive) { Task { await model.lifecycle.forceStop() } }
+                                .accessibilityIdentifier("watch-stop-recording")
+                                .accessibilityHint(stopExplanation)
+                        }
                     }
                     if model.presentation.canPrepareNext {
-                        Button("Prepare next workout") { confirmNext = true }
-                            .accessibilityIdentifier("watch-prepare-next")
+                        VStack(spacing: 6) {
+                            Text(model.presentation.nextWorkoutConfirmation).font(.caption2)
+                            Button("Prepare next workout") { model.lifecycle.prepareNextWorkout() }
+                                .accessibilityIdentifier("watch-prepare-next")
+                                .accessibilityHint(model.presentation.nextWorkoutConfirmation)
+                        }
                     }
                     if model.presentation.canEnd || model.presentation.canStop || model.presentation.canPrepareNext {
                         Text("Recording controls only. Stop the treadmill at its console.").font(.caption2)
@@ -98,16 +110,7 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { Task { await model.lifecycle.foreground(); model.adapter.publishMetrics() } }
             }
-            .confirmationDialog("Stop Watch recording?", isPresented: $confirmStop, titleVisibility: .visible) {
-                Button("Stop recording", role: .destructive) { Task { await model.lifecycle.forceStop() } }
-            } message: {
-                Text("Stops Health recording only. A save already in progress may still complete. The treadmill keeps moving until you stop it at its console.")
-            }
-            .confirmationDialog("Prepare a new workout?", isPresented: $confirmNext, titleVisibility: .visible) {
-                Button("Prepare next workout") { model.lifecycle.prepareNextWorkout() }
-            } message: {
-                Text(model.presentation.nextWorkoutConfirmation)
-            }
+
         }
     }
 }

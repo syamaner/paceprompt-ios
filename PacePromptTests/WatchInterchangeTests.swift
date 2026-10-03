@@ -879,6 +879,23 @@ import XCTest
         var fresh = WatchWireMessage(.bind, summaryID: "11400000-0000-4000-8000-000000000002"); fresh.workoutActivity = "indoorWalking"
         try await receive(fresh); XCTAssertEqual(recording.begins, 2)
     }
+    func testDirectRecoveryActionsRequireStoppedProofAndRetireOnlyOnce() async throws {
+        try await bound(); try await receive(manifest(1))
+        sut.prepareNextWorkout()
+        XCTAssertTrue(store.archives.isEmpty)
+        XCTAssertEqual(sut.journal?.phase, .recording)
+        await sut.forceStop()
+        await sut.forceStop()
+        XCTAssertEqual(recording.order.filter { $0 == "verifiedStop" }.count, 1)
+        XCTAssertTrue(sut.canPrepareNext)
+        sut.prepareNextWorkout()
+        sut.prepareNextWorkout()
+        XCTAssertEqual(store.archives.count, 1)
+        XCTAssertEqual(sut.journal?.phase, .retired)
+        XCTAssertFalse(sut.canPrepareNext)
+        XCTAssertEqual(recording.finishes, 0)
+        XCTAssertEqual(recording.discards, 0)
+    }
     func testFailedArchiveOrRetirementWriteDoesNotPermitNewAttempt() async throws {
         try await bound(); await sut.forceStop(); store.failArchive = true
         sut.prepareNextWorkout(); await sut.launch(activity: "indoorWalking")

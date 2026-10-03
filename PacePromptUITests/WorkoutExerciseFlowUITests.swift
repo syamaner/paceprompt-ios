@@ -95,11 +95,13 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
     }
   }
 
-  func testLandscapeRecoveryObservationCanBeCancelled() {
+  func testLandscapeRecoveryObservationNeedsOneTapAndKeepsInterruptedOutcome() {
     launch(scenario: "interrupted", orientation: .landscapeLeft)
-    app.buttons["exercise.confirm-stationary"].tap()
-    XCTAssertTrue(app.buttons["Confirm treadmill is stationary"].waitForExistence(timeout: 2))
-    app.buttons["Cancel"].tap()
+    let observation = app.buttons["exercise.confirm-stationary"]
+    XCTAssertEqual(observation.label, "I can see the belt has stopped")
+    observation.tap()
+    XCTAssertTrue(observation.waitForNonExistence(timeout: 2))
+    XCTAssertFalse(app.buttons["Confirm treadmill is stationary"].exists)
     XCTAssertTrue(app.staticTexts["Workout interrupted"].exists)
     XCTAssertFalse(app.buttons["exercise.end"].exists)
   }
@@ -274,11 +276,7 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
     XCTAssertTrue(stationaryConfirmation.isHittable)
     stationaryConfirmation.tap()
 
-    let confirmStationary = app.buttons["Confirm treadmill is stationary"]
-    XCTAssertTrue(confirmStationary.waitForExistence(timeout: 2))
-    app.swipeUp()
-    scrollTo(confirmStationary)
-    confirmStationary.tap()
+    XCTAssertFalse(app.buttons["Confirm treadmill is stationary"].exists)
 
     XCTAssertTrue(app.staticTexts["Workout interrupted"].waitForExistence(timeout: 2))
     XCTAssertTrue(

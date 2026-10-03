@@ -7,7 +7,6 @@ struct WorkoutExerciseView: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var showingPlan = false
-  @State private var showingStationaryConfirmation = false
 
   var body: some View {
     GeometryReader { geometry in
@@ -16,9 +15,6 @@ struct WorkoutExerciseView: View {
           .padding(.horizontal, 12)
           .padding(.vertical, 10)
           .frame(width: geometry.size.width, height: geometry.size.height)
-          .overlay {
-            landscapeConfirmationOverlay
-          }
       } else {
         ScrollView {
           Group {
@@ -232,6 +228,7 @@ struct WorkoutExerciseView: View {
         Button(stationaryActionTitle) { stationaryAction() }
         .landscapeExerciseActionStyle(tint: .orange)
         .accessibilityIdentifier("exercise.confirm-stationary")
+          .accessibilityHint("Only activate after you have seen the belt stop. A missing treadmill update does not mean it has stopped.")
       } else {
         if presentation.canReturnToPlan {
           Button("Return to plan") { send(.returnToPlan) }
@@ -253,38 +250,6 @@ struct WorkoutExerciseView: View {
     .overlay {
       RoundedRectangle(cornerRadius: 14)
         .stroke(WorkoutExercisePalette.border, lineWidth: 1)
-    }
-  }
-
-  @ViewBuilder
-  private var landscapeConfirmationOverlay: some View {
-    if presentation.canConfirmOperatorStationary && showingStationaryConfirmation {
-      landscapeConfirmationBackdrop {
-        confirmationPanel(
-          title: "Confirm the belt has stopped",
-          message:
-            "Confirm only after you have seen the belt stop. A lost connection or missing update does not mean it has stopped.",
-          actionTitle: "Confirm treadmill is stationary",
-          tint: .orange
-        ) {
-          showingStationaryConfirmation = false
-          send(.confirmOperatorStationary)
-        } cancel: {
-          showingStationaryConfirmation = false
-        }
-      }
-    }
-  }
-
-  private func landscapeConfirmationBackdrop<Content: View>(
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    ZStack {
-      Color.black.opacity(0.72)
-        .ignoresSafeArea()
-      content()
-        .frame(maxWidth: 380)
-        .padding(20)
     }
   }
 
@@ -517,7 +482,7 @@ struct WorkoutExerciseView: View {
 
   private func stationaryAction() {
     if presentation.canConfirmStationaryAndEnd { send(.confirmStationaryAndEndWorkout) }
-    else { showingStationaryConfirmation = true }
+    else { send(.confirmOperatorStationary) }
   }
 
   private var actionRegion: some View {
@@ -549,21 +514,9 @@ struct WorkoutExerciseView: View {
           Button(stationaryActionTitle) { stationaryAction() }
           .exerciseActionStyle(tint: .orange)
           .accessibilityIdentifier("exercise.confirm-stationary")
+          .accessibilityHint("Only activate after you have seen the belt stop. A missing treadmill update does not mean it has stopped.")
 
-          if showingStationaryConfirmation {
-            confirmationPanel(
-              title: "Confirm the belt has stopped",
-              message:
-                "Confirm only after you have seen the belt stop. A lost connection or missing update does not mean it has stopped.",
-              actionTitle: "Confirm treadmill is stationary",
-              tint: .orange
-            ) {
-              showingStationaryConfirmation = false
-              send(.confirmOperatorStationary)
-            } cancel: {
-              showingStationaryConfirmation = false
-            }
-          }
+
         }
         .padding(12)
         .background(WorkoutExercisePalette.surface, in: RoundedRectangle(cornerRadius: 14))
@@ -628,35 +581,6 @@ struct WorkoutExerciseView: View {
       }
       .accessibilityIdentifier("exercise.plan.sheet")
     }
-  }
-
-  private func confirmationPanel(
-    title: String,
-    message: String,
-    actionTitle: String,
-    tint: Color,
-    action: @escaping () -> Void,
-    cancel: @escaping () -> Void
-  ) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
-      Text(title)
-        .font(.headline)
-      Text(message)
-        .font(.caption)
-        .foregroundStyle(WorkoutExercisePalette.muted)
-        .fixedSize(horizontal: false, vertical: true)
-      Button(actionTitle, action: action)
-        .exerciseActionStyle(tint: tint)
-      Button("Cancel", role: .cancel, action: cancel)
-        .font(.subheadline.weight(.semibold))
-        .frame(maxWidth: .infinity, minHeight: 44)
-    }
-    .padding(12)
-    .background(WorkoutExercisePalette.surface, in: RoundedRectangle(cornerRadius: 14))
-    .overlay(
-      RoundedRectangle(cornerRadius: 14)
-        .stroke(tint.opacity(0.8), lineWidth: 1)
-    )
   }
 
   private func metric(title: String, value: String, detail: String? = nil) -> some View {
