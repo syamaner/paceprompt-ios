@@ -33,7 +33,7 @@ final class HealthExportFlowUITests: XCTestCase {
     save.tap()
     XCTAssertTrue(app.alerts["Save to Apple Health?"].waitForExistence(timeout: 2))
     XCTAssertTrue(app.alerts["Save to Apple Health?"].staticTexts.element(boundBy: 1).label.contains(
-      "prescribed, effective-target and separately observed speed and inclination"
+      "original plan settings, your changed settings and separate treadmill readings for speed and incline"
     ))
     app.alerts["Save to Apple Health?"].buttons["Save"].tap()
 
@@ -70,9 +70,9 @@ final class HealthExportFlowUITests: XCTestCase {
     XCTAssertTrue(repeatButton.waitForExistence(timeout: 3))
     XCTAssertTrue(repeatButton.isHittable)
     repeatButton.tap()
-    XCTAssertTrue(app.navigationBars["Repeat Synthetic steady walk"].waitForExistence(timeout: 5))
+    XCTAssertTrue(app.navigationBars["Plan: Synthetic steady walk"].waitForExistence(timeout: 5))
     let reviewOnly = app.staticTexts[
-      "Review only. This does not arm, connect to or operate a treadmill, and it does not create or save a new plan."
+      "This is the original plan for this workout. Viewing it does not start a workout or save a new plan."
     ]
     for _ in 0..<4 where !reviewOnly.exists { app.swipeUp() }
     XCTAssertTrue(reviewOnly.exists)
@@ -105,7 +105,7 @@ final class HealthExportFlowUITests: XCTestCase {
     let disclosure = app.descendants(matching: .any)["history.export.disclosure"]
     for _ in 0..<6 where !disclosure.exists { app.swipeUp() }
     XCTAssertTrue(disclosure.exists)
-    XCTAssertTrue(disclosure.label.contains("prescribed, effective-target and separately observed"))
+    XCTAssertTrue(disclosure.label.contains("original plan settings, your changed settings, separate treadmill readings"))
     app.buttons["history.export.cancel"].tap()
 
     XCTAssertTrue(delete.waitForExistence(timeout: 3))

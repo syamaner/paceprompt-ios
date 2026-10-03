@@ -174,7 +174,7 @@ struct WorkoutExerciseView: View {
   private var landscapeEvidenceBoundary: some View {
     VStack(alignment: .leading, spacing: 3) {
       Text(
-        "Actual is treadmill reported. Planned is the segment target. Effective includes any current-segment override."
+        "Treadmill shows the reported value. Plan shows the original setting. Your setting includes changes for this step."
       )
       .font(.caption2)
       .foregroundStyle(WorkoutExercisePalette.muted)
@@ -216,7 +216,7 @@ struct WorkoutExerciseView: View {
         } else {
           Text(
             shouldReduceMotion
-              ? "Reduced motion: static status" : "Status changes use a gentle pulse only"
+              ? "Animation off" : "Gentle status animation"
           )
           .font(.caption2)
           .foregroundStyle(WorkoutExercisePalette.muted)
@@ -242,7 +242,7 @@ struct WorkoutExerciseView: View {
         if presentation.canEndWorkout {
           Button("End workout") { send(.endWorkout) }
             .landscapeExerciseActionStyle(tint: .red)
-            .accessibilityHint("Ends this workout using the current stopped-treadmill evidence. Stop the belt at its console.")
+            .accessibilityHint("Finishes the workout after the treadmill has stopped. Use the console to stop the belt.")
             .accessibilityIdentifier("exercise.end")
         }
       }
@@ -261,9 +261,9 @@ struct WorkoutExerciseView: View {
     if presentation.canConfirmOperatorStationary && showingStationaryConfirmation {
       landscapeConfirmationBackdrop {
         confirmationPanel(
-          title: "Operator-confirmed stationary",
+          title: "Confirm the belt has stopped",
           message:
-            "Confirm only after directly observing that the treadmill is stationary. Silence, stale telemetry and disconnection are not stationary evidence.",
+            "Confirm only after you have seen the belt stop. A lost connection or missing update does not mean it has stopped.",
           actionTitle: "Confirm treadmill is stationary",
           tint: .orange
         ) {
@@ -378,11 +378,11 @@ struct WorkoutExerciseView: View {
 
   private var evidenceBoundary: some View {
     VStack(alignment: .leading, spacing: 7) {
-      Label("Evidence, not assumptions", systemImage: "shield.lefthalf.filled")
+      Label("Your settings and treadmill readings", systemImage: "shield.lefthalf.filled")
         .font(.caption.weight(.bold))
         .foregroundStyle(WorkoutExercisePalette.muted)
       Text(
-        "Actual is treadmill reported. Planned is the segment target. Effective includes any current-segment override."
+        "Treadmill shows the reported value. Plan shows the original setting. Your setting includes changes for this step."
       )
       .font(.caption)
       .foregroundStyle(WorkoutExercisePalette.muted)
@@ -426,9 +426,9 @@ struct WorkoutExerciseView: View {
         }
       }
 
-      valueRow(label: "Actual", value: axis.actual, emphasis: true, compact: compact)
-      valueRow(label: "Planned", value: axis.planned, compact: compact)
-      valueRow(label: "Effective", value: axis.effective, compact: compact)
+      valueRow(label: "Treadmill", value: axis.actual, emphasis: true, compact: compact)
+      valueRow(label: "Plan", value: axis.planned, compact: compact)
+      valueRow(label: "Your setting", value: axis.effective, compact: compact)
 
       Label(axis.evidence.label, systemImage: axis.evidence.symbol)
         .font(.caption.weight(.semibold))
@@ -504,7 +504,7 @@ struct WorkoutExerciseView: View {
     .disabled(target == nil)
     .accessibilityLabel(label)
     .accessibilityHint(
-      "Changes only the current segment effective target within the current live machine range and increment."
+      "Changes this step only, using the settings supported by the connected treadmill."
     )
     .accessibilityIdentifier(
       "exercise.\(speed ? "speed" : "inclination").\(symbol)"
@@ -512,7 +512,7 @@ struct WorkoutExerciseView: View {
   }
 
   private var stationaryActionTitle: String {
-    presentation.canConfirmStationaryAndEnd ? "Treadmill stopped — end workout" : "I observed the treadmill stationary"
+    presentation.canConfirmStationaryAndEnd ? "Treadmill stopped — end workout" : "I can see the belt has stopped"
   }
 
   private func stationaryAction() {
@@ -552,9 +552,9 @@ struct WorkoutExerciseView: View {
 
           if showingStationaryConfirmation {
             confirmationPanel(
-              title: "Operator-confirmed stationary",
+              title: "Confirm the belt has stopped",
               message:
-                "Confirm only after directly observing that the treadmill is stationary. Silence, stale telemetry and disconnection are not stationary evidence.",
+                "Confirm only after you have seen the belt stop. A lost connection or missing update does not mean it has stopped.",
               actionTitle: "Confirm treadmill is stationary",
               tint: .orange
             ) {
@@ -574,7 +574,7 @@ struct WorkoutExerciseView: View {
       if presentation.canEndWorkout {
         Button("End workout") { send(.endWorkout) }
           .exerciseActionStyle(tint: .red)
-          .accessibilityHint("Ends this workout using the current stopped-treadmill evidence. Stop the belt at its console.")
+          .accessibilityHint("Finishes the workout after the treadmill has stopped. Use the console to stop the belt.")
           .accessibilityIdentifier("exercise.end")
       }
 
@@ -589,7 +589,7 @@ struct WorkoutExerciseView: View {
 
       Text(
         shouldReduceMotion
-          ? "Reduced motion: static status" : "Status changes use a gentle pulse only"
+          ? "Animation off" : "Gentle status animation"
       )
       .font(.caption2)
       .foregroundStyle(WorkoutExercisePalette.muted)

@@ -272,7 +272,7 @@ final class ProductionWorkoutExecutionBinding {
   private let automaticTicks: Bool
   var executionStateObserver: ((WorkoutExecutionState) -> Void)?
   var capabilityReadObserver: (() -> Void)?
-  private(set) var preflightRead: LiveCapabilityRead = .unavailable("No fresh preflight read")
+  private(set) var preflightRead: LiveCapabilityRead = .unavailable("Treadmill settings have not been checked yet.")
   private var preflightPending: Set<String> = []
   private var preflightStartedAt: MonotonicInstant?
   private static let preflightUUIDs: Set<String> = [FTMSUUID.fitnessMachineFeature, FTMSUUID.supportedSpeedRange, FTMSUUID.supportedInclinationRange]
@@ -280,7 +280,7 @@ final class ProductionWorkoutExecutionBinding {
   func readCapabilitiesForPreflight() {
     guard isConnected, epoch != nil, applicationActivity == .active, protectedDataAvailable, preflightPending.isEmpty else {
       preflightPending = []; preflightStartedAt = nil
-      preflightRead = .unavailable("Current connection is unavailable or a read is already pending")
+      preflightRead = .unavailable("The treadmill is disconnected or a settings check is already running.")
       capabilityReadObserver?(); return
     }
     preflightPending = Self.preflightUUIDs
@@ -288,7 +288,7 @@ final class ProductionWorkoutExecutionBinding {
     preflightRead = .reading
     if !client.refreshCapabilitiesForPreflight() {
       preflightPending = []; preflightStartedAt = nil
-      preflightRead = .unavailable("Complete current capability reads could not be requested. In setup, wait for pending reads or explicitly disconnect and reconnect before continuing.")
+      preflightRead = .unavailable("Could not start the treadmill check. In setup, wait for any check to finish, or disconnect and reconnect before continuing.")
       capabilityReadObserver?()
     }
   }
@@ -298,7 +298,7 @@ final class ProductionWorkoutExecutionBinding {
     let now = clock.read().monotonic
     guard let started = preflightStartedAt, now >= started, now.seconds - started.seconds < 10 else {
       preflightStartedAt = nil
-      preflightRead = .unavailable("Current capability read expired. Choose another treadmill, then explicitly disconnect and reconnect before continuing.")
+      preflightRead = .unavailable("The treadmill check expired. Choose another treadmill, then disconnect and reconnect before continuing.")
       capabilityReadObserver?(); return
     }
     preflightStartedAt = nil
@@ -313,7 +313,7 @@ final class ProductionWorkoutExecutionBinding {
         speed: feature.supportsSpeedTargetSetting ? .supported(.init(minimum: .init(value: FTMSProtocolDecimal.speed(kilometresPerHour: speed.minimumKilometresPerHour), unit: .kilometresPerHour), maximum: .init(value: FTMSProtocolDecimal.speed(kilometresPerHour: speed.maximumKilometresPerHour), unit: .kilometresPerHour), increment: .init(value: FTMSProtocolDecimal.speed(kilometresPerHour: speed.minimumIncrementKilometresPerHour), unit: .kilometresPerHour))) : .unsupported,
         inclination: feature.supportsInclinationTargetSetting ? .supported(.init(minimum: .init(value: FTMSProtocolDecimal.inclination(percent: incline.minimumPercent), unit: .percent), maximum: .init(value: FTMSProtocolDecimal.inclination(percent: incline.maximumPercent), unit: .percent), increment: .init(value: FTMSProtocolDecimal.inclination(percent: incline.minimumIncrementPercent), unit: .percent))) : .unsupported)
       preflightRead = .complete(epoch, capabilities)
-    } catch { preflightRead = .unavailable("Current capability read is malformed or incomplete") }
+    } catch { preflightRead = .unavailable("Some treadmill settings could not be read.") }
     capabilityReadObserver?()
   }
   private enum LiveReadFailure: Error { case incomplete }
@@ -408,7 +408,7 @@ final class ProductionWorkoutExecutionBinding {
     applicationActivity = activity
     if activity != .active {
       preflightPending = []; preflightStartedAt = nil
-      preflightRead = .unavailable("Capability evidence became stale while the app was inactive")
+      preflightRead = .unavailable("The treadmill needs checking again after PacePrompt was in the background.")
       capabilityReadObserver?()
     }
     guard let epoch else {
@@ -471,14 +471,14 @@ final class ProductionWorkoutExecutionBinding {
       consumeValue(uuid: key, data: data)
       if source == .preflightRead, preflightPending.remove(key) != nil, preflightPending.isEmpty { finishPreflightRead() }
       else if Self.preflightUUIDs.contains(key), preflightPending.isEmpty, source != .preflightRead {
-        preflightRead = .unavailable("Capability evidence changed; a fresh preflight read is required")
+        preflightRead = .unavailable("The treadmill settings changed. Check the workout again.")
         capabilityReadObserver?()
       }
     case .valueError(let uuid, _, let message):
       if Self.preflightUUIDs.contains(uuid.uppercased()) {
         values.removeValue(forKey: uuid.uppercased())
         preflightPending = []; preflightStartedAt = nil
-        preflightRead = .unavailable("Current capability read failed")
+        preflightRead = .unavailable("Could not check the supported treadmill settings.")
         publishCapabilityChange(nil)
         capabilityReadObserver?()
       }
@@ -498,7 +498,7 @@ final class ProductionWorkoutExecutionBinding {
       let now = clock.read().monotonic
       if now < started || now.seconds - started.seconds >= 10 {
         preflightPending = []; preflightStartedAt = nil
-        preflightRead = .unavailable("Current capability read timed out or its clock cannot be verified. Choose another treadmill, then explicitly disconnect and reconnect before continuing.")
+        preflightRead = .unavailable("The treadmill check did not finish in time. Choose another treadmill, then disconnect and reconnect before continuing.")
         capabilityReadObserver?()
       }
     }
@@ -821,7 +821,7 @@ final class ProductionWorkoutExecutionBinding {
     establishedLinkIdentity = nil
     isConnected = false
     preflightPending = []; preflightStartedAt = nil
-    preflightRead = .unavailable("Current connection was replaced or disconnected")
+    preflightRead = .unavailable("The treadmill connection changed or was lost.")
     capabilityReadObserver?()
     characteristics = [:]
     values = [:]

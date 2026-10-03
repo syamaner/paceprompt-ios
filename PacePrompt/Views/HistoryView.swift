@@ -137,7 +137,7 @@ private struct HistoryWorkoutDetailView: View {
                     .navigationTitle(detail.title)
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
-                            Button("Repeat") { showingRepeatReview = true }
+                            Button("View plan") { showingRepeatReview = true }
                                 .accessibilityIdentifier("history.repeat")
                         }
                     }
@@ -168,7 +168,7 @@ private struct HistoryWorkoutDetailView: View {
     private func detailList(_ detail: HistoryWorkoutDetail) -> some View {
         List {
             Section {
-                Label(detail.outcome, systemImage: outcomeSymbol(detail.outcome))
+                Label(detail.outcome, systemImage: detail.outcomeSymbol)
                     .font(.headline)
                     .accessibilityIdentifier("history.detail.outcome")
                 Text(detail.activityAndDate).foregroundStyle(.secondary)
@@ -180,7 +180,7 @@ private struct HistoryWorkoutDetailView: View {
                 LabeledContent("Progress", value: detail.progress)
             }
 
-            Section("Prescribed plan") {
+            Section("Original plan") {
                 ForEach(detail.prescribed) { segment in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(segment.title).font(.subheadline.weight(.semibold))
@@ -191,7 +191,7 @@ private struct HistoryWorkoutDetailView: View {
                 }
             }
 
-            Section("Executed intervals") {
+            Section("Recorded intervals") {
                 if let unavailable = detail.executionUnavailable {
                     Text(unavailable)
                         .foregroundStyle(.secondary)
@@ -219,7 +219,7 @@ private struct HistoryWorkoutDetailView: View {
             Section("Apple Health") {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: detail.health.symbol)
-                        .foregroundStyle(detail.health.title == "Saved to Apple Health" ? .green : .secondary)
+                        .foregroundStyle(detail.health.isSaved ? .green : .secondary)
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 5) {
                         Text(detail.health.title).font(.headline)
@@ -247,21 +247,12 @@ private struct HistoryWorkoutDetailView: View {
                     .accessibilityIdentifier("history.delete")
             } footer: {
                 Text(model.historyExportFailure(summaryID: summaryID)
-                     ?? "JSON export creates a deliberate protected copy. Deletion is not available in this version.")
+                     ?? "Export a JSON copy to share. Deleting workouts is not available in this version.")
             }
         }
     }
 
-    private func outcomeSymbol(_ outcome: String) -> String {
-        switch outcome {
-        case "Completed": "checkmark.circle.fill"
-        case "Ended by you": "stop.circle.fill"
-        case "Interrupted": "pause.circle.fill"
-        case "Failed": "xmark.circle.fill"
-        case "Physically uncertain": "exclamationmark.triangle.fill"
-        default: "clock.badge.exclamationmark"
-        }
-    }
+
 }
 
 private struct WorkoutHistoryExportFlowView: View {
@@ -368,8 +359,8 @@ private struct WorkoutHistoryExportFlowView: View {
                 LabeledContent("Workouts", value: preview.recordCount.formatted())
             }
 
-            Section("Included evidence") {
-                ForEach(preview.includedFields, id: \.self) { field in Text(field) }
+            Section("Included details") {
+                ForEach(WorkoutHistoryExportPreview.productFieldDescriptions, id: \.self) { field in Text(field) }
             }
 
             Section("Selected workouts") {
@@ -387,7 +378,7 @@ private struct WorkoutHistoryExportFlowView: View {
                     .buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("history.export.share")
             } footer: {
-                Text("The export contains prescribed, effective-target and separately observed speed and inclination, timing, outcome and optional trustworthy distance. PacePrompt removes the protected temporary copy when sharing finishes or is cancelled. Persistent History is unchanged.")
+                Text("The export includes original plan settings, your changed settings, separate treadmill readings, timing, outcome and available distance. Choose who receives it in the share sheet. PacePrompt removes its temporary copy after sharing or cancellation; copies you share may remain with the recipient. Your History is unchanged.")
                     .accessibilityIdentifier("history.export.disclosure")
             }
         }
@@ -431,7 +422,7 @@ private struct HistoryRepeatReviewView: View {
                     LabeledContent("Activity", value: plan.activity == .indoorWalking ? "Indoor walking" : "Indoor running")
                     LabeledContent("Segments", value: "\(plan.steps.count)")
                 }
-                Section("Immutable plan snapshot") {
+                Section("Original plan") {
                     ForEach(Array(plan.steps.enumerated()), id: \.offset) { index, step in
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(index + 1). \(step.label)").font(.headline)
@@ -442,11 +433,11 @@ private struct HistoryRepeatReviewView: View {
                     }
                 }
                 Section {
-                    Text("Review only. This does not arm, connect to or operate a treadmill, and it does not create or save a new plan.")
+                    Text("This is the original plan for this workout. Viewing it does not start a workout or save a new plan.")
                         .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Repeat \(plan.suggestedName)")
+            .navigationTitle("Plan: \(plan.suggestedName)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

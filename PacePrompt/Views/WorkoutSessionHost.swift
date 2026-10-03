@@ -159,7 +159,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
   private func requestCapabilityRead(_ action: PendingRead) {
     pendingRead = action
     if let plan = selectedPlan?.plan {
-      liveFailure = .init(plan: plan, reason: "Reading current treadmill capabilities. Execution remains blocked.", issues: [], readComplete: false)
+      liveFailure = .init(plan: plan, reason: "Checking supported treadmill settings. Please wait.", issues: [], readComplete: false, isReading: true)
     }
     binding.readCapabilitiesForPreflight()
   }
@@ -171,10 +171,10 @@ final class WorkoutSessionCoordinator: ObservableObject {
       pendingRead = nil
       liveFailure = LivePreflightFailure.review(record.plan, read: binding.preflightRead, epoch: binding.epoch)
       if liveFailure == nil && !binding.canExposeArming {
-        liveFailure = .init(plan: record.plan, reason: "Current capability or subscriptions do not match the accepted FR30z execution profile. No control authority is granted.", issues: [], readComplete: true)
+        liveFailure = .init(plan: record.plan, reason: "The treadmill settings or live updates do not meet the requirements for a Reebok FR30z workout. PacePrompt cannot change its settings.", issues: [], readComplete: true)
       }
       if liveFailure == nil, action == nil, binding.orchestrator.state.armedWorkout == nil {
-        liveFailure = .init(plan: record.plan, reason: "A new deliberate preparation is required. Choose another treadmill to return to setup.", issues: [], readComplete: true)
+        liveFailure = .init(plan: record.plan, reason: "Prepare this workout again. Choose another treadmill to return to setup.", issues: [], readComplete: true)
       }
       if useAppleWatch, watch?.phase == .unavailable {
         isStartingWatch = false
@@ -187,7 +187,7 @@ final class WorkoutSessionCoordinator: ObservableObject {
           guard let capability = binding.currentCapability,
             case .success(let plan) = WorkoutPlanValidator.validate(record.plan, against: capability.planCapabilities),
             let result = binding.arm(plan: plan, sourcePlanID: record.id), result.reducerDisposition == .accepted else {
-              liveFailure = .init(plan: record.plan, reason: "The exact plan fails current capability range or increment validation.", issues: [], readComplete: true)
+              liveFailure = .init(plan: record.plan, reason: "Some plan settings are not supported by the connected treadmill.", issues: [], readComplete: true)
               revision &+= 1; return
           }
         case .refresh:
@@ -418,15 +418,15 @@ struct WorkoutSessionHost: View {
           }
           Text(
             coordinator.binding.canExposeArming
-              ? "The current connection matches the accepted FR30z production profile."
-              : "Connect the accepted FR30z and wait for current capabilities and subscriptions."
+              ? "This connection supports Reebok FR30z workouts."
+              : "Connect your Reebok FR30z and wait for its settings and live updates to be checked."
           )
           .foregroundStyle(coordinator.binding.canExposeArming ? .green : .secondary)
           .accessibilityIdentifier("workout.prepare.connection-status")
         }
 
-        Section("Live capability bounds") {
-          Text("Continue reads current treadmill ranges and increments. Every exact plan target and manual adjustment must fit that evidence.")
+        Section("Treadmill limits") {
+          Text("Continue checks which speed and incline settings the connected treadmill supports. Your plan and any changes during the workout must fit those limits.")
         }
 
         if let notice = coordinator.notice {
@@ -438,12 +438,12 @@ struct WorkoutSessionHost: View {
         }
 
         Section {
-          Button("Continue to preflight") { coordinator.prepareWorkout() }
+          Button("Check workout") { coordinator.prepareWorkout() }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("workout.prepare.continue")
         } footer: {
           Text(
-            "This validates and prepares the local workout. No treadmill procedure is sent until after Begin workout and fresh physical-Start movement."
+            "This checks your workout. Settings are sent only after you tap Begin workout and the treadmill reports movement from using Start at its console."
           )
         }
       }
@@ -459,7 +459,7 @@ struct WorkoutSessionHost: View {
 
   private var unavailablePreflight: some View {
     ContentUnavailableView(
-      "Preflight unavailable",
+      "Workout check unavailable",
       systemImage: "exclamationmark.triangle.fill",
       description: Text("The selected plan or current treadmill profile changed.")
     )

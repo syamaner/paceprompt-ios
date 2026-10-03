@@ -104,7 +104,22 @@ struct ManualPlanIssuePresentation: Equatable {
     }
 
     init(validation issue: WorkoutPlanValidationIssue) {
-        self.init(kind: .validation(issue.code), path: issue.path, message: issue.message)
+        self.init(kind: .validation(issue.code), path: issue.path, message: Self.message(issue))
+    }
+
+    private static func message(_ issue: WorkoutPlanValidationIssue) -> String {
+        let axis = issue.path.lowercased().contains("speed") ? "speed" : "incline"
+        switch issue.code {
+        case .unsupportedSchemaVersion: return "This plan uses a format this version of PacePrompt cannot open."
+        case .capabilityUnknown: return "The supported \(axis) settings are not known. Connect the treadmill and wait for its settings to be checked."
+        case .targetUnsupported: return "This treadmill does not support changing \(axis) from the app."
+        case .invalidCapabilityRange: return "The treadmill reported unusable \(axis) limits. Reconnect in setup to check them again."
+        case .nonFiniteTarget: return "Enter a valid number for \(axis)."
+        // These messages include useful exact limits or a specific structural correction.
+        case .missingSuggestedName, .missingSteps, .invalidStepOrder, .missingInterval,
+             .missingStepLabel, .invalidDuration, .targetOutOfRange, .targetNotIncrementAligned:
+            return issue.message
+        }
     }
 
     private init(kind: ManualPlanProblemKind, path: String, message: String) {
@@ -156,7 +171,7 @@ struct ManualPlanIssuePresentation: Equatable {
         }
         if path == "suggestedName" { return "Plan name" }
         if path == "steps" { return "Ordered steps" }
-        if path.hasPrefix("capabilities.") { return "Capability snapshot" }
+        if path.hasPrefix("capabilities.") { return "Treadmill settings" }
         if path == "schemaVersion" { return "Plan format" }
         return "Plan"
     }
@@ -211,7 +226,7 @@ struct ManualPlanEditorPresentation: Equatable {
         issues = mappedIssues
         planNameHasProblem = mappedIssues.contains { $0.path == "suggestedName" }
         reviewActionEnabled = mappedIssues.isEmpty
-        reviewFooter = "Review validates canonical plan values independently of equipment. It does not save, contact or control the treadmill."
+        reviewFooter = "Review checks your plan before saving. Treadmill compatibility is checked before a workout begins."
 
         steps = draft.steps.enumerated().map { index, step in
             let stepIssues = mappedIssues.filter { $0.stepIndex == index }
@@ -299,7 +314,7 @@ struct ManualPlanReviewPresentation: Equatable {
         stepCount = preview.plan.steps.count.formatted(.number.locale(locale))
         confirmationTitle = editing ? "Confirm and update" : "Confirm and save"
         confirmationEnabled = canConfirm
-        confirmationFooter = "Canonical plan values validated independently of equipment. Live compatibility is checked before execution. Review and confirmation do not contact or control the treadmill. Only confirmation writes to local storage."
+        confirmationFooter = "Your plan has been checked. Confirm to save it on this iPhone. Treadmill compatibility is checked before a workout begins; saving does not control the treadmill."
         steps = preview.plan.steps.enumerated().map { index, step in
             ManualPlanReviewStepPresentation(
                 id: index,
@@ -362,7 +377,7 @@ struct PlansLibraryPresentation: Equatable {
             content = .blocked(
                 Self.statusCard(
                     title: "Plans are locked",
-                    detail: "Protected data is unavailable until this iPhone is unlocked. Your saved plans are untouched.",
+                    detail: "Unlock this iPhone and try again. Your saved plans are unchanged.",
                     symbol: "lock.shield",
                     tone: .neutral,
                     retryTitle: "Try again"
@@ -372,7 +387,7 @@ struct PlansLibraryPresentation: Equatable {
             content = .blocked(
                 Self.statusCard(
                     title: "Could not read plans",
-                    detail: "The plan store could not be opened. Nothing was written or deleted, and your saved data was preserved.",
+                    detail: "Your saved plans could not be opened. They have not been changed or deleted.",
                     symbol: "exclamationmark.triangle.fill",
                     tone: .failure,
                     retryTitle: "Retry read"
@@ -381,8 +396,8 @@ struct PlansLibraryPresentation: Equatable {
         case .corruptData:
             content = .blocked(
                 Self.statusCard(
-                    title: "Saved plans are corrupt",
-                    detail: "The stored records could not be decoded safely. They were preserved unchanged; editing and export are disabled.",
+                    title: "Saved plans cannot be read",
+                    detail: "Your saved plans could not be read. They are kept unchanged, but cannot be edited or exported.",
                     symbol: "exclamationmark.triangle.fill",
                     tone: .failure,
                     retryTitle: nil
@@ -391,28 +406,28 @@ struct PlansLibraryPresentation: Equatable {
         case .partialWriteDetected:
             content = .blocked(
                 Self.statusCard(
-                    title: "Last save finished partially",
-                    detail: "A partial write was detected. Existing plans were preserved; editing and export are disabled.",
+                    title: "Last save was interrupted",
+                    detail: "The last save did not finish. Existing plans are kept; editing and export are unavailable.",
                     symbol: "exclamationmark.triangle.fill",
                     tone: .warning,
                     retryTitle: nil
                 )
             )
-        case let .unsupportedStoreVersion(version):
+        case .unsupportedStoreVersion:
             content = .blocked(
                 Self.statusCard(
                     title: "Saved by a newer version",
-                    detail: "This plan store uses schema v\(version); this build reads v\(SavedPlanStoreSchema.currentVersion). The data is kept as-is and cannot be shown safely.",
+                    detail: "These plans use a format this version of PacePrompt cannot open. They are kept unchanged.",
                     symbol: "exclamationmark.circle.fill",
                     tone: .neutral,
                     retryTitle: nil
                 )
             )
-        case let .unsupportedPlanVersion(_, version):
+        case .unsupportedPlanVersion:
             content = .blocked(
                 Self.statusCard(
                     title: "A plan uses a newer version",
-                    detail: "A saved plan uses schema v\(version); this build reads v\(WorkoutPlanSchema.currentVersion). The store is kept as-is and cannot be shown safely.",
+                    detail: "A plan uses a format this version of PacePrompt cannot open. Your saved plans are kept unchanged.",
                     symbol: "exclamationmark.circle.fill",
                     tone: .neutral,
                     retryTitle: nil
@@ -428,7 +443,7 @@ struct PlansLibraryPresentation: Equatable {
         case .staleArtifactPresent:
             statusCard(
                 title: "A previous save needs attention",
-                detail: "A stale staging file was detected. Readable plans remain visible and preserved, but all changes are disabled.",
+                detail: "A previous save did not finish cleanly. You can view readable plans, but changes and export are unavailable.",
                 symbol: "exclamationmark.triangle.fill",
                 tone: .warning,
                 retryTitle: nil
@@ -436,7 +451,7 @@ struct PlansLibraryPresentation: Equatable {
         case .presenceUnavailable:
             statusCard(
                 title: "Save status is unavailable",
-                detail: "PacePrompt could not check for a staging file. Saved data was preserved, and all changes are disabled.",
+                detail: "PacePrompt could not check the last save. Your plans are kept, but changes and export are unavailable.",
                 symbol: "exclamationmark.triangle.fill",
                 tone: .warning,
                 retryTitle: nil
@@ -498,4 +513,14 @@ extension WorkoutStepKind {
         case .coolDown: "Cool-down"
         }
     }
+}
+
+extension SavedPlanExportPreview {
+    static let productFieldDescriptions = [
+        "File format version and export date",
+        "Plan identifiers, creation and modification dates",
+        "Plan format, name and activity",
+        "Every step's type and label",
+        "Every step's duration, speed and incline, with units",
+    ]
 }

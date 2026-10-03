@@ -26,7 +26,7 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
         XCTAssertTrue(status.exists)
         XCTAssertEqual(
           status.value as? String,
-          "\(title). Fresh treadmill evidence confirms the current effective targets."
+          "\(title). The treadmill reports your current speed and incline settings."
         )
       }
     }
@@ -318,8 +318,8 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
 
     XCTAssertEqual(element("exercise.motion").value as? String, "Static guidance")
     XCTAssertTrue(app.staticTexts["Checking treadmill"].exists)
-    XCTAssertTrue(element("exercise.speed.evidence").label.contains("Stale treadmill report"))
-    XCTAssertTrue(element("exercise.inclination.evidence").label.contains("Stale treadmill report"))
+    XCTAssertTrue(element("exercise.speed.evidence").label.contains("Waiting for an update"))
+    XCTAssertTrue(element("exercise.inclination.evidence").label.contains("Waiting for an update"))
   }
 
   private func launch(

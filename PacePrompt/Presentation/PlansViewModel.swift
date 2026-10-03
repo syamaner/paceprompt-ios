@@ -369,7 +369,7 @@ final class PlansViewModel: ObservableObject {
             }
             if current.isMismatch && mismatch != current {
                 saveRequiresHistoricalReview = true
-                saveError = "Review the affected steps and choose Save plan anyway to acknowledge this historical mismatch. No plan was saved."
+                saveError = "Review the affected steps and choose Save plan anyway to acknowledge this difference from the saved treadmill settings. No plan was saved."
                 return
             }
         }
@@ -427,8 +427,8 @@ final class PlansViewModel: ObservableObject {
             return "This saved plan is no longer available to edit. Existing plans were left unchanged."
         case .blocked:
             return "Saved-plan storage is not currently writable. Existing plans were left unchanged. Return to Plans and retry after the storage issue is resolved."
-        case let .writeFailed(stage):
-            return "The plan could not be \(editing ? "updated" : "saved") during \(stage.displayName). Existing plans were left unchanged. Try again."
+        case .writeFailed:
+            return "The plan could not be \(editing ? "updated" : "saved"). Existing plans are unchanged. Try again."
         }
     }
 
@@ -441,8 +441,8 @@ final class PlansViewModel: ObservableObject {
             return "Deletion was not confirmed because this saved plan is no longer available. No other plan was deleted."
         case .blocked:
             return "Deletion was not confirmed because saved-plan storage is not writable. No plan was removed from this list. Resolve the storage issue and retry."
-        case let .writeFailed(stage):
-            return "Deletion was not confirmed during \(stage.displayName). The existing plan remains listed. Try again."
+        case .writeFailed:
+            return "The plan could not be deleted. It remains listed. Try again."
         }
     }
 
@@ -454,32 +454,17 @@ final class PlansViewModel: ObservableObject {
         case .noRecords:
             return "Choose at least one saved plan before exporting. No file was created."
         case .encoding:
-            return "The selected plans could not be encoded. Saved plans were left unchanged and no file was shared."
+            return "The selected plans could not be prepared for sharing. Saved plans are unchanged and no file was shared."
         case .directoryPreparation:
-            return "Protected temporary storage could not be prepared. Saved plans were left unchanged and no file was shared."
+            return "A private copy could not be prepared. Saved plans are unchanged and no file was shared."
         case .previousArtifactCleanup:
             return "A previous temporary export could not be removed, so it was not replaced or shared."
         case .protectedWrite:
-            return "The export could not be written to protected temporary storage. Saved plans were left unchanged."
+            return "The private export copy could not be saved. Your saved plans are unchanged."
         case .fileProtection:
-            return "Complete file protection could not be verified, so the temporary export was not shared."
+            return "The export copy could not be protected, so it was not shared."
         case .cleanup:
             return "The temporary export could not be removed after sharing. Retry export cleanup before creating another copy."
-        }
-    }
-}
-
-private extension SavedPlanMutationFailure.WriteStage {
-    var displayName: String {
-        switch self {
-        case .encoding: "plan encoding"
-        case .directoryPreparation: "storage preparation"
-        case .fileProtection: "file protection"
-        case .backupExclusion: "backup exclusion"
-        case .stagingWrite: "the protected staging write"
-        case .stagingValidation: "staging validation"
-        case .synchronization: "file synchronisation"
-        case .atomicReplacement: "the atomic replacement"
         }
     }
 }

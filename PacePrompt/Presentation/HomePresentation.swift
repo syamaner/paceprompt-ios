@@ -77,7 +77,7 @@ struct HomePresentation: Equatable {
         case .poweredOff:
             status(category: "Bluetooth", title: "Powered off", detail: "Turn Bluetooth on in Control Centre or Settings.", symbol: "antenna.radiowaves.left.and.right", tone: .warning)
         case .poweredOn:
-            status(category: "Bluetooth", title: "Available", detail: "Radio powered on and authorised for this app.", symbol: "antenna.radiowaves.left.and.right", tone: .positive)
+            status(category: "Bluetooth", title: "Available", detail: "Bluetooth is on and PacePrompt has permission to use it.", symbol: "antenna.radiowaves.left.and.right", tone: .positive)
         }
     }
 
@@ -92,13 +92,13 @@ struct HomePresentation: Equatable {
     ) -> HomeStatusPresentation {
         switch connection {
         case .idle:
-            return status(category: "Treadmill", title: "Idle", detail: "No scan started. Capability is unknown until you scan.", symbol: "figure.run")
+            return status(category: "Treadmill", title: "Idle", detail: "Choose Set up treadmill to find and check your treadmill.", symbol: "figure.run")
         case .scanning:
-            return status(category: "Treadmill", title: "Scanning", detail: "Scan started by you. Capability remains unknown while scanning.", symbol: "dot.radiowaves.left.and.right")
+            return status(category: "Treadmill", title: "Scanning", detail: "Looking for nearby treadmills. Their supported settings are not yet known.", symbol: "dot.radiowaves.left.and.right")
         case let .connecting(name):
-            return status(category: "Treadmill", title: "Connecting", detail: "\(name) · capability not yet read.", symbol: "dot.radiowaves.left.and.right")
+            return status(category: "Treadmill", title: "Connecting", detail: "\(name) · supported settings not yet checked.", symbol: "dot.radiowaves.left.and.right")
         case let .discovering(name):
-            return status(category: "Treadmill", title: "Reading capability", detail: "\(name) · current capability evidence is being discovered.", symbol: "dot.radiowaves.left.and.right")
+            return status(category: "Treadmill", title: "Checking treadmill", detail: "\(name) · checking supported settings.", symbol: "dot.radiowaves.left.and.right")
         case let .connected(name):
             return connectedPresentation(
                 name: name,
@@ -109,15 +109,15 @@ struct HomePresentation: Equatable {
                 lastError: lastError
             )
         case .disconnected:
-            return status(category: "Treadmill", title: "Disconnected", detail: "Prior capability values are stale and are not shown as current.", symbol: "exclamationmark.circle.fill")
-        case let .failed(message):
+            return status(category: "Treadmill", title: "Disconnected", detail: "Reconnect in treadmill setup to check its current settings.", symbol: "exclamationmark.circle.fill")
+        case .failed:
             let canRetry = availability == .poweredOn
             return status(
                 category: "Treadmill",
                 title: "Connection failed",
                 detail: canRetry
-                    ? "\(message) Wake the console and retry the user-started scan."
-                    : "\(message) Resolve Bluetooth status before trying setup again.",
+                    ? "Wake the treadmill console and try scanning again."
+                    : "Check Bluetooth permission and turn it on before trying setup again.",
                 symbol: "exclamationmark.triangle.fill",
                 tone: .failure,
                 action: canRetry ? .retryScan : nil
@@ -134,12 +134,12 @@ struct HomePresentation: Equatable {
         lastError: String?
     ) -> HomeStatusPresentation {
         if [featureFlags.issue, speedRange.issue, inclinationRange.issue].contains(where: { $0 != nil }) {
-            return status(category: "Treadmill", title: "Capability malformed", detail: "A current capability value could not be decoded. Open setup to inspect it and retry.", symbol: "exclamationmark.circle.fill", tone: .warning)
+            return status(category: "Treadmill", title: "Treadmill settings unreadable", detail: "The treadmill sent an unreadable setting. Open setup to check the connection.", symbol: "exclamationmark.circle.fill", tone: .warning)
         }
 
         if case let .value(flags, _) = featureFlags,
            !flags.supportsSpeedTargetSetting || !flags.supportsInclinationTargetSetting {
-            return status(category: "Treadmill", title: "Capability unsupported", detail: "Current feature evidence reports speed or inclination target-setting as unsupported.", symbol: "exclamationmark.circle.fill", tone: .warning)
+            return status(category: "Treadmill", title: "Settings not supported", detail: "This treadmill reports that speed or incline cannot be changed by the app.", symbol: "exclamationmark.circle.fill", tone: .warning)
         }
 
         if case .value = featureFlags,
@@ -148,21 +148,21 @@ struct HomePresentation: Equatable {
             return status(
                 category: "Treadmill",
                 title: "Connected",
-                detail: "\(name) · read range evidence: speed \(oneDecimal(speed.minimumKilometresPerHour))–\(oneDecimal(speed.maximumKilometresPerHour)) km/h · inclination \(oneDecimal(inclination.minimumPercent))–\(oneDecimal(inclination.maximumPercent))%.",
+                detail: "\(name) · supported speed \(oneDecimal(speed.minimumKilometresPerHour))–\(oneDecimal(speed.maximumKilometresPerHour)) km/h · inclination \(oneDecimal(inclination.minimumPercent))–\(oneDecimal(inclination.maximumPercent))%.",
                 symbol: "checkmark.circle.fill",
                 tone: .positive
             )
         }
 
-        if let lastError {
-            return status(category: "Treadmill", title: "Capability unavailable", detail: "A current capability read failed: \(lastError)", symbol: "exclamationmark.circle.fill", tone: .warning)
+        if lastError != nil {
+            return status(category: "Treadmill", title: "Treadmill check unavailable", detail: "Could not read the supported treadmill settings. Open setup to check the connection.", symbol: "exclamationmark.circle.fill", tone: .warning)
         }
 
         if requiredReadIsUnsupported(in: characteristics) {
-            return status(category: "Treadmill", title: "Capability unsupported", detail: "A required read-only capability characteristic is unavailable.", symbol: "exclamationmark.circle.fill", tone: .warning)
+            return status(category: "Treadmill", title: "Settings not supported", detail: "The treadmill does not provide the settings needed for a workout.", symbol: "exclamationmark.circle.fill", tone: .warning)
         }
 
-        return status(category: "Treadmill", title: "Reading capability", detail: "\(name) is connected, but current decoded capability evidence is incomplete.", symbol: "dot.radiowaves.left.and.right")
+        return status(category: "Treadmill", title: "Checking treadmill", detail: "\(name) is connected. Its supported settings are still being checked.", symbol: "dot.radiowaves.left.and.right")
     }
 
     private static func requiredReadIsUnsupported(

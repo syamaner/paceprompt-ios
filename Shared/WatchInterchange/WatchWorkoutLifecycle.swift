@@ -85,10 +85,15 @@ enum WatchStoreError: Error { case definite, ambiguous }
     var canEnd: Bool { !stopping && recordingAttached && journal?.prepareSequence == nil && [.unbound, .recording].contains(journal?.phase) }
     var canStop: Bool { !stopping && !stopVerified && (recoveryRequired || journal.map { ![.saved, .discarded, .retired].contains($0.phase) } == true) }
     var canPrepareNext: Bool { !stopping && stopVerified && journal != nil }
+    var nextWorkoutConfirmation: String {
+        saveOutcomeIsUncertain
+            ? "The previous save is still unconfirmed. Check Apple Health. Preparing another workout will not retry or replace it."
+            : "The previous workout was not saved. Preparing another workout will not retry or replace it."
+    }
     private var pendingBind: WatchWireMessage?
     private var endDeadline: TimeInterval?
     private(set) var journal: WatchWorkoutJournal?
-    private(set) var display = "Start a Watch-assisted workout on iPhone."
+    private(set) var display = "Start a workout with Apple Watch on your iPhone."
     var changed: (() -> Void)?
 
     init(store: any WatchJournalStore, recording: any WatchRecordingPort,
@@ -99,7 +104,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
         do { try store.save(value); journal = value; changed?(); return true }
         catch {
             recoveryRequired = true; journal = value; journal?.phase = .ambiguous
-            display = "Save result uncertain. No replacement workout will be created."; changed?(); return false
+            display = "Save not confirmed. Check Apple Health. This workout will not be saved again."; changed?(); return false
         }
     }
     func launch(activity: String) async {
@@ -114,7 +119,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
                     guard await cleanUpSaved(previous) else { return }
                 }
             }
-        } catch { display = "Protected workout state is unavailable."; changed?(); return }
+        } catch { display = "Workout details could not be read. Unlock your Watch and reopen PacePrompt."; changed?(); return }
         generation &+= 1; let token = generation
         savedCleanupVerified = false
         stopVerified = false; stopping = false; recoveryRequired = false; operationDeadline = nil
@@ -394,8 +399,8 @@ enum WatchStoreError: Error { case definite, ambiguous }
             value.formatVersion = 2; value.phase = .retired
             try store.save(value)
             generation &+= 1; journal = value; stopVerified = false; recoveryRequired = false
-            display = "Ready. Previous outcome retained. Start a new workout on iPhone."
-        } catch { display = "Recovery could not be saved. Previous outcome retained; try again when Watch is unlocked." }
+            display = "Ready for your next workout. Start it on iPhone."
+        } catch { display = "Could not prepare your next workout. Unlock your Watch and try again. The previous result is kept." }
         changed?()
     }
     private func expireOperation() {
@@ -463,7 +468,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
             current.failedSaveStage = nil
             guard persist(current) else { journal?.failedSaveStage = .receiptPersistence; quarantine(); recording.end(); return }
             recording.completeSaved()
-            display = complete ? "Workout saved on Apple Watch." : "Workout saved with incomplete intervals."; changed?()
+            display = complete ? "Workout saved on Apple Watch." : "Workout saved. Some step details could not be confirmed."; changed?()
         } catch {
             guard acceptCompletion(token) else { return }
             operationDeadline = nil; recordSaveFailureStage()
@@ -492,7 +497,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
         _ = persist(value)
     }
     private var emptyDiscardDisplay: String {
-        journal?.failedSaveStage == nil ? "Workout not saved: no execution intervals were received or usable." : "Workout was not saved because recording could not finish."
+        journal?.failedSaveStage == nil ? "Workout not saved: no usable step details arrived from iPhone." : "Workout was not saved because recording could not finish."
     }
     private var saveOutcomeIsUncertain: Bool {
         guard let stage = journal?.failedSaveStage else { return true }
@@ -501,7 +506,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
     private func quarantine() {
         recoveryRequired = true
         if var value = journal { value.phase = .ambiguous; _ = persist(value) }
-        display = saveOutcomeIsUncertain ? "Save result uncertain. No replacement workout will be created." : "Workout was not saved. Stop recording, then prepare your next workout."
+        display = saveOutcomeIsUncertain ? "Save not confirmed. Check Apple Health. This workout will not be saved again." : "Workout was not saved. Stop recording, then prepare your next workout."
         changed?()
     }
     private func latchIncomplete() { if var value = journal { value.incomplete = true; _ = persist(value) } }

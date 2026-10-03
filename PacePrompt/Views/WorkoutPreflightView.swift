@@ -35,7 +35,7 @@ struct WorkoutPreflightView: View {
                 healthCard
                     .accessibilitySortPriority(70)
 
-                Text("The operator starts and stops the belt using the physical treadmill console. The console and safety key remain authoritative throughout the workout.")
+                Text("Start and stop the belt at the treadmill console. Keep the console and safety key within reach.")
                     .font(.subheadline)
                     .foregroundStyle(WorkoutPreflightPalette.muted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -58,7 +58,7 @@ struct WorkoutPreflightView: View {
                 .disabled(!presentation.canBeginWorkout)
                 .accessibilityHint(
                     presentation.canBeginWorkout
-                        ? "Starts the app attempt and waits for physical Start. It sends no treadmill procedure."
+                        ? "Prepares the workout. Use Start on the treadmill console to begin moving."
                         : "Unavailable until the current treadmill and workout readiness checks pass."
                 )
                 .accessibilityIdentifier("preflight.begin")
@@ -75,7 +75,7 @@ struct WorkoutPreflightView: View {
     private var planHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Preflight")
+                Text("Workout check")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(WorkoutPreflightPalette.muted)
                 Spacer(minLength: 16)
@@ -126,7 +126,7 @@ struct WorkoutPreflightView: View {
 
     private var ceilingsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Live treadmill bounds")
+            Text("Treadmill limits")
                 .font(.caption.weight(.bold))
                 .tracking(1.2)
                 .foregroundStyle(WorkoutPreflightPalette.muted)
@@ -134,18 +134,18 @@ struct WorkoutPreflightView: View {
 
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 12) {
-                    ceiling(title: "Speed ceiling", value: presentation.speedCeiling, tint: .yellow)
-                    ceiling(title: "Incline ceiling", value: presentation.inclinationCeiling, tint: .cyan)
+                    ceiling(title: "Maximum speed", value: presentation.speedCeiling, tint: .yellow)
+                    ceiling(title: "Maximum incline", value: presentation.inclinationCeiling, tint: .cyan)
                 }
                 VStack(alignment: .leading, spacing: 14) {
-                    ceiling(title: "Speed ceiling", value: presentation.speedCeiling, tint: .yellow)
-                    ceiling(title: "Incline ceiling", value: presentation.inclinationCeiling, tint: .cyan)
+                    ceiling(title: "Maximum speed", value: presentation.speedCeiling, tint: .yellow)
+                    ceiling(title: "Maximum incline", value: presentation.inclinationCeiling, tint: .cyan)
                 }
             }
         }
         .preflightCard()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Current treadmill capability ceilings")
+        .accessibilityLabel("Current treadmill limits")
         .accessibilityValue(
             "Speed \(presentation.speedCeiling), inclination \(presentation.inclinationCeiling)"
         )
@@ -161,7 +161,7 @@ struct WorkoutPreflightView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Apple Health")
                     .font(.headline)
-                Text(useAppleWatch ? "Apple Watch owns this recording" : "Ready for a later deliberate save")
+                Text(useAppleWatch ? "Record with Apple Watch" : "Save from History after your workout")
                     .font(.subheadline.weight(.semibold))
                 Text(useAppleWatch ? "Begin requests recording on Apple Watch and may ask for Health permissions there. The Watch saves the workout; iPhone saving stays disabled for this attempt." : "No permission is requested and no workout or health data is saved on this screen.")
                     .font(.subheadline)
@@ -242,7 +242,7 @@ struct WorkoutPreflightView: View {
                             }
                         }
 
-                        Text("Planned only - neither target has been submitted, acknowledged, reached or observed.")
+                        Text("These are planned settings. They have not been sent to the treadmill or confirmed.")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(WorkoutPreflightPalette.muted)
                             .fixedSize(horizontal: false, vertical: true)
@@ -275,7 +275,7 @@ struct WorkoutPreflightView: View {
                     .accessibilitySortPriority(70)
 
                     Label {
-                        Text("Keep the console and safety key immediately reachable. PacePrompt is waiting for fresh treadmill-reported movement; waiting is not proof that the belt is moving.")
+                        Text("Keep the console and safety key within reach. PacePrompt is waiting for the treadmill to report movement.")
                             .fixedSize(horizontal: false, vertical: true)
                     } icon: {
                         Image(systemName: "exclamationmark.shield.fill")
@@ -376,36 +376,36 @@ struct LivePreflightFailureView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
-                    Text("Preflight").font(.largeTitle.bold())
+                    Text("Workout check").font(.largeTitle.bold())
                     Spacer()
                     Button("Cancel", action: cancel).frame(minHeight: 44).accessibilityIdentifier("workout.preflight.cancel")
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("This workout cannot begin", systemImage: "exclamationmark.octagon.fill").font(.headline).foregroundStyle(.red)
+                    Label(failure.title, systemImage: failure.isReading ? "hourglass" : "exclamationmark.octagon.fill").font(.headline).foregroundStyle(failure.isReading ? Color.secondary : Color.red)
                     Text(failure.reason)
                     Text("Your saved plan has not been altered.")
-                }.preflightCard().overlay { RoundedRectangle(cornerRadius: 16).stroke(.red) }
+                }.preflightCard().overlay { RoundedRectangle(cornerRadius: 16).stroke(failure.isReading ? Color.secondary : Color.red) }
                     .accessibilityElement(children: .combine).accessibilityIdentifier("preflight.live-failure")
                     .accessibilityFocused($verdictFocused)
                 if !failure.issues.isEmpty {
-                    Text("INCOMPATIBLE TARGETS").font(.caption.bold())
+                    Text("SETTINGS TO REVIEW").font(.caption.bold())
                     ForEach(Array(failure.issues.enumerated()), id: \.offset) { _, issue in
                         VStack(alignment: .leading, spacing: 8) {
                             Label(stepLabel(issue), systemImage: "xmark.circle").foregroundStyle(.red)
-                            Text("Current treadmill requirement").font(.caption)
-                            Text(issue.message)
+                            Text("Supported setting").font(.caption)
+                            Text(ManualPlanIssuePresentation(validation: issue).message)
                         }.preflightCard().accessibilityElement(children: .combine)
                             .accessibilityIdentifier("preflight.live-issue.\(issue.path)")
                             .accessibilityAddTraits(.isSelected)
                     }
                 }
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("LIVE COMPATIBILITY CHECK").font(.caption.bold())
+                    Text("TREADMILL CHECK").font(.caption.bold())
                     Text("Current treadmill: \(treadmillName)")
-                    Text("Capability read: \(failure.readComplete ? "Complete" : "Unavailable or in progress")")
-                    Label("Execution blocked", systemImage: "lock.shield.fill").foregroundStyle(.red)
+                    Text("Treadmill settings: \(failure.readStatus)")
+                    Label(failure.isReading ? "Please wait for the check" : "Workout cannot begin", systemImage: "lock.shield.fill").foregroundStyle(failure.isReading ? Color.secondary : Color.red)
                 }.preflightCard().accessibilityElement(children: .combine)
-                Text("Physical Start and Stop and the safety key remain authoritative. PacePrompt applies only validated speed and inclination targets after its live execution checks pass.")
+                Text("Use the treadmill console and safety key to start and stop. PacePrompt checks the treadmill before changing speed or incline.")
                     .font(.subheadline).fixedSize(horizontal: false, vertical: true)
                 Button("Edit plan", action: edit).buttonStyle(.borderedProminent).frame(minHeight: 44).accessibilityIdentifier("preflight.edit-plan")
                 Button("Choose another treadmill", action: chooseTreadmill).buttonStyle(.bordered).frame(minHeight: 44).accessibilityIdentifier("preflight.choose-treadmill")

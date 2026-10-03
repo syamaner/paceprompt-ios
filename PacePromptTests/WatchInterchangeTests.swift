@@ -39,6 +39,17 @@ import XCTest
         try await prepared(); try await receive(m ?? manifest(1, final: true))
         var confirmation = message(.finalize); confirmation.revision = m?.revision ?? 1; try await receive(confirmation)
     }
+    func testSavedUnconfirmedFinalManifestDoesNotClaimMissingSteps() async throws {
+        try await bound()
+        try await prepared()
+        try await receive(manifest(1, final: true))
+        clock.time = 31
+        await sut.tick()
+        XCTAssertEqual(recording.finishes, 1)
+        XCTAssertEqual(recording.assemblies.first?.intervals, [interval()])
+        XCTAssertEqual(recording.assemblies.first?.complete, false)
+        XCTAssertEqual(sut.display, "Workout saved. Some step details could not be confirmed.")
+    }
     func testIntervalsAreAddedBeforeCollectionEndsAfterVerifiedActivityStop() async throws {
         let backend = TestSessionOperations()
         let adapter = WatchRecordingAdapter(operations: backend)
@@ -210,6 +221,8 @@ import XCTest
         try await complete()
         XCTAssertEqual(sut.journal?.failedSaveStage, .endCollection)
         XCTAssertEqual(store.value?.failedSaveStage, .endCollection)
+        XCTAssertTrue(sut.nextWorkoutConfirmation.contains("was not saved"))
+        XCTAssertFalse(sut.nextWorkoutConfirmation.contains("unconfirmed"))
         XCTAssertEqual(recording.finishes, 0); XCTAssertTrue(sut.display.contains("was not saved"))
         await sut.forceStop(); XCTAssertTrue(sut.display.contains("was not saved"))
         sut.prepareNextWorkout(); XCTAssertEqual(store.archives.first?.failedSaveStage, .endCollection)
@@ -218,7 +231,9 @@ import XCTest
         try await bound(); recording.finishFailure = true; recording.finalizationStage = .finish
         try await complete()
         XCTAssertEqual(store.value?.failedSaveStage, .finish)
-        XCTAssertTrue(sut.display.contains("Save result uncertain")); XCTAssertEqual(recording.finishes, 1)
+        XCTAssertTrue(sut.nextWorkoutConfirmation.contains("unconfirmed"))
+        XCTAssertTrue(sut.nextWorkoutConfirmation.contains("will not retry or replace"))
+        XCTAssertTrue(sut.display.contains("Save not confirmed")); XCTAssertEqual(recording.finishes, 1)
         await sut.endWorkout(); XCTAssertEqual(recording.finishes, 1)
     }
     func testTimedOutAssemblyCapturesStageAndLateCompletionCannotFinish() async throws {
@@ -234,7 +249,7 @@ import XCTest
     func testReceiptFailureEndsSessionButNeverRetriesSavedBuilder() async throws {
         try await bound(); store.failPhase = .saved; try await complete()
         XCTAssertEqual(sut.journal?.failedSaveStage, .receiptPersistence)
-        XCTAssertTrue(sut.display.contains("Save result uncertain")); XCTAssertTrue(recording.order.contains("end"))
+        XCTAssertTrue(sut.display.contains("Save not confirmed")); XCTAssertTrue(recording.order.contains("end"))
         XCTAssertFalse(recording.order.contains("completeSaved"))
         await sut.endWorkout(); XCTAssertEqual(recording.finishes, 1)
     }
@@ -350,7 +365,7 @@ import XCTest
     func testEmptyFinalDiscardsWithoutFinish() async throws {
         try await bound(); try await complete(manifest(1, final: true, intervals: []))
         XCTAssertEqual(recording.discards, 1); XCTAssertEqual(recording.finishes, 0); XCTAssertEqual(sut.journal?.phase, .discarded)
-        XCTAssertTrue(sut.display.contains("no execution intervals"))
+        XCTAssertTrue(sut.display.contains("no usable step details"))
     }
     func testWatchEndBeforeAnyManifestDiscards() async throws {
         try await bound(); await sut.endWorkout(); await sut.endWorkout()
@@ -472,7 +487,7 @@ import XCTest
         let final = port.messages.last!; XCTAssertEqual(final.kind, .manifest)
         var ack = message(.ack); ack.revision = final.revision; phone.receive(try WatchWire.encode(ack))
         XCTAssertEqual(phone.phase, .confirmed); XCTAssertEqual(port.messages.last?.kind, .finalize)
-        XCTAssertEqual(phone.status, "Watch recording end sent. Check the save result on Apple Watch.")
+        XCTAssertEqual(phone.status, "Asked Apple Watch to finish recording. Check your Watch for the save result.")
     }
     func testPhonePrimaryEndedStopsSendingAndLateDisconnectPreservesResult() async throws {
         let port = TestPhonePort()
@@ -491,7 +506,7 @@ import XCTest
         var e = message(.endPrepared); e.sequence = 1; e.workoutEnd = recording.pauseDate; phone.receive(try WatchWire.encode(e))
         var ack = message(.ack); ack.revision = port.messages.last!.revision; phone.receive(try WatchWire.encode(ack))
         phone.primaryEnded(); phone.disconnect()
-        XCTAssertEqual(phone.phase, .confirmed); XCTAssertEqual(phone.status, "Watch recording end sent. Check the save result on Apple Watch.")
+        XCTAssertEqual(phone.phase, .confirmed); XCTAssertEqual(phone.status, "Asked Apple Watch to finish recording. Check your Watch for the save result.")
     }
     func testDisconnectAfterWatchSavedOrDiscardedDoesNotOverwriteTerminalState() async throws {
         try await bound(); try await complete(); let saved = sut.display; sut.disconnected()

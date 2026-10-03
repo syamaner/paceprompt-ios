@@ -45,7 +45,7 @@ import Foundation
     func start(activity: String) async {
         guard phase == .idle else { return }
         let id = makeID()
-        do { try reserve(id) } catch { fail("Watch ownership could not be reserved. Nothing was launched."); return }
+        do { try reserve(id) } catch { fail("Could not prepare Apple Watch recording. Nothing was started."); return }
         summaryID = id.uuidString.lowercased(); self.activity = activity
         phase = .binding; deadline = monotonic() + 30
         status = "Connecting to Apple Watch… iPhone Health saving is disabled for this attempt."; changed?()
@@ -71,18 +71,18 @@ import Foundation
         if transmit(m) { lastBind = monotonic() }
     }
     func receive(_ data: Data) {
-        if let deadline, monotonic() >= deadline { fail("Watch interchange timed out. Save result unavailable on iPhone."); return }
+        if let deadline, monotonic() >= deadline { fail("Apple Watch did not respond in time. Check the recording and save status on your Watch."); return }
         guard let id = summaryID else { return }
         guard let m = try? WatchWire.decode(data), m.summaryID == id else { integrityFailed = true; return }
         switch m.kind {
         case .bound:
             if phase == .binding, let start = m.workoutStart, let uuid = UUID(uuidString: id) {
                 workoutStart = start; phase = .bound; deadline = nil
-                status = "Watch-owned; save result unavailable on iPhone"; changed?(); bound?(uuid)
+                status = "Check Apple Watch for the save result. iPhone saving is disabled for this workout."; changed?(); bound?(uuid)
             } else if [.bound, .reconnecting].contains(phase), m.workoutStart == workoutStart {
                 let reconnecting = phase == .reconnecting
                 phase = .bound; deadline = nil; lastRecordingRequest = nil
-                if reconnecting { status = "Watch reconnected; previous connection gaps remain incomplete."; changed?() }
+                if reconnecting { status = "Watch reconnected. Some earlier workout details could not be confirmed."; changed?() }
                 sendNonfinal()
                 if let outcome = terminalOutcome { update(intervals: latestIntervals, outcome: outcome, distance: terminalDistance) }
             } else if m.workoutStart != workoutStart { integrityFailed = true }
@@ -100,7 +100,7 @@ import Foundation
             if transmit(confirmation) {
                 terminalMessage = confirmation; lastTerminalSend = monotonic()
                 confirmationDeadline = deadline; phase = .confirmed; deadline = nil
-                status = "Watch recording end sent. Check the save result on Apple Watch."; changed?()
+                status = "Asked Apple Watch to finish recording. Check your Watch for the save result."; changed?()
             }
         case .bind, .manifest, .prepareEnd, .finalize, .recordingState: integrityFailed = true
         }
@@ -115,7 +115,7 @@ import Foundation
         }
         if let outcome {
             terminalOutcome = outcome; terminalDistance = distance
-            guard sequence < Int64.max, let id = summaryID else { fail("Watch interchange is incomplete."); return }
+            guard sequence < Int64.max, let id = summaryID else { fail("Some workout details could not be sent to Apple Watch."); return }
             sequence += 1; phase = .preparingEnd; deadline = monotonic() + 5
             var m = WatchWireMessage(.prepareEnd, summaryID: id); m.sequence = sequence
             status = "Ending Watch recording…"; changed?()
@@ -148,7 +148,7 @@ import Foundation
         }
     }
     func tick() {
-        if let deadline, monotonic() >= deadline { fail("Watch interchange timed out. Save result unavailable on iPhone."); return }
+        if let deadline, monotonic() >= deadline { fail("Apple Watch did not respond in time. Check the recording and save status on your Watch."); return }
         if [.binding, .reconnecting].contains(phase), lastBind.map({ monotonic() - $0 >= 5 }) ?? false { sendBind() }
         if phase == .bound { sendNonfinal() }
         if isEnding { sendTerminal() }

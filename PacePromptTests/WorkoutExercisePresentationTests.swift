@@ -32,7 +32,7 @@ final class WorkoutExercisePresentationTests: XCTestCase {
       XCTAssertEqual(presentation.status.tone, .active)
       XCTAssertEqual(
         presentation.status.detail,
-        "Fresh treadmill evidence confirms the current effective targets."
+        "The treadmill reports your current speed and incline settings."
       )
     }
   }
@@ -109,7 +109,7 @@ final class WorkoutExercisePresentationTests: XCTestCase {
     XCTAssertEqual(presentation.distance, "Unavailable")
     XCTAssertEqual(
       presentation.distanceDetail,
-      "No trustworthy treadmill distance is available"
+      "The treadmill has not provided a usable distance"
     )
   }
 
@@ -117,8 +117,8 @@ final class WorkoutExercisePresentationTests: XCTestCase {
     let presentation = makePresentation(.checking)
 
     XCTAssertEqual(presentation.distance, "1.26 km")
-    XCTAssertEqual(presentation.distanceDetail, "Last reported; telemetry is stale")
-    XCTAssertTrue(presentation.status.detail.contains("does not mean the treadmill stopped"))
+    XCTAssertEqual(presentation.distanceDetail, "Last reported; no recent update")
+    XCTAssertTrue(presentation.status.detail.contains("belt may still be moving"))
   }
 
   func testPlannedEffectiveActualAndOverrideRemainSeparate() {
@@ -129,7 +129,7 @@ final class WorkoutExercisePresentationTests: XCTestCase {
     XCTAssertEqual(presentation.speed.actual, "7.1 km/h")
     XCTAssertTrue(presentation.speed.isOverridden)
     XCTAssertFalse(presentation.inclination.isOverridden)
-    XCTAssertEqual(presentation.overrideLabel, "Current-segment speed override")
+    XCTAssertEqual(presentation.overrideLabel, "Your speed setting for this step")
     XCTAssertTrue(presentation.canReturnToPlan)
   }
 
@@ -211,9 +211,9 @@ final class WorkoutExercisePresentationTests: XCTestCase {
 
     XCTAssertEqual(
       presentation.restorationDetail,
-      "Restoring effective speed 7.0 km/h, then inclination 2.0 %."
+      "Restoring your speed setting 7.0 km/h, then inclination 2.0 %."
     )
-    XCTAssertTrue(presentation.status.detail.contains("Speed is restored before inclination"))
+    XCTAssertTrue(presentation.status.detail.contains("Restoring speed, then incline"))
   }
 
   func testEndWorkoutRequiresCurrentStationaryEvidenceAndNeverAppearsForChecking() {

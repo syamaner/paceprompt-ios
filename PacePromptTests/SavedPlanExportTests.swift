@@ -233,7 +233,7 @@ final class SavedPlanExportPresentationTests: XCTestCase {
         XCTAssertNil(model.shareArtifact)
         XCTAssertEqual(
             model.exportError,
-            "Complete file protection could not be verified, so the temporary export was not shared."
+            "The export copy could not be protected, so it was not shared."
         )
 
         exporter.prepareFailure = nil

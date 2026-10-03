@@ -57,26 +57,26 @@ final class WorkoutPreflightFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["0.0 %"].exists)
         XCTAssertTrue(element("preflight.waiting.target-boundary").exists)
     XCTAssertTrue(statusValue().hasPrefix("Waiting for physical Start."))
-    XCTAssertTrue(statusValue().contains("No Control Point procedure has been sent"))
+    XCTAssertTrue(statusValue().contains("No settings have been sent"))
         XCTAssertFalse(app.buttons["preflight.begin"].exists)
     }
 
     func testWatchPreflightDisclosesSeparatePermissionsAndPermanentPhoneSuppression() {
         launch(scenario: "ready-to-begin", extraEnvironment: ["PACEPROMPT_PREFLIGHT_WATCH": "1"])
-        XCTAssertTrue(app.staticTexts["Apple Watch owns this recording"].exists)
+        XCTAssertTrue(app.staticTexts["Record with Apple Watch"].exists)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label == %@", "Begin requests recording on Apple Watch and may ask for Health permissions there. The Watch saves the workout; iPhone saving stays disabled for this attempt.")).firstMatch.exists)
-        XCTAssertFalse(app.staticTexts["Ready for a later deliberate save"].exists)
+        XCTAssertFalse(app.staticTexts["Save from History after your workout"].exists)
     }
 
     func testBlockedAndTransitionalReadinessStatesRemainDistinctAndDisabled() {
         let scenarios = [
             ("disconnected", "Disconnected."),
             ("preparing", "Preparing."),
-            ("unsupported", "Unsupported profile."),
-            ("stale", "Treadmill data stale."),
-            ("locked", "Readiness locked."),
+            ("unsupported", "Treadmill not supported."),
+            ("stale", "Treadmill updates delayed."),
+            ("locked", "Workout not ready."),
             ("requesting", "Requesting control."),
-            ("failed", "Preflight failed."),
+            ("failed", "Workout preparation failed."),
         ]
 
         for (scenario, expectedStatus) in scenarios {

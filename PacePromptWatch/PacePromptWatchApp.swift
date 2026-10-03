@@ -5,10 +5,11 @@ import HealthKit
 @MainActor final class WatchWorkoutModel: ObservableObject {
     static let shared = WatchWorkoutModel()
     struct Presentation: Equatable {
-        var status = "Start a Watch-assisted workout on iPhone."
+        var status = "Start a workout with Apple Watch on your iPhone."
         var canEnd = false
         var canStop = false
         var canPrepareNext = false
+        var nextWorkoutConfirmation = ""
     }
     @Published var presentation = Presentation()
     @Published var heartRate: Double?
@@ -33,7 +34,8 @@ import HealthKit
         lifecycle.changed = { [weak self] in
             guard let self else { return }
             let next = Presentation(status: self.lifecycle.display, canEnd: self.lifecycle.canEnd,
-                                    canStop: self.lifecycle.canStop, canPrepareNext: self.lifecycle.canPrepareNext)
+                                    canStop: self.lifecycle.canStop, canPrepareNext: self.lifecycle.canPrepareNext,
+                                    nextWorkoutConfirmation: self.lifecycle.nextWorkoutConfirmation)
             if self.presentation != next { self.presentation = next }
         }
         timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
@@ -88,7 +90,7 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
                         .monospacedDigit().accessibilityLabel("Recording elapsed time")
                     Text(model.heartRate.map { "\(Int($0.rounded())) bpm" } ?? "Heart rate unavailable")
                     Text(model.activeEnergy.map { "\(Int($0.rounded())) kcal estimated" } ?? "Active energy unavailable")
-                    Text("Active energy is calculated by HealthKit.").font(.caption2)
+                    Text("Calories are estimated by Apple Watch.").font(.caption2)
 
                 }.padding()
             }
@@ -102,9 +104,9 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
                 Text("Stops Health recording only. A save already in progress may still complete. The treadmill keeps moving until you stop it at its console.")
             }
             .confirmationDialog("Prepare a new workout?", isPresented: $confirmNext, titleVisibility: .visible) {
-                Button("Keep previous outcome and continue") { model.lifecycle.prepareNextWorkout() }
+                Button("Prepare next workout") { model.lifecycle.prepareNextWorkout() }
             } message: {
-                Text("The previous save result stays uncertain and is retained. Check Health for it. This will not retry or replace that workout.")
+                Text(model.presentation.nextWorkoutConfirmation)
             }
         }
     }

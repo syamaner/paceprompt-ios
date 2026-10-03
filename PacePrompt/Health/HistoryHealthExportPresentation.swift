@@ -20,7 +20,7 @@ enum HistoryHealthExportPresenter {
     isSaving: Bool
   ) -> HistoryHealthExportPresentation? {
     if summary.isWatchOwnedOrInvalidOwnership {
-      return .init(title: summary.planSnapshot.suggestedName, outcome: outcome(summary.outcome), activity: "Apple Watch workout", timing: "Recorded independently on Apple Watch", duration: "See local workout details", distance: "See local workout details", intervalCount: "Local execution remains in History", status: "Watch-owned; save result unavailable on iPhone", actionTitle: nil, confirmationTitle: "", confirmationMessage: "")
+      return .init(title: summary.planSnapshot.suggestedName, outcome: outcome(summary.outcome), activity: summary.hasValidWatchOwnership ? "Apple Watch workout" : "Recording source unavailable", timing: "Recording status is unavailable on iPhone", duration: "See local workout details", distance: "See local workout details", intervalCount: "Workout details remain in History", status: summary.recordingSaveStatus, actionTitle: nil, confirmationTitle: "", confirmationMessage: "")
     }
     let candidateVersion = nextVersion(summary.healthExport)
     guard case let .eligible(payload) = WorkoutHealthPayloadFactory.make(
@@ -49,7 +49,7 @@ enum HistoryHealthExportPresenter {
       status: status(state, isSaving: isSaving, formatter: formatter),
       actionTitle: action(state, isSaving: isSaving),
       confirmationTitle: "Save to Apple Health?",
-      confirmationMessage: "\(activity), \(timing), \(duration(payload.activeDurationSeconds)), distance: \(distance), \(payload.intervals.count) interval metadata record\(payload.intervals.count == 1 ? "" : "s"). Each interval contains prescribed, effective-target and separately observed speed and inclination."
+      confirmationMessage: "\(activity), \(timing), \(duration(payload.activeDurationSeconds)), distance: \(distance), \(payload.intervals.count) recorded interval\(payload.intervals.count == 1 ? "" : "s"). Each interval includes the original plan settings, your changed settings and separate treadmill readings for speed and incline."
     )
   }
 
@@ -293,49 +293,49 @@ struct HistoryLibraryPresentation: Equatable {
     case .protectedDataUnavailable:
       content = .blocked(Self.message(
         "History is locked",
-        "Unlock this iPhone, then retry. Stored workouts were preserved and were not treated as empty.",
+        "Unlock this iPhone, then retry. Your workouts are kept.",
         "lock.fill",
         .neutral
       ))
     case .readFailure:
       content = .blocked(Self.message(
         "History could not be read",
-        "PacePrompt could not read the protected history file. The file was preserved.",
+        "PacePrompt could not read your saved workouts. They are kept unchanged.",
         "exclamationmark.triangle.fill",
         .failure
       ))
     case .corruptData:
       content = .blocked(Self.message(
         "History data is unreadable",
-        "The stored file could not be decoded safely. It was preserved without guessing or showing an empty library.",
+        "Your saved workouts could not be read. They are kept unchanged.",
         "exclamationmark.triangle.fill",
         .failure
       ))
     case .partialWriteDetected:
       content = .blocked(Self.message(
-        "A partial history write was detected",
-        "The incomplete data was preserved. PacePrompt will not promote, merge or guess its contents.",
+        "A History save was interrupted",
+        "The last save did not finish. Your existing workout data is kept unchanged.",
         "exclamationmark.triangle.fill",
         .warning
       ))
-    case let .unsupportedStoreVersion(version):
+    case .unsupportedStoreVersion:
       content = .blocked(Self.message(
         "History was saved by a newer version",
-        "This store uses format v\(version). It was preserved unchanged and cannot be shown safely.",
+        "This version of PacePrompt cannot open your saved workouts. They are kept unchanged.",
         "exclamationmark.circle.fill",
         .neutral
       ))
-    case let .unsupportedSummaryVersion(_, version):
+    case .unsupportedSummaryVersion:
       content = .blocked(Self.message(
         "A workout uses a newer version",
-        "One workout uses schema v\(version). The complete store was preserved unchanged.",
+        "A workout uses a format this version of PacePrompt cannot open. History is kept unchanged.",
         "exclamationmark.circle.fill",
         .neutral
       ))
-    case let .unsupportedPlanVersion(_, version):
+    case .unsupportedPlanVersion:
       content = .blocked(Self.message(
         "A plan snapshot uses a newer version",
-        "One workout plan uses schema v\(version). The complete store was preserved unchanged.",
+        "A workout plan uses a format this version of PacePrompt cannot open. History is kept unchanged.",
         "exclamationmark.circle.fill",
         .neutral
       ))
@@ -358,14 +358,14 @@ struct HistoryLibraryPresentation: Equatable {
     case .staleArtifactPresent:
       .init(
         title: "A previous history save needs attention",
-        detail: "Readable workouts remain visible, but Apple Health save-state changes and JSON export are disabled while the stale staging file is preserved.",
+        detail: "A previous save did not finish cleanly. You can view readable workouts, but saving to Apple Health and exporting are unavailable.",
         symbol: "exclamationmark.triangle.fill",
         tone: .warning
       )
     case .presenceUnavailable:
       .init(
         title: "History save status is unavailable",
-        detail: "PacePrompt could not check for a staging file. Workouts remain visible, but Apple Health save-state changes and JSON export are disabled.",
+        detail: "PacePrompt could not check the last save. You can view workouts, but saving to Apple Health and exporting are unavailable.",
         symbol: "exclamationmark.triangle.fill",
         tone: .warning
       )
@@ -391,6 +391,7 @@ struct HistoryExecutedIntervalDetail: Equatable, Identifiable {
 }
 
 struct HistoryHealthCard: Equatable {
+  var isSaved = false
   let title: String
   let detail: String
   let symbol: String
@@ -400,6 +401,7 @@ struct HistoryHealthCard: Equatable {
 }
 
 struct HistoryWorkoutDetail: Equatable {
+  let outcomeSymbol: String
   let id: UUID
   let title: String
   let outcome: String
@@ -427,7 +429,7 @@ enum HistoryWorkoutDetailPresenter {
     let unavailable: String?
     if summary.schemaVersion == WorkoutExecutionSummarySchema.legacyVersion {
       executed = []
-      unavailable = "Executed interval detail is unavailable in schema v1. PacePrompt does not reconstruct it from plan targets or summary timestamps."
+      unavailable = "This older workout has no recorded interval details. Missing details have not been estimated from the plan."
     } else {
       switch summary.activityTimeline {
       case let .recorded(_, _, _, intervals):
@@ -436,23 +438,24 @@ enum HistoryWorkoutDetailPresenter {
             id: "\(interval.segmentIndex)-\(interval.intervalIndex)",
             title: "Segment \(interval.segmentIndex + 1) · interval \(interval.intervalIndex + 1)",
             timing: "\(timeFormatter.string(from: interval.startedAt))–\(timeFormatter.string(from: interval.endedAt))",
-            prescribed: "Prescribed · \(historyDecimal(interval.prescribed.speedKilometresPerHour, locale: locale)) km/h · \(historyDecimal(interval.prescribed.inclinationPercent, locale: locale))%",
-            effective: "Effective · \(historyDecimal(interval.effectiveSpeed.kilometresPerHour, locale: locale)) km/h (\(source(interval.effectiveSpeed.source))) · \(historyDecimal(interval.effectiveInclination.percent, locale: locale))% (\(source(interval.effectiveInclination.source)))",
-            observed: "Observed · \(historyDecimal(interval.settledObservation.speedKilometresPerHour, locale: locale)) km/h · \(historyDecimal(interval.settledObservation.inclinationPercent, locale: locale))% at \(timeFormatter.string(from: interval.settledObservation.observedAt))",
+            prescribed: "Plan · \(historyDecimal(interval.prescribed.speedKilometresPerHour, locale: locale)) km/h · \(historyDecimal(interval.prescribed.inclinationPercent, locale: locale))%",
+            effective: "Your settings · \(historyDecimal(interval.effectiveSpeed.kilometresPerHour, locale: locale)) km/h (\(source(interval.effectiveSpeed.source))) · \(historyDecimal(interval.effectiveInclination.percent, locale: locale))% (\(source(interval.effectiveInclination.source)))",
+            observed: "Treadmill readings · \(historyDecimal(interval.settledObservation.speedKilometresPerHour, locale: locale)) km/h · \(historyDecimal(interval.settledObservation.inclinationPercent, locale: locale))% at \(timeFormatter.string(from: interval.settledObservation.observedAt))",
             ended: "Ended · \(endReason(interval.endReason))"
           )
         }
         unavailable = nil
-      case let .unavailable(reason):
+      case .unavailable:
         executed = []
-        unavailable = "Executed interval timing is unavailable (\(reason.rawValue)). No detail was inferred."
+        unavailable = "Recorded interval timing is unavailable. Missing details have not been estimated."
       case nil:
         executed = []
-        unavailable = "Executed interval detail is unavailable. No detail was inferred."
+        unavailable = "Recorded interval details are unavailable. Missing details have not been estimated."
       }
     }
 
     return .init(
+      outcomeSymbol: outcomeSymbol(summary),
       id: summary.id,
       title: summary.planSnapshot.suggestedName,
       outcome: outcome(summary),
@@ -478,8 +481,19 @@ enum HistoryWorkoutDetailPresenter {
     )
   }
 
+  static func outcomeSymbol(_ summary: WorkoutExecutionSummary) -> String {
+    if case .unconfirmed = summary.physicalStopConfirmation { return "exclamationmark.triangle.fill" }
+    return switch summary.outcome {
+    case .completed: "checkmark.circle.fill"
+    case .stoppedByUser: "stop.circle.fill"
+    case .interrupted: "pause.circle.fill"
+    case .failed: "xmark.circle.fill"
+    case .inProgress: "clock.badge.exclamationmark"
+    }
+  }
+
   static func outcome(_ summary: WorkoutExecutionSummary) -> String {
-    if case .unconfirmed = summary.physicalStopConfirmation { return "Physically uncertain" }
+    if case .unconfirmed = summary.physicalStopConfirmation { return "Treadmill stop unconfirmed" }
     return switch summary.outcome {
     case .completed: "Completed"
     case .stoppedByUser: "Ended by you"
@@ -518,21 +532,21 @@ enum HistoryWorkoutDetailPresenter {
     mutationAllowed: Bool
   ) -> HistoryHealthCard {
     if summary.isWatchOwnedOrInvalidOwnership {
-      return .init(title: "Apple Watch recording", detail: "Watch-owned; save result unavailable on iPhone", symbol: "applewatch", actionTitle: nil, confirmationTitle: nil, confirmationMessage: nil)
+      return .init(title: summary.hasValidWatchOwnership ? "Apple Watch recording" : "Recording source unavailable", detail: summary.recordingSaveStatus, symbol: summary.hasValidWatchOwnership ? "applewatch" : "questionmark.circle", actionTitle: nil, confirmationTitle: nil, confirmationMessage: nil)
     }
     guard let export = HistoryHealthExportPresenter.make(summary: summary, isSaving: isSaving) else {
       let detail: String
       if summary.schemaVersion == WorkoutExecutionSummarySchema.legacyVersion {
-        detail = "Schema v1 stays local and is not reconstructed for Apple Health."
+        detail = "This older workout does not contain the details needed to save to Apple Health. It remains in History."
       } else if case .inProgress = summary.outcome {
-        detail = "This persisted in-progress attempt is shown as interrupted; completion is unknown."
+        detail = "This workout was interrupted. PacePrompt cannot confirm whether it finished."
       } else if case .unconfirmed = summary.physicalStopConfirmation {
         detail = "The physical stop state is uncertain, so this workout remains local only."
       } else {
-        detail = "This outcome or execution timeline is not eligible for Apple Health."
+        detail = "This workout does not contain the details needed to save to Apple Health."
       }
       return .init(
-        title: "Not eligible for Apple Health",
+        title: "Cannot save to Apple Health",
         detail: detail,
         symbol: "heart.slash",
         actionTitle: nil,
@@ -543,7 +557,10 @@ enum HistoryWorkoutDetailPresenter {
     let status = mutationAllowed || export.actionTitle == nil
       ? export.status
       : "History storage needs attention before Apple Health saving."
+    let saved: Bool
+    if case .saved = summary.healthExport { saved = !isSaving } else { saved = false }
     return .init(
+      isSaved: saved,
       title: historyHealthTitle(summary.healthExport, isSaving: isSaving),
       detail: status,
       symbol: historyHealthSymbol(summary.healthExport, isSaving: isSaving),
@@ -559,7 +576,7 @@ enum HistoryWorkoutDetailPresenter {
     if let current = summary.progress.currentStepIndex {
       return "\(completed) of \(total) completed · step \(current + 1) active for \(historyDuration(summary.progress.activeSecondsInCurrentStep))"
     }
-    return "\(completed) of \(total) prescribed segments completed"
+    return "\(completed) of \(total) planned steps completed"
   }
 
   private static func source(_ value: WorkoutTargetValueSource) -> String {
@@ -811,21 +828,21 @@ final class HistoryLibraryViewModel: ObservableObject {
 
   private static func historyExportMessage(_ error: Error) -> String {
     guard let failure = error as? WorkoutHistoryExportFailure else {
-      return "The workout-history export failed without changing persistent History."
+      return "The export failed. Your saved workouts are unchanged."
     }
     return switch failure {
     case .noRecords:
       "Select at least one supported workout before creating an export."
     case .encoding:
-      "The selected workouts could not be encoded. No export file was created."
+      "The selected workouts could not be prepared for sharing. No export file was created."
     case .directoryPreparation:
-      "Protected temporary storage could not be prepared. No export file was created."
+      "A private copy could not be prepared. No export file was created."
     case .previousArtifactCleanup:
       "The previous temporary export could not be removed, so it was not replaced."
     case .protectedWrite:
-      "The protected temporary export could not be written."
+      "The private export copy could not be saved."
     case .fileProtection:
-      "Complete file protection could not be verified, so the temporary export was not shared."
+      "The export copy could not be protected, so it was not shared."
     case .cleanup:
       "The temporary export could not be removed after sharing."
     }
@@ -841,7 +858,7 @@ private extension HistoryWorkoutRow {
     date = historyDateFormatter(locale: locale, timeZone: timeZone).string(from: summary.attemptedAt)
     duration = HistoryWorkoutDetailPresenter.duration(summary.activeDuration)
     distance = HistoryWorkoutDetailPresenter.distance(summary.distance, locale: locale)
-    health = summary.isWatchOwnedOrInvalidOwnership ? "Watch-owned; save result unavailable on iPhone" : historyHealthRowStatus(summary.healthExport, schemaVersion: summary.schemaVersion)
+    health = summary.isWatchOwnedOrInvalidOwnership ? summary.recordingSaveStatus : historyHealthRowStatus(summary.healthExport, schemaVersion: summary.schemaVersion)
   }
 }
 
@@ -964,3 +981,24 @@ private final class UITestStatusHistory: WorkoutHistoryRepositoryProtocol {
   func record(_ summary: WorkoutExecutionSummary) {}
 }
 #endif
+
+extension WorkoutHistoryExportPreview {
+    static let productFieldDescriptions = [
+        "File format version and export date",
+        "Workout identifiers, format, activity and outcome",
+        "Start, end and active time recorded by PacePrompt",
+        "Original speed and incline for each planned step",
+        "Recorded intervals: original settings, changed settings and separate treadmill readings",
+        "Interval timing, where readings came from and why each interval ended",
+        "Available distance and its source",
+    ]
+}
+
+private extension WorkoutExecutionSummary {
+    var hasValidWatchOwnership: Bool { schemaVersion == 3 && ownership == .watchPrimary }
+    var recordingSaveStatus: String {
+        hasValidWatchOwnership
+            ? "iPhone saving is disabled for this workout. Check Apple Watch for its recording and save status."
+            : "The recording source could not be verified. iPhone saving is disabled for this workout."
+    }
+}

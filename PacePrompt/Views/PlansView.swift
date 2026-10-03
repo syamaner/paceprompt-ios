@@ -402,12 +402,12 @@ private struct SavedPlanExportFlowView: View {
         Form {
             Section("Exact export") {
                 LabeledContent("Filename", value: preview.fileName)
-                LabeledContent("Category", value: preview.category)
+                LabeledContent("Contents", value: "Saved plans")
                 LabeledContent("Records", value: preview.recordCount.formatted())
             }
 
             Section("Included fields") {
-                ForEach(preview.includedFields, id: \.self) { field in
+                ForEach(SavedPlanExportPreview.productFieldDescriptions, id: \.self) { field in
                     Text(field)
                 }
             }
@@ -427,7 +427,7 @@ private struct SavedPlanExportFlowView: View {
                     .buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("export.share")
             } footer: {
-                Text("Sharing creates a temporary protected copy. PacePrompt removes it when the share sheet finishes or is cancelled. Your saved plans are not changed.")
+                Text("Choose who receives the copy in the share sheet. PacePrompt removes its temporary copy after sharing or cancellation; copies you share may remain with the recipient. Your saved plans are unchanged.")
             }
         }
     }
@@ -696,7 +696,7 @@ struct PlanEntryView: View {
                                 .accessibilityLabel("\(issue.context). \(issue.message)")
                                 .accessibilityIdentifier("plan.validation.issue.\(index)")
                             }
-                            Text("Invalid values are rejected. PacePrompt never clamps, repairs or replaces a target for you.")
+                            Text("Correct the highlighted values to continue. PacePrompt will not change them for you.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1182,7 +1182,7 @@ struct PlanPreviewView: View {
                     .accessibilityIdentifier("plan.back-to-edit")
                 HistoricalPlanSaveButton(plans: viewModel, onConfirm: onConfirm)
             } footer: {
-                Text("Only this separate confirmation action writes the validated plan to local storage.")
+                Text("Confirm to save this plan on your iPhone.")
             }
         }
     }

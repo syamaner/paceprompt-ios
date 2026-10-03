@@ -446,7 +446,7 @@ final class WorkoutHistoryExportPresentationTests: XCTestCase {
         model.toggleHistoryExportSelection(legacy.id)
         XCTAssertTrue(model.selectedHistoryExportIDs.isEmpty)
         XCTAssertFalse(model.canExport(summaryID: legacy.id))
-        XCTAssertTrue(model.historyExportFailure(summaryID: legacy.id)?.contains("cannot be reconstructed") == true)
+        XCTAssertTrue(model.historyExportFailure(summaryID: legacy.id)?.contains("lacks the details") == true)
     }
 
     func testBlockedRepositoryAndStagingNeverCreateStructuredExport() {

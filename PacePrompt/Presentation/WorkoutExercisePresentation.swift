@@ -37,12 +37,12 @@ enum WorkoutExerciseEvidenceStage: String, CaseIterable, Equatable {
   var label: String {
     switch self {
     case .requested: "Requested"
-    case .submitted: "Submitted"
-    case .attAccepted: "ATT accepted"
-    case .ftmsAcknowledged: "FTMS acknowledged"
+    case .submitted: "Sent"
+    case .attAccepted: "Bluetooth delivered"
+    case .ftmsAcknowledged: "Setting accepted"
     case .observing: "Observing treadmill"
     case .confirmed: "Confirmed by treadmill"
-    case .stale: "Stale treadmill report"
+    case .stale: "Waiting for an update"
     case .failed: "Failed"
     case .unknown: "Unknown"
     }
@@ -199,11 +199,11 @@ struct WorkoutExercisePresentation: Equatable {
       distance = Self.measurement(trustworthyDistance / 1_000, unit: "km", locale: locale)
       distanceDetail =
         Self.telemetryIsStale(state.telemetry, at: now)
-        ? "Last reported; telemetry is stale"
+        ? "Last reported; no recent update"
         : "Treadmill reported"
     } else {
       distance = "Unavailable"
-      distanceDetail = "No trustworthy treadmill distance is available"
+      distanceDetail = "The treadmill has not provided a usable distance"
     }
 
     let planned = currentStep.map {
@@ -252,11 +252,11 @@ struct WorkoutExercisePresentation: Equatable {
     overrideLabel =
       overriddenAxes.isEmpty
       ? nil
-      : "Current-segment \(overriddenAxes.joined(separator: " and ")) override"
+      : "Your \(overriddenAxes.joined(separator: " and ")) setting for this step"
     canReturnToPlan = !overriddenAxes.isEmpty && Self.adjustmentAllowed(state.execution)
     restorationDetail =
       stage == .restoring
-      ? "Restoring effective speed \(speed.effective), then inclination \(inclination.effective)."
+      ? "Restoring your speed setting \(speed.effective), then inclination \(inclination.effective)."
       : nil
     self.plan = steps.enumerated().map { index, step in
       .init(
@@ -334,7 +334,7 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Press Start on the treadmill",
         detail:
-          "PacePrompt is waiting for fresh treadmill-reported movement. No target is confirmed.",
+          "Waiting for the treadmill to report movement. Your speed and incline settings are not yet confirmed.",
         symbol: "hand.tap.fill",
         tone: .neutral
       )
@@ -342,21 +342,21 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Applying targets",
         detail:
-          "Intent, submission, ATT, FTMS acknowledgement and treadmill observation remain separate.",
+          "Sending your speed and incline settings, then checking what the treadmill reports.",
         symbol: "arrow.triangle.2.circlepath",
         tone: .warning
       )
     case .running:
       return .init(
         title: activity == .indoorWalking ? "Walking" : "Running",
-        detail: "Fresh treadmill evidence confirms the current effective targets.",
+        detail: "The treadmill reports your current speed and incline settings.",
         symbol: activity == .indoorWalking ? "figure.walk" : "figure.run",
         tone: .active
       )
     case .override:
       return .init(
         title: "Manual override",
-        detail: "The effective target differs from the plan for this segment only.",
+        detail: "Your changed setting applies to this step only.",
         symbol: "slider.horizontal.3",
         tone: .warning
       )
@@ -364,7 +364,7 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Checking treadmill",
         detail:
-          "Telemetry is delayed or stale, so timing is frozen. This does not mean the treadmill stopped; confirm below only after the operator observes it stationary.",
+          "Treadmill updates are delayed, so the timer is paused. The belt may still be moving. Confirm it has stopped only after you have seen it stop.",
         symbol: "clock.badge.exclamationmark.fill",
         tone: .warning
       )
@@ -372,7 +372,7 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Workout paused — press Start on the treadmill to resume",
         detail:
-          "The current segment and effective targets are preserved while active time is frozen.",
+          "Your step and settings are kept while the timer is paused.",
         symbol: "pause.circle.fill",
         tone: .warning
       )
@@ -380,21 +380,21 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Restoring targets",
         detail:
-          "Speed is restored before inclination. The step timer counts fresh reported movement during the ramp.",
+          "Restoring speed, then incline. The step timer continues while the treadmill reports movement.",
         symbol: "arrow.clockwise.circle.fill",
         tone: .warning
       )
     case .awaitingPhysicalStop:
       return .init(
         title: "Workout complete - press Stop on the treadmill",
-        detail: "PacePrompt sends no Stop command. End workout appears after stationary evidence.",
+        detail: "Stop the belt at the console. You can finish here once it has stopped.",
         symbol: "flag.checkered",
         tone: .warning
       )
     case .readyToEnd:
       return .init(
-        title: "Stationary confirmed",
-        detail: "End workout saves the local app attempt and sends no FTMS Stop.",
+        title: "Treadmill stopped",
+        detail: "End workout saves to History on this iPhone. It does not stop the treadmill.",
         symbol: "checkmark.shield.fill",
         tone: .active
       )
@@ -402,14 +402,14 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Ending workout",
         detail:
-          "Saving the local app attempt. The treadmill remains under physical-console control.",
+          "Saving to History on this iPhone. Use the console to stop the treadmill.",
         symbol: "hourglass",
         tone: .neutral
       )
     case .finished:
       return .init(
         title: "Workout ended",
-        detail: "The local app attempt is saved. No FTMS Stop was sent.",
+        detail: "Saved to History on this iPhone. Apple Health saving has a separate status.",
         symbol: "checkmark.circle.fill",
         tone: .active
       )
@@ -425,7 +425,7 @@ struct WorkoutExercisePresentation: Equatable {
       return .init(
         title: "Workout interrupted",
         detail:
-          "Physical state is uncertain. Use the console and safety key; no automatic resume is available.",
+          "The treadmill may still be moving. Use its console and safety key. This workout will not resume automatically.",
         symbol: "exclamationmark.triangle.fill",
         tone: .failure
       )
@@ -603,16 +603,16 @@ struct WorkoutExercisePresentation: Equatable {
   ) -> String {
     let axis = isSpeed ? "speed" : "inclination"
     return switch evidence {
-    case .requested: "A typed \(axis) intent exists; submission is not yet recorded."
-    case .submitted: "The \(axis) procedure was submitted; ATT acceptance is not yet recorded."
-    case .attAccepted: "ATT accepted the \(axis) write; FTMS has not yet acknowledged it."
+    case .requested: "Your \(axis) change is waiting to be sent."
+    case .submitted: "Your \(axis) change was sent. Bluetooth delivery is not yet confirmed."
+    case .attAccepted: "Bluetooth delivery confirmed. Waiting for treadmill acceptance."
     case .ftmsAcknowledged:
-      "FTMS acknowledged \(axis); later treadmill observation is still required."
-    case .observing: "Acknowledgements are complete; waiting for a later joint treadmill report."
-    case .confirmed: "A later fresh treadmill report matches the effective \(axis) target."
-    case .stale: "The last treadmill report is older than the accepted freshness window."
-    case .failed: "Current \(axis) evidence is malformed, contradictory or procedurally failed."
-    case .unknown: "No current evidence confirms the effective \(axis) target."
+      "The treadmill accepted the \(axis) setting. Waiting for it to report the new value."
+    case .observing: "The treadmill accepted both settings. Waiting for a new speed and incline report."
+    case .confirmed: "The latest treadmill report matches your \(axis) setting."
+    case .stale: "The displayed value is from an earlier treadmill update."
+    case .failed: "The \(axis) change failed or the treadmill sent an unusable update."
+    case .unknown: "Your \(axis) setting is not yet confirmed by a current treadmill report."
     }
   }
 

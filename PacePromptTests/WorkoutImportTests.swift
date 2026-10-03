@@ -4,6 +4,25 @@ import Security
 
 @MainActor
 final class WorkoutImportTests: XCTestCase {
+    func testImportFailureCopyKeepsRecoveryAndHidesInternalPathsAndReasons() {
+        let missing = WorkoutImportViewModel.message(.providerUnavailable(.missingCredential))
+        XCTAssertTrue(missing.contains("OpenRouter key"))
+        XCTAssertTrue(missing.contains("Nothing was saved"))
+        XCTAssertFalse(missing.contains("missingCredential"))
+        let identity = WorkoutImportViewModel.message(.providerFailure(.identityModelMismatch))
+        XCTAssertTrue(identity.contains("could not be verified"))
+        XCTAssertFalse(identity.contains("identityModelMismatch"))
+        let fields = WorkoutImportViewModel.message(.clarificationRequired(.init(
+            reason: "missingRequiredField", paths: ["steps.targetSpeed.value", "steps.duration.unit"])))
+        XCTAssertTrue(fields.contains("step speed, duration unit"))
+        XCTAssertFalse(fields.contains("steps."))
+        for path in WorkoutImportContract.pathOrder {
+            XCTAssertNotEqual(WorkoutImportViewModel.fieldLabel(path), "workout details", path)
+        }
+        XCTAssertEqual(WorkoutImportViewModel.fieldLabel("untrusted.path"), "workout details")
+        XCTAssertEqual(ImportCredentialStore.State.failed.displayText, "Key status needs attention")
+    }
+
     func testResourceHashesAndCompleteAuthorizedRequestMatchesFrozenFixture() throws {
         let resources = try ImportResources()
         let snapshot = ImportRequestSnapshot(text: "Synthetic import contract fixture.", capabilities: .init(speed: .unknown, inclination: .unknown))
@@ -347,7 +366,7 @@ final class WorkoutImportBoundaryTests: XCTestCase {
         }
     }
 
-    func testIdentityDiagnosticsReachFeedbackAsCodesOnly() {
+    func testIdentityFailuresKeepCodesInOutcomeButShowProductFeedback() {
         let codes: [ImportFailure] = [.identityResponseURL, .identityModelMissing,
                                       .identityModelRevisionWithoutProvider, .identityModelNonString, .identityModelMismatch,
                                       .identityProviderMissing, .identityProviderMismatch,
@@ -359,8 +378,10 @@ final class WorkoutImportBoundaryTests: XCTestCase {
             model.begin(capabilities: known()); model.text = "Synthetic workout"
             model.reviewDisclosure(); model.consentAndSend()
             generator.complete(.providerFailure(code))
-            XCTAssertEqual(model.feedback,
-                           "Remote import failed (\(code.rawValue)). Nothing was saved. A new attempt requires a new disclosure.")
+            XCTAssertEqual(model.outcome, .providerFailure(code))
+            XCTAssertTrue(model.feedback?.contains("Nothing was saved") == true)
+            XCTAssertTrue(model.feedback?.contains("Review and agree to a new request") == true)
+            XCTAssertFalse(model.feedback?.contains(code.rawValue) == true)
             XCTAssertFalse(model.feedback?.contains("Synthetic workout") ?? true)
         }
     }

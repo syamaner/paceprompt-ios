@@ -38,8 +38,8 @@ final class PlansFlowUITests: XCTestCase {
     func testEveryBlockedAndWarningRepositoryStateRemainsDistinct() {
         assertRepositoryBlocked(repository: "protected", title: "Plans are locked", retry: true)
         assertRepositoryBlocked(repository: "read-failure", title: "Could not read plans", retry: true)
-        assertRepositoryBlocked(repository: "corrupt", title: "Saved plans are corrupt")
-        assertRepositoryBlocked(repository: "partial-write", title: "Last save finished partially")
+        assertRepositoryBlocked(repository: "corrupt", title: "Saved plans cannot be read")
+        assertRepositoryBlocked(repository: "partial-write", title: "Last save was interrupted")
         assertRepositoryBlocked(repository: "unsupported-store", title: "Saved by a newer version")
         assertRepositoryBlocked(repository: "unsupported-plan", title: "A plan uses a newer version")
 
@@ -101,7 +101,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Prepare workout"].waitForExistence(timeout: 2))
         XCTAssertTrue(
             app.staticTexts[
-                "The current connection matches the accepted FR30z production profile."
+                "This connection supports Reebok FR30z workouts."
             ].waitForExistence(timeout: 3)
         )
         XCTAssertFalse(app.buttons["Authorise this exact connection"].exists)
@@ -112,7 +112,7 @@ final class PlansFlowUITests: XCTestCase {
 
         tapWhenVisible(app.buttons["workout.prepare.continue"])
 
-        XCTAssertTrue(app.staticTexts["Preflight"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Workout check"].waitForExistence(timeout: 2))
         XCTAssertFalse(app.otherElements["preflight.safety"].exists)
         XCTAssertFalse(app.otherElements["preflight.activity"].exists)
         XCTAssertTrue(app.buttons["workout.preflight.cancel"].exists)
@@ -122,7 +122,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Press Start on the treadmill"].waitForExistence(timeout: 2))
         XCTAssertTrue(
             app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS %@", "No target is confirmed")
+                NSPredicate(format: "label CONTAINS %@", "settings are not yet confirmed")
             ).firstMatch.exists
         )
     }
@@ -194,8 +194,8 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 3))
         editor.tap(); editor.typeText("Synthetic treadmill workout")
         tapWhenVisible(app.buttons["import.disclosure"])
-        XCTAssertTrue(app.navigationBars["Remote-send disclosure"].waitForExistence(timeout: 3))
-        app.navigationBars["Remote-send disclosure"].buttons["Cancel"].tap()
+        XCTAssertTrue(app.navigationBars["Review AI request"].waitForExistence(timeout: 3))
+        app.navigationBars["Review AI request"].buttons["Cancel"].tap()
         XCTAssertFalse(app.buttons["plan.confirm-save"].exists)
         XCTAssertEqual(editor.value as? String, "")
         editor.tap(); editor.typeText("Synthetic treadmill workout")
@@ -238,7 +238,7 @@ final class PlansFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["21:00"].exists)
         XCTAssertTrue(app.staticTexts["2.2 km"].exists)
         XCTAssertTrue(findByScrolling(element("plan.review.step.3")))
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Canonical plan values validated independently of equipment")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Your plan has been checked")).firstMatch.exists)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "capability read at")).firstMatch.exists)
 
         tapWhenVisible(app.buttons["plan.confirm-save"])
@@ -316,7 +316,7 @@ final class PlansFlowUITests: XCTestCase {
         tapWhenVisible(app.buttons["plan.confirm-save"])
 
         XCTAssertTrue(app.staticTexts["Save failed"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Existing plans were left unchanged")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Existing plans are unchanged")).firstMatch.exists)
         XCTAssertTrue(findByScrolling(app.buttons["plan.confirm-save"]))
     }
 
@@ -373,13 +373,13 @@ final class PlansFlowUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Exact export"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "PacePrompt-saved-plans.json")).firstMatch.exists)
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "savedPlans")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Saved plans")).firstMatch.exists)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label == %@", "Records, 1")).firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["savedPlans[].plan.schemaVersion"].exists)
+        XCTAssertTrue(app.staticTexts["Plan format, name and activity"].exists)
         XCTAssertTrue(
-            findByScrolling(app.staticTexts["savedPlans[].plan.steps[].targetInclination.unit"])
+            findByScrolling(app.staticTexts["Every step's duration, speed and incline, with units"])
         )
-        XCTAssertTrue(app.buttons["export.share"].exists)
+        XCTAssertTrue(findByScrolling(app.buttons["export.share"]))
 
         app.buttons["export.cancel"].tap()
         XCTAssertTrue(app.buttons["plans.record.00000000-0000-0000-0000-000000000010"].waitForExistence(timeout: 2))

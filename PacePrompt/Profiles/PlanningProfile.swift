@@ -106,17 +106,17 @@ enum PlanningProfileFailure: Error, Equatable {
     case writeFailure, partialWrite, conflict, invalidName, full, invalidEvidence
     var message: String {
         switch self {
-        case .protectedDataUnavailable: "Saved treadmill profiles are unavailable while protected data is locked."
+        case .protectedDataUnavailable: "Unlock this iPhone to read your saved treadmill profiles."
         case .readFailure: "Saved treadmill profiles could not be read. Try again."
         case .corrupt: "Saved treadmill profiles contain invalid data. Nothing has been replaced."
-        case .unsupportedVersion: "Saved treadmill profiles use an unsupported version. Nothing has been migrated."
-        case .interruptedWrite: "An interrupted profile write needs recovery. Nothing has been promoted."
+        case .unsupportedVersion: "This version of PacePrompt cannot open your saved treadmill profiles. They are unchanged."
+        case .interruptedWrite: "A profile save was interrupted. Your saved profiles have not been replaced."
         case .writeFailure: "The profile change could not be saved. Try again."
         case .partialWrite: "The profile write could not be verified. Reload before making another change."
         case .conflict: "This profile changed. Reload and review before trying again."
-        case .invalidName: "Use a trimmed name of 1–80 characters without control characters."
+        case .invalidName: "Use a name of 1–80 visible characters, without spaces at the beginning or end."
         case .full: "Delete a saved profile to add another."
-        case .invalidEvidence: "Complete current speed and inclination capability reads are required."
+        case .invalidEvidence: "Connect your treadmill and wait for its speed and incline settings to be checked."
         }
     }
 }

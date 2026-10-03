@@ -19,7 +19,7 @@ final class PlanningProfilesViewModel: ObservableObject {
     @Published private(set) var review: Review?
     @Published private(set) var createdProfileID: String?
     @Published private(set) var currentProfileID: String?
-    @Published private(set) var discoveryStatus = "Connect explicitly to read complete treadmill capabilities."
+    @Published private(set) var discoveryStatus = "Connect your treadmill to check its supported settings."
     private let repository: any PlanningProfileRepository
     private let identity: any PlanningProfileIdentity
     private let now: () -> Date
@@ -84,9 +84,9 @@ final class PlanningProfilesViewModel: ObservableObject {
         review = nil
         createdProfileID = nil
         currentProfileID = nil
-        discoveryStatus = "Capability read incomplete — no saved profile change."
+        discoveryStatus = "The treadmill check is incomplete. Your saved profile is unchanged."
     }
-    func invalidateDiscovery(status: String = "Disconnected — saved profiles remain historical.") {
+    func invalidateDiscovery(status: String = "Disconnected. Saved profiles keep the previously checked settings.") {
         activePeer = nil
         review = nil
         currentProfileID = nil
@@ -130,7 +130,7 @@ final class PlanningProfilesViewModel: ObservableObject {
             consumed = true
             currentProfileID = replacement.records.first { $0.machineKey == key }?.id
             createdProfileID = old?.records.contains(where: { $0.machineKey == key }) == true ? nil : currentProfileID
-            discoveryStatus = createdProfileID == nil ? "Saved profile confirmed by complete read." : "Treadmill profile saved."
+            discoveryStatus = createdProfileID == nil ? "Saved profile matches the connected treadmill." : "Treadmill profile saved."
         } catch { handle(error) }
     }
     func keepSaved() { review = nil }
