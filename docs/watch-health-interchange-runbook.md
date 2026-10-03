@@ -226,7 +226,8 @@ does not establish complete device cause or repair acceptance.
    or discarded (zero usable intervals). No Watch tap should be needed; the normal
    End action must disappear during handoff and both recording actions disappear
    after successful completion. Phone end-sent is not a Health save receipt.
-4. If the Watch requires emergency Stop, confirm once. Expect Stopping, then a
+4. If the Watch requires emergency Stop, read its inline consequence and tap
+   Stop recording once. Expect Stopping, then a
    verified stopped state with Prepare next workout, or a bounded explicit failure.
    A late callback must not silently return to the same Stop prompt. Do not relaunch
    or delete data to mask a failed stop; retain the exact visible status privately.

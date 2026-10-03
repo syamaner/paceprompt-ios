@@ -86,7 +86,7 @@ Controls are above the metrics so recovery does not depend on scrolling beneath
 calories. **End recording & save** uses the ordinary single save/discard path.
 **Stop recording** is available while connecting, recording, saving or uncertain;
 it stops Health recording, prevents subsequent save operations and checks native
-termination. A finish already submitted may still complete. The confirmation
+termination. A finish already submitted may still complete. The inline explanation
 explicitly says the treadmill keeps moving until stopped at its console.
 **Prepare next workout** preserves the uncertain result before allowing a new
 iPhone attempt. None of these controls pauses or stops the treadmill.
@@ -234,5 +234,22 @@ The [copy inventory](validation/issue209-product-copy.md) records the screen rou
 state distinctions and validation evidence. “Save not confirmed” retains the
 uncertain outcome and no-replacement rule. “Some step details could not be confirmed”
 can mean a missing final confirmation even when every interval arrived. Prepare
-next workout keeps its existing confirmation; it now distinguishes known not-saved
+next workout distinguishes known not-saved
 from uncertain outcomes. No extra save or cleanup is triggered by a label change.
+
+
+## Direct recovery actions (#211)
+
+[Confirmation decisions](../design/confirmation-decisions.md) reduce Watch recovery
+from four taps to two. Read the explanation under Recording recovery, tap **Stop
+recording** once, and wait for verified stop. Then read the retained-outcome
+explanation and tap **Prepare next workout** once. There is no second dialog for
+either action. Neither action saves or retries an uncertain workout; a save already
+submitted may still complete. For normal ending use the phone or **End recording &
+save**; no Watch acknowledgement is needed for successful phone-driven completion.
+
+Phone interrupted/failed recovery uses one **I can see the belt has stopped** tap.
+Observe the physical belt first. This records an observation and preserves the
+interrupted/failed outcome; it does not resume or complete the workout.
+Historical build receipts above describe their then-current dialogs. This change
+requires a later release and separate device/VoiceOver acceptance.

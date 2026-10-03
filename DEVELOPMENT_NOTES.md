@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 3 Oct 2026 | `PP-20261003-04` | Direct Watch and phone recovery actions (#211) | `gpt-6-astra` | 13,723,788 (13,476,992; 0) | 15,178 | 13,738,966 | USD 16.70 (standard-tier API-equivalent) | Exact 73-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-03` | Clear product copy across ordinary app flows (#209) | `gpt-6-astra` | 31,115,690 (30,531,328; 0) | 58,135 | 31,173,825 | USD 39.28 (standard-tier API-equivalent) | Exact 215-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-02` | Internal build 21 delivery and release receipt | `gpt-6-astra` | 6,254,687 (6,224,128; 0) | 13,851 | 6,268,538 | USD 7.22 (standard-tier API-equivalent) | Exact 39-request root delta from candidate pre-ledger snapshot; includes candidate completion and release delivery. Reviewer, final numeric insertion and later receipt delivery excluded |
 | 3 Oct 2026 | `PP-20261003-01` | Internal TestFlight build 21 candidate | `gpt-6-astra` | 9,328,234 (9,212,416; 0) | 14,697 | 9,342,931 | USD 11.11 (standard-tier API-equivalent) | Exact 68-request root candidate phase; reviewer, final numeric insertion and later delivery/release excluded |
@@ -1981,4 +1982,62 @@ historical resets 0; in-boundary resets
 2. Every measured event verifies `gpt-6-astra`.
 Standard-tier API-equivalent USD 39.28 (unrounded 39.281698).
 Private final report `/private/tmp/pp209-accounting-final.json`. Reviewer,
+final numeric insertion and post-boundary exact-head delivery are excluded.
+
+## PP-20261003-04 — Direct Watch and phone recovery actions (#211)
+
+Operator-authorised implementation after the confirmation audit, from main
+`5af321691c3a158a0e5ceb39308e0570d4df9cfd` in isolated
+`codex/issue211-confirmation-recovery`. The [decision inventory](design/confirmation-decisions.md)
+records all nine confirmation flows and adjacent review/commit boundaries.
+Watch Stop and Prepare next use direct buttons with inline consequences and
+accessibility hints; phone interrupted/failed stationary observation uses one
+deliberate tap. Existing lifecycle guards, native stop proof, archival, uncertain
+outcomes, single writer, no replacement, console authority and normal ending remain
+unchanged. Deletion/Health/provider consent and staged-selection safeguards remain.
+No hardware, provider request or upload belongs to this slice.
+
+Exact selected root-session baseline: event 2917 at `2026-10-03T16:52:27.216Z`;
+input 384,721,524, cached input 378,364,928, cache-write input 0,
+output 998,673 (reasoning subset 307,323), total 385,720,197.
+Private baseline `/private/tmp/pp211-baseline.json`; original transcript ends in
+`01a0e504-8937-7c80-9128-08ad4b305f87.jsonl`. The unchanged helper reconciles request
+and cumulative counters; the private wrapper correlates each selected event with
+its preceding turn-context model. The independent reviewer uses a separate excluded
+session; the original transcript is not modified.
+
+Official GPT-6 Astra standard-tier rates checked 3 October 2026 and retained from
+today's PP-20261003-03 pricing verification:
+[model pricing](https://developers.openai.com/api/docs/models/gpt-6-astra), USD 10/M
+uncached input, 1/M cached input, 12.50/M cache-write input and 50/M output.
+Requests over 272,000 input use 2× input/cache and 1.5× output. This is a token-only
+API-equivalent comparison, not a ChatGPT subscription bill. Reasoning is included
+in output. Final numeric insertion and post-boundary exact-head delivery are excluded.
+
+Complete `scripts/validate_local.sh` passed on 3 October 2026 with Xcode 27.0
+(27A266a), SDK 27.0 and the dedicated iPhone 17 Pro / iOS 26.5 simulator: 517 app
+unit tests, 72 UI tests and 16 evaluation-target tests, zero failures. Debug and
+Release simulator builds including Watch, static analysis, coverage export,
+built-bundle safety/metadata checks, offline repository tests and 24 accounting
+helper tests passed. HostEval reported 247 tests with 36 private-evidence skips.
+All 417 frozen executable/test/build inputs remained unchanged after validation.
+Changed-document local links and `git diff --check` passed. Private evidence:
+`/private/tmp/pp211-complete-gate.log` and `/private/tmp/pp211-complete-gate/`.
+These checks do not establish interactive Watch/VoiceOver or device acceptance.
+
+End snapshot: event 2991 at `2026-10-03T17:48:03.451Z`;
+input 398,445,312, cached input 391,841,920, cache-write
+input 0, output 1,013,851 (reasoning subset
+310,178), total 399,459,163.
+
+Exact delta: 13,723,788 input, 13,476,992 cached,
+0 cache-write, 15,178 output (reasoning subset
+2,855), 13,738,966 total across 73 requests.
+Largest input 196,257; threshold crossings 0;
+historical resets 0; in-boundary resets
+0; exact replay events
+1; repeated snapshots
+0. Every measured event verifies `gpt-6-astra`.
+Standard-tier API-equivalent USD 16.70 (unrounded 16.703852).
+Private final report `/private/tmp/pp211-accounting-final.json`. Reviewer,
 final numeric insertion and post-boundary exact-head delivery are excluded.

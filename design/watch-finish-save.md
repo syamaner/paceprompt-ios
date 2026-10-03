@@ -1,6 +1,6 @@
-# Watch finish/save and ordinary ending — revision 2
+# Watch finish/save and ordinary ending — revision 3
 
-Changes: PP-20261002-01 and PP-20261002-04. Authorised maintenance after the
+Changes: PP-20261002-01, PP-20261002-04 and PP-20261003-04. Authorised maintenance after the
 build 19/20 operator reports in #212 and the request to remove repetitive
 ordinary-end confirmations in #211.
 
@@ -116,8 +116,8 @@ an undocumented activity-suppression mechanism.
 | --- | ---: | ---: | --- |
 | Stationary fallback then end | 4 | 1 | Explicit **Treadmill stopped — end workout** attests observed belt stop; accepted stationary evidence must precede end |
 | End with current stationary evidence | 2 | 1 | Existing reducer end eligibility; inline console authority |
-| Interrupted/failed stationary recovery | 2 | 2 | Observation remains distinct from successful ending |
-| Watch emergency Stop / Prepare next | unchanged | unchanged | Explicit recovery and retained uncertain outcome |
+| Interrupted/failed stationary recovery | 2 | 1 | Explicit observation remains distinct from successful ending; warning inline |
+| Watch emergency Stop / Prepare next | 4 | 2 | Separate direct actions with inline consequences; verified stop and retained uncertain outcome |
 
 Counts exclude physical console operation. Fresh moving telemetry hides the
 combined action and still prevents end. Stale or missing telemetry does not prove
@@ -134,7 +134,7 @@ contracts cover verified stopped activity before builder operations, receipt bef
 cleanup, following-attempt native end, failures by stage, missing/late callbacks,
 cancellation, saved-journal crash recovery/mismatch/timeout, unchanged zero-prefix/idempotency and optional journal decoding.
 UI tests cover one-tap ordinary ending in both orientations and unchanged recovery
-confirmation. Required local/CI and independent exact-head review evidence is
+direct observation. Required local/CI and independent exact-head review evidence is
 recorded in the PR and development ledger.
 
 A later installed candidate must repeat normal completion with no Watch tap and
@@ -142,3 +142,7 @@ exactly one nonempty Health workout, plus foreground/background and recovery.
 #212 and #115 remain open for device acceptance; #116 and WeeklyHealthReport #80
 remain separate interchange/reader work. No hardware, real Health-data inspection,
 release upload or implementation of those dependent issues occurs in this slice.
+
+Revision 3 adopts [the #211 confirmation decisions](confirmation-decisions.md):
+recovery explanations move inline and duplicate dialogs are removed. Native stop,
+archival and save policies are unchanged; normal phone ending remains automatic.

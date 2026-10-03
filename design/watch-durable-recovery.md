@@ -1,4 +1,4 @@
-# Watch durability and lifecycle amendment — revision 2
+# Watch durability and lifecycle amendment — revision 3
 
 Authorised by the operator after build 16 startup timeout/disconnection and a stuck
 Watch screen: durable recovery, explicit recording controls and reliable
@@ -34,8 +34,8 @@ is the explicit escape action during connecting, recording, saving and recovery.
 It requests Health recording termination and reports whether that was verified.
 It does not terminate the watchOS process. Save/stop timeouts expose recovery
 controls rather than a permanent busy screen; absence of a callback never proves
-success. Confirmations explain possible incomplete/uncertain results and that the
-treadmill must be stopped at its console. No Watch pause/resume button is added.
+success. Inline explanations and button accessibility hints explain possible
+incomplete/uncertain results and that the treadmill must be stopped at its console. No Watch pause/resume button is added.
 
 ## Connection and application lifecycle
 
@@ -177,3 +177,11 @@ Emergency verified termination, archival, late-callback fences and uncertainty
 rules remain unchanged. Saved next-attempt reset also verifies native end first.
 The same amendment removes only redundant ordinary phone-end confirmations;
 Watch emergency/recovery confirmations remain independently assessed.
+
+## Recovery interaction amendment (#211)
+
+[Confirmation decisions](confirmation-decisions.md) remove the two recovery dialogs
+in favour of direct Stop recording and Prepare next workout buttons with inline
+consequences. Historical confirmation references above describe earlier revisions.
+Stop proof, explicit separate retirement, archives, outcome retention and all
+operation fences remain unchanged. This does not automatically clear an attempt.
