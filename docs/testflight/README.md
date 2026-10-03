@@ -960,3 +960,45 @@ following [confirmation decisions](../../design/confirmation-decisions.md).
 #209 and #211 are now included in this internal release. #208 remains open for
 #210 diagnostics placement and runtime/device acceptance. #115/#212 repeated and
 background/recovery acceptance, #116 and WeeklyHealthReport #80 remain separate.
+
+
+## Internal build 23 candidate (#232)
+
+Authorised on 4 October 2026 from protected main
+`a6809ec983ec8d06a491f26975ef6ec90b4f856d`. This release includes #210 treadmill
+Troubleshooting separation and #231 workout-caption/privacy polish. Setup keeps
+connection/actions, supported settings and reading availability prominent; raw
+diagnostics and existing captures are behind Troubleshooting. Workout animation
+captions are removed while Reduce Motion remains supported. Settings groups the
+same privacy disclosures into On this device, AI processing and Apple Health.
+
+Candidate changes are the four phone/Watch build numbers from 22 to 23 and matching
+synthetic release fixtures. Marketing version 1.0.1, identities, permissions,
+privacy declarations, encryption behaviour, workflow, signing tools and profiles
+are unchanged. The existing internal-only sole-tester group is the destination;
+no external/public distribution or added tester. The standing no-non-exempt-
+encryption decision applies to this unchanged behaviour.
+
+Build 22 was the latest successful release and the build-23 tag was absent during
+preparation. Trusted hosted preflight checks Apple build freshness and existing
+app/group/tester before signing/upload. Protected credentials remain hosted.
+
+Complete local gate passed on 4 October 2026 with Xcode 27.0 (27A266a),
+SDK 27.0 and dedicated iPhone 17 Pro / iOS 26.5: 517 unit + 78 UI +
+16 evaluation-target tests, zero failures. Release simulator build, static analysis,
+coverage, metadata/binary checks and 24 accounting tests passed. Supporting checks:
+57 release tests, 41 scorer tests, 13 summary tests and 247 HostEval tests
+(36 expected private-evidence skips). Focused metadata/actionlint/shellcheck and
+shell syntax passed. All 417 frozen executable/test/build inputs are unchanged.
+Private evidence: `/private/tmp/pp23-complete-gate.log` and
+`/private/tmp/pp23-complete-gate/`. Full diff and `git diff --check` passed.
+
+After delivery, update both companions to 1.0.1 (23). Check Treadmill setup and
+Troubleshooting, Settings privacy at your preferred text size, and workout screens
+in portrait/landscape. Normal phone ending should automatically finish Watch
+recording; check the saved result and one nonempty Health entry separately from
+local History. Recovery remains a separate path; preserve older uncertain attempts
+without retry or replacement. Release evidence does not establish installation,
+interactive VoiceOver, Watch scrolling or physical Health/treadmill acceptance.
+#208, #115/#212 and #116/WeeklyHealthReport #80 remain open for their respective
+acceptance. Candidate preparation is not an upload receipt.
