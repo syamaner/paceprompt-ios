@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 3 Oct 2026 | `PP-20261003-01` | Internal TestFlight build 21 candidate | `gpt-6-astra` | 9,328,234 (9,212,416; 0) | 14,697 | 9,342,931 | USD 11.11 (standard-tier API-equivalent) | Exact 68-request root candidate phase; reviewer, final numeric insertion and later delivery/release excluded |
 | 3 Oct 2026 | `PP-20261002-04` | Keep Watch builder active through interval insertion | `gpt-6.1-sol` | 11,737,948 (11,567,232; 0) | 57,292 | 11,795,240 | USD 2.07 (standard-tier API-equivalent) | Exact 70-request root investigation/repair/validation phase; reviewer, final numeric insertion and later delivery/release excluded |
 | 2026-10-02 | PP-20261002-03 | Internal build 20 delivery and release receipt | gpt-6.1-sol | 5,602,168 (5,514,624; 0) | 23,513 | 5,625,681 | USD 0.96 | Exact root delta across 33 requests from candidate pre-ledger snapshot; includes subsequent candidate completion and release delivery. Reviewer, final numeric insertion and later receipt delivery excluded. API-equivalent only. |
 | 2 Oct 2026 | `PP-20261002-02` | Internal TestFlight build 20 candidate | `gpt-6.1-sol` | 9,411,831 (9,325,184; 0) | 22,207 | 9,434,038 | USD 1.33 (standard-tier API-equivalent) | Exact 59-request root candidate phase; reviewer and final numeric insertion/delivery excluded |
@@ -1857,3 +1858,38 @@ observations. Failed/uncertain attempts are retained and never retried/replaced.
 End snapshot: event 2526 at `2026-10-02T23:07:12.902Z`; input 330,360,537, cached input 325,101,056, cache-write input 0, output 891,189 (reasoning subset 284,552), total 331,251,726.
 
 Exact delta: 11,737,948 input, 11,567,232 cached, 0 cache-write, 57,292 output (reasoning subset 36,408), 11,795,240 total across 70 requests. Largest input 223,122; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 5; repeated snapshots 0. Every measured event verifies `gpt-6.1-sol`. Standard-tier API-equivalent USD 2.07 (unrounded 2.0710752, official rates checked 3 October 2026); reviewer, final numeric insertion and later exact-head delivery/release excluded.
+
+## PP-20261003-01 — Internal build 21 candidate
+
+Authorised internal delivery of the merged #221 Watch save repair under #222.
+The candidate changes the four phone/Watch build numbers to 21 and matching
+synthetic release fixtures, plus this accounting and release documentation.
+The marketing version is 1.0.1; existing workflow, signing tools, privacy,
+encryption and sole-tester destination remain unchanged. No device acceptance
+is inferred from candidate validation or release availability.
+
+Selected root session `01a0e504-8937-7c80-9128-08ad4b305f87`. Baseline
+`/private/tmp/pp-b21-candidate-baseline.json`, event 2547 at
+`2026-10-03T04:35:27.517Z`: input 331,733,978, cached input 326,366,336,
+cache-write input 0, output 897,828 (reasoning subset 285,443), total 332,631,806.
+Independent reviewer usage, final numeric insertion and later exact-head
+delivery/release are excluded. Each measured event is associated with its
+preceding turn-context model; historical models outside this phase are excluded
+without editing the original transcript. This phase uses `gpt-6-astra`.
+Official [GPT-6 Astra pricing](https://developers.openai.com/api/docs/models/gpt-6-astra)
+checked 3 October 2026 gives standard-tier USD/M input 10, cached input 1,
+cache-write 12.50 and output 50. Prompts over 272,000 input tokens use 2x input/
+cache and 1.5x output for the full request. The estimate is API-equivalent only,
+not a ChatGPT subscription bill. Final measurement follows validation and review.
+
+The complete candidate gate passed on the dedicated iPhone 17 Pro/iOS 26.5
+simulator using Xcode 27.0: 512 unit, 72 UI and 16 evaluation tests; unsigned
+Release builds including Watch, static analysis, coverage and repository checks.
+Offline HostEval passed 247 tests with 36 unavailable-evidence skips. The
+evidence root is `/private/tmp/pp-b21-full-gate`; all 417 frozen executable/test/
+build inputs remain identical. Independent working-diff review approved before
+the gate. Exact-head review and required hosted PR/main CI precede release.
+
+End snapshot: event 2617 at `2026-10-03T05:11:07.632Z`; input 341,062,212, cached input 335,578,752, cache-write input 0, output 912,525 (reasoning subset 288,303), total 341,974,737.
+
+Exact delta: 9,328,234 input, 9,212,416 cached, 0 cache-write, 14,697 output (reasoning subset 2,860), 9,342,931 total across 68 requests. Largest input 149,341; threshold crossings 0; historical resets 0; in-boundary resets 0; exact replay events 2; repeated snapshots 0. Every measured event verifies `gpt-6-astra`. Standard-tier API-equivalent USD 11.11 (unrounded 11.105446, official rates checked 3 October 2026); reviewer, final numeric insertion and later exact-head delivery/release excluded.

@@ -784,3 +784,37 @@ before repeating the existing foreground acceptance procedure. Retain old failed
 uncertain outcomes; no finish retry, phone replacement export or Health deletion.
 Native paired simulator binding still failed separately; successful standalone
 native saving is not full paired-device acceptance. Keep #212/#115 open.
+
+## Internal build 21 candidate (#222)
+
+The operator authorised the next internal release on 3 October 2026 to test
+#221's Watch interval-save repair, merged as
+`5ed7abf3073e42c4fb2c3f3a6319834730c4b00f`. Candidate **1.0.1 (21)**
+advances both companions together and updates matching synthetic release
+fixtures. Marketing version, production logic, workflow, signing tools, privacy
+and encryption declarations remain unchanged. The destination is the existing
+sole-tester internal group; the trusted tools pin remains
+`796819b21382ac7dd038fb989e79e1352aaf06ca`. Hosted preflight checks the unused
+Apple build and unchanged app/group/tester before signing or upload.
+
+Build 20 lacks #221. A standalone native simulator save succeeded with three
+closed intervals after the repair; native paired startup still failed separately.
+This candidate does not establish installation, automatic device saving,
+background recovery, accepted-distance readback or cross-repository acceptance.
+After both companions are updated, repeat the foreground phone-end procedure
+and leave Watch untouched while checking one nonempty Health workout separately
+from PacePrompt History. Retain older failed/uncertain outcomes without retry
+or replacement. #212/#115 remain open; #116 and WeeklyHealthReport #80 remain
+separate reader/interchange work.
+
+Candidate validation, independent exact-head review, protected merge/CI and the
+immutable release receipt are recorded at their respective gates. No physical
+operation, new tester or external/public release is included.
+
+The complete candidate gate passed on the dedicated iPhone 17 Pro/iOS 26.5
+simulator using Xcode 27.0: 512 unit, 72 UI and 16 evaluation tests; unsigned
+Release builds including Watch, static analysis, coverage and repository checks.
+Offline HostEval passed 247 tests with 36 unavailable-evidence skips. The
+evidence root is `/private/tmp/pp-b21-full-gate`; all 417 frozen executable/test/
+build inputs remain identical. Independent working-diff review approved before
+the gate. Exact-head review and required hosted PR/main CI precede release.

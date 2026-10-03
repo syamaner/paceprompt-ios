@@ -33,7 +33,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                'DIST_P12_PASSWORD': 'synthetic',
                'DIST_PROFILE_B64': encode(plistlib.dumps(f.profile('phone'))),
                'DIST_WATCH_PROFILE_B64': encode(plistlib.dumps(f.profile('watch'))),
-               'RELEASE_TAG': 'testflight/1.0.1-b20', 'RELEASE_SHA': 'a' * 40,
+               'RELEASE_TAG': 'testflight/1.0.1-b21', 'RELEASE_SHA': 'a' * 40,
                'GITHUB_STEP_SUMMARY': str(root / 'summary')}
         if failure == 'swapped-profile': env['DIST_WATCH_PROFILE_B64'] = env['DIST_PROFILE_B64']
         result = subprocess.run(['/bin/bash', str(f.ROOT / 'scripts/testflight_release.sh')],
