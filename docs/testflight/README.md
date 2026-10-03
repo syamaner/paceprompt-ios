@@ -818,3 +818,53 @@ Offline HostEval passed 247 tests with 36 unavailable-evidence skips. The
 evidence root is `/private/tmp/pp-b21-full-gate`; all 417 frozen executable/test/
 build inputs remain identical. Independent working-diff review approved before
 the gate. Exact-head review and required hosted PR/main CI precede release.
+
+## Internal build 21 release receipt (#222)
+
+On 3 October 2026, [candidate PR #223](https://github.com/syamaner/paceprompt-ios/pull/223)
+merged through protected main as `1e34be1a9ae3fa87b7016788c13403ac6a296abf`,
+from independently approved head `1c779a6b02ad62e83aa66e392e95a8d23e97e12a`.
+Required [PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/37099087496)
+and [exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/37099117490)
+passed. The merge tree and all 417 frozen candidate inputs match the reviewed
+head. The candidate's full local gate is recorded above. Immutable lightweight
+tag `testflight/1.0.1-b21` points to that merge. Its creation used the existing
+admin-only tag-creation exception; tag update/deletion and main protection were
+unchanged, and main was not bypassed.
+
+[Release run 37099154214](https://github.com/syamaner/paceprompt-ios/actions/runs/37099154214),
+attempt 1, succeeded. The credential-free Xcode 26.6 archive passed before normal
+protected-environment approval under the operator's internal-release instruction.
+Exact tag/source, unchanged workflow and trusted tools
+`796819b21382ac7dd038fb989e79e1352aaf06ca`, export-compliance allowlist and
+same-run archive identity were verified. The standing no-non-exempt-encryption
+declaration applied unchanged to build 21.
+
+Trusted preflight verified the existing app, fresh build and sole-tester group.
+Both profiles, inside-out signing, internal-only export and both signed apps'
+metadata, privacy and fixed entitlements passed. The log records exactly one
+`UPLOAD SUCCEEDED with no errors` marker. The trusted Apple guard confirmed
+processed `VALID` / `INTERNAL_ONLY` and assignment in the unchanged sole-tester
+group's build list. No workflow rerun or second upload occurred.
+
+The Actions wrapper artifact digest was
+`232239c29cbd50aa36551bdee8f5c75685aa72d8e9cebafc039e17431c442944`.
+The inner unsigned archive digest was
+`5e22fb02a6386dd77bc8cd3d9ccb5cf811fbde59dbecbc6e0fd467197d374451`.
+The download matched the hosted digest, bounded extraction verified the exact
+source/tag/run/attempt, and both unsigned device apps passed validation. Matching
+archive and both dSYMs are retained privately under
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-21/` with
+directory mode 700 and file mode 600. Only the unsigned package was transferred
+as an Actions artifact. Optional symbol upload remains disabled.
+
+These are hosted-release and Apple API observations. Browser visual verification,
+tester installation and physical Health acceptance were not observed. Update
+both companions to **1.0.1 (21)** before the foreground phone-end test. This
+build contains #221; build 20 does not. Physically stop the treadmill, use the
+eligible phone end action and leave Watch untouched while checking its saved
+result and exactly one nonempty Health workout; check local History separately.
+Preserve older failed/uncertain attempts without finish retry or replacement.
+#212/#115 remain open for save/recovery acceptance, #211 for the wider confirmation
+audit, and #116/WeeklyHealthReport #80 for reader/interchange work. No hardware,
+new tester or external/public distribution was included in this release.
