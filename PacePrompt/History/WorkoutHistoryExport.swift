@@ -138,17 +138,17 @@ enum WorkoutHistoryExportEligibilityFailure: Error, Equatable {
     var message: String {
         switch self {
         case .versionOne:
-            "Version-1 workouts remain readable but cannot be reconstructed for JSON export."
-        case let .unsupportedSummaryVersion(version):
-            "Workout summary schema v\(version) is not supported for JSON export."
-        case let .unsupportedPlanVersion(version):
-            "Plan schema v\(version) is not supported for JSON export."
+            "This older workout can be viewed but lacks the details needed for JSON export."
+        case .unsupportedSummaryVersion:
+            "This workout uses a format this version of PacePrompt cannot export."
+        case .unsupportedPlanVersion:
+            "This plan uses a format this version of PacePrompt cannot export."
         case .unavailableTimeline:
-            "This workout has no recorded execution timeline and cannot be exported without inference."
+            "This workout has no recorded step timing, so it cannot be exported."
         case .unavailableDuration:
-            "This workout has no measured active duration and cannot be exported without inference."
+            "This workout has no recorded active duration, so it cannot be exported."
         case .inconsistentRecord:
-            "This workout is not internally consistent enough for structured JSON export."
+            "Some workout details do not agree, so it cannot be exported."
         }
     }
 }

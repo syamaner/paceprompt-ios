@@ -22,7 +22,7 @@ struct PlanningProfilesView: View {
     var body: some View {
         List {
             Section {
-                Text("Saved ranges are historical planning evidence. Live compatibility is checked before execution.")
+                Text("Use saved treadmill limits to plan your workout. The connected treadmill is checked again before you begin.")
                 Text(model.selectedName).accessibilityIdentifier("profiles.selection")
             }
             if let failure = model.failure {
@@ -65,7 +65,7 @@ struct PlanningProfilesView: View {
                     }
                 }
             }
-            Section("Capability discovery") { Text(model.discoveryStatus) }
+            Section("Treadmill check") { Text(model.discoveryStatus) }
         }.navigationTitle("Saved treadmills")
     }
 }
@@ -112,7 +112,7 @@ struct PlanningProfileDetailView: View {
                         Label("Current treadmill — connected", systemImage: "dot.radiowaves.left.and.right")
                             .foregroundStyle(.mint)
                     }
-                    Text("Selection uses historical planning information. Live compatibility is checked before execution.")
+                    Text("This uses previously saved treadmill settings. The connected treadmill is checked again before you begin.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Section("Saved capabilities") {
@@ -120,7 +120,7 @@ struct PlanningProfileDetailView: View {
                     Text("Speed increment \(String(format: "%.2f", Double(record.snapshot.speed.incrementHundredthsKph) / 100)) km/h")
                     Text("Inclination increment \(String(format: "%.1f", Double(record.snapshot.inclination.incrementTenthsPercent) / 10)) %")
                     if let warning = model.warning(record.snapshot) { Label(warning, systemImage: "exclamationmark.triangle") }
-                    Text("Historical profile — this does not establish execution readiness.")
+                    Text("Saved settings help you plan. They do not confirm that a treadmill is ready now.")
                 }
                 if let failure = model.failure { Section { Label(failure.message, systemImage: "exclamationmark.triangle") } }
                 Section {
@@ -164,7 +164,7 @@ struct PlanningProfileDiscoveryPresentation: ViewModifier {
                         Section(review.profile.name) {
                             PlanningProfileCapabilityComparison(saved: review.profile.snapshot, newlyRead: review.snapshot)
                             Text("Read just now: \(PlanningProfileSnapshot.date(review.snapshot.observedAt)?.formatted(date: .long, time: .shortened) ?? "date unavailable")")
-                            Text("The saved profile has not been changed. Current live capability still governs execution; updating changes historical planning evidence only.")
+                            Text("Your saved profile is unchanged. Updating it changes the limits used for planning; the connected treadmill is still checked before each workout.")
                         }
                         Section {
                             Button("Update profile") { model.updateReviewed() }.frame(minHeight: 44)
@@ -183,7 +183,7 @@ struct PlanningProfileDiscoveryPresentation: ViewModifier {
                             Text("Stored on this iPhone. Saving does not start or control the treadmill.")
                             Text(record.name).font(.headline)
                             PlanningProfileSummary(snapshot: record.snapshot)
-                            Text("You can use this historical profile for planning while disconnected. Live compatibility is checked before execution.")
+                            Text("You can plan with these saved settings while disconnected. The treadmill is checked again before you begin a workout.")
                         }
                         Section {
                             Button("Use for planning") { if model.selectCreated(id) { model.dismissCreated() } }.frame(minHeight: 44)

@@ -47,7 +47,7 @@ struct SettingsView: View {
             }
             Section("Privacy") {
                 Label("Saved plans stay local", systemImage: "iphone")
-                Text("Saved plans stay on this device. Optional remote import sends workout text to OpenRouter and OpenAI only after a disclosure and your agreement for each request. A key is stored in this device’s Keychain. Remote processing has no zero-retention guarantee. No analytics are used. The iPhone does not read Health data and saves iPhone-only workouts only after you choose Save to Apple Health. If you choose Apple Watch recording, the Watch separately reads available heart rate and active energy and saves its workout, execution intervals and optional accepted treadmill distance. iPhone saving stays disabled for that attempt. Workouts without usable intervals are discarded; sensor samples may already remain in HealthKit.")
+                Text("Saved plans stay on this device. Optional remote import sends workout text to OpenRouter and OpenAI only after a disclosure and your agreement for each request. A key is stored in this device’s Keychain. Remote processing has no zero-retention guarantee. No analytics are used. The iPhone does not read Health data and saves iPhone-only workouts only after you choose Save to Apple Health. If you choose Apple Watch recording, the Watch separately reads available heart rate and active energy and saves its workout, execution intervals and available treadmill distance. iPhone saving stays disabled for that attempt. Workouts without usable step details are not saved; heart rate and calorie samples may still remain in Apple Health.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("settings.privacy")
@@ -55,17 +55,17 @@ struct SettingsView: View {
 
             Section("About") {
                 LabeledContent(
-                    "Current slice",
+                    "Available features",
                     value: "Saved plans, workouts and Health export"
                 )
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Current slice")
+                .accessibilityLabel("Available features")
                 .accessibilityValue("Saved plans, workouts and Health export")
                 .accessibilityIdentifier("settings.current-slice")
-                LabeledContent("FTMS control", value: "Reviewed speed and incline only")
+                LabeledContent("Treadmill adjustments", value: "Speed and incline during workouts")
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("FTMS control")
-                    .accessibilityValue("Reviewed speed and incline only")
+                    .accessibilityLabel("Treadmill adjustments")
+                    .accessibilityValue("Speed and incline during workouts")
                     .accessibilityIdentifier("settings.ftms-control")
             }
         }

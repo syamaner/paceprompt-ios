@@ -60,7 +60,7 @@ final class PlansPresentationTests: XCTestCase {
             XCTAssertFalse(presentation.canImport)
             XCTAssertFalse(presentation.canExport)
             XCTAssertTrue(
-                card.detail.localizedCaseInsensitiveContains("preserv")
+                card.detail.contains("unchanged") || card.detail.contains("not been changed") || card.detail.contains("kept")
                     || card.detail.contains("kept as-is")
                     || card.detail.contains("untouched")
             )
@@ -111,8 +111,8 @@ final class PlansPresentationTests: XCTestCase {
               case let .blocked(planCard) = plan.content else {
             return XCTFail("Unsupported versions must remain blocked")
         }
-        XCTAssertTrue(storeCard.detail.contains("schema v7"))
-        XCTAssertTrue(planCard.detail.contains("schema v9"))
+        XCTAssertTrue(storeCard.detail.contains("cannot open"))
+        XCTAssertTrue(planCard.detail.contains("cannot open"))
         XCTAssertNil(storeCard.retryTitle)
         XCTAssertNil(planCard.retryTitle)
         XCTAssertNotEqual(storeCard.title, planCard.title)
@@ -182,8 +182,8 @@ final class PlansPresentationTests: XCTestCase {
         XCTAssertEqual(presentation.steps[1].problemFields, [.speed])
         XCTAssertEqual(presentation.issues.map(\.context), ["Step 01 · Duration", "Step 02 · Speed"])
         XCTAssertFalse(presentation.reviewActionEnabled)
-        XCTAssertTrue(presentation.reviewFooter.contains("canonical plan values independently of equipment"))
-        XCTAssertTrue(presentation.reviewFooter.contains("does not save, contact or control"))
+        XCTAssertTrue(presentation.reviewFooter.contains("checks your plan before saving"))
+        XCTAssertTrue(presentation.reviewFooter.contains("compatibility is checked before a workout"))
     }
 
     func testReviewPresentationUsesStableExactCanonicalFactsAndSeparateLabels() throws {
@@ -222,7 +222,7 @@ final class PlansPresentationTests: XCTestCase {
         XCTAssertTrue(create.confirmationEnabled)
         XCTAssertEqual(edit.confirmationTitle, "Confirm and update")
         XCTAssertFalse(edit.confirmationEnabled)
-        XCTAssertTrue(create.confirmationFooter.contains("Canonical plan values validated independently of equipment"))
+        XCTAssertTrue(create.confirmationFooter.contains("Your plan has been checked"))
         XCTAssertFalse(create.confirmationFooter.localizedCaseInsensitiveContains(" at "))
     }
 
@@ -252,7 +252,7 @@ final class PlansPresentationTests: XCTestCase {
         )
         XCTAssertEqual(
             presentation.issues.map(\.context),
-            ["Capability snapshot", "Capability snapshot", "Capability snapshot", "Step 02 · Speed"]
+            ["Treadmill settings", "Treadmill settings", "Treadmill settings", "Step 02 · Speed"]
         )
     }
 
@@ -429,7 +429,7 @@ final class PlansPresentationTests: XCTestCase {
         model.confirmSave()
 
         XCTAssertNotNil(model.preview)
-        XCTAssertTrue(model.saveError?.contains("atomic replacement") == true)
+        XCTAssertTrue(model.saveError?.contains("could not be saved") == true)
         XCTAssertTrue(repository.records.isEmpty)
     }
 
@@ -559,8 +559,8 @@ final class PlansPresentationTests: XCTestCase {
             model.libraryPresentation.content,
             .populated([PlansPlanRowPresentation(record: original)])
         )
-        XCTAssertTrue(model.deletionError?.contains("Deletion was not confirmed") == true)
-        XCTAssertTrue(model.deletionError?.contains("atomic replacement") == true)
+        XCTAssertTrue(model.deletionError?.contains("could not be deleted") == true)
+        XCTAssertTrue(model.deletionError?.contains("remains listed") == true)
     }
 
     func testBlockedStorageCannotOpenOrConfirmDeletion() {

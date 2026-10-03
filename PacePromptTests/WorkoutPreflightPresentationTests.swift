@@ -4,6 +4,19 @@ import XCTest
 @testable import PacePrompt
 
 final class WorkoutPreflightPresentationTests: XCTestCase {
+  func testLiveReadPresentationDistinguishesCheckingFromUnavailableWithoutChangingBlocking() throws {
+    let fixture = Harness()
+    let checking = try XCTUnwrap(LivePreflightFailure.review(fixture.validatedPlan.plan, read: .reading, epoch: fixture.epoch))
+    let unavailable = try XCTUnwrap(LivePreflightFailure.review(fixture.validatedPlan.plan, read: .unavailable("Connection lost"), epoch: fixture.epoch))
+    XCTAssertTrue(checking.isReading)
+    XCTAssertFalse(unavailable.isReading)
+    XCTAssertFalse(checking.readComplete)
+    XCTAssertFalse(unavailable.readComplete)
+    XCTAssertEqual(checking.title, "Checking your treadmill")
+    XCTAssertEqual(unavailable.title, "This workout cannot begin")
+    XCTAssertEqual(unavailable.readStatus, "Unavailable")
+  }
+
   func testLiveReviewNamesAllSpeedInclinationAndCombinedFailuresAndMissingEvidence() throws {
     let fixture = Harness()
     let plan = fixture.validatedPlan.plan
@@ -174,12 +187,12 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
         )
 
         XCTAssertEqual(requesting.stage, .requestingControl)
-        XCTAssertTrue(requesting.status.detail.contains("ATT acceptance alone is not control"))
+        XCTAssertTrue(requesting.status.detail.contains("Waiting for its confirmation"))
         XCTAssertFalse(requesting.status.title.localizedCaseInsensitiveContains("confirmed"))
 
         XCTAssertEqual(waiting.stage, .waitingForPhysicalStart)
-        XCTAssertTrue(waiting.status.detail.contains("matching FTMS Request Control success"))
-    XCTAssertTrue(waiting.status.detail.contains("Fresh movement is still required"))
+        XCTAssertTrue(waiting.status.detail.contains("treadmill allows setting changes"))
+    XCTAssertTrue(waiting.status.detail.contains("Waiting for it to report movement"))
         XCTAssertFalse(waiting.canBeginWorkout)
 
     let preControlState = harness.reduce(
@@ -189,7 +202,7 @@ final class WorkoutPreflightPresentationTests: XCTestCase {
     ).state
     let preControl = harness.presentation(state: preControlState, now: 4.2)
     XCTAssertEqual(preControl.stage, .waitingForPhysicalStart)
-    XCTAssertTrue(preControl.status.detail.contains("No Control Point procedure has been sent"))
+    XCTAssertTrue(preControl.status.detail.contains("No settings have been sent"))
     }
 }
 

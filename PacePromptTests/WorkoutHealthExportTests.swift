@@ -5,6 +5,30 @@ import XCTest
 
 @MainActor
 final class WorkoutHealthExportTests: XCTestCase {
+  func testHistoryVisualStateIsSemanticAndDoesNotClaimUnknownHealthSuccess() throws {
+    let base = fixture()
+    let saved = WorkoutHealthExportState.saved(savedAt: base.lastUpdatedAt, syncVersion: 1,
+      workoutUUID: uuid(164), mirroredIntervalCount: 2, distanceIncluded: false)
+    let summary = copy(base, healthExport: saved)
+    let detail = HistoryWorkoutDetailPresenter.make(summary: summary, isSaving: false, healthMutationAllowed: true)
+    XCTAssertTrue(detail.health.isSaved)
+    XCTAssertEqual(detail.outcomeSymbol, "checkmark.circle.fill")
+    XCTAssertFalse(HistoryWorkoutDetailPresenter.make(summary: summary, isSaving: true, healthMutationAllowed: true).health.isSaved)
+    let uncertain = HistoryWorkoutDetailPresenter.make(summary: copy(summary, stop: .unconfirmed), isSaving: false, healthMutationAllowed: true)
+    XCTAssertEqual(uncertain.outcomeSymbol, "exclamationmark.triangle.fill")
+    XCTAssertFalse(uncertain.health.isSaved)
+    var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(summary)) as? [String: Any])
+    object["schemaVersion"] = 3
+    object.removeValue(forKey: "ownership")
+    let invalid = try JSONDecoder().decode(WorkoutExecutionSummary.self, from: JSONSerialization.data(withJSONObject: object))
+    let blocked = HistoryWorkoutDetailPresenter.make(summary: invalid, isSaving: false, healthMutationAllowed: true)
+    XCTAssertFalse(blocked.health.isSaved)
+    XCTAssertNil(blocked.health.actionTitle)
+    XCTAssertFalse(blocked.health.detail.contains("Workout saved"))
+    XCTAssertEqual(blocked.health.title, "Recording source unavailable")
+    XCTAssertFalse(blocked.health.detail.contains("Apple Watch"))
+  }
+
   func testWatchAndReservedPhoneIdentityNeverRequestPermissionOrSave() async throws {
     let phone = fixture()
     var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(phone)) as? [String: Any])
@@ -24,10 +48,10 @@ final class WorkoutHealthExportTests: XCTestCase {
     let watch = try JSONDecoder().decode(WorkoutExecutionSummary.self, from: JSONSerialization.data(withJSONObject: object))
     let list = HistoryLibraryPresentation(status: .init(canonical: .available(summaries: [watch]), staging: .absent))
     guard case let .populated(rows) = list.content else { return XCTFail("Watch History must remain visible") }
-    XCTAssertEqual(rows.first?.health, "Watch-owned; save result unavailable on iPhone")
+    XCTAssertEqual(rows.first?.health, "iPhone saving is disabled for this workout. Check Apple Watch for its recording and save status.")
     let detail = HistoryWorkoutDetailPresenter.make(summary: watch, isSaving: false, healthMutationAllowed: true)
     XCTAssertEqual(detail.health.title, "Apple Watch recording")
-    XCTAssertEqual(detail.health.detail, "Watch-owned; save result unavailable on iPhone")
+    XCTAssertEqual(detail.health.detail, "iPhone saving is disabled for this workout. Check Apple Watch for its recording and save status.")
     XCTAssertNil(detail.health.actionTitle)
   }
 
@@ -309,8 +333,8 @@ final class WorkoutHealthExportTests: XCTestCase {
       HistoryHealthExportPresenter.make(summary: summary, isSaving: false)
     )
     XCTAssertEqual(unsaved.actionTitle, "Save to Apple Health")
-    XCTAssertTrue(unsaved.confirmationMessage.contains("prescribed, effective-target and separately observed"))
-    XCTAssertTrue(unsaved.confirmationMessage.contains("2 interval metadata records"))
+    XCTAssertTrue(unsaved.confirmationMessage.contains("original plan settings, your changed settings and separate treadmill readings"))
+    XCTAssertTrue(unsaved.confirmationMessage.contains("2 recorded intervals"))
 
     let savedSummary = copy(
       summary,
@@ -366,7 +390,7 @@ final class WorkoutHealthExportTests: XCTestCase {
       (.protectedDataUnavailable, "History is locked"),
       (.readFailure, "History could not be read"),
       (.corruptData, "History data is unreadable"),
-      (.partialWriteDetected, "A partial history write was detected"),
+      (.partialWriteDetected, "A History save was interrupted"),
       (.unsupportedStoreVersion(7), "History was saved by a newer version"),
       (.unsupportedSummaryVersion(summaryID: uuid(1), version: 7), "A workout uses a newer version"),
       (.unsupportedPlanVersion(summaryID: uuid(1), version: 7), "A plan snapshot uses a newer version"),
@@ -407,7 +431,7 @@ final class WorkoutHealthExportTests: XCTestCase {
     XCTAssertTrue(detail.executed[0].prescribed.contains("5 km/h · 1%"))
     XCTAssertTrue(detail.executed[0].effective.contains("5.2 km/h (manual override)"))
     XCTAssertTrue(detail.executed[0].effective.contains("1% (planned)"))
-    XCTAssertTrue(detail.executed[0].observed.contains("Observed · 5.2 km/h · 1%"))
+    XCTAssertTrue(detail.executed[0].observed.contains("Treadmill readings · 5.2 km/h · 1%"))
     XCTAssertNil(detail.executionUnavailable)
     XCTAssertEqual(detail.health.actionTitle, "Save to Apple Health")
   }
@@ -430,9 +454,9 @@ final class WorkoutHealthExportTests: XCTestCase {
     )
     XCTAssertEqual(detail.title, legacy.planSnapshot.suggestedName)
     XCTAssertTrue(detail.executed.isEmpty)
-    XCTAssertTrue(detail.executionUnavailable?.contains("schema v1") == true)
-    XCTAssertEqual(detail.health.title, "Not eligible for Apple Health")
-    XCTAssertTrue(detail.health.detail.contains("not reconstructed"))
+    XCTAssertTrue(detail.executionUnavailable?.contains("older workout") == true)
+    XCTAssertEqual(detail.health.title, "Cannot save to Apple Health")
+    XCTAssertTrue(detail.health.detail.contains("does not contain the details"))
     XCTAssertNil(detail.health.actionTitle)
   }
 
@@ -444,7 +468,7 @@ final class WorkoutHealthExportTests: XCTestCase {
       (.inProgress, .notRequired, "Interrupted · completion unknown"),
       (.interrupted(reason: .init(rawValue: "interrupt")), .notRequired, "Interrupted"),
       (.failed(reason: .init(rawValue: "failure")), .notRequired, "Failed"),
-      (.completed, .unconfirmed, "Physically uncertain"),
+      (.completed, .unconfirmed, "Treadmill stop unconfirmed"),
     ]
     for (outcome, stop, expected) in cases {
       XCTAssertEqual(

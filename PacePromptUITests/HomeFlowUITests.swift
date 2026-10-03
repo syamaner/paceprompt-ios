@@ -12,8 +12,8 @@ final class HomeFlowUITests: XCTestCase {
     func testIdleHomeKeepsAvailableBluetoothSeparateAndStartsNoScan() {
         launch(scenario: "idle")
 
-        XCTAssertEqual(status("bluetooth").value as? String, "Available. Radio powered on and authorised for this app.")
-        XCTAssertEqual(status("treadmill").value as? String, "Idle. No scan started. Capability is unknown until you scan.")
+        XCTAssertEqual(status("bluetooth").value as? String, "Available. Bluetooth is on and PacePrompt has permission to use it.")
+        XCTAssertEqual(status("treadmill").value as? String, "Idle. Choose Set up treadmill to find and check your treadmill.")
         let setup = app.buttons["home.setup"]
         XCTAssertTrue(setup.exists)
         XCTAssertTrue(app.descendants(matching: .any)["home.safety"].exists)
@@ -26,8 +26,8 @@ final class HomeFlowUITests: XCTestCase {
         launch(scenario: "in-progress")
 
         let value = status("treadmill").value as? String
-        XCTAssertTrue(value?.hasPrefix("Reading capability.") == true)
-        XCTAssertTrue(value?.contains("incomplete") == true)
+        XCTAssertTrue(value?.hasPrefix("Checking treadmill.") == true)
+        XCTAssertTrue(value?.contains("still being checked") == true)
         XCTAssertFalse(value?.localizedCaseInsensitiveContains("ready") == true)
     }
 
@@ -36,7 +36,7 @@ final class HomeFlowUITests: XCTestCase {
 
         let value = status("treadmill").value as? String
         XCTAssertTrue(value?.hasPrefix("Connected.") == true)
-        XCTAssertTrue(value?.contains("read range evidence") == true)
+        XCTAssertTrue(value?.contains("supported speed") == true)
         XCTAssertTrue(value?.contains("0.8–16.0 km/h") == true)
         XCTAssertTrue(value?.contains("0.0–12.0%") == true)
     }
@@ -83,7 +83,7 @@ final class HomeFlowUITests: XCTestCase {
         XCTAssertTrue(privacy.waitForExistence(timeout: 2))
         XCTAssertTrue(privacy.label.contains("The iPhone does not read Health data"))
         XCTAssertTrue(privacy.label.contains("Watch separately reads available heart rate and active energy"))
-        XCTAssertTrue(privacy.label.contains("Workouts without usable intervals are discarded"))
+        XCTAssertTrue(privacy.label.contains("Workouts without usable step details are not saved"))
         app.swipeUp()
         XCTAssertEqual(
             app.descendants(matching: .any)["settings.current-slice"].value as? String,
@@ -91,7 +91,7 @@ final class HomeFlowUITests: XCTestCase {
         )
         XCTAssertEqual(
             app.descendants(matching: .any)["settings.ftms-control"].value as? String,
-            "Reviewed speed and incline only"
+            "Speed and incline during workouts"
         )
     }
 

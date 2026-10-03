@@ -26,15 +26,15 @@ struct WorkoutImportView: View {
                         }
                         if let feedback = model.feedback { Section { Text(feedback) } }
                         if !model.validationIssues.isEmpty {
-                            Section("Local validation") {
+                            Section("Plan details to review") {
                                 ForEach(Array(model.validationIssues.enumerated()), id: \.offset) { _, issue in
-                                    Text(issue.message)
+                                    Text(ManualPlanIssuePresentation(validation: issue).context + ": " + ManualPlanIssuePresentation(validation: issue).message)
                                 }
                             }
                         }
                         if model.isSending { ProgressView("Waiting for remote import…") }
                         else {
-                            Button("Review remote-send disclosure", action: model.reviewDisclosure)
+                            Button("Review what will be sent", action: model.reviewDisclosure)
                                 .disabled(model.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                                 .accessibilityIdentifier("import.disclosure")
                         }
@@ -47,8 +47,8 @@ struct WorkoutImportView: View {
                 NavigationStack {
                     Form {
                         Section("Send this workout text remotely?") {
-                            Text("Your entered workout text will leave this device and be processed by OpenRouter and OpenAI using openai/gpt-6-sol, to produce an untrusted structured workout proposal.")
-                            Text("We send the exact text below, en-GB locale, the supported unit vocabulary, the fixed versioned instructions, schema and eleven examples, and only your current speed/inclination capability states. Capability ranges remain on this device. Saved treadmill profile names, identities and historical ranges are not sent.")
+                            Text("Your entered workout text will leave this device and be processed by OpenRouter and OpenAI using openai/gpt-6-sol, to suggest a workout plan for you to review.")
+                            Text("We send the text below, British English language settings, supported units, instructions, the required plan format and eleven examples. We also send whether speed and incline changes are supported. Treadmill limits, saved profile names and identities stay on this device.")
                             Text("Your stored OpenRouter key authenticates this request. No saved plans, workout history, health data or device identifiers are sent. Remote processing has no zero-retention guarantee; account logging and provider retention policies apply.")
                             Text("PacePrompt validates the proposal locally. You must review the exact plan and separately confirm before it is saved. A request can incur charges on your OpenRouter account.")
                         }
@@ -62,7 +62,7 @@ struct WorkoutImportView: View {
                         Button("I agree — send this request", action: model.consentAndSend)
                             .accessibilityIdentifier("import.consent")
                     }
-                    .navigationTitle("Remote-send disclosure")
+                    .navigationTitle("Review AI request")
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: model.dismissDisclosure) } }
                 }
             }
@@ -87,12 +87,12 @@ struct ImportCredentialView: View {
 
     var body: some View {
         Form {
-            Section("OpenRouter credential") {
-                Text("Credential: \(credential.state.rawValue)")
+            Section("OpenRouter key") {
+                Text(credential.state.displayText)
                 Text("Stored only in this device's Keychain and accessible while unlocked. It is not synchronised. Storing a key sends no request.")
                     .font(.footnote)
                 if credential.state == .failed {
-                    Text("The credential operation failed. A failed replacement preserves the previous key; a failed deletion does not confirm removal.")
+                    Text("The key could not be read or changed. A failed replacement keeps the previous key; a failed deletion does not confirm that it was removed.")
                 }
                 if editing {
                     SecureField("OpenRouter key", text: $credential.entry)
@@ -110,7 +110,7 @@ struct ImportCredentialView: View {
                         Button("Replace key") { replacing = true; credential.beginReplacement(); editing = true }
                         Button("Delete key", role: .destructive) { confirmDelete = true }
                     }
-                    Button("Refresh credential status", action: credential.refresh)
+                    Button("Check key status", action: credential.refresh)
                 }
             }
         }
@@ -126,6 +126,19 @@ struct ImportCredentialView: View {
         .confirmationDialog("Delete the stored OpenRouter key?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete key", role: .destructive, action: credential.delete)
             Button("Cancel", role: .cancel) {}
+        }
+    }
+}
+
+// Display labels stay separate from the Keychain state and diagnostic identifiers.
+extension ImportCredentialStore.State {
+    var displayText: String {
+        switch self {
+        case .absent: "No key saved"
+        case .present: "Key saved on this iPhone"
+        case .replacing: "Replacing your key"
+        case .deleting: "Deleting your key"
+        case .failed: "Key status needs attention"
         }
     }
 }

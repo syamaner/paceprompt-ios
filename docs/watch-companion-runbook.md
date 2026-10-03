@@ -8,15 +8,15 @@ On iPhone, select a saved plan, prepare the treadmill and opt into **Record work
 
 The Watch owns one primary session and its associated builder. The phone owns execution and sends only closed intervals and accepted cumulative distance. HealthKit's mirrored-session channel is the sole transport. There is no app-driven automatic remirroring or treadmill reconnection. HealthKit OS redelivery may restore the same identity after activity/start/bind validation; it never restarts execution. Once reserved, that attempt can never use iPhone Health saving, even after timeout, disconnection, relaunch or an uncertain Watch result. Start a new deliberate attempt after ending an unavailable attempt; do not retry its identity.
 
-The Watch displays recording status, elapsed recording time, available heart rate and estimated active energy with HealthKit provenance. Missing quantities remain unavailable. **End recording & save** ends Health recording only: it does not stop the treadmill. On iPhone, **Watch-owned; save result unavailable on iPhone** is intentional. Final acknowledgement confirms interchange, not a saved Health workout. The Watch retains the actual result locally.
+The Watch displays recording status, elapsed recording time, available heart rate and estimated active energy with HealthKit provenance. Missing quantities remain unavailable. **End recording & save** ends Health recording only: it does not stop the treadmill. On iPhone, **iPhone saving is disabled for this workout. Check Apple Watch for its recording and save status.** is intentional. Final acknowledgement confirms interchange, not a saved Health workout. The Watch retains the actual result locally.
 
 ## End, discard and recovery
 
 The phone sends a cumulative final manifest only after the Watch establishes its recording end boundary. Confirmation within the bounded deadline permits complete status. Without confirmation, a valid nonempty prefix can be saved as incomplete, with distance omitted. Conflicts, malformed data, recovery and disconnection cannot manufacture completeness.
 
-If there are no usable intervals, the Watch ends and discards the builder without calling finish. A definite discard displays **Workout not saved: no execution intervals were received or usable.** This is not a promise to delete sensor samples HealthKit may already have stored. Any uncertain mutation, finish result or receipt-persistence failure remains uncertain and never triggers a replacement workout or iPhone fallback.
+If there are no usable intervals, the Watch ends and discards the builder without calling finish. A definite discard displays **Workout not saved: no usable step details arrived from iPhone.** This is not a promise to delete sensor samples HealthKit may already have stored. Any uncertain mutation, finish result or receipt-persistence failure remains uncertain and never triggers a replacement workout or iPhone fallback.
 
-Active-workout recovery attaches only to the existing primary session and builder, validates identity/start/activity/source provenance, and restores delegates. It does not recreate an ended or ambiguous builder. End a recovered recording on Watch. An uncertain journal is not cleared automatically. Use **Stop recording**, then **Prepare next workout** only after the app verifies that the existing HealthKit primary has ended or none is active. The old outcome is archived and remains uncertain; no Health workout is deleted or replaced, and its iPhone suppression stays permanent. A storage/probe failure keeps recovery blocked and offers another explicit stop/check. Do not reinstall or delete ownership files as a recovery step.
+Active-workout recovery attaches only to the existing primary session and builder, validates identity/start/activity/source provenance, and restores delegates. It does not recreate an ended or ambiguous builder. End a recovered recording on Watch. An uncertain journal is not cleared automatically. Use **Stop recording**, then **Prepare next workout** only after the app verifies that the existing HealthKit primary has ended or none is active. The old outcome is archived: an uncertain result remains uncertain, and a known not-saved result remains not saved. No Health workout is deleted or replaced, and its iPhone suppression stays permanent. A storage/probe failure keeps recovery blocked and offers another explicit stop/check. Do not reinstall or delete ownership files as a recovery step.
 
 ## Privacy and retention
 
@@ -227,3 +227,12 @@ installed candidate repeat the existing foreground phone-end procedure, leave
 Watch untouched and verify one nonempty Health workout separately from History.
 Retain failed/uncertain attempts; no finish retry, phone replacement export or
 Health deletion. Keep personal diagnostics and images out of Git/tracker records.
+
+## Product status wording (#209)
+
+The [copy inventory](validation/issue209-product-copy.md) records the screen routes,
+state distinctions and validation evidence. “Save not confirmed” retains the
+uncertain outcome and no-replacement rule. “Some step details could not be confirmed”
+can mean a missing final confirmation even when every interval arrived. Prepare
+next workout keeps its existing confirmation; it now distinguishes known not-saved
+from uncertain outcomes. No extra save or cleanup is triggered by a label change.

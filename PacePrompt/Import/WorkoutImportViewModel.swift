@@ -80,7 +80,7 @@ final class WorkoutImportViewModel: ObservableObject {
                         self.diagnostics.record(.check(.previewEligibility, .rejected))
                         self.diagnostics.record(.terminal(.localValidationFailure))
 #endif
-                        self.terminal("Canonical authoring validation blocked this plan. Review the listed fields or use manual entry.")
+                        self.terminal("Some plan details need attention. Review the listed fields or enter the plan manually.")
                         self.validationIssues = failure.issues
                     case .success:
 #if DEBUG
@@ -98,7 +98,7 @@ final class WorkoutImportViewModel: ObservableObject {
                     self.diagnostics.record(.check(.previewEligibility, .rejected))
                     self.diagnostics.record(.terminal(.mappingFailure))
 #endif
-                    self.terminal("Exact unit conversion failed. Use representable values and whole canonical seconds, or enter the plan manually.")
+                    self.terminal("The values could not be converted exactly. Use whole seconds and explicit units, or enter the plan manually.")
                     self.mappingFailure = true
                 }
             default:
@@ -153,7 +153,44 @@ final class WorkoutImportViewModel: ObservableObject {
         text = ""
         feedback = message
     }
-    private static func message(_ outcome: WorkoutImportOutcome) -> String {
+    static func fieldLabel(_ path: String) -> String {
+        switch path {
+        case "activity": "activity"
+        case "steps": "workout steps"
+        case "steps.repetitions": "step repetitions"
+        case "steps.kind": "step type"
+        case "steps.duration", "steps.duration.value": "step duration"
+        case "steps.duration.unit": "duration unit"
+        case "steps.targetSpeed", "steps.targetSpeed.value": "step speed"
+        case "steps.targetSpeed.unit": "speed unit"
+        case "steps.targetInclination", "steps.targetInclination.value": "step incline"
+        case "steps.targetInclination.unit": "incline unit"
+        case "capabilities.speed": "treadmill speed support"
+        case "capabilities.inclination": "treadmill incline support"
+        default: "workout details"
+        }
+    }
+    static func failureMessage(_ failure: ImportFailure) -> String {
+        switch failure {
+        case .missingCredential: "Add your OpenRouter key in Settings."
+        case .authentication: "OpenRouter did not accept your key. Check it in Settings."
+        case .credits: "Check the credit balance on your OpenRouter account."
+        case .restrictedRoute: "Your OpenRouter account does not allow the required service. Check your account settings."
+        case .rateLimited: "The service is receiving too many requests. Try again later."
+        case .transport: "Could not reach the import service. Check your internet connection."
+        case .timeout: "The import service did not respond in time."
+        case .cancelled: "The request was cancelled."
+        case .unavailable: "The import service is unavailable. Try again later."
+        case .resources: "The import instructions could not be loaded."
+        case .mapping: "The returned values could not be converted exactly. Try whole seconds and explicit units."
+        case .structure, .responseContentType: "The service returned an unreadable workout."
+        case .identity, .redirect, .identityResponseURL, .identityModelMissing,
+             .identityModelRevisionWithoutProvider, .identityModelNonString, .identityModelMismatch,
+             .identityProviderMissing, .identityProviderMismatch, .identityServiceTier, .identityMessageModel:
+            "The response could not be verified as coming from the agreed AI service."
+        }
+    }
+    static func message(_ outcome: WorkoutImportOutcome) -> String {
         func describe(_ problem: ImportProblem) -> String {
             let action: String
             switch problem.reason {
@@ -168,14 +205,14 @@ final class WorkoutImportViewModel: ObservableObject {
             case "unsafeRequest", "promptInjection": action = "This request was refused. Provide a workout description that preserves safety controls."
             default: action = "Describe an importable treadmill workout with duration, speed and inclination."
             }
-            return action + (problem.paths.isEmpty ? "" : " Affected fields: " + problem.paths.joined(separator: ", ") + ".")
+            return action + (problem.paths.isEmpty ? "" : " Affected fields: " + problem.paths.map(Self.fieldLabel).joined(separator: ", ") + ".")
         }
         switch outcome {
         case let .clarificationRequired(p): return "Clarification required. " + describe(p)
         case let .unsupportedRequest(p): return "Unsupported request. " + describe(p)
         case let .refusal(p): return describe(p)
-        case let .providerUnavailable(reason): return "Remote import unavailable (\(reason.rawValue)). Check the stored key or route availability, then review a new disclosure to try again."
-        case let .providerFailure(reason): return "Remote import failed (\(reason.rawValue)). Nothing was saved. A new attempt requires a new disclosure."
+        case let .providerUnavailable(reason): return "Import unavailable. " + Self.failureMessage(reason) + " Nothing was saved. Review and agree to a new request before trying again."
+        case let .providerFailure(reason): return "Import failed. " + Self.failureMessage(reason) + " Nothing was saved. Review and agree to a new request before trying again."
         case .proposal: return ""
         }
     }

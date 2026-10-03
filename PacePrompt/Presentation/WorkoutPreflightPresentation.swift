@@ -234,7 +234,7 @@ struct WorkoutPreflightPresentation: Equatable {
             .init(
                 title: "Disconnected",
         detail:
-          "Connect the accepted FR30z before preflight can continue. No control request has been made.",
+          "Connect your Reebok FR30z to check this workout. No control request has been sent.",
                 symbol: "bolt.slash.fill",
                 tone: .neutral
             )
@@ -242,31 +242,31 @@ struct WorkoutPreflightPresentation: Equatable {
             .init(
                 title: "Preparing",
         detail:
-          "Reading current capabilities, subscriptions and profile evidence. Control is not held.",
+          "Checking the treadmill settings and live updates. PacePrompt does not yet have control.",
                 symbol: "ellipsis.circle.fill",
                 tone: .neutral
             )
         case .unsupported:
             .init(
-                title: "Unsupported profile",
+                title: "Treadmill not supported",
         detail:
-          "This connection does not exactly match the accepted FR30z profile. Control remains unavailable.",
+          "This connection does not match the supported Reebok FR30z. PacePrompt cannot change its settings.",
                 symbol: "xmark.shield.fill",
                 tone: .failure
             )
         case .stale:
             .init(
-                title: "Treadmill data stale",
+                title: "Treadmill updates delayed",
         detail:
-          "Current speed and inclination evidence is older than 2 seconds. Last-known values are not readiness.",
+          "Speed and incline updates are delayed. Waiting for current readings before you can begin.",
                 symbol: "clock.badge.exclamationmark.fill",
                 tone: .warning
             )
         case .lockedOrUnknown:
             .init(
-                title: "Readiness locked",
+                title: "Workout not ready",
         detail:
-          "A required current fact is unknown, invalid or unsafe. Begin workout remains unavailable.",
+          "Some treadmill checks are missing or did not pass. You cannot begin yet.",
                 symbol: "lock.shield.fill",
                 tone: .warning
             )
@@ -274,7 +274,7 @@ struct WorkoutPreflightPresentation: Equatable {
             .init(
                 title: "Requesting control",
         detail:
-          "A Request Control procedure is in progress. Intent, submission or ATT acceptance alone is not control.",
+          "Asking the treadmill to allow speed and incline changes. Waiting for its confirmation.",
                 symbol: "arrow.triangle.2.circlepath.circle.fill",
                 tone: .neutral
             )
@@ -282,7 +282,7 @@ struct WorkoutPreflightPresentation: Equatable {
             .init(
                 title: "Ready to begin",
         detail:
-          "The current profile and workout are ready. Begin workout sends nothing and waits for physical Start.",
+          "The checks have passed. Tap Begin workout, then use Start on the treadmill console.",
                 symbol: "checkmark.circle.fill",
                 tone: .ready
             )
@@ -292,7 +292,7 @@ struct WorkoutPreflightPresentation: Equatable {
             .init(
                 title: "Control confirmed",
           detail:
-            "A matching FTMS Request Control success is held. Fresh movement is still required before any target.",
+            "The treadmill allows setting changes. Waiting for it to report movement before sending them.",
                 symbol: "checkmark.shield.fill",
                 tone: .ready
             )
@@ -300,21 +300,21 @@ struct WorkoutPreflightPresentation: Equatable {
         .init(
           title: "Waiting for physical Start",
           detail:
-            "No Control Point procedure has been sent. Fresh reported movement permits Request Control.",
+            "No settings have been sent. PacePrompt will ask for control once the treadmill reports movement.",
           symbol: "figure.walk.motion",
           tone: .ready
         )
       case .requesting, .invalidated:
         .init(
-          title: "Readiness locked",
-          detail: "Control state is not valid for physical Start.",
+          title: "Workout not ready",
+          detail: "PacePrompt cannot proceed with this workout yet.",
           symbol: "lock.shield.fill",
           tone: .warning
         )
       }
         case .failed:
             .init(
-                title: "Preflight failed",
+                title: "Workout preparation failed",
         detail:
           "This attempt cannot continue. Use the physical console and safety key, then begin a new attempt.",
                 symbol: "exclamationmark.triangle.fill",
@@ -364,12 +364,15 @@ struct LivePreflightFailure: Equatable {
     let reason: String
     let issues: [WorkoutPlanValidationIssue]
     let readComplete: Bool
+    var isReading = false
+    var title: String { isReading ? "Checking your treadmill" : "This workout cannot begin" }
+    var readStatus: String { isReading ? "Checking…" : (readComplete ? "Checked" : "Unavailable") }
     static func review(_ plan: WorkoutPlan, read: LiveCapabilityRead, epoch: ConnectionEpoch?) -> Self? {
         switch read {
-        case .reading: return .init(plan: plan, reason: "Reading current treadmill capabilities. Execution remains blocked.", issues: [], readComplete: false)
+        case .reading: return .init(plan: plan, reason: "Checking supported treadmill settings. Please wait.", issues: [], readComplete: false, isReading: true)
         case .unavailable(let reason): return .init(plan: plan, reason: reason, issues: [], readComplete: false)
         case .complete(let observedEpoch, let capabilities):
-            guard observedEpoch == epoch else { return .init(plan: plan, reason: "The capability read belongs to a different connection.", issues: [], readComplete: false) }
+            guard observedEpoch == epoch else { return .init(plan: plan, reason: "The connection changed during the check. Prepare the workout again.", issues: [], readComplete: false) }
             switch WorkoutPlanValidator.validate(plan, against: capabilities) {
             case .success: return nil
             case .failure(let failure): return .init(plan: plan, reason: "The current treadmill cannot satisfy this exact plan. Your saved plan has not been altered.", issues: failure.issues, readComplete: true)

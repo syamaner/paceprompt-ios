@@ -10,7 +10,7 @@ final class HomePresentationTests: XCTestCase {
         XCTAssertTrue(presentation.bluetooth.isSuccessful)
         XCTAssertEqual(presentation.treadmill.title, "Idle")
         XCTAssertFalse(presentation.treadmill.isSuccessful)
-        XCTAssertTrue(presentation.treadmill.detail.contains("unknown"))
+        XCTAssertTrue(presentation.treadmill.detail.contains("find and check"))
     }
 
     func testConnectionWithoutCompleteDecodedEvidenceRemainsInProgress() {
@@ -20,7 +20,7 @@ final class HomePresentationTests: XCTestCase {
             characteristics: readableCharacteristics()
         )
 
-        XCTAssertEqual(presentation.treadmill.title, "Reading capability")
+        XCTAssertEqual(presentation.treadmill.title, "Checking treadmill")
         XCTAssertEqual(presentation.treadmill.tone, .neutral)
         XCTAssertFalse(presentation.treadmill.isSuccessful)
     }
@@ -37,7 +37,7 @@ final class HomePresentationTests: XCTestCase {
 
         XCTAssertEqual(presentation.treadmill.title, "Connected")
         XCTAssertTrue(presentation.treadmill.isSuccessful)
-        XCTAssertTrue(presentation.treadmill.detail.contains("read range evidence"))
+        XCTAssertTrue(presentation.treadmill.detail.contains("supported speed"))
         XCTAssertTrue(presentation.treadmill.detail.contains("0.8–16.0 km/h"))
         XCTAssertTrue(presentation.treadmill.detail.contains("0.0–12.0%"))
         XCTAssertFalse(presentation.treadmill.detail.localizedCaseInsensitiveContains("control"))
@@ -62,9 +62,9 @@ final class HomePresentationTests: XCTestCase {
             featureFlags: unsupportedFeatureFlags()
         )
 
-        XCTAssertEqual(malformed.treadmill.title, "Capability malformed")
-        XCTAssertEqual(unavailable.treadmill.title, "Capability unavailable")
-        XCTAssertEqual(unsupported.treadmill.title, "Capability unsupported")
+        XCTAssertEqual(malformed.treadmill.title, "Treadmill settings unreadable")
+        XCTAssertEqual(unavailable.treadmill.title, "Treadmill check unavailable")
+        XCTAssertEqual(unsupported.treadmill.title, "Settings not supported")
         for state in [malformed, unavailable, unsupported] {
             XCTAssertFalse(state.treadmill.isSuccessful)
             XCTAssertFalse(state.treadmill.detail.contains("0.0"))
@@ -81,7 +81,7 @@ final class HomePresentationTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation.treadmill.title, "Disconnected")
-        XCTAssertTrue(presentation.treadmill.detail.contains("stale"))
+        XCTAssertTrue(presentation.treadmill.detail.contains("Reconnect"))
         XCTAssertFalse(presentation.treadmill.detail.contains("16.0"))
         XCTAssertFalse(presentation.treadmill.isSuccessful)
     }

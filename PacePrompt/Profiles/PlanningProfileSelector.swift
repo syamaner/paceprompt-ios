@@ -17,7 +17,7 @@ struct PlanningProfileSelectorRow: View {
                                 Label(warning, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
                             }
                         } else {
-                            Text("You can create and save the plan now. Live compatibility is checked before execution.").font(.footnote)
+                            Text("You can save the plan now. The connected treadmill is checked before your workout.").font(.footnote)
                         }
                         if model.store == nil, let failure = model.failure {
                             Label(failure.message, systemImage: "exclamationmark.triangle").font(.footnote)
@@ -31,7 +31,7 @@ struct PlanningProfileSelectorRow: View {
                 .padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 .overlay { RoundedRectangle(cornerRadius: 12).stroke(.secondary.opacity(0.25)) }
         }.buttonStyle(.plain).accessibilityElement(children: .combine)
-            .accessibilityHint("Choose historical planning information. This does not establish execution readiness.")
+            .accessibilityHint("Choose saved treadmill settings for planning. The connected treadmill is checked again before a workout.")
             .accessibilityIdentifier("planning.selector")
             .sheet(isPresented: $choosing) {
                 PlanningProfilePicker(model: model)
@@ -45,7 +45,7 @@ struct OptionalPlanningProfileSelector: View {
     var body: some View {
         if let model {
             PlanningProfileSelectorRow(model: model)
-            Text("Saved planning information. Live compatibility is checked before execution.")
+            Text("Saved treadmill settings for planning. The connected treadmill is checked before your workout.")
                 .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -66,7 +66,7 @@ private struct PlanningProfilePicker: View {
                     choice(id: nil) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("No treadmill selected").font(.headline)
-                            Text("Create a plan without equipment validation.").font(.footnote)
+                            Text("Create a plan without checking treadmill limits yet.").font(.footnote)
                         }
                     }
                     ForEach(model.records) { record in
@@ -96,7 +96,7 @@ private struct PlanningProfilePicker: View {
                     NavigationLink("Manage saved profiles") { PlanningProfilesView(model: model, setupAvailableByDismissal: false, allowsPlanningSelection: false) }
                         .frame(minHeight: 44)
                 } footer: {
-                    Text("Saved profiles record historical planning information. Live compatibility is checked before execution.")
+                    Text("Saved profiles help you plan. The connected treadmill is checked again before your workout.")
                 }
             }.navigationTitle("Treadmill profile").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -131,7 +131,7 @@ struct PlanningProfileManualIncrementControls: View {
                      increment: model.selectedProfile.map { Decimal($0.snapshot.speed.incrementHundredthsKph) / 100 } ?? Decimal(string: "0.01")!)
             controls("inclination", unit: "%", value: $inclination,
                      increment: model.selectedProfile.map { Decimal($0.snapshot.inclination.incrementTenthsPercent) / 10 } ?? Decimal(string: "0.1")!)
-            Text("Increments guide editing; enter any exact target directly. Saved ranges never clamp your draft.")
+            Text("Use the buttons to adjust by the shown amount, or type a value. Saved limits do not change your draft.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -183,10 +183,10 @@ struct HistoricalPlanCompatibilityCard: View {
                     .accessibilityIdentifier("planning.compatibility.verdict")
                     .accessibilityFocused($verdictFocused)
                 if let profile = review.profile {
-                    Text("Checked against \(profile.name). Live capability has not been checked.")
+                    Text("Checked against saved settings for \(profile.name). The connected treadmill has not been checked yet.")
                     Text("Last confirmed \(PlanningProfileSnapshot.date(profile.snapshot.observedAt)?.formatted(date: .long, time: .omitted) ?? "date unavailable")")
                 } else {
-                    Text("Connect a treadmill before execution to verify speed and inclination targets.")
+                    Text("Connect a treadmill before your workout to check its speed and incline settings.")
                     if case .unavailable(let message) = review.selection {
                         Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
                     }
@@ -195,7 +195,7 @@ struct HistoricalPlanCompatibilityCard: View {
                             .frame(minHeight: 44).accessibilityIdentifier("planning.preview.choose-profile")
                     }
                 }
-                Text("Live compatibility will be checked before execution.").font(.footnote)
+                Text("The connected treadmill will be checked before your workout.").font(.footnote)
                 if let warning = review.ageWarning {
                     Label(warning, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
                 }
@@ -239,7 +239,7 @@ struct HistoricalPlanSaveButton: View {
             if mismatch { actionButton.buttonStyle(.bordered) }
             else { actionButton.buttonStyle(.borderedProminent) }
         }.disabled(!plans.canMutate)
-            .confirmationDialog("Confirm exact plan despite historical mismatch", isPresented: $confirmingMismatch, titleVisibility: .visible) {
+            .confirmationDialog("Save despite different treadmill limits?", isPresented: $confirmingMismatch, titleVisibility: .visible) {
                 Button("Confirm and save exact plan") { save(acknowledgement); acknowledgement = nil }
                 Button("Cancel", role: .cancel) { acknowledgement = nil }
             } message: {
@@ -254,7 +254,7 @@ struct HistoricalPlanSaveButton: View {
             } else { save(nil) }
         }.font(.headline).frame(maxWidth: .infinity, minHeight: 50)
             .accessibilityIdentifier("plan.confirm-save")
-            .accessibilityHint(mismatch ? "Review exact affected targets before acknowledging this historical mismatch" : "Writes this exact canonical plan to local storage")
+            .accessibilityHint(mismatch ? "Review the settings that differ from your saved treadmill limits" : "Saves this plan on your iPhone")
     }
     private func save(_ acknowledgement: HistoricalPlanCompatibility?) {
         if let onConfirm { onConfirm(acknowledgement) } else { plans.confirmSave(acknowledging: acknowledgement) }
