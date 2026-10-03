@@ -314,10 +314,20 @@ final class WorkoutExerciseFlowUITests: XCTestCase {
       extraEnvironment: ["PACEPROMPT_EXERCISE_REDUCE_MOTION": "1"]
     )
 
-    XCTAssertEqual(element("exercise.motion").value as? String, "Static guidance")
+    XCTAssertFalse(element("exercise.motion").exists)
+    XCTAssertFalse(app.staticTexts["Animation off"].exists)
+    XCTAssertFalse(app.staticTexts["Gentle status animation"].exists)
     XCTAssertTrue(app.staticTexts["Checking treadmill"].exists)
     XCTAssertTrue(element("exercise.speed.evidence").label.contains("Waiting for an update"))
     XCTAssertTrue(element("exercise.inclination.evidence").label.contains("Waiting for an update"))
+  }
+
+  func testLandscapeOmitsAnimationCaptionAndKeepsConsoleGuidance() {
+    launch(scenario: "checking", orientation: .landscapeLeft)
+    XCTAssertFalse(element("exercise.motion").exists)
+    XCTAssertFalse(app.staticTexts["Gentle status animation"].exists)
+    XCTAssertTrue(element("exercise.console-authority").exists)
+    XCTAssertTrue(app.staticTexts["Checking treadmill"].exists)
   }
 
   private func launch(

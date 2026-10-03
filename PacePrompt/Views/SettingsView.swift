@@ -46,11 +46,33 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.guided-access")
             }
             Section("Privacy") {
-                Label("Saved plans stay local", systemImage: "iphone")
-                Text("Saved plans stay on this device. Optional remote import sends workout text to OpenRouter and OpenAI only after a disclosure and your agreement for each request. A key is stored in this device’s Keychain. Remote processing has no zero-retention guarantee. No analytics are used. The iPhone does not read Health data and saves iPhone-only workouts only after you choose Save to Apple Health. If you choose Apple Watch recording, the Watch separately reads available heart rate and active energy and saves its workout, execution intervals and available treadmill distance. iPhone saving stays disabled for that attempt. Workouts without usable step details are not saved; heart rate and calorie samples may still remain in Apple Health.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("settings.privacy")
+                privacyDisclosure(
+                    "On this device",
+                    text: "Saved plans stay on this device. A key is stored in this device’s Keychain. No analytics are used.",
+                    identifier: "settings.privacy.local"
+                )
+                privacyDisclosure(
+                    "AI processing",
+                    text: "Optional remote import sends workout text to OpenRouter and OpenAI only after a disclosure and your agreement for each request. Remote processing has no zero-retention guarantee.",
+                    identifier: "settings.privacy.ai"
+                )
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Apple Health")
+                        .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
+                    privacyText(
+                        "The iPhone does not read Health data and saves iPhone-only workouts only after you choose Save to Apple Health.",
+                        identifier: "settings.privacy.health.phone"
+                    )
+                    privacyText(
+                        "If you choose Apple Watch recording, the Watch separately reads available heart rate and active energy and saves its workout, execution intervals and available treadmill distance. iPhone saving stays disabled for that attempt.",
+                        identifier: "settings.privacy.health.watch"
+                    )
+                    privacyText(
+                        "Workouts without usable step details are not saved; heart rate and calorie samples may still remain in Apple Health.",
+                        identifier: "settings.privacy.health.empty"
+                    )
+                }
             }
 
             Section("About") {
@@ -71,4 +93,22 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
     }
+
+    private func privacyDisclosure(_ title: String, text: String, identifier: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            privacyText(text, identifier: identifier)
+        }
+    }
+
+    private func privacyText(_ text: String, identifier: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier(identifier)
+    }
+
 }

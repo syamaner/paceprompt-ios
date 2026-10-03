@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 3 Oct 2026 | `PP-20261003-08` | Workout captions and grouped privacy (#208) | `gpt-6-astra` | 9,488,041 (9,358,976; 0) | 13,979 | 9,502,020 | USD 11.35 (standard-tier API-equivalent) | Exact 74-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-07` | Treadmill setup and troubleshooting (#210) | `gpt-6-astra` | 16,088,271 (15,936,256; 0) | 21,476 | 16,109,747 | USD 18.53 (standard-tier API-equivalent) | Exact 93-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-06` | Internal TestFlight build 22 release receipt (#227) | `gpt-6-astra` | 3,483,443 (3,459,712; 0) | 9,249 | 3,492,692 | USD 4.16 (standard-tier API-equivalent) | Exact 36-request root delivery/receipt phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-05` | Internal TestFlight build 22 candidate (#227) | `gpt-6-astra` | 6,771,472 (6,673,920; 0) | 10,044 | 6,781,516 | USD 8.15 (standard-tier API-equivalent) | Exact 69-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
@@ -2210,4 +2211,61 @@ historical resets 0; in-boundary resets
 0. Every measured event verifies `gpt-6-astra`.
 Standard-tier API-equivalent USD 18.53 (unrounded 18.530206).
 Private final report `/private/tmp/pp210-accounting-final.json`. Reviewer,
+final numeric insertion and post-boundary exact-head delivery are excluded.
+
+## PP-20261003-08 — Workout captions and grouped privacy (#208)
+
+The operator approved this small UI addition before the next release. Isolated
+branch `codex/issue208-ui-polish` begins at main
+`183075468c4be7466b48d20b7d24e8c4e2f4ffad`. Remove the workout animation captions
+in both orientations while preserving the actual pulse predicate and Reduce Motion
+resolver byte-for-byte. Group Settings disclosures under On this device,
+AI processing and Apple Health, preserving all nine original sentences verbatim.
+No domain, provider, Health, Bluetooth, consent, signing or release behaviour
+changes; no hardware operation or upload. Unrelated worktrees/settings preserved.
+
+Exact root-session baseline: event 3232 at `2026-10-03T21:13:09.327Z`;
+input 431,816,587, cached input 424,859,776, cache-write input 0,
+output 1,069,955 (reasoning subset 320,043), total 432,886,542.
+Private baseline `/private/tmp/pp208polish-baseline.json`; original transcript ends
+in `01a0e504-8937-7c80-9128-08ad4b305f87.jsonl`. The unchanged accounting helper
+reconciles cumulative/request counters; the wrapper checks each measured event's
+preceding model context. Separate reviewer usage and post-boundary delivery are
+excluded; the original transcript is unchanged.
+
+Official GPT-6 Astra standard-tier pricing checked 3 October 2026 is retained
+from PP-20261003-05: [model pricing](https://developers.openai.com/api/docs/models/gpt-6-astra).
+USD 10/M uncached input, 1/M cached input, 12.50/M cache-write input, 50/M output;
+above 272,000 input, 2× input/cache and 1.5× output. API-equivalent comparison only,
+not a ChatGPT bill. Reasoning is included in output and is not charged twice.
+
+Independent working-diff review found no actionable P1/P2 findings. Four focused
+UI tests passed on iPhone 17 Pro; two selected large-text/landscape tests passed on
+iPhone SE 3, both iOS 26.5. Automated accessibility description/trait audits and
+inspected actual XXXL capture passed. Interactive VoiceOver and device acceptance
+remain unobserved. Private focused bundles use `/private/tmp/pp208polish-` prefixes.
+
+Complete local gate passed: 517 unit + 78 UI + 16 evaluation-target tests,
+Release simulator build and static analysis; 57 release-script + 41 scorer +
+13 summary + 247 HostEval (36 expected private-evidence skips) + 24 accounting
+tests. All 417 frozen executable/test/build inputs stayed unchanged. Private
+evidence: `/private/tmp/pp208polish-complete-gate` and adjacent `.log`.
+`git diff --check` passed; validation and scope are recorded in
+`docs/validation/issue208-workout-settings-polish.md`.
+
+End snapshot: event 3307 at `2026-10-03T21:54:30.553Z`;
+input 441,304,628, cached input 434,218,752, cache-write
+input 0, output 1,083,934 (reasoning subset
+322,929), total 442,388,562.
+
+Exact delta: 9,488,041 input, 9,358,976 cached,
+0 cache-write, 13,979 output (reasoning subset
+2,886), 9,502,020 total across 74 requests.
+Largest input 222,914; threshold crossings 0;
+historical resets 0; in-boundary resets
+0; exact replay events
+0; repeated snapshots
+1. Every measured event verifies `gpt-6-astra`.
+Standard-tier API-equivalent USD 11.35 (unrounded 11.348576).
+Private final report `/private/tmp/pp208polish-accounting-final.json`. Reviewer,
 final numeric insertion and post-boundary exact-head delivery are excluded.

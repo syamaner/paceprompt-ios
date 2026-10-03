@@ -79,11 +79,15 @@ final class HomeFlowUITests: XCTestCase {
         let guidedAccess = app.descendants(matching: .any)["settings.guided-access"]
         XCTAssertTrue(guidedAccess.waitForExistence(timeout: 2))
         XCTAssertTrue(guidedAccess.label.contains("triple-click the side button"))
-        let privacy = app.descendants(matching: .any)["settings.privacy"]
-        XCTAssertTrue(privacy.waitForExistence(timeout: 2))
-        XCTAssertTrue(privacy.label.contains("The iPhone does not read Health data"))
-        XCTAssertTrue(privacy.label.contains("Watch separately reads available heart rate and active energy"))
-        XCTAssertTrue(privacy.label.contains("Workouts without usable step details are not saved"))
+        let phone = app.staticTexts["settings.privacy.health.phone"]
+        reveal(phone)
+        XCTAssertTrue(phone.label.contains("The iPhone does not read Health data"))
+        let watch = app.staticTexts["settings.privacy.health.watch"]
+        reveal(watch)
+        XCTAssertTrue(watch.label.contains("Watch separately reads available heart rate and active energy"))
+        let empty = app.staticTexts["settings.privacy.health.empty"]
+        reveal(empty)
+        XCTAssertTrue(empty.label.contains("Workouts without usable step details are not saved"))
         app.swipeUp()
         XCTAssertEqual(
             app.descendants(matching: .any)["settings.current-slice"].value as? String,
@@ -181,6 +185,33 @@ final class HomeFlowUITests: XCTestCase {
         capture("troubleshooting-large-text")
         app.navigationBars["Troubleshooting"].buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.navigationBars["Treadmill"].waitForExistence(timeout: 2))
+    }
+
+    func testPrivacyGroupsRetainDisclosuresAtLargeText() throws {
+        launch(scenario: "idle", largeText: true)
+        app.buttons["Settings"].tap()
+        let local = app.staticTexts["settings.privacy.local"]
+        reveal(local)
+        XCTAssertTrue(local.label.contains("Saved plans stay on this device"))
+        XCTAssertTrue(local.label.contains("this device’s Keychain"))
+        XCTAssertTrue(local.label.contains("No analytics are used"))
+        let ai = app.staticTexts["settings.privacy.ai"]
+        reveal(ai)
+        XCTAssertTrue(ai.label.contains("OpenRouter and OpenAI"))
+        XCTAssertTrue(ai.label.contains("your agreement for each request"))
+        XCTAssertTrue(ai.label.contains("no zero-retention guarantee"))
+        let phone = app.staticTexts["settings.privacy.health.phone"]
+        reveal(phone)
+        XCTAssertTrue(phone.label.contains("only after you choose Save to Apple Health"))
+        let watch = app.staticTexts["settings.privacy.health.watch"]
+        reveal(watch)
+        XCTAssertTrue(watch.label.contains("execution intervals and available treadmill distance"))
+        XCTAssertTrue(watch.label.contains("iPhone saving stays disabled for that attempt"))
+        let empty = app.staticTexts["settings.privacy.health.empty"]
+        reveal(empty)
+        XCTAssertTrue(empty.label.contains("heart rate and calorie samples may still remain in Apple Health"))
+        try app.performAccessibilityAudit(for: [.sufficientElementDescription, .trait])
+        capture("privacy-large-text")
     }
 
     private func capture(_ name: String) {
