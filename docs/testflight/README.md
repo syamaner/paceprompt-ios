@@ -868,3 +868,44 @@ Preserve older failed/uncertain attempts without finish retry or replacement.
 #212/#115 remain open for save/recovery acceptance, #211 for the wider confirmation
 audit, and #116/WeeklyHealthReport #80 for reader/interchange work. No hardware,
 new tester or external/public distribution was included in this release.
+
+
+## Internal build 22 candidate (#227)
+
+The operator authorised internal **1.0.1 (22)** on 3 October 2026 after #209/#211.
+Baseline main `ce97934d100e01af3dd8d31c5217b52ece231a84` includes clearer product
+copy (#225) and direct recovery actions (#226). Watch recovery uses Stop recording,
+then Prepare next workout without duplicate dialogs; interrupted/failed iPhone
+recovery records one explicit belt-stopped observation. Normal phone ending still
+finishes Watch recording automatically. Incomplete/uncertain save distinctions,
+no replacement, zero-interval discard and physical console authority are unchanged.
+
+This candidate changes only the four phone/Watch build numbers to 22 and matching
+synthetic release fixtures. Version 1.0.1, bundle identities, workflow, trusted
+signing tools, profiles, privacy, permissions and encryption behaviour are unchanged.
+Use the standing no-non-exempt-encryption decision only for this unchanged behaviour.
+The existing internal-only, explicit-assignment sole-tester group remains the sole
+destination. No new testers or external/public release.
+
+The build-22 tag was absent and build 21 was the latest successful release when
+preparing this candidate. Apple freshness is checked by trusted hosted preflight
+before signing/upload; protected Apple credentials are not copied locally.
+The complete local gate passed on 3 October 2026 with Xcode 27.0 (27A266a),
+SDK 27.0 and the dedicated iPhone 17 Pro / iOS 26.5 simulator: 517 unit tests,
+72 UI tests and 16 evaluation-target tests, zero failures. Release simulator build,
+static analysis, coverage, built-bundle safety/metadata checks and 24 accounting
+helper tests passed. Offline checks passed 57 release tests, 41 scorer tests,
+13 summary tests and 247 HostEval tests (36 private-evidence skips). Focused
+metadata, actionlint, shell syntax and shellcheck passed. All 417 frozen
+executable/test/build inputs remain unchanged. Private evidence:
+`/private/tmp/pp22-complete-gate.log` and `/private/tmp/pp22-complete-gate/`.
+Local document links and `git diff --check` passed. Candidate preparation is not
+an upload or installation receipt.
+
+After delivery, update both companions to build 22. Test normal phone ending
+without Watch taps and exactly one nonempty Health workout; separately check the
+two direct Watch recovery actions and one-tap phone recovery when needed. See
+[confirmation decisions](../../design/confirmation-decisions.md) for the procedure
+and limits. Interactive Watch scrolling/VoiceOver, tester installation and physical
+Health/treadmill acceptance remain unobserved until tested. Preserve older uncertain
+attempts without save retry or replacement. #210 remains separate diagnostics work.
