@@ -1111,3 +1111,65 @@ for the physical and HealthKit round trip. Verify exactly one saved Health
 workout, complete/incomplete metadata truthfulness, preview disclosure and the
 exact reviewed schema-6 reader export. Release availability alone does not prove
 installation, HealthKit visibility, Drive export or physical treadmill acceptance.
+
+
+## Internal build 24 release receipt (#116 / #233)
+
+Candidate [PR #237](https://github.com/syamaner/paceprompt-ios/pull/237) merged
+through normal protection as `7c4ae4f7cd94f2cf0168e603cc3830ed5929f5ca` on
+4 October 2026. Independent review approved exact head
+`69550126d00743efb0001ff36fe6c28793cd0bae`; the two-parent merge's tree equals
+that head. Required PR CI and exact-main CI passed. The candidate's complete
+local gate above remains the validation authority; this receipt changes only
+documentation, with all 419 frozen executable/test/build inputs unchanged.
+
+The public policy URL returned the reviewed document without authentication.
+Its SHA-256 is
+`e9162e7a3c649d3b4a00b45ce99e7564ebe2bee58b6316b0abd37fee584d705c`.
+The matching App Store Connect Privacy Policy URL was saved and persisted after
+full reload before environment approval. The optional privacy-choices URL,
+public App Store submission and questionnaire were not changed.
+
+Immutable lightweight tag `testflight/1.0.1-b24` points to that exact merge.
+The existing administrator tag-creation exception was used; no tag moved and no
+ruleset changed. Trusted tools remain pinned to
+`796819b21382ac7dd038fb989e79e1352aaf06ca`. The exact-tag compliance allowlist
+uses the standing no-non-exempt-encryption decision for unchanged behaviour.
+The protected source check and credential-free archive passed before normal
+`internal-testflight` approval under the operator's release authorisation.
+
+[Release run 37190945308](https://github.com/syamaner/paceprompt-ios/actions/runs/37190945308)
+completed successfully on attempt 1. Trusted preflight verified the fresh build
+and existing sole-tester group. Phone and Watch profiles, signed metadata,
+privacy and exact entitlements passed. The log contains exactly one successful
+upload marker. The Apple guard verified VALID processing, INTERNAL_ONLY audience,
+an eligible internal beta state and assignment in the unchanged group. No rerun,
+second upload, added tester or public/external release occurred.
+
+The Actions artifact ID is `11299345909`; its wrapper SHA-256 is
+`3534db016a014d93e69ad3e406a5ff7f0209b06849b942553fcbb72425d62744`.
+The inner unsigned archive SHA-256 is
+`e7484e7e0d25decef66a3fbafa34ca2dc0fd21b40eeb00e8feffa419d370afc4`.
+Bounded extraction verified source/tag/run/attempt, and unsigned phone/Watch
+metadata validation passed. Both apps' executable UUIDs match their retained
+dSYMs. The verified wrapper/package, archive, matching symbols and non-sensitive receipt
+are retained privately under
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-24/`, created
+without overwriting an existing release. Directories use mode 700 and files 600.
+No signed IPA or signing asset was uploaded as an Actions artifact.
+
+Independent App Store Connect UI readback confirmed **1.0.1 (24)** is
+**Internal** and **Testing**, with 90 days remaining and the existing internal
+group still showing one tester. The reviewed What to Test text was saved;
+a full reload retained the 1,210-character count and visible paragraphs. The
+accessibility snapshot truncates long paragraphs, so this is not a full-byte
+server text comparison. No install was reported in App Store Connect, and no
+tester-side visibility, installation or launch was observed.
+
+The compatible reader is WeeklyHealthReport's schema-6 implementation from
+PR #181, with the privacy prerequisite from PR #182. #116 and reader #80 remain
+open for installation and the separately supervised device/HealthKit/export
+round trip. Release observations do not prove tester installation, HealthKit
+visibility, native zone availability or physical treadmill behaviour. No
+personal Health data, real Drive export or physical treadmill operation was
+performed during this release.

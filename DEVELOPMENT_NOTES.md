@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 4 Oct 2026 | `PP-20261004-05` | Internal build 24 protected delivery and release receipt (#116 / #233) | `gpt-6-astra` | 5,484,733 (5,398,144; 0) | 17,314 | 5,502,047 | USD 7.13 (token-only API-equivalent) | Exact 57-request root protected-delivery and receipt phase; child work and reviewers separate; final numeric insertion and later delivery excluded |
 | 4 Oct 2026 | `PP-20261004-04` | Internal build 24 and accessible privacy policy (#116 / #233) | `gpt-6-astra` | 16,569,582 (16,339,584; 0) | 44,621 | 16,614,203 | USD 20.87 (token-only API-equivalent) | Exact 118-request root candidate/validation and cross-app coordination phase; child work and reviewers separate; final numeric insertion and later delivery excluded |
 | 4 Oct 2026 | `PP-20261004-03` | Preserve observed interval distance and coordinate Health reader #80 (#233) | `gpt-6-astra` | 22,924,346 (22,418,816; 0) | 66,118 | 22,990,464 | USD 30.78 (standard-tier API-equivalent) | Exact 157-request root implementation/validation phase; reader child measured separately in WHR; reviewers, final numeric insertion and post-boundary delivery excluded |
 | 4 Oct 2026 | `PP-20261004-02` | Internal TestFlight build 23 delivery receipt (#232) | `gpt-6-astra` | 4,319,634 (4,301,440; 0) | 7,077 | 4,326,711 | USD 4.84 (standard-tier API-equivalent) | Exact 31-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
@@ -2501,5 +2502,47 @@ excluded: 0.
 
 API-equivalent USD 20.87 (unrounded 20.870614). Original exact
 report: `/private/tmp/pp24-accounting-final.json`. Final numeric ledger insertion,
+commit/push and later delivery are outside this phase; separate child/reviewer
+sessions are not estimated or added to it.
+
+
+## PP-20261004-05 — internal build 24 delivery receipt
+
+This documentation-only receipt records protected candidate delivery, immutable
+release identity, normal environment approval, the single-attempt hosted release,
+policy URL readback and verified private archive/dSYM retention. It adds no
+executable, test, build, workflow or signing changes. All 419 frozen inputs still
+match the complete local gate recorded in PP-20261004-04. Signed-device Health
+and physical acceptance remain separately supervised under #116 and reader #80.
+
+Accounting uses root session `01a10414-79bc-7141-988c-871c3fa7fa31`, original
+JSONL and the exact baseline `/private/tmp/pp24-delivery-baseline.json`, event
+348 at `2026-10-04T09:00:53.452Z`, captured after the candidate commit and before
+push/PR/merge/tag. The phase includes root protected-delivery coordination,
+release evidence and receipt preparation. WeeklyHealthReport work and independent
+reviewers run in separate sessions and are excluded, not estimated.
+
+Official [GPT-6 Astra rates](https://developers.openai.com/api/docs/models/gpt-6-astra)
+checked 4 October 2026: USD 10/M uncached input, 1/M cached input, 12.50/M cache
+writes and 50/M output. Above 272,000 input tokens, input/cache rates double and
+output uses 1.5 times the base rate. This is a token-only API-equivalent estimate,
+not a ChatGPT subscription bill; reasoning remains a subset of output.
+
+Start: event 348 at `2026-10-04T09:00:53.452Z`; input 45,841,526, cached 44,949,888, cache-write 0, output 131,668 (reasoning subset 54,468), total 45,973,194.
+
+Final: event 407 at `2026-10-04T09:21:58.779Z`; input 51,326,259, cached 50,348,032, cache-write 0, output 148,982 (reasoning subset 58,175), total 51,475,241.
+
+Exact delta: 5,484,733 input, 5,398,144 cached,
+0 cache-write, 17,314 output
+(reasoning subset 3,707), 5,502,047 total.
+The helper reconciles 57 requests; largest input
+206,925; 0 requests above
+272,000. Historical counter resets: 0;
+in-boundary resets: 0; exact replay events
+excluded: 1; repeated cumulative snapshots
+excluded: 1.
+
+API-equivalent USD 7.13 (unrounded 7.129734). Original exact
+report: `/private/tmp/pp24-delivery-accounting-final.json`. Final numeric ledger insertion,
 commit/push and later delivery are outside this phase; separate child/reviewer
 sessions are not estimated or added to it.
