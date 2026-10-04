@@ -1050,3 +1050,64 @@ Watch scrolling and physical Health/treadmill acceptance were not observed.
 #208 remains open for its runtime/device audit. #115/#212 repeated/background/
 recovery acceptance and #116/WeeklyHealthReport #80 reader interchange remain
 separate. No hardware or personal Health data was accessed during this release.
+
+## Internal build 24 candidate (#116 / #233)
+
+Authorised on 4 October 2026 from protected main
+`5e03c4d42bb63c725be99e9e20c1abcdef7bab62`. This release adds the merged #233
+interval-distance extension to the Watch-owned Health interchange. It preserves
+planned segment identity and existing executed sub-intervals, including actual
+distance observation endpoints and explicit unavailable or partial coverage.
+Phone and Watch must both be updated before the #116 round trip with the
+compatible WeeklyHealthReport reader from PR #181.
+
+The candidate advances all four production phone/Watch build settings from 23
+to 24 and updates matching synthetic release fixtures. The release review also
+adds an accessible Settings Privacy Policy link and a factual
+[public policy](../privacy-policy.md); App Store Connect must point to the same
+policy before upload. Marketing
+version 1.0.1, permissions, identities, bundled privacy manifests, encryption behaviour,
+workflow, trusted signing tools and profiles remain unchanged. The standing
+no-non-exempt-encryption decision still applies. The destination is the existing
+internal-only sole-tester group. Build 23 was the latest successful release and
+the build-24 tag was absent during preparation; trusted hosted preflight must
+verify Apple freshness and the existing app/group/tester before upload.
+
+Focused release checks passed: 57 tests, production metadata, actionlint, shell
+syntax, shellcheck and `git diff --check`. The first full gate was deliberately
+stopped after 529 unit tests passed when review identified the missing policy
+link. It is not final release evidence. The focused policy-link accessibility
+check passed.
+
+Replacement complete local gate passed on 4 October 2026 with Xcode 27.0
+(27A266a), SDK 27.0 and the dedicated iPhone 17 Pro / iOS 26.5 simulator:
+529 unit, 78 UI and 16 evaluation-target tests, with zero failures. Release
+simulator build including Watch, static analysis, coverage and binary/metadata
+checks passed. Supporting checks passed: 57 release, 41 scorer, 13 summary,
+247 HostEval (36 expected private-evidence skips) and 24 accounting tests.
+All 419 frozen executable/test/build inputs match. Evidence is retained at
+`/private/tmp/pp24-complete-gate-v2/` and
+`/private/tmp/pp24-complete-gate-v2.log`; the input manifest is
+`/private/tmp/pp24-frozen-inputs-v2.json`. Full diff and `git diff --check` passed.
+
+Independent exact-head review remains required before protected merge. This
+candidate note is not an upload or device-acceptance receipt.
+
+### What to Test
+
+Update the iPhone and Watch companions together. With the compatible
+WeeklyHealthReport build, check one ordinary Watch-owned workout through Apple
+Health and the Daily Export preview. Keep the planned intervals and confirmed
+speed/inclination changes distinguishable. Check interval timestamps, available
+minimum/average/maximum heart rate, estimated active energy, observed distance
+windows and independent whole-workout totals. Missing or partial observations
+must stay explicit; interval sums need not equal the independent workout totals.
+Native heart-rate zones require supported SDK/OS 27 data; older systems must
+show unsupported, and unavailable visible data must remain unavailable. The
+export does not contain the raw heart-rate sample series.
+
+Use the supervised [interchange procedure](../watch-health-interchange-runbook.md)
+for the physical and HealthKit round trip. Verify exactly one saved Health
+workout, complete/incomplete metadata truthfulness, preview disclosure and the
+exact reviewed schema-6 reader export. Release availability alone does not prove
+installation, HealthKit visibility, Drive export or physical treadmill acceptance.

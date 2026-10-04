@@ -86,9 +86,20 @@ Review production metadata whenever it changes:
 - display name;
 - Bluetooth and HealthKit purpose strings;
 - `PacePrompt/PrivacyInfo.xcprivacy`;
+- accessible Settings **Privacy Policy** link and the matching public URL in
+  App Store Connect; verify the published policy covers the candidate’s actual
+  phone/Watch data flows, retention, deletion and consent controls;
 - `PacePrompt/PacePrompt.entitlements` with HealthKit;
 - `ITSAppUsesNonExemptEncryption` as a Boolean declaration;
 - app icon and Release archive scheme.
+
+The policy source is [`docs/privacy-policy.md`](../privacy-policy.md). Its public
+URL is `https://github.com/syamaner/paceprompt-ios/blob/main/docs/privacy-policy.md`.
+Verify that URL after protected merge and before approving upload. A privacy
+manifest, in-app disclosure, published policy and App Store privacy questionnaire
+are separate records; do not substitute one for another or claim an App Store
+submission review from an internal TestFlight release. Reassess changed data
+flows against Apple’s current guidelines.
 
 These values come from different sources and should not be conflated:
 
