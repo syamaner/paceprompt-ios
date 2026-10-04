@@ -1231,8 +1231,9 @@ reviewed integration. Its repeated native run again passed both methods and all
 13 cases, with 728 independently expected fields per path and 13 identical
 canonical JSON pairs. The private receipt is
 `/private/tmp/whr-build21-integrated-native-frozen`, with all 986 retained hashes
-verified. This combined candidate is still unreleased; producer upload must wait
-for protected reader checks and compatible availability to be verified.
+verified. At that evidence snapshot the combined candidate was unreleased; producer upload
+remained held for protected reader checks and compatible availability. The later
+reader-22 availability observation is recorded in the build-25 candidate section.
 
 The paused legacy sample retained its original 100 m while the native statistic
 remained approximately 57.805 m; the reader recovered 100 m separately without
@@ -1283,3 +1284,64 @@ native Command-A selection preserves the exact initial and final value assertion
 it passed focused tests on both runtimes and the replacement full gate. No app
 runtime input changed during this test repair, so the native producer evidence
 remains bound to the same production bytes.
+
+
+## Internal build 25 candidate (not uploaded)
+
+The candidate is PacePrompt **1.0.1 (25)**, prepared from protected merge
+`fa7d7e6c7384f5e5ea30dde89d7057a8388340d5`
+([PR #239](https://github.com/syamaner/paceprompt-ios/pull/239)). Its exact-main
+[CI run 37236952768](https://github.com/syamaner/paceprompt-ios/actions/runs/37236952768)
+passed. The candidate changes only the four production phone/Watch build numbers
+and matching release fixtures; test/evaluation versions, runtime implementation,
+workflow, signing policy, permissions and privacy declarations remain unchanged.
+Negative mismatch fixtures still modify the candidate source values and fail closed.
+
+The existing independently reviewed trusted-tools pin remains
+`796819b21382ac7dd038fb989e79e1352aaf06ca`. Build 24 remains the last observed
+successful hosted release. The build-25 tag was absent at preparation; freshness
+must be checked again before any tag is pushed. Apple app/build and unchanged
+sole-tester group checks remain the trusted hosted preflight's responsibility
+before signing credentials are imported or an upload occurs. No protected key
+is copied locally for preparation.
+
+This candidate carries Health interchange v3 and requires the compatible combined
+WeeklyHealthReport reader. Accepted treadmill distance is exported separately
+from the literal native statistic; unsafe duration-spanning samples are omitted,
+so Apple Health/Fitness may show no native distance. The synthetic native proof
+and its bounded final-submillisecond limitation are recorded above. Heart-rate
+and energy statistics remain subject to native availability; no raw heart-rate
+series export is added.
+
+The compatible reader prerequisite was subsequently confirmed: WeeklyHealthReport
+**0.1.1 (22)** is Testing in the existing Internal Testing group with one tester.
+Its actual uploaded package was independently verified and its testing notes were
+confirmed after reload. This establishes reader availability, not tester installation
+or physical Health/treadmill acceptance.
+
+At candidate preparation, the public policy returned HTTP 200 and its raw source
+matched the candidate exactly (SHA-256
+`e9162e7a3c649d3b4a00b45ce99e7564ebe2bee58b6316b0abd37fee584d705c`). A fresh
+App Store Connect readback at 22:00:23 UTC on 4 October 2026 showed the same
+`https://github.com/syamaner/paceprompt-ios/blob/main/docs/privacy-policy.md` URL.
+Private receipts are `/private/tmp/pp25-public-policy-receipt.json` and
+`/private/tmp/pp25-asc-policy-readback.json`. No App Store Connect field was changed.
+Existing policy content covers these phone/Watch data flows and retention controls;
+the candidate adds no permission or provider behavior. Recheck any subsequent
+policy or metadata change before upload; an App Store privacy questionnaire is a
+separate record and no submission-compliance claim is made here.
+There is no build-25 upload or availability claim here. Tag creation, export gate
+changes, environment approval and upload remain held until the producer candidate
+passes its final protected source/CI, privacy and release gates. Existing internal-only
+membership is unchanged; physical and installation acceptance remain open.
+
+
+The final build 25 candidate gate completed successfully on the dedicated iOS
+26.5 simulator: 540 unit tests, 78 UI tests and 16 evaluation tests passed; the
+Release build including Watch, static analysis, coverage, binary/metadata checks,
+57 release tests, 41 scorer tests, 13 summary tests, 247 host evaluation tests
+(with their 36 expected skips) and 24 accounting tests passed. Evidence is retained
+at `/private/tmp/pp25-complete-gate` and `/private/tmp/pp25-complete-gate.log`.
+All 429 frozen non-Markdown input hashes in
+`/private/tmp/pp25-frozen-inputs.json` matched after the gate. These are simulator
+and software results; they do not establish installation or physical acceptance.
