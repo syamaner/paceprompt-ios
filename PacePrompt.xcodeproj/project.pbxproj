@@ -141,6 +141,7 @@
 		D11500000000000000000923 = {isa = PBXBuildFile; fileRef = D11500000000000000000921; };
 		D11500000000000000000B00 = {isa = PBXBuildFile; fileRef = D11500000000000000000A00; };
 		D11500000000000000000B01 = {isa = PBXBuildFile; fileRef = D11500000000000000000A01; };
+		D23300000000000000000001 = {isa = PBXBuildFile; fileRef = D23300000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -303,6 +304,7 @@
 		D11500000000000000000921 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WatchInterchange/WatchHealthMetadata.swift; sourceTree = SOURCE_ROOT; };
 		D11500000000000000000A00 = {isa = PBXFileReference; lastKnownFileType = text.json; path = docs/fixtures/watch-health-v1/complete.synthetic.json; sourceTree = SOURCE_ROOT; };
 		D11500000000000000000A01 = {isa = PBXFileReference; lastKnownFileType = text.json; path = docs/fixtures/watch-health-v1/incomplete.synthetic.json; sourceTree = SOURCE_ROOT; };
+		D23300000000000000000002 = {isa = PBXFileReference; lastKnownFileType = folder; path = "docs/fixtures/watch-health-v2"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -768,6 +770,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                D23300000000000000000001,
                 D11500000000000000000B01,
                 D11500000000000000000B00,
 				AD0000000000000000000009 /* outbound-request.json in Resources */,

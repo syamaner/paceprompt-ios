@@ -39,6 +39,136 @@ import XCTest
         try await prepared(); try await receive(m ?? manifest(1, final: true))
         var confirmation = message(.finalize); confirmation.revision = m?.revision ?? 1; try await receive(confirmation)
     }
+    func testV2SharedFixtureMatchesNativeMetadataProjection() throws {
+        for name in ["complete", "incomplete"] {
+            let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: name + ".synthetic", withExtension: "json", subdirectory: "watch-health-v2"))
+            let fixture = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+            let manifests = try XCTUnwrap(fixture["manifests"] as? [[String: Any]])
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any])
+            let workout = try XCTUnwrap(expected["workout"] as? [String: Any])
+            let activities = try XCTUnwrap(workout["activities"] as? [[String: Any]])
+            let final = try WatchWire.decode(JSONSerialization.data(withJSONObject: manifests.last!))
+            XCTAssertEqual(final.schemaVersion, 2)
+            XCTAssertEqual(try WatchWire.decode(WatchWire.encode(final)), final)
+            for (interval, activity) in zip(final.intervals!, activities) {
+                let actual = WatchHealthMetadata.interval(interval, summaryID: final.summaryID)
+                var golden = try XCTUnwrap(activity["metadata"] as? [String: Any])
+                for suffix in ["observedAt", "intervalDistanceStartObservedAt", "intervalDistanceEndObservedAt"] {
+                    let key = WatchHealthMetadata.namespace + suffix
+                    if let text = golden[key] as? String { golden[key] = try WatchWire.date(text) }
+                }
+                XCTAssertTrue(NSDictionary(dictionary: actual).isEqual(to: golden))
+            }
+        }
+    }
+    func testV2PhoneOverflowRetainsWatchPrefixAndSavesIncomplete() async throws {
+        for count in [64, 65] {
+            try await setUp(); try await bound()
+            let port = TestPhonePort()
+            let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
+            await phone.start(activity: "indoorWalking")
+            var boundMessage = message(.bound); boundMessage.workoutStart = start
+            phone.receive(try WatchWire.encode(boundMessage))
+            var values = (0..<count).map { interval($0) }
+            for index in values.indices { values[index].intervalDistance = .unavailable() }
+            phone.update(intervals: [values[0]], outcome: nil)
+            let prefix = try XCTUnwrap(port.messages.last(where: { $0.kind == .manifest }))
+            try await receive(prefix)
+            let prefixCount = port.messages.filter { $0.kind == .manifest }.count
+            clock.time = 6
+            phone.update(intervals: values, outcome: nil)
+            XCTAssertTrue(phone.integrityFailed, "The actual byte/count ceiling must latch incomplete")
+            XCTAssertEqual(port.messages.filter { $0.kind == .manifest }.count, prefixCount)
+            XCTAssertEqual(sut.journal?.manifest?.intervals, [values[0]])
+            phone.update(intervals: values, outcome: "completed")
+            let prepare = try XCTUnwrap(port.messages.last(where: { $0.kind == .prepareEnd }))
+            try await receive(prepare)
+            let end = try XCTUnwrap(sent.last(where: { $0.kind == .endPrepared }))
+            phone.receive(try WatchWire.encode(end))
+            clock.time = 12; phone.tick(); await sut.tick()
+            XCTAssertEqual(recording.finishes, 1)
+            XCTAssertFalse(recording.assemblies.first?.complete ?? true)
+            XCTAssertEqual(recording.assemblies.first?.intervals, [values[0]])
+            XCTAssertFalse(port.messages.contains(where: { $0.kind == .finalize }))
+        }
+    }
+
+    func testV2PayloadRetainsMessageAndIntervalLimits() throws {
+        var values: [WatchInterval] = (0..<64).map { interval($0) }
+        for index in values.indices {
+            let i = values[index]
+            values[index].intervalDistance = .observed(startMetres: 0, endMetres: 10, start: i.startedAt, end: i.endedAt)
+        }
+        var m = manifest(1, intervals: values); m.schemaVersion = 2
+        XCTAssertThrowsError(try WatchWire.encode(m), "Byte ceiling must remain enforced as distance evidence grows")
+        values.append(interval(64)); m.intervals = values
+        XCTAssertThrowsError(try WatchWire.encode(m))
+    }
+
+    func testIntervalDistanceV2RoundTripsAndKeepsV1Strict() throws {
+        var i = interval()
+        i.intervalDistance = .observed(startMetres: 100, endMetres: 125, start: i.startedAt, end: i.endedAt)
+        var m = manifest(1, intervals: [i]); m.schemaVersion = 2
+        XCTAssertEqual(try WatchWire.decode(WatchWire.encode(m)), m)
+        m.schemaVersion = 1
+        XCTAssertThrowsError(try WatchWire.encode(m), "v1 cannot silently acquire new fields")
+        m.schemaVersion = 2; m.intervals = [interval()]
+        XCTAssertThrowsError(try WatchWire.encode(m), "v2 requires explicit distance availability")
+    }
+    func testIntervalDistanceRejectsWrongDeltaBoundsUnknownReasonAndExtraFields() throws {
+        var i = interval()
+        let valid = WorkoutIntervalDistance.observed(startMetres: 100, endMetres: 125, start: i.startedAt, end: i.endedAt)
+        var invalidDelta = valid; invalidDelta.metres = 24
+        var outside = valid; outside.endObservedAt = i.endedAt.addingTimeInterval(1)
+        var reversed = valid; reversed.endCumulativeMetres = 99; reversed.metres = -1
+        var equalTime = valid; equalTime.endObservedAt = i.startedAt
+        for distance in [invalidDelta, outside, reversed, equalTime, .unavailable("guessed")] {
+            i.intervalDistance = distance
+            var m = manifest(1, intervals: [i]); m.schemaVersion = 2
+            XCTAssertThrowsError(try WatchWire.encode(m))
+        }
+        i.intervalDistance = .unavailable(); var m = manifest(1, intervals: [i]); m.schemaVersion = 2
+        let bytes = try WatchWire.encode(m)
+        let tampered = String(decoding: bytes, as: UTF8.self).replacingOccurrences(of: "\"reason\":\"missingBoundary\"", with: "\"reason\":\"missingBoundary\",\"metres\":0")
+        XCTAssertThrowsError(try WatchWire.decode(Data(tampered.utf8)))
+    }
+    func testPartialAndZeroDistanceMetadataPreservesObservationWindow() throws {
+        var i = interval()
+        let last = i.endedAt.addingTimeInterval(-2)
+        i.intervalDistance = .observed(startMetres: 50, endMetres: 50, start: i.startedAt, end: last)
+        var m = manifest(1, intervals: [i]); m.schemaVersion = 2
+        _ = try WatchWire.encode(m)
+        let metadata = WatchHealthMetadata.interval(i, summaryID: id), n = WatchHealthMetadata.namespace
+        XCTAssertEqual(metadata[n+"intervalDistanceState"] as? String, "observed")
+        XCTAssertEqual(metadata[n+"intervalDistanceMetres"] as? NSDecimalNumber, 0)
+        XCTAssertEqual(metadata[n+"intervalDistanceEndObservedAt"] as? Date, last)
+        XCTAssertNil(metadata[n+"intervalDistanceReason"])
+        i.intervalDistance = .unavailable("invalidDistanceEvidence")
+        let missing = WatchHealthMetadata.interval(i, summaryID: id)
+        XCTAssertNil(missing[n+"intervalDistanceMetres"])
+        XCTAssertEqual(missing[n+"intervalDistanceReason"] as? String, "invalidDistanceEvidence")
+    }
+    func testV2DistanceSurvivesDuplicateManifestAndOneCompleteSave() async throws {
+        try await bound()
+        var i = interval(); i.intervalDistance = .observed(startMetres: 0, endMetres: 10, start: i.startedAt, end: i.endedAt)
+        var m = manifest(1, final: true, intervals: [i]); m.schemaVersion = 2
+        try await prepared(); try await receive(m); try await receive(m)
+        var finalize = message(.finalize); finalize.revision = 1
+        try await receive(finalize); try await receive(finalize)
+        XCTAssertEqual(recording.finishes, 1)
+        XCTAssertEqual(recording.assemblies.first?.intervals, [i])
+        XCTAssertTrue(recording.assemblies.first?.complete == true)
+    }
+    func testV2DistanceMutationCannotRewriteAcknowledgedPrefix() async throws {
+        try await bound()
+        var i = interval(); i.intervalDistance = .unavailable()
+        var first = manifest(1, intervals: [i]); first.schemaVersion = 2; try await receive(first)
+        i.intervalDistance = .observed(startMetres: 0, endMetres: 10, start: i.startedAt, end: i.endedAt)
+        var changed = manifest(2, intervals: [i]); changed.schemaVersion = 2; try await receive(changed)
+        XCTAssertTrue(sut.journal?.incomplete == true)
+        XCTAssertEqual(sut.journal?.manifest?.intervals?.first?.intervalDistance, .unavailable())
+    }
+
     func testSavedUnconfirmedFinalManifestDoesNotClaimMissingSteps() async throws {
         try await bound()
         try await prepared()

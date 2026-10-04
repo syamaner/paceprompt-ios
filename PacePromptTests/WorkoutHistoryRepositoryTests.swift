@@ -3,6 +3,28 @@ import XCTest
 @testable import PacePrompt
 
 final class WorkoutHistoryRepositoryTests: XCTestCase {
+    func testWatchV4DistancePersistsAndOldVersionsDoNotAcquireIt() throws {
+        let base = versionTwoSummary(id: uuid(233))
+        guard case .recorded(let start, let end, let provenance, var intervals) = base.activityTimeline else { return XCTFail("fixture") }
+        intervals[0].intervalDistance = .observed(startMetres: 100, endMetres: 110, start: intervals[0].startedAt, end: intervals[0].endedAt)
+        func owned(_ version: Int) -> WorkoutExecutionSummary {
+            .init(id: base.id, schemaVersion: version, sourcePlanID: base.sourcePlanID, planSnapshot: base.planSnapshot,
+                  attemptedAt: base.attemptedAt, lastUpdatedAt: base.lastUpdatedAt, outcome: base.outcome,
+                  activeDuration: base.activeDuration, distance: base.distance, progress: base.progress,
+                  physicalStopConfirmation: base.physicalStopConfirmation,
+                  activityTimeline: .recorded(startedAt: start, endedAt: end, timingProvenance: provenance, executedIntervals: intervals),
+                  healthExport: .notRequested, ownership: .watchPrimary)
+        }
+        let repository = WorkoutHistoryRepository(fileSystem: MemoryWorkoutHistoryFileSystem())
+        try repository.record(owned(4))
+        XCTAssertEqual(availableSummaries(repository), [owned(4)])
+        XCTAssertThrowsError(try WorkoutHistoryRepository(fileSystem: MemoryWorkoutHistoryFileSystem()).record(owned(3)))
+        intervals[0].intervalDistance?.metres = 11
+        XCTAssertThrowsError(try WorkoutHistoryRepository(fileSystem: MemoryWorkoutHistoryFileSystem()).record(owned(4)))
+        intervals[0].intervalDistance = nil
+        XCTAssertThrowsError(try WorkoutHistoryRepository(fileSystem: MemoryWorkoutHistoryFileSystem()).record(owned(4)))
+    }
+
     func testFractionalIntervalRoundingAgreesAcrossHistoryAndHealthProjection() throws {
         let precise = versionTwoSummary(id: uuid(193), endOffset: -0.000_000_2)
         let repository = WorkoutHistoryRepository(fileSystem: MemoryWorkoutHistoryFileSystem())

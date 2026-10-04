@@ -383,7 +383,7 @@ final class ProductionWorkoutExecutionBindingTests: XCTestCase {
     phone.receive(try WatchWire.encode(bound))
     XCTAssertEqual(c.stage, .exercise); XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart)
     XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.id, id)
-    XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.schemaVersion, 3)
+    XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.schemaVersion, 4)
     XCTAssertEqual(h.binding.orchestrator.lastPersistedSummary?.ownership, .watchPrimary)
     phone.disconnect()
     XCTAssertEqual(h.binding.orchestrator.state.execution, .waitingForPhysicalStart); XCTAssertTrue(h.link.writes.isEmpty)

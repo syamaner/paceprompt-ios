@@ -129,6 +129,9 @@ final class WorkoutExecutionOrchestrator {
   private var preparedInputs: PreparedInputs?
   private var latestDistance: WorkoutDistance = .unavailable(
     reason: .init(rawValue: "distance-not-yet-measured"))
+  private var intervalDistanceStart: DistanceObservation?
+  private var intervalDistanceLast: DistanceObservation?
+  private var intervalClosingObservation: DistanceObservation?
   private var openExecutedInterval: OpenExecutedInterval?
   private var closedExecutedIntervals: [WorkoutExecutedInterval] = []
   private var nextIntervalIndexBySegment: [Int: Int] = [:]
@@ -623,6 +626,12 @@ final class WorkoutExecutionOrchestrator {
     reading: WorkoutOrchestrationTime
   ) {
     guard frozenAttempt != nil else { return }
+    intervalClosingObservation = nil
+    if transition.disposition == .accepted, case .telemetry = event,
+       let sample = freshTelemetrySample(transition.state), let metres = sample.totalDistanceMetres,
+       metres.isFinite, metres >= 0 {
+      intervalClosingObservation = DistanceObservation(metres: metres, observedAt: reading.wallClock)
+    }
 
     if case .runningSegment = original.execution,
        case .telemetry = event,
@@ -671,6 +680,10 @@ final class WorkoutExecutionOrchestrator {
       openExecutedInterval = nil
     }
 
+    if openExecutedInterval != nil, let observation = intervalClosingObservation {
+      if intervalDistanceStart == nil { intervalDistanceStart = observation }
+      intervalDistanceLast = observation
+    }
     guard transition.disposition == .accepted,
           case .telemetry = event,
           isRunning(transition.state.execution), openExecutedInterval == nil,
@@ -710,6 +723,8 @@ final class WorkoutExecutionOrchestrator {
         provenance: .fr30zTreadmillDataCurrentEpoch
       )
     )
+    intervalDistanceStart = intervalClosingObservation
+    intervalDistanceLast = intervalClosingObservation
     if distanceStart == nil, let metres = sample.totalDistanceMetres,
        metres.isFinite, metres >= 0 {
       let observation = DistanceObservation(metres: metres, observedAt: reading.wallClock)
@@ -735,9 +750,19 @@ final class WorkoutExecutionOrchestrator {
         effectiveSpeed: open.effectiveSpeed,
         effectiveInclination: open.effectiveInclination,
         settledObservation: open.settledObservation,
-        endReason: reason
+        endReason: reason,
+        intervalDistance: reservedWatchID == nil ? nil : observedIntervalDistance(open, end: endDate)
       )
     )
+  }
+
+  private func observedIntervalDistance(_ open: OpenExecutedInterval, end: Date) -> WorkoutIntervalDistance {
+    guard !distanceProvenanceInvalid else { return .unavailable("invalidDistanceEvidence") }
+    let last = [intervalDistanceLast, intervalClosingObservation].compactMap { $0 }
+      .filter { $0.observedAt <= end }.max { $0.observedAt < $1.observedAt }
+    guard let first = intervalDistanceStart, let last, last.observedAt > first.observedAt,
+          first.observedAt >= open.startedAt, last.metres >= first.metres else { return .unavailable() }
+    return .observed(startMetres: first.metres, endMetres: last.metres, start: first.observedAt, end: last.observedAt)
   }
 
   private func intervalEnd(
@@ -1178,6 +1203,7 @@ final class WorkoutExecutionOrchestrator {
     lastPersistedSummary = nil
     latestDistance = .unavailable(reason: .init(rawValue: "distance-not-yet-measured"))
     openExecutedInterval = nil
+    intervalDistanceStart = nil; intervalDistanceLast = nil; intervalClosingObservation = nil
     closedExecutedIntervals = []
     nextIntervalIndexBySegment = [:]
     distanceStart = nil

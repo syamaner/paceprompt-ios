@@ -416,8 +416,8 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
         if let index = summary.progress.currentStepIndex,
            !(summary.planSnapshot.steps.indices.contains(index)) { return false }
 
-        guard summary.schemaVersion == 3 ? summary.ownership == .watchPrimary : summary.ownership == nil else { return false }
-        if summary.schemaVersion == 3, summary.healthExport != .notRequested { return false }
+        guard summary.schemaVersion >= 3 ? summary.ownership == .watchPrimary : summary.ownership == nil else { return false }
+        if summary.schemaVersion >= 3, summary.healthExport != .notRequested { return false }
 
         switch summary.outcome {
         case .inProgress, .completed: break
@@ -512,6 +512,9 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
                         == interval.effectiveSpeed.kilometresPerHour,
                       interval.settledObservation.inclinationPercent
                         == interval.effectiveInclination.percent else { return false }
+                if summary.schemaVersion >= 4 {
+                    guard interval.intervalDistance?.isValid(start: interval.startedAt, end: interval.endedAt) == true else { return false }
+                } else if interval.intervalDistance != nil { return false }
                 nextIntervalIndex[interval.segmentIndex, default: 0] += 1
                 previousEnd = interval.endedAt
                 previousSegmentIndex = interval.segmentIndex
@@ -554,8 +557,8 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
         guard let schemaVersion = value["schemaVersion"] as? Int else { return false }
         let required = schemaVersion >= WorkoutExecutionSummarySchema.currentVersion
             ? base.union(["activityTimeline", "healthExport"]) : base
-        let allowed = required.union(["sourcePlanID"]).union(schemaVersion == 3 ? ["ownership"] : [])
-        if schemaVersion == 3 {
+        let allowed = required.union(["sourcePlanID"]).union(schemaVersion >= 3 ? ["ownership"] : [])
+        if schemaVersion >= 3 {
             guard let ownership = value["ownership"] as? [String: Any], Set(ownership.keys) == ["schemaVersion", "owner"],
                   ownership["schemaVersion"] as? Int == 1, ownership["owner"] as? String == "watchPrimary" else { return false }
         }
@@ -568,7 +571,7 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
               let stop = value["physicalStopConfirmation"] as? [String: Any], taggedObjectHasExpectedShape(stop, valueKey: "confirmedAt", valueRequiredFor: ["humanConfirmed"]) else { return false }
         if schemaVersion >= WorkoutExecutionSummarySchema.currentVersion {
             guard let timeline = value["activityTimeline"] as? [String: Any],
-                  activityTimelineHasExpectedShape(timeline),
+                  activityTimelineHasExpectedShape(timeline, schemaVersion: schemaVersion),
                   let healthExport = value["healthExport"] as? [String: Any],
                   healthExportHasExpectedShape(healthExport) else { return false }
         }
@@ -589,7 +592,7 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
         ]
     }
 
-    private func activityTimelineHasExpectedShape(_ value: [String: Any]) -> Bool {
+    private func activityTimelineHasExpectedShape(_ value: [String: Any], schemaVersion: Int) -> Bool {
         guard let state = value["state"] as? String else { return false }
         if state == "unavailable" { return Set(value.keys) == ["state", "reasonCode"] }
         guard state == "recorded",
@@ -598,10 +601,10 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
               ],
               let intervals = value["executedIntervals"] as? [[String: Any]] else { return false }
         return intervals.allSatisfy { interval in
-            guard Set(interval.keys) == [
+            guard Set(interval.keys) == Set([
                 "segmentIndex", "intervalIndex", "startedAt", "endedAt", "prescribed",
                 "effectiveSpeed", "effectiveInclination", "settledObservation", "endReason"
-            ], let prescribed = interval["prescribed"] as? [String: Any],
+            ]).union(schemaVersion >= 4 ? ["intervalDistance"] : []), let prescribed = interval["prescribed"] as? [String: Any],
                Set(prescribed.keys) == [
                 "kind", "speedKilometresPerHour", "inclinationPercent"
                ], let speed = interval["effectiveSpeed"] as? [String: Any],
@@ -612,6 +615,17 @@ final class WorkoutHistoryRepository: WorkoutHistoryRepositoryProtocol {
                Set(observation.keys) == [
                 "observedAt", "speedKilometresPerHour", "inclinationPercent", "provenance"
                ] else { return false }
+            if schemaVersion >= 4 {
+                guard let distance = interval["intervalDistance"],
+                      let bytes = try? JSONSerialization.data(withJSONObject: distance),
+                      let parsed = try? StrictImportJSON.parse(bytes),
+                      let decoded = try? JSONDecoder().decode(WorkoutIntervalDistance.self, from: bytes),
+                      parsed["schemaVersion"] == .number("1"),
+                      (try? parsed.fields(required: decoded.state == "unavailable"
+                        ? ["schemaVersion", "state", "reason"]
+                        : ["schemaVersion", "state", "startCumulativeMetres", "endCumulativeMetres", "startObservedAt", "endObservedAt", "metres", "provenance"])) != nil,
+                      decoded.isValid(start: .distantPast, end: .distantFuture) else { return false }
+            }
             return true
         }
     }

@@ -1,5 +1,12 @@
 # Watch-primary Health interchange contract v1 — revision 1.3
 
+Current interval-enrichment amendment: [issue #233 contract](workout-interval-enrichment-contract.md).
+It adds local Watch summary v4, distance-bearing manifest/Health interchange v2 and
+Daily schema v6. Existing v1 fixture bytes and original semantics remain frozen.
+The amendment supersedes the older schema-v4 reader reservation below. Normal-save
+ordering remains governed by the current finish/save amendment; this change adds
+no treadmill-control capability or second writer.
+
 Status: issue [#114](https://github.com/syamaner/paceprompt-ios/issues/114) specification; accepted when this document's reviewed PR merges. Parent [#7](https://github.com/syamaner/paceprompt-ios/issues/7) remains open. This contract freezes semantics for separately selected implementations [#115](https://github.com/syamaner/paceprompt-ios/issues/115) and [WeeklyHealthReport #80](https://github.com/syamaner/WeeklyHealthReport/issues/80); physical acceptance remains [#116](https://github.com/syamaner/paceprompt-ios/issues/116).
 
 Revision 1.1: on 28 September 2026 the operator selected discarding zero-interval workouts. Wire and metadata schema versions remain 1; existing nonempty fixture bytes are unchanged. An empty materializable prefix is never saved as a workout. See [the amendment decision](watch-health-empty-prefix-amendment.md).

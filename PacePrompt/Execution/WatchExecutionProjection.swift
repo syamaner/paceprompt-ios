@@ -9,7 +9,7 @@ enum WatchExecutionProjection {
                   effectiveSpeed: .init(kilometresPerHour: i.effectiveSpeed.kilometresPerHour, source: i.effectiveSpeed.source.rawValue),
                   effectiveInclination: .init(percent: i.effectiveInclination.percent, source: i.effectiveInclination.source.rawValue),
                   settledObservation: .init(observedAt: i.settledObservation.observedAt, speedKilometresPerHour: i.settledObservation.speedKilometresPerHour, inclinationPercent: i.settledObservation.inclinationPercent, provenance: i.settledObservation.provenance.rawValue),
-                  endReason: i.endReason.rawValue)
+                  endReason: i.endReason.rawValue, intervalDistance: i.intervalDistance)
         }
     }
     static func outcome(_ summary: WorkoutExecutionSummary?) -> String? {
