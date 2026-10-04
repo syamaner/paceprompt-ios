@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 4 Oct 2026 | `PP-20261004-01` | Internal TestFlight build 23 candidate (#232) | `gpt-6-astra` | 8,062,780 (8,024,320; 0) | 7,979 | 8,070,759 | USD 8.81 (standard-tier API-equivalent) | Exact 68-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-08` | Workout captions and grouped privacy (#208) | `gpt-6-astra` | 9,488,041 (9,358,976; 0) | 13,979 | 9,502,020 | USD 11.35 (standard-tier API-equivalent) | Exact 74-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-07` | Treadmill setup and troubleshooting (#210) | `gpt-6-astra` | 16,088,271 (15,936,256; 0) | 21,476 | 16,109,747 | USD 18.53 (standard-tier API-equivalent) | Exact 93-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-06` | Internal TestFlight build 22 release receipt (#227) | `gpt-6-astra` | 3,483,443 (3,459,712; 0) | 9,249 | 3,492,692 | USD 4.16 (standard-tier API-equivalent) | Exact 36-request root delivery/receipt phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
@@ -2268,4 +2269,62 @@ historical resets 0; in-boundary resets
 1. Every measured event verifies `gpt-6-astra`.
 Standard-tier API-equivalent USD 11.35 (unrounded 11.348576).
 Private final report `/private/tmp/pp208polish-accounting-final.json`. Reviewer,
+final numeric insertion and post-boundary exact-head delivery are excluded.
+
+
+## PP-20261004-01 — Internal TestFlight build 23 candidate (#232)
+
+The operator authorised the next internal release containing #210 and #231.
+Fresh isolated branch `codex/testflight-build23` starts at protected main
+`a6809ec983ec8d06a491f26975ef6ec90b4f856d`. The only executable/build changes
+are four production phone/Watch build settings from 22 to 23 and corresponding
+synthetic release fixtures. No app logic, workflow, privacy, permissions,
+encryption, signing/profile, group membership or external/public distribution
+changes. Other worktrees and local signing settings are preserved.
+
+Exact root-session baseline: event 3327 at `2026-10-03T23:22:36.415Z`
+(4 October in Europe/London); input 442,937,608, cached input 435,827,072,
+cache-write input 0, output 1,087,557 (reasoning subset 323,126),
+total 444,025,165. Private baseline `/private/tmp/pp23-baseline.json`;
+original transcript ends in `01a0e504-8937-7c80-9128-08ad4b305f87.jsonl`.
+The unchanged helper reconciles counters and the private wrapper checks each
+measured event's preceding model context. Reviewer usage, final numeric insertion
+and post-boundary review/delivery are excluded; original transcript unchanged.
+
+Retain official GPT-6 Astra standard-tier rates checked 3 October 2026 in
+PP-20261003-05: [model pricing](https://developers.openai.com/api/docs/models/gpt-6-astra).
+USD 10/M uncached input, 1/M cached input, 12.50/M cache-write, 50/M output;
+above 272,000 input, 2× input/cache and 1.5× output. API-equivalent comparison,
+not a ChatGPT bill; reasoning is included in output.
+
+Focused 57 release tests, metadata verification, actionlint, shell syntax and
+shellcheck passed. Independent working-diff review approved freeze, including
+negative version/build/leading-zero fixtures. Main and environment protections
+and the existing trusted-tools pin were read back unchanged.
+
+Complete local gate passed on 4 October 2026 with Xcode 27.0 (27A266a),
+SDK 27.0 and dedicated iPhone 17 Pro / iOS 26.5: 517 unit + 78 UI +
+16 evaluation-target tests, zero failures. Release simulator build, static analysis,
+coverage, metadata/binary checks and 24 accounting tests passed. Supporting checks:
+57 release tests, 41 scorer tests, 13 summary tests and 247 HostEval tests
+(36 expected private-evidence skips). Focused metadata/actionlint/shellcheck and
+shell syntax passed. All 417 frozen executable/test/build inputs are unchanged.
+Private evidence: `/private/tmp/pp23-complete-gate.log` and
+`/private/tmp/pp23-complete-gate/`. Full diff and `git diff --check` passed.
+
+End snapshot: event 3395 at `2026-10-03T23:59:20.821Z`;
+input 451,000,388, cached input 443,851,392, cache-write
+input 0, output 1,095,536 (reasoning subset
+323,795), total 452,095,924.
+
+Exact delta: 8,062,780 input, 8,024,320 cached,
+0 cache-write, 7,979 output (reasoning subset
+669), 8,070,759 total across 68 requests.
+Largest input 125,047; threshold crossings 0;
+historical resets 0; in-boundary resets
+0; exact replay events
+0; repeated snapshots
+0. Every measured event verifies `gpt-6-astra`.
+Standard-tier API-equivalent USD 8.81 (unrounded 8.807870).
+Private final report `/private/tmp/pp23-accounting-final.json`. Reviewer,
 final numeric insertion and post-boundary exact-head delivery are excluded.
