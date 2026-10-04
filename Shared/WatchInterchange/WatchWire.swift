@@ -99,7 +99,7 @@ enum WatchWire {
         }
         _ = try root.fields(required: fields.union(["schemaVersion", "summaryID", "kind"]))
         let version = try integer(root["schemaVersion"], minimum: 1)
-        guard (version == 1 || (version == 2 && kind == .manifest)),
+        guard (version == 1 || ((version == 2 || version == 3) && kind == .manifest)),
               let id = root["summaryID"]?.string, let uuid = UUID(uuidString: id), uuid.uuidString.lowercased() == id else { throw WatchWireError.invalid }
         if let r = root["revision"] { _ = try integer(r, minimum: kind == .ack ? 0 : 1) }
         if let s = root["sequence"] { _ = try integer(s, minimum: 1) }
@@ -148,7 +148,7 @@ enum WatchWire {
         } else if root["workoutEnd"] != .null || root["localOutcome"] != .null { throw WatchWireError.invalid }
         var previousEnd = start, previousSegment: Int64 = -1, previousIndex: Int64 = -1
         for i in intervals {
-            _ = try i.fields(required: Set(["segmentIndex", "intervalIndex", "startedAt", "endedAt", "prescribed", "effectiveSpeed", "effectiveInclination", "settledObservation", "endReason"]).union(version == 2 ? ["intervalDistance"] : []))
+            _ = try i.fields(required: Set(["segmentIndex", "intervalIndex", "startedAt", "endedAt", "prescribed", "effectiveSpeed", "effectiveInclination", "settledObservation", "endReason"]).union(version >= 2 ? ["intervalDistance"] : []))
             let segment = try integer(i["segmentIndex"]), index = try integer(i["intervalIndex"])
             guard segment >= previousSegment,
                   segment > previousSegment ? index == 0 : (previousIndex < Int64.max && index == previousIndex + 1) else { throw WatchWireError.invalid }
@@ -166,7 +166,7 @@ enum WatchWire {
                 guard let value = object[key] else { throw WatchWireError.invalid }; _ = try value.decimal()
             }
             try member(i["endReason"], ["planTransition", "targetChanged", "paused", "completed", "endedByUser", "interrupted", "failed"])
-            if version == 2 { try validateIntervalDistance(i["intervalDistance"], start: a, end: b) }
+            if version >= 2 { try validateIntervalDistance(i["intervalDistance"], start: a, end: b) }
             previousEnd = b; previousSegment = segment; previousIndex = index
         }
         guard let d = root["distance"] else { throw WatchWireError.invalid }
@@ -174,7 +174,7 @@ enum WatchWire {
         else {
             _ = try d.fields(required: ["state", "metres", "provenance"])
             guard final, d["state"] == .string("accepted"), d["provenance"] == .string("fr30zCumulativeDistanceDelta"),
-                  let metres = d["metres"], try metres.decimal() > 0 else { throw WatchWireError.invalid }
+                  let metres = d["metres"], (version == 3 ? try metres.decimal() >= 0 : try metres.decimal() > 0) else { throw WatchWireError.invalid }
         }
     }
 }

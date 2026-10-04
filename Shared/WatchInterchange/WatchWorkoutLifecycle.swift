@@ -30,6 +30,7 @@ struct WatchAssembly: Equatable {
     let revision: Int64
     let complete: Bool
     let distance: WatchDistance
+    let interchangeVersion: Int
 }
 
 enum WatchSaveStage: String, Codable { case stopActivity, assemblyValidation, endCollection, activities, distance, metadata, finish, receiptPersistence }
@@ -260,7 +261,9 @@ enum WatchStoreError: Error { case definite, ambiguous }
             if m.revision == old.revision {
                 if m != old { latchIncomplete() }; acknowledge(); return
             }
-            guard old.final != true, m.intervals!.starts(with: old.intervals!) else { latchIncomplete(); return }
+            guard old.final != true,
+                  (old.schemaVersion != 3 && m.schemaVersion != 3) || old.schemaVersion == m.schemaVersion,
+                  m.intervals!.starts(with: old.intervals!) else { latchIncomplete(); return }
         }
         if m.final == true {
             guard value.prepareSequence != nil, m.workoutEnd == value.preparedEnd else { latchIncomplete(); return }
@@ -448,7 +451,9 @@ enum WatchStoreError: Error { case definite, ambiguous }
             && ["completed", "stoppedByUser"].contains(value.manifest?.localOutcome ?? "")
         let assembly = WatchAssembly(summaryID: id, activity: value.activity, start: start, end: end,
                                      intervals: prefix, revision: value.manifest?.revision ?? 0, complete: complete,
-                                     distance: value.confirmed && value.sourceExclusionEstablished ? value.manifest?.distance ?? .unavailable : .unavailable)
+                                     distance: value.confirmed && value.sourceExclusionEstablished && (value.manifest?.schemaVersion != 3 || complete)
+                                        ? value.manifest?.distance ?? .unavailable : .unavailable,
+                                     interchangeVersion: value.manifest?.schemaVersion ?? 1)
         let token = generation
         operationDeadline = monotonic() + 15
         display = "Saving workout…"

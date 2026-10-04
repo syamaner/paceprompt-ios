@@ -164,13 +164,26 @@ import HealthKit
                                       start: start, end: end, metadata: [HKMetadataKeySyncIdentifier: Self.namespace + "distance." + summaryID, HKMetadataKeySyncVersion: 1])
         try await builder.addSamples([sample])
     }
-    func addMetadata(_ value: WatchAssembly, distanceIncluded: Bool) async throws {
+    func distanceSampleEvidence() -> WatchDistanceSampleEvidence {
+        guard let builder else { return .init(collectionStart: nil, collectionEnd: nil, events: []) }
+        return .init(collectionStart: builder.startDate, collectionEnd: builder.endDate, events: builder.workoutEvents.map { event in
+            let kind: WatchDistanceSampleEvidence.Event.Kind
+            switch event.type {
+            case .pause: kind = .pause
+            case .resume: kind = .resume
+            case .lap, .marker, .segment: kind = .annotation
+            default: kind = .unsupported
+            }
+            return .init(kind: kind, start: event.dateInterval.start, end: event.dateInterval.end)
+        })
+    }
+    func addMetadata(_ value: WatchAssembly, distanceDecision: WatchNativeDistanceDecision) async throws {
         guard let builder else { throw WatchStoreError.ambiguous }
         let n = Self.namespace
-        let metadata: [String: Any] = [n+"interchangeSchemaVersion": value.intervals.contains(where: { $0.intervalDistance != nil }) ? 2 : 1, n+"summaryID": value.summaryID, n+"ownership": "watchPrimary",
-                                      n+"interchangeStatus": value.complete ? "complete" : "incomplete", n+"manifestRevision": NSNumber(value: value.revision),
-                                      n+"intervalCount": value.intervals.count, n+"distanceProvenance": distanceIncluded ? "fr30zCumulativeDistanceDelta" : "unavailable",
-                                      HKMetadataKeyIndoorWorkout: true, HKMetadataKeySyncIdentifier: n+"workout."+value.summaryID, HKMetadataKeySyncVersion: 1]
+        var metadata = WatchHealthMetadata.workout(value, distanceDecision: distanceDecision)
+        metadata[HKMetadataKeyIndoorWorkout] = true
+        metadata[HKMetadataKeySyncIdentifier] = n + "workout." + value.summaryID
+        metadata[HKMetadataKeySyncVersion] = 1
         try await builder.addMetadata(metadata)
     }
     func finishBuilder() async throws -> String? {

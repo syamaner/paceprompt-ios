@@ -1,0 +1,19 @@
+{
+  "v1-complete": "2401",
+  "v2-incomplete": "2403",
+  "v2-paused": "2405",
+  "v2-rich": "2402",
+  "v2-rich-rejected": "2404",
+  "v3-incomplete": "2502",
+  "v3-paused": "2500",
+  "v3-rich": "2511",
+  "v3-safe-0": "2503",
+  "v3-safe-1": "2504",
+  "v3-safe-2": "2505",
+  "v3-safe-3": "2506",
+  "v3-safe-4": "2507",
+  "v3-safe-5": "2508",
+  "v3-safe-6": "2509",
+  "v3-safe-7": "2510",
+  "v3-zero": "2501"
+}

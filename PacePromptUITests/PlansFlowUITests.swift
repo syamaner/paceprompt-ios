@@ -487,10 +487,8 @@ final class PlansFlowUITests: XCTestCase {
 
     private func replaceText(in field: XCUIElement, with value: String) {
         field.tap()
-        field.press(forDuration: 1)
-        let selectAll = app.menuItems["Select All"]
-        XCTAssertTrue(selectAll.waitForExistence(timeout: 2))
-        selectAll.tap()
+        // Keyboard presentation can move the field before a second coordinate gesture.
+        field.typeKey("a", modifierFlags: .command)
         field.typeText(value)
     }
 

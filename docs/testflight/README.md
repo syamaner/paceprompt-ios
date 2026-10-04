@@ -1173,3 +1173,113 @@ round trip. Release observations do not prove tester installation, HealthKit
 visibility, native zone availability or physical treadmill behaviour. No
 personal Health data, real Drive export or physical treadmill operation was
 performed during this release.
+
+## Accepted workout distance repair (unreleased)
+
+The proposed compatible producer/reader update uses Watch interchange v3 and
+WeeklyHealthReport Daily schema 7. It preserves the accepted treadmill aggregate
+separately from HealthKit's native distance statistic. It does not replace native
+statistics, infer distance from interval sums, or change the defined interval and
+treadmill-control semantics. The closed contract is
+[`accepted-workout-distance-amendment.md`](../../design/accepted-workout-distance-amendment.md).
+
+When a workout includes a pause or its exact native collection bounds cannot
+safely contain the original duration-spanning distance sample, PacePrompt omits
+that native sample. **Apple Health and Fitness may therefore show no native
+distance for these new workouts.** WeeklyHealthReport preserves the independently
+accepted treadmill total and the explicit sample decision. An observed zero is
+preserved as zero; unavailable data is not converted to zero. Heart-rate and
+energy fields still reflect native availability, and raw heart-rate samples are
+not added to the export.
+
+Historical Health interchange v1/v2 keeps its original sample-writing semantics.
+The compatible reader may recover an original accepted distance from exactly one
+validated associated sample, with source, identity and bounds checks. Recovery
+never rewrites an existing Health workout or its native statistic.
+
+The repeatable synthetic-only procedure is in
+[`Tools/NativeHealthRoundTrip`](../../Tools/NativeHealthRoundTrip/README.md).
+Native archives and diagnostics remain outside Git.
+
+This section describes an unreleased repair. Delivery requires the repository's
+complete gates, independent review, protected merges and compatible signed builds.
+The synthetic simulator round trip must separately prove native persistence,
+paired-phone visibility, the literal native statistic, and the accepted aggregate
+in the final JSON. It does not establish physical treadmill behaviour, personal
+Health access, real Drive delivery or installation acceptance, and does not close
+issues #116 or WeeklyHealthReport #80.
+
+### Synthetic native acceptance evidence
+
+On 2026-10-04, the isolated iOS 27 / watchOS 27 companion pair completed
+13 native cases: one unchanged build-24 legacy writer case and twelve repaired
+v3 cases. The actual Watch writer saved and queried native workouts; the paired
+phone then used the production HealthKit fetch, projection, Daily schema-7
+serializer and strict identity validator from WeeklyHealthReport commit
+`ac1c9e05979d56d22244035cc9be958dca00ea33`
+([reader PR #185](https://github.com/syamaner/WeeklyHealthReport/pull/185)).
+The two joined test methods passed with 728 independently declared fields checked
+per path. Direct Health reads and secure-archive reads produced identical
+canonical JSON for all 13 cases. Reader commit/PR identity is source evidence,
+not a claim that its release is available.
+
+The subsequent combined reader candidate preserves the concurrently shipped
+nutrition snapshot as well as this workout repair. WeeklyHealthReport
+[PR #187](https://github.com/syamaner/WeeklyHealthReport/pull/187), commit
+`4988beca9b77584d1eecb252343dcd549f4de727`, has the same tree as the independently
+reviewed integration. Its repeated native run again passed both methods and all
+13 cases, with 728 independently expected fields per path and 13 identical
+canonical JSON pairs. The private receipt is
+`/private/tmp/whr-build21-integrated-native-frozen`, with all 986 retained hashes
+verified. This combined candidate is still unreleased; producer upload must wait
+for protected reader checks and compatible availability to be verified.
+
+The paused legacy sample retained its original 100 m while the native statistic
+remained approximately 57.805 m; the reader recovered 100 m separately without
+rewriting Health. The repaired paused case preserved accepted 100 m and omitted
+the unsafe native sample. Observed zero remained available, an incomplete save
+had no accepted whole aggregate, and naturally safe cases retained exact native
+10 m and 30.625 m totals. Fractional targets, timestamps, a gap and partial
+interval-distance coverage survived the joined path. Native energy availability
+was preserved; absent heart-rate statistics and zones remained unavailable.
+
+All eight naturally timed safe candidates were retained. Three included a safe
+sample and five conservatively suppressed it because the original wire start
+was not strictly later than the precise native collection start. None isolated
+a final submillisecond pause overlap with an otherwise valid start. That native
+case remains unproved; pure exact-boundary tests, the original legacy clipping
+observation, and the repaired mid-workout pause case are separate evidence.
+No timestamps were shifted and no quantities were rescaled to obtain a result.
+
+The private producer index is
+`/private/tmp/pp-native-repair-final-frozen-index.json`
+(SHA-256 `b3d9f12af8c056bcddafacf2b016ea10d2eda02577eea6aad00e2019c181b358`).
+The reader's frozen receipt is
+`/private/tmp/whr-final-native-thirteen-frozen/index.json`, with its test summary
+and 949-file hash manifest alongside it. Native archives, UUIDs and device
+logs are excluded from Git. The retained harness above is the reproducible
+procedure; these private paths are local evidence references.
+
+### Producer software gate
+
+The replacement complete local gate on the dedicated iOS 26.5 simulator passed:
+540 unit tests, 78 UI tests, 16 evaluation tests, Release compilation including
+Watch, static analysis, coverage export, binary/metadata checks and offline
+contract/accounting checks. Both final test-result summaries report zero failures,
+skips and runtime warnings. Evidence is retained at
+`/private/tmp/pp-aggregate-complete-gate265-v2`; all 429 frozen non-Markdown inputs
+match `/private/tmp/pp-aggregate-frozen-inputs-v2.json`. The standalone harness's
+five mocked tests and both generated API variants compiled successfully outside
+production targets.
+
+Earlier failed runs remain evidence, not passing gates. The iOS 27 full run's
+unchanged import-disclosure hittability assertion also failed on the unchanged
+protected baseline. Its separate view-update warning was not reproduced by the
+narrow baseline test and remains unclassified. The first iOS 26.5 full run found
+an editing-test coordinate race: keyboard presentation moved the field and the
+subsequent long press hit the `5` key. The unchanged baseline narrow test passed,
+so deterministic baseline reproduction is not claimed. The reviewed test-only
+native Command-A selection preserves the exact initial and final value assertions;
+it passed focused tests on both runtimes and the replacement full gate. No app
+runtime input changed during this test repair, so the native producer evidence
+remains bound to the same production bytes.

@@ -23,6 +23,7 @@ import XCTest
             effectiveSpeed: .init(kilometresPerHour: 4.3, source: "manualOverride"), effectiveInclination: .init(percent: 1, source: "planned"),
             settledObservation: .init(observedAt: a, speedKilometresPerHour: 4.3, inclinationPercent: 1, provenance: "fr30zTreadmillDataCurrentEpoch"), endReason: "planTransition")
     }
+    private func currentInterval() -> WatchInterval { var value = interval(); value.intervalDistance = .unavailable(); return value }
     private func manifest(_ revision: Int64, final: Bool = false, intervals: [WatchInterval]? = nil) -> WatchWireMessage {
         var m = message(.manifest); m.revision = revision; m.workoutActivity = "indoorWalking"; m.workoutStart = start
         m.intervals = intervals ?? [interval()]; m.final = final; m.workoutEnd = final ? recording.pauseDate : nil
@@ -185,7 +186,7 @@ import XCTest
         let adapter = WatchRecordingAdapter(operations: backend)
         try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
         let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(90),
-                                  intervals: [interval(0), interval(1), interval(2)], revision: 1, complete: true, distance: .unavailable)
+                                  intervals: [interval(0), interval(1), interval(2)], revision: 1, complete: true, distance: .unavailable, interchangeVersion: 1)
         try await adapter.assemble(value)
         XCTAssertEqual(Array(backend.calls.suffix(6)), ["verifiedActivityStop", "activity", "activity", "activity", "endCollection", "metadata"])
         XCTAssertEqual(backend.activities.count, 3)
@@ -200,7 +201,7 @@ import XCTest
             let adapter = WatchRecordingAdapter(operations: backend)
             try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
             let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60),
-                                      intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+                                      intervals: [interval()], revision: 1, complete: true, distance: .unavailable, interchangeVersion: 1)
             do { try await adapter.assemble(value); XCTFail("Unexpected native mutation accepted") } catch {}
             XCTAssertTrue(backend.calls.contains("endCollection"))
             XCTAssertFalse(backend.calls.contains("metadata")); XCTAssertFalse(backend.calls.contains("finish"))
@@ -212,7 +213,7 @@ import XCTest
         let backend = TestSessionOperations(); backend.rejectCollectionAfterEnd = true
         let adapter = WatchRecordingAdapter(operations: backend)
         try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
-        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable, interchangeVersion: 1)
         try await adapter.assemble(value)
         XCTAssertFalse(backend.calls.contains("end"))
         _ = try await adapter.finish()
@@ -254,7 +255,7 @@ import XCTest
             let backend = TestSessionOperations(); backend.holdEndCollection = !activity; backend.holdActivity = activity
             let adapter = WatchRecordingAdapter(operations: backend)
             try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
-            let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+            let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable, interchangeVersion: 1)
             let pending = Task { try await adapter.assemble(value) }
             while backend.builderWaiter == nil { await Task.yield() }
             adapter.end(); let before = backend.calls
@@ -327,7 +328,7 @@ import XCTest
             try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
             if distance { backend.hasDistance = true }
             else { backend.activities = [.init(start: start, end: start.addingTimeInterval(60), activity: "indoorWalking", indoor: true)] }
-            let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+            let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable, interchangeVersion: 1)
             do { try await adapter.assemble(value); XCTFail("unexpected automatic data accepted") } catch {}
             XCTAssertEqual(adapter.finalizationStage, .assemblyValidation)
             XCTAssertFalse(backend.calls.contains("endCollection")); XCTAssertFalse(backend.calls.contains("finish"))
@@ -339,7 +340,7 @@ import XCTest
             let adapter = WatchRecordingAdapter(operations: backend)
             try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
             let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true,
-                distance: .init(state: "accepted", metres: 100, provenance: "fr30zCumulativeDistanceDelta"))
+                distance: .init(state: "accepted", metres: 100, provenance: "fr30zCumulativeDistanceDelta"), interchangeVersion: 1)
             do { try await adapter.assemble(value); XCTFail("failure was ignored: \(stage)") } catch {}
             XCTAssertEqual(adapter.finalizationStage, stage)
             do { _ = try await adapter.finish(); XCTFail("unassembled builder finished") } catch {}
@@ -612,7 +613,7 @@ import XCTest
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); phone.mirrorConnected()
         var bound = message(.bound); bound.workoutStart = start; phone.receive(try WatchWire.encode(bound))
-        phone.update(intervals: [interval()], outcome: "completed")
+        phone.update(intervals: [currentInterval()], outcome: "completed")
         var prepared = message(.endPrepared); prepared.sequence = 1; prepared.workoutEnd = recording.pauseDate; phone.receive(try WatchWire.encode(prepared))
         let final = port.messages.last!; XCTAssertEqual(final.kind, .manifest)
         var ack = message(.ack); ack.revision = final.revision; phone.receive(try WatchWire.encode(ack))
@@ -624,7 +625,7 @@ import XCTest
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
         phone.primaryEnded(); let count = port.messages.count; let status = phone.status
-        phone.disconnect(); phone.tick(); phone.update(intervals: [interval()], outcome: "completed")
+        phone.disconnect(); phone.tick(); phone.update(intervals: [currentInterval()], outcome: "completed")
         XCTAssertEqual(phone.phase, .unavailable); XCTAssertEqual(port.messages.count, count)
         XCTAssertEqual(phone.status, status); XCTAssertTrue(status.contains("recording ended"))
     }
@@ -632,7 +633,7 @@ import XCTest
         let port = TestPhonePort()
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-        phone.update(intervals: [interval()], outcome: "completed")
+        phone.update(intervals: [currentInterval()], outcome: "completed")
         var e = message(.endPrepared); e.sequence = 1; e.workoutEnd = recording.pauseDate; phone.receive(try WatchWire.encode(e))
         var ack = message(.ack); ack.revision = port.messages.last!.revision; phone.receive(try WatchWire.encode(ack))
         phone.primaryEnded(); phone.disconnect()
@@ -693,7 +694,7 @@ import XCTest
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking")
         var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-        phone.update(intervals: [interval()], outcome: "completed")
+        phone.update(intervals: [currentInterval()], outcome: "completed")
         var e = message(.endPrepared); e.sequence = 1; e.workoutEnd = recording.pauseDate; phone.receive(try WatchWire.encode(e))
         var ack = message(.ack); ack.revision = port.messages.last!.revision
         phone.receive(Data("{}".utf8)); phone.receive(try WatchWire.encode(ack))
@@ -704,7 +705,7 @@ import XCTest
         let port = TestPhonePort()
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-        phone.update(intervals: [interval()], outcome: "completed")
+        phone.update(intervals: [currentInterval()], outcome: "completed")
         var e = message(.endPrepared); e.sequence = 1; e.workoutEnd = recording.pauseDate; phone.receive(try WatchWire.encode(e))
         var a = message(.ack); a.revision = port.messages.last!.revision; clock.time = 5.01; phone.receive(try WatchWire.encode(a))
         XCTAssertEqual(phone.phase, .unavailable); XCTAssertFalse(port.messages.contains { $0.kind == .finalize })
@@ -783,7 +784,7 @@ import XCTest
         let backend = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: backend)
         try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
         XCTAssertEqual(backend.calls, ["reset", "authorize", "recover", "create", "configure", "prepare", "mirror", "start", "collect"])
-        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable, interchangeVersion: 1)
         try await adapter.assemble(value); backend.nilFinish = true
         do { _ = try await adapter.finish(); XCTFail("nil receipt") } catch { }
         do { _ = try await adapter.finish(); XCTFail("repeated finish") } catch { }
@@ -799,7 +800,7 @@ import XCTest
     }
     func testAssemblySourceExclusionActivityMappingAndDistancePermission() async throws {
         let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 4, complete: true,
-            distance: .init(state: "accepted", metres: 100, provenance: "fr30zCumulativeDistanceDelta"))
+            distance: .init(state: "accepted", metres: 100, provenance: "fr30zCumulativeDistanceDelta"), interchangeVersion: 1)
         for permission in [false, true] {
             let backend = TestSessionOperations(); backend.collectionStarted = true; backend.activityStopped = true; backend.distanceAuthorized = permission
             try await WatchBuilderAssemblyWriter(builder: backend).assemble(value)
@@ -895,7 +896,7 @@ import XCTest
         let backend = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: backend)
         try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
         backend.holdStop = true
-        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable, interchangeVersion: 1)
         let task = Task { try await adapter.assemble(value) }; await Task.yield()
         XCTAssertFalse(backend.calls.contains("endCollection"))
         // A second explicit stop fences the old save before its native proof arrives.
@@ -908,7 +909,7 @@ import XCTest
         let backend = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: backend)
         try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
         backend.holdStop = true
-        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable)
+        let value = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: true, distance: .unavailable, interchangeVersion: 1)
         let task = Task { try await adapter.assemble(value) }; await Task.yield()
         XCTAssertFalse(backend.calls.contains("endCollection"))
         backend.stopWaiter?.resume(); backend.stopWaiter = nil; try await task.value
@@ -931,7 +932,7 @@ import XCTest
             let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
             await phone.start(activity: "indoorWalking")
             var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-            phone.update(intervals: [interval()], outcome: "stoppedByUser")
+            phone.update(intervals: [currentInterval()], outcome: "stoppedByUser")
             var phoneIndex = 0, watchIndex = 0; var dropped = false
             for step in 0...8 {
                 clock.time = 60 + Double(step) * 0.5; phone.tick(); await sut.tick()
@@ -958,7 +959,7 @@ import XCTest
         let port = TestPhonePort()
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-        phone.update(intervals: [interval()], outcome: "completed")
+        phone.update(intervals: [currentInterval()], outcome: "completed")
         let end = port.messages.last!; XCTAssertTrue(phone.isEnding)
         clock.time = 1; phone.tick(); XCTAssertEqual(port.messages.last, end)
         var e = message(.endPrepared); e.sequence = end.sequence; e.workoutEnd = recording.pauseDate
@@ -975,7 +976,7 @@ import XCTest
         let port = TestPhonePort()
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-        phone.update(intervals: [interval()], outcome: "completed")
+        phone.update(intervals: [currentInterval()], outcome: "completed")
         var e = message(.endPrepared); e.sequence = 1; e.workoutEnd = recording.pauseDate; phone.receive(try WatchWire.encode(e))
         var ack = message(.ack); ack.revision = port.messages.last!.revision; phone.receive(try WatchWire.encode(ack))
         XCTAssertEqual(port.messages.last?.kind, .finalize)
@@ -988,7 +989,7 @@ import XCTest
         let port = TestPhonePort()
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-        phone.update(intervals: [interval()], outcome: "stoppedByUser")
+        phone.update(intervals: [currentInterval()], outcome: "stoppedByUser")
         for t in 1...4 { clock.time = Double(t); phone.tick() }
         XCTAssertEqual(port.messages.filter { $0.kind == .prepareEnd }.count, 5)
         clock.time = 5; phone.tick(); XCTAssertEqual(phone.phase, .unavailable)
@@ -1092,7 +1093,7 @@ import XCTest
             let ops = TestSessionOperations(); let adapter = WatchRecordingAdapter(operations: ops)
             try await adapter.prepare(activity: "indoorWalking"); _ = try await adapter.begin()
             ops.holdEndCollection = !stopAtActivity; ops.holdActivity = stopAtActivity
-            let assembly = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: false, distance: .unavailable)
+            let assembly = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60), intervals: [interval()], revision: 1, complete: false, distance: .unavailable, interchangeVersion: 1)
             let old = Task { try await adapter.assemble(assembly) }; await Task.yield()
             try await adapter.stopAndVerify(); try adapter.releaseStopped()
             ops.activities = []; let before = ops.calls.count
@@ -1111,15 +1112,15 @@ import XCTest
         XCTAssertTrue(phone.acceptsMirror(activity: "indoorWalking", indoor: true, start: start))
         XCTAssertFalse(phone.acceptsMirror(activity: "indoorWalking", indoor: true, start: start.addingTimeInterval(1)))
         XCTAssertFalse(phone.acceptsMirror(activity: "indoorRunning", indoor: true, start: start))
-        phone.update(intervals: [interval()], outcome: nil); phone.mirrorConnected(); phone.receive(bytes); phone.foreground()
+        phone.update(intervals: [currentInterval()], outcome: nil); phone.mirrorConnected(); phone.receive(bytes); phone.foreground()
         XCTAssertEqual(phone.phase, .bound); XCTAssertEqual(starts, 1); XCTAssertEqual(reserves, 1); XCTAssertEqual(port.launches, 1)
-        XCTAssertEqual(port.messages.last(where: { $0.kind == .manifest })?.intervals, [interval()])
+        XCTAssertEqual(port.messages.last(where: { $0.kind == .manifest })?.intervals, [currentInterval()])
     }
     func testLostManifestAckRetriesSameRevisionAndStopsWhenAcknowledged() async throws {
         let port = TestPhonePort()
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-        phone.update(intervals: [interval()], outcome: nil); let first = port.messages.last!
+        phone.update(intervals: [currentInterval()], outcome: nil); let first = port.messages.last!
         clock.time = 5; phone.foreground()
         XCTAssertEqual(port.messages.filter { $0.kind == .manifest }, [first, first])
         var ack = message(.ack); ack.revision = first.revision; phone.receive(try WatchWire.encode(ack))
@@ -1138,7 +1139,7 @@ import XCTest
         let port = TestPhonePort()
         let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
         await phone.start(activity: "indoorWalking"); var b = message(.bound); b.workoutStart = start; phone.receive(try WatchWire.encode(b))
-        phone.update(intervals: [interval()], outcome: "completed"); phone.disconnect(); phone.foreground(); phone.receive(try WatchWire.encode(b))
+        phone.update(intervals: [currentInterval()], outcome: "completed"); phone.disconnect(); phone.foreground(); phone.receive(try WatchWire.encode(b))
         XCTAssertEqual(phone.phase, .unavailable); XCTAssertFalse(port.messages.contains { $0.kind == .finalize })
     }
     func testProtectedJournalLegacyMigrationAndIdempotentArchive() throws {
@@ -1361,5 +1362,224 @@ import XCTest
         activities.append(item); if addExtraActivity { activities.append(item) }
     }
     func addDistance(metres: Decimal, summaryID: String, start: Date, end: Date) async throws { calls.append("distance"); if failedStage == .distance { throw WatchStoreError.ambiguous } }
-    func addMetadata(_ value: WatchAssembly, distanceIncluded: Bool) async throws { calls.append("metadata"); if failedStage == .metadata { throw WatchStoreError.ambiguous }; metadataDistance = distanceIncluded }
+    var sampleEvidence = WatchDistanceSampleEvidence(collectionStart: nil, collectionEnd: nil, events: [])
+    var metadataDecision: WatchNativeDistanceDecision?
+    func distanceSampleEvidence() -> WatchDistanceSampleEvidence { sampleEvidence }
+    func addMetadata(_ value: WatchAssembly, distanceDecision: WatchNativeDistanceDecision) async throws { calls.append("metadata"); if failedStage == .metadata { throw WatchStoreError.ambiguous }; metadataDistance = distanceDecision.included; metadataDecision = distanceDecision }
+}
+
+@MainActor extension WatchInterchangeTests {
+    func testV3AcceptsObservedZeroWithoutChangingLegacyWireContracts() throws {
+        var value = manifest(1, final: true, intervals: [currentInterval()])
+        value.schemaVersion = 3; value.distance = .init(state: "accepted", metres: 0, provenance: "fr30zCumulativeDistanceDelta")
+        XCTAssertEqual(try WatchWire.decode(WatchWire.encode(value)), value)
+        for version in [1, 2] {
+            value.schemaVersion = version
+            if version == 1 { value.intervals = [interval()] } else { value.intervals = [currentInterval()] }
+            XCTAssertThrowsError(try WatchWire.decode(WatchWire.encode(value)))
+        }
+        value.schemaVersion = 3; value.intervals = [interval()]
+        XCTAssertThrowsError(try WatchWire.decode(WatchWire.encode(value)))
+    }
+    func testV3NativeSamplePolicyUsesExactBoundsAndPauseOverlap() {
+        let end = start.addingTimeInterval(60)
+        let distance = WatchDistance(state: "accepted", metres: 100, provenance: "fr30zCumulativeDistanceDelta")
+        func decision(_ events: [WatchDistanceSampleEvidence.Event], collectionStart: Date? = nil, collectionEnd: Date? = nil) -> WatchNativeDistanceDecision {
+            WatchDistanceSamplePolicy.decision(distance: distance, authorized: true, start: start, end: end,
+                evidence: .init(collectionStart: collectionStart ?? start.addingTimeInterval(-1), collectionEnd: collectionEnd ?? end, events: events))
+        }
+        func point(_ kind: WatchDistanceSampleEvidence.Event.Kind, _ offset: Double) -> WatchDistanceSampleEvidence.Event {
+            let date = start.addingTimeInterval(offset); return .init(kind: kind, start: date, end: date)
+        }
+        XCTAssertEqual(decision([]), .included)
+        XCTAssertEqual(decision([point(.pause, 10), point(.resume, 20)]), .suppressed(.pauseOverlap))
+        XCTAssertEqual(decision([point(.pause, 59.9998)]), .suppressed(.pauseOverlap))
+        XCTAssertEqual(decision([point(.pause, 60)]), .included)
+        XCTAssertEqual(decision([point(.pause, 60.0002)]), .included, "Exact canonical final-pause projection; no shifted date")
+        XCTAssertEqual(decision([point(.pause, 60.001)]), .suppressed(.uncertainTemporalCoverage))
+        XCTAssertEqual(decision([point(.pause, 60.0002), point(.annotation, 60.0003)]), .suppressed(.uncertainTemporalCoverage))
+        XCTAssertEqual(decision([.init(kind: .pause, start: end.addingTimeInterval(0.0001), end: end.addingTimeInterval(0.0002))]), .suppressed(.uncertainTemporalCoverage))
+        XCTAssertEqual(decision([point(.unsupported, 60.0002)]), .suppressed(.uncertainTemporalCoverage))
+        XCTAssertEqual(decision([point(.resume, 10)]), .suppressed(.uncertainTemporalCoverage))
+        XCTAssertEqual(decision([point(.pause, 20), point(.resume, 10)]), .suppressed(.uncertainTemporalCoverage))
+        XCTAssertEqual(decision([point(.pause, 10), point(.pause, 20)]), .suppressed(.uncertainTemporalCoverage))
+        XCTAssertEqual(decision([point(.annotation, 20)]), .included)
+        XCTAssertEqual(decision([], collectionStart: start), .suppressed(.uncertainTemporalCoverage), "SDK requires sample start strictly later")
+        XCTAssertEqual(decision([], collectionEnd: end.addingTimeInterval(-0.0001)), .suppressed(.uncertainTemporalCoverage))
+        XCTAssertEqual(WatchDistanceSamplePolicy.decision(distance: distance, authorized: true, start: start, end: end,
+            evidence: .init(collectionStart: nil, collectionEnd: end, events: [])), .suppressed(.uncertainTemporalCoverage))
+    }
+    func testV3AssemblyPreservesAcceptedAggregateWhenNativeSampleSuppressed() async throws {
+        for (metres, authorized, expected) in [(Decimal(100), true, WatchNativeDistanceDecision.suppressed(.pauseOverlap)),
+                                               (Decimal(0), true, .suppressed(.zeroAggregate)),
+                                               (Decimal(100), false, .suppressed(.writeNotAuthorized))] {
+            let backend = TestSessionOperations(); backend.collectionStarted = true; backend.activityStopped = true; backend.distanceAuthorized = authorized
+            let end = start.addingTimeInterval(60), pause = start.addingTimeInterval(10)
+            backend.sampleEvidence = .init(collectionStart: start.addingTimeInterval(-1), collectionEnd: end,
+                events: [.init(kind: .pause, start: pause, end: pause)])
+            let assembly = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: end,
+                intervals: [currentInterval()], revision: 1, complete: true,
+                distance: .init(state: "accepted", metres: metres, provenance: "fr30zCumulativeDistanceDelta"), interchangeVersion: 3)
+            try await WatchBuilderAssemblyWriter(builder: backend).assemble(assembly)
+            XCTAssertEqual(backend.metadataDecision, expected); XCTAssertFalse(backend.calls.contains("distance"))
+            let metadata = WatchHealthMetadata.workout(assembly, distanceDecision: expected), n = WatchHealthMetadata.namespace
+            XCTAssertEqual(metadata[n+"acceptedDistanceState"] as? String, "accepted")
+            XCTAssertEqual(metadata[n+"acceptedDistanceMetres"] as? String, metres == 0 ? "0" : "100")
+            XCTAssertEqual(metadata[n+"distanceProvenance"] as? String, "unavailable")
+            XCTAssertEqual(metadata[n+"nativeDistanceSampleReason"] as? String, expected.reason?.rawValue)
+        }
+    }
+    func testV3SafeNativeSampleAndSourceExclusionGuard() async throws {
+        let end = start.addingTimeInterval(60)
+        let assembly = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: end,
+            intervals: [currentInterval()], revision: 1, complete: true,
+            distance: .init(state: "accepted", metres: Decimal(string: "30.625")!, provenance: "fr30zCumulativeDistanceDelta"), interchangeVersion: 3)
+        let backend = TestSessionOperations(); backend.collectionStarted = true; backend.activityStopped = true
+        backend.sampleEvidence = .init(collectionStart: start.addingTimeInterval(-1), collectionEnd: end, events: [])
+        try await WatchBuilderAssemblyWriter(builder: backend).assemble(assembly)
+        XCTAssertEqual(backend.metadataDecision, .included); XCTAssertEqual(backend.calls.filter { $0 == "distance" }.count, 1)
+        for existingDistance in [true, false] {
+            let invalid = TestSessionOperations(); invalid.collectionStarted = true; invalid.activityStopped = true
+            invalid.hasDistance = existingDistance; invalid.sourceExcludesDistance = existingDistance
+            do { try await WatchBuilderAssemblyWriter(builder: invalid).assemble(assembly); XCTFail("Source guard must fail") } catch {}
+            XCTAssertFalse(invalid.calls.contains("distance")); XCTAssertFalse(invalid.calls.contains("metadata"))
+        }
+    }
+    func testV3IncompleteRetainsVersionButNoInventedAggregate() async throws {
+        try await bound(); try await prepared()
+        var value = manifest(1, intervals: [currentInterval()]); value.schemaVersion = 3
+        try await receive(value); clock.time = 6; await sut.tick()
+        let assembly = try XCTUnwrap(recording.assemblies.last)
+        XCTAssertEqual(assembly.interchangeVersion, 3); XCTAssertFalse(assembly.complete); XCTAssertEqual(assembly.distance, .unavailable)
+        let metadata = WatchHealthMetadata.workout(assembly, distanceDecision: .suppressed(.notAccepted)), n = WatchHealthMetadata.namespace
+        XCTAssertEqual(metadata[n+"acceptedDistanceState"] as? String, "unavailable")
+        XCTAssertEqual(metadata[n+"acceptedDistanceReason"] as? String, "notAccepted")
+        XCTAssertNil(metadata[n+"acceptedDistanceMetres"])
+    }
+    func testV3ExactAggregateDecimalMetadataDoesNotPassThroughDouble() {
+        let cases = ["0", "1.23", "12345678901234567890123456789012345678", "1e127", "1e-128"]
+        for text in cases {
+            let metres = Decimal(string: text)!
+            let assembly = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start, end: start.addingTimeInterval(60),
+                intervals: [currentInterval()], revision: 1, complete: true,
+                distance: .init(state: "accepted", metres: metres, provenance: "fr30zCumulativeDistanceDelta"), interchangeVersion: 3)
+            let metadata = WatchHealthMetadata.workout(assembly, distanceDecision: .suppressed(metres == 0 ? .zeroAggregate : .pauseOverlap))
+            let output = metadata[WatchHealthMetadata.namespace+"acceptedDistanceMetres"] as! String
+            XCTAssertFalse(output.contains("e")); XCTAssertFalse(output.contains("E")); XCTAssertEqual(Decimal(string: output), metres)
+            XCTAssertLessThanOrEqual(output.count, 256)
+            if text == "1e-128" { XCTAssertGreaterThan(output.count, 128) }
+        }
+    }
+}
+
+@MainActor extension WatchInterchangeTests {
+    func testV3SharedFixturesMatchActualWorkoutAndIntervalMetadataProjection() throws {
+        for name in ["paused", "safe", "zero", "incomplete", "submillisecond"] {
+            let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: name+".synthetic", withExtension: "json", subdirectory: "watch-health-v3"))
+            let fixture = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+            let manifests = try XCTUnwrap(fixture["manifests"] as? [[String: Any]])
+            let manifest = try WatchWire.decode(JSONSerialization.data(withJSONObject: manifests.last!))
+            XCTAssertEqual(manifest.schemaVersion, 3)
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any])
+            let workout = try XCTUnwrap(expected["workout"] as? [String: Any])
+            let golden = try XCTUnwrap(workout["metadata"] as? [String: Any])
+            let decisionValue = try XCTUnwrap(fixture["nativeDistanceSampleDecision"] as? [String: String])
+            let decision: WatchNativeDistanceDecision = decisionValue["state"] == "included" ? .included : .suppressed(try XCTUnwrap(WatchNativeDistanceDecision.Reason(rawValue: decisionValue["reason"]!)))
+            let assembly = WatchAssembly(summaryID: manifest.summaryID, activity: manifest.workoutActivity!, start: manifest.workoutStart!,
+                end: try WatchWire.date(workout["endedAt"] as! String), intervals: manifest.intervals!, revision: manifest.revision!,
+                complete: name != "incomplete", distance: manifest.distance!, interchangeVersion: 3)
+            let actual = WatchHealthMetadata.workout(assembly, distanceDecision: decision)
+            let expectedCustom = golden.filter { $0.key.hasPrefix(WatchHealthMetadata.namespace) }
+            XCTAssertTrue(NSDictionary(dictionary: actual).isEqual(to: expectedCustom), name)
+            let activities = try XCTUnwrap(workout["activities"] as? [[String: Any]])
+            for (interval, activity) in zip(manifest.intervals!, activities) {
+                var metadata = try XCTUnwrap(activity["metadata"] as? [String: Any])
+                for suffix in ["observedAt", "intervalDistanceStartObservedAt", "intervalDistanceEndObservedAt"] {
+                    let key = WatchHealthMetadata.namespace+suffix
+                    if let text = metadata[key] as? String { metadata[key] = try WatchWire.date(text) }
+                }
+                XCTAssertTrue(NSDictionary(dictionary: WatchHealthMetadata.interval(interval, summaryID: manifest.summaryID)).isEqual(to: metadata))
+            }
+        }
+    }
+    func testV3ManifestCannotChangeVersionWhileRetainingAnEarlierPrefix() async throws {
+        try await bound()
+        var first = manifest(1, intervals: [currentInterval()]); first.schemaVersion = 3; try await receive(first)
+        var downgrade = first; downgrade.schemaVersion = 2; downgrade.revision = 2
+        try await receive(downgrade)
+        XCTAssertTrue(sut.journal!.incomplete); XCTAssertEqual(sut.journal!.manifest, first)
+    }
+}
+
+@MainActor extension WatchInterchangeTests {
+    func testAssemblyRejectsUnsupportedVersionAndWrongRowShapeBeforeMutation() async throws {
+        for (version, rows) in [(0, [interval()]), (4, [currentInterval()]), (1, [currentInterval()]),
+                                (2, [interval()]), (3, [interval()]), (3, [currentInterval(), interval(1)])] {
+            let backend = TestSessionOperations(); backend.collectionStarted = true; backend.activityStopped = true
+            let assembly = WatchAssembly(summaryID: id, activity: "indoorWalking", start: start,
+                end: start.addingTimeInterval(60), intervals: rows, revision: 1, complete: true,
+                distance: .unavailable, interchangeVersion: version)
+            do { try await WatchBuilderAssemblyWriter(builder: backend).assemble(assembly); XCTFail("Invalid schema accepted") }
+            catch {}
+            XCTAssertTrue(backend.calls.isEmpty); XCTAssertTrue(backend.activities.isEmpty)
+        }
+    }
+}
+
+@MainActor extension WatchInterchangeTests {
+    func testObservedZeroProjectsThroughPhoneV3WithoutInventingMissingDistance() async throws {
+        let fixture = HistoryUITestFixtures.syntheticSummary()
+        guard case let .recorded(a, b, _, _)? = fixture.activityTimeline else { return XCTFail("Expected recorded fixture") }
+        func summary(_ distance: WorkoutDistance) -> WorkoutExecutionSummary {
+            .init(id: fixture.id, schemaVersion: 4, sourcePlanID: fixture.sourcePlanID, planSnapshot: fixture.planSnapshot,
+                  attemptedAt: fixture.attemptedAt, lastUpdatedAt: fixture.lastUpdatedAt, outcome: fixture.outcome,
+                  activeDuration: fixture.activeDuration, distance: distance, progress: fixture.progress,
+                  physicalStopConfirmation: fixture.physicalStopConfirmation, activityTimeline: fixture.activityTimeline,
+                  healthExport: .notRequested, ownership: .watchPrimary)
+        }
+        let measured = summary(.measuredWithProvenance(metres: 0, provenance: .init(method: .fr30zCumulativeDistanceDelta,
+            startCumulativeMetres: 100, startObservedAt: a, finalCumulativeMetres: 100, finalObservedAt: b)))
+        let distance = WatchExecutionProjection.distance(measured)
+        XCTAssertEqual(distance, .init(state: "accepted", metres: 0, provenance: "fr30zCumulativeDistanceDelta"))
+        XCTAssertEqual(WatchExecutionProjection.distance(nil), .unavailable)
+        let port = TestPhonePort()
+        let phone = PhoneWatchLifecycle(port: port, reserve: { _ in }, makeID: { UUID(uuidString: self.id)! }, monotonic: { self.clock.time })
+        await phone.start(activity: "indoorWalking"); phone.mirrorConnected()
+        var bound = message(.bound); bound.workoutStart = start; phone.receive(try WatchWire.encode(bound))
+        phone.update(intervals: [currentInterval()], outcome: "completed", distance: distance)
+        var prepared = message(.endPrepared); prepared.sequence = 1; prepared.workoutEnd = recording.pauseDate
+        phone.receive(try WatchWire.encode(prepared))
+        let final = try XCTUnwrap(port.messages.last(where: { $0.kind == .manifest && $0.final == true }))
+        XCTAssertEqual(final.schemaVersion, 3); XCTAssertEqual(final.distance, distance)
+        XCTAssertEqual(try WatchWire.decode(WatchWire.encode(final)), final)
+    }
+}
+
+@MainActor extension WatchInterchangeTests {
+    func testV3IncompleteConfirmedAggregateIsUnavailableWhileLegacySemanticsStayUnchanged() async throws {
+        for version in [1, 2, 3] {
+            for outcome in ["completed", "failed", "interrupted"] {
+                for conflict in [false, true] {
+                    let journal = TestJournal(), backend = TestRecording(start: start)
+                    let flow = WatchWorkoutLifecycle(store: journal, recording: backend, now: { self.start }, monotonic: { 0 }, send: { _ in })
+                    await flow.launch(activity: "indoorWalking")
+                    var bind = message(.bind); bind.workoutActivity = "indoorWalking"
+                    await flow.receive(try WatchWire.encode(bind))
+                    var first = manifest(1, intervals: [version == 1 ? interval() : currentInterval()]); first.schemaVersion = version
+                    await flow.receive(try WatchWire.encode(first))
+                    if conflict { var bad = first; bad.intervals = []; await flow.receive(try WatchWire.encode(bad)) }
+                    var prepare = message(.prepareEnd); prepare.sequence = 1; await flow.receive(try WatchWire.encode(prepare))
+                    var final = first; final.revision = 2; final.final = true; final.workoutEnd = backend.pauseDate; final.localOutcome = outcome
+                    final.distance = .init(state: "accepted", metres: 100, provenance: "fr30zCumulativeDistanceDelta")
+                    await flow.receive(try WatchWire.encode(final))
+                    var confirm = message(.finalize); confirm.revision = 2; await flow.receive(try WatchWire.encode(confirm))
+                    let assembly = try XCTUnwrap(backend.assemblies.first)
+                    let complete = !conflict && outcome == "completed"
+                    XCTAssertEqual(assembly.complete, complete); XCTAssertEqual(assembly.interchangeVersion, version)
+                    XCTAssertEqual(assembly.distance, version == 3 && !complete ? .unavailable : final.distance!)
+                    XCTAssertEqual(backend.finishes, 1)
+                }
+            }
+        }
+    }
 }
