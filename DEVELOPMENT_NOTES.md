@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 4 Oct 2026 | `PP-20261004-06` | Preserve accepted workout distance across native pauses; synthetic native round trip (#116 / WHR #80) | `gpt-6-astra` | 53,027,950 (52,527,104; 0) | 114,080 | 53,142,030 | USD 63.24 (token-only API-equivalent) | Exact 421-request producer implementation phase; preceding investigation separately detailed; root/reviewers unmeasured and excluded; final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-05` | Internal build 24 protected delivery and release receipt (#116 / #233) | `gpt-6-astra` | 5,484,733 (5,398,144; 0) | 17,314 | 5,502,047 | USD 7.13 (token-only API-equivalent) | Exact 57-request root protected-delivery and receipt phase; child work and reviewers separate; final numeric insertion and later delivery excluded |
 | 4 Oct 2026 | `PP-20261004-04` | Internal build 24 and accessible privacy policy (#116 / #233) | `gpt-6-astra` | 16,569,582 (16,339,584; 0) | 44,621 | 16,614,203 | USD 20.87 (token-only API-equivalent) | Exact 118-request root candidate/validation and cross-app coordination phase; child work and reviewers separate; final numeric insertion and later delivery excluded |
 | 4 Oct 2026 | `PP-20261004-03` | Preserve observed interval distance and coordinate Health reader #80 (#233) | `gpt-6-astra` | 22,924,346 (22,418,816; 0) | 66,118 | 22,990,464 | USD 30.78 (standard-tier API-equivalent) | Exact 157-request root implementation/validation phase; reader child measured separately in WHR; reviewers, final numeric insertion and post-boundary delivery excluded |
@@ -2546,3 +2547,66 @@ API-equivalent USD 7.13 (unrounded 7.129734). Original exact
 report: `/private/tmp/pp24-delivery-accounting-final.json`. Final numeric ledger insertion,
 commit/push and later delivery are outside this phase; separate child/reviewer
 sessions are not estimated or added to it.
+
+
+## PP-20261004-06 — accepted workout distance and native interoperability
+
+This change preserves an independently accepted aggregate through wire/Health v3,
+checks exact native sample coverage, and retains a repeatable isolated synthetic
+companion harness. It includes the shared contract, fixtures, tests, native
+producer/reader proof, failure triage and the reviewed test-only keyboard
+interaction repair. The release and native-evidence boundaries are recorded in
+`docs/testflight/README.md`; this commit does not upload a build or close #116/#80.
+
+Only producer child session `01a1042c-09eb-7332-a89d-21ed72dda8ec` is measured here.
+Its original JSONL contains its own session metadata followed by inherited parent
+metadata. The normal loader rejects that shape. Read-only structured recovery
+binds the first child identity and exact fork-parent identity, preserves original
+event ordinals and source lines, and uses the checked-in counter, boundary,
+repeat/replay, reset and pricing validators. The original transcript was not
+edited. Recovery script/helper/source-prefix hashes and original JSONL remain
+private. No counts are inferred. Root orchestration and independent reviewer
+sessions have no established exact phase boundaries here and are excluded and
+unmeasured; separately recorded reader work is not added.
+
+The ledger row measures implementation from event 301, captured before repository
+edits, through the final pre-ledger snapshot below. The earlier native investigation
+is a separate, disjoint phase ending at event 301 and is not folded into the row.
+Final numeric insertion, commit/push, exact-head review and later delivery are
+outside this measurement.
+
+Official [GPT-6 Astra rates](https://developers.openai.com/api/docs/models/gpt-6-astra)
+checked 4 October 2026 and recorded in PP-20261004-05: USD 10/M uncached input,
+1/M cached input, 12.50/M cache writes and 50/M output. Above 272,000 input tokens,
+input/cache rates double and output uses 1.5 times its base rate. This is a token-only
+API-equivalent estimate, not a ChatGPT subscription bill. Reasoning is already a
+subset of output and is neither added nor priced twice.
+
+### Producer implementation phase
+
+Start: event 301 at `2026-10-04T19:03:46.562Z`; input 32,279,999, cached 31,884,928, cache-write 0, output 68,923 (reasoning subset 17,932), total 32,348,922.
+
+Final: event 755 at `2026-10-04T21:36:40.068Z`; input 85,307,949, cached 84,412,032, cache-write 0, output 183,003 (reasoning subset 54,290), total 85,490,952.
+
+Exact delta: 53,027,950 input, 52,527,104 cached, 0 cache-write, 114,080 output (reasoning subset 36,358), 53,142,030 total. Reconciled 421 requests; largest input 196,288; 0 requests above 272,000. Historical resets: 0; in-boundary resets: 0; exact replay events excluded: 31; repeated cumulative snapshots excluded: 2.
+
+API-equivalent USD 63.24 (unrounded 63.239564).
+
+Exact report: `/private/tmp/pp-producer-implementation-accounting-final.json`.
+Baseline: `/private/tmp/pp-aggregate-distance-producer-baseline.json`.
+
+### Preceding native investigation (separate phase)
+
+This phase covers the released-producer native simulator investigation and shared
+repair design before implementation. It is retained separately from the commit row.
+
+Start: event 83 at `2026-10-04T15:52:13.198Z`; input 10,973,369, cached 10,774,400, cache-write 0, output 18,896 (reasoning subset 3,977), total 10,992,265.
+
+Final: event 301 at `2026-10-04T19:03:46.562Z`; input 32,279,999, cached 31,884,928, cache-write 0, output 68,923 (reasoning subset 17,932), total 32,348,922.
+
+Exact delta: 21,306,630 input, 21,110,528 cached, 0 cache-write, 50,027 output (reasoning subset 13,955), 21,356,657 total. Reconciled 201 requests; largest input 233,146; 0 requests above 272,000. Historical resets: 0; in-boundary resets: 0; exact replay events excluded: 16; repeated cumulative snapshots excluded: 1.
+
+API-equivalent USD 25.57 (unrounded 25.572898).
+
+Exact report: `/private/tmp/pp-native-investigation-accounting-final.json`.
+Baseline: `/private/tmp/pp-native-producer-baseline.json`.

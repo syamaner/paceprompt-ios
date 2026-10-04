@@ -179,7 +179,7 @@ import Foundation
         manifestRevision += 1
         var m = WatchWireMessage(.manifest, summaryID: id)
         m.revision = manifestRevision; m.workoutActivity = activity; m.workoutStart = start
-        m.intervals = latestIntervals; m.schemaVersion = latestIntervals.contains(where: { $0.intervalDistance != nil }) ? 2 : 1; m.final = final; m.workoutEnd = end
+        m.intervals = latestIntervals; m.schemaVersion = 3; m.final = final; m.workoutEnd = end
         m.localOutcome = final ? terminalOutcome : nil; m.distance = final ? terminalDistance : .unavailable
         return m
     }

@@ -25,7 +25,7 @@ enum WatchExecutionProjection {
     static func distance(_ summary: WorkoutExecutionSummary?) -> WatchDistance {
         guard let summary, case let .measuredWithProvenance(metres, provenance) = summary.distance,
               case let .recorded(start, end, _, _)? = summary.activityTimeline,
-              metres > 0, metres.isFinite, provenance.method == .fr30zCumulativeDistanceDelta,
+              metres >= 0, metres.isFinite, provenance.method == .fr30zCumulativeDistanceDelta,
               provenance.startCumulativeMetres >= 0, provenance.finalCumulativeMetres >= provenance.startCumulativeMetres,
               provenance.finalCumulativeMetres - provenance.startCumulativeMetres == metres,
               provenance.startObservedAt == start, provenance.finalObservedAt >= end else { return .unavailable }

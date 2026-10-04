@@ -2,6 +2,28 @@ import Foundation
 
 enum WatchHealthMetadata {
     static let namespace = "com.otherweather.PromptPace."
+    static func workout(_ value: WatchAssembly, distanceDecision: WatchNativeDistanceDecision) -> [String: Any] {
+        let n = namespace
+        var result: [String: Any] = [n+"interchangeSchemaVersion": value.interchangeVersion,
+            n+"summaryID": value.summaryID, n+"ownership": "watchPrimary", n+"interchangeStatus": value.complete ? "complete" : "incomplete",
+            n+"manifestRevision": NSNumber(value: value.revision), n+"intervalCount": value.intervals.count,
+            n+"distanceProvenance": distanceDecision.included ? "fr30zCumulativeDistanceDelta" : "unavailable"]
+        guard value.interchangeVersion == 3 else { return result }
+        result[n+"acceptedDistanceSchemaVersion"] = 1
+        if value.distance.state == "accepted", let metres = value.distance.metres, metres.isFinite, metres >= 0,
+           value.distance.provenance == "fr30zCumulativeDistanceDelta" {
+            result[n+"acceptedDistanceState"] = "accepted"
+            var canonical = metres
+            result[n+"acceptedDistanceMetres"] = NSDecimalString(&canonical, Locale(identifier: "en_US_POSIX"))
+            result[n+"acceptedDistanceProvenance"] = "fr30zCumulativeDistanceDelta"
+        } else {
+            result[n+"acceptedDistanceState"] = "unavailable"
+            result[n+"acceptedDistanceReason"] = "notAccepted"
+        }
+        result[n+"nativeDistanceSampleState"] = distanceDecision.included ? "included" : "suppressed"
+        if let reason = distanceDecision.reason { result[n+"nativeDistanceSampleReason"] = reason.rawValue }
+        return result
+    }
     static func interval(_ i: WatchInterval, summaryID: String) -> [String: Any] {
         let n = namespace
         var result: [String: Any] = [n+"timelineSchemaVersion": 1, n+"summaryID": summaryID, n+"segmentIndex": i.segmentIndex, n+"intervalIndex": i.intervalIndex,
