@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 4 Oct 2026 | `PP-20261004-08` | Internal build 25 protected delivery and release receipt (#116 / WHR #80) | `gpt-6-astra` | 9,209,838 (8,973,568; 0) | 18,556 | 9,228,394 | USD 12.26 (token-only API-equivalent) | Exact 89-request producer delivery phase; root/reviewers excluded and unmeasured; final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-07` | Internal build 25 candidate for accepted workout distance (#116 / WHR #80) | `gpt-6-astra` | 17,280,366 (16,979,200; 0) | 18,032 | 17,298,398 | USD 20.89 (token-only API-equivalent) | Exact 87-request producer candidate phase; root/reviewers excluded and unmeasured; final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-06` | Preserve accepted workout distance across native pauses; synthetic native round trip (#116 / WHR #80) | `gpt-6-astra` | 53,027,950 (52,527,104; 0) | 114,080 | 53,142,030 | USD 63.24 (token-only API-equivalent) | Exact 421-request producer implementation phase; preceding investigation separately detailed; root/reviewers unmeasured and excluded; final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-05` | Internal build 24 protected delivery and release receipt (#116 / #233) | `gpt-6-astra` | 5,484,733 (5,398,144; 0) | 17,314 | 5,502,047 | USD 7.13 (token-only API-equivalent) | Exact 57-request root protected-delivery and receipt phase; child work and reviewers separate; final numeric insertion and later delivery excluded |
@@ -2658,3 +2659,53 @@ Reconciled 87 requests; largest input 215,808;
 API-equivalent USD 20.89 (unrounded 20.892460). Exact report:
 `/private/tmp/pp25-accounting-final.json`; baseline:
 `/private/tmp/pp25-producer-baseline.json`.
+
+
+## PP-20261004-08 — internal build 25 protected delivery and receipt
+
+The release receipt records protected candidate delivery, the single approved
+build-25 tag, independently verified unsigned archive and symbols, protected
+signing/upload, and separately evidenced Apple processing/internal availability.
+This commit changes documentation only. It adds no runtime behavior, permissions,
+provider calls, tester membership or physical-device evidence.
+
+Accounting measures producer child session `01a1042c-09eb-7332-a89d-21ed72dda8ec`
+from the exact already-captured candidate endpoint at event 858 to the final
+snapshot below. That disjoint boundary includes the prior row's final numeric
+insertion, commit/push, protected delivery preparation, release evidence and this
+receipt's prose. The original event-858 timestamp and counters were checked
+against the unmodified structured JSONL before receipt edits. This is not an
+estimated reconstruction. The reviewed read-only fork recovery uses the same
+checked-in reconciliation, reset, repeat/replay and pricing validators described
+in PP-20261004-06. Original transcript and source-prefix/helper/script hashes
+remain private. Root orchestration, root UI and independent reviewer/reader
+sessions are excluded and unmeasured here. This row's final numeric insertion,
+commit/push, exact-head review and subsequent receipt delivery are outside its
+boundary.
+
+Official [GPT-6 Astra rates](https://developers.openai.com/api/docs/models/gpt-6-astra)
+checked 4 October 2026 and recorded in PP-20261004-05: USD 10/M uncached input,
+1/M cached input, 12.50/M cache writes and 50/M output. Above 272,000 input tokens,
+input/cache rates double and output uses 1.5 times its base rate. This is a token-only
+API-equivalent comparison, not a ChatGPT subscription bill. Reasoning remains a
+subset of output and is not added or priced twice.
+
+
+Start: event 858 at `2026-10-04T22:17:25.430Z`; input 104,677,173, cached 103,472,256, cache-write 0, output 203,333 (reasoning subset 59,627), total 104,880,506.
+
+
+Final: event 949 at `2026-10-04T22:43:54.687Z`; input 113,887,011, cached 112,445,824, cache-write 0, output 221,889 (reasoning subset 61,753), total 114,108,900.
+
+Exact delta: 9,209,838 input, 8,973,568 cached,
+0 cache-write, 18,556 output
+(reasoning subset 2,126), 9,228,394 total.
+Reconciled 89 requests; largest input 127,061;
+0 above 272,000. Historical resets:
+0; in-boundary resets:
+0; exact replay events excluded:
+2; repeated cumulative snapshots excluded:
+0.
+
+API-equivalent USD 12.26 (unrounded 12.264068). Exact report:
+`/private/tmp/pp25-delivery-accounting-final.json`; baseline:
+`/private/tmp/pp25-delivery-baseline.json`.
