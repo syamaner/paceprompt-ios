@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 4 Oct 2026 | `PP-20261004-04` | Internal build 24 and accessible privacy policy (#116 / #233) | `gpt-6-astra` | 16,569,582 (16,339,584; 0) | 44,621 | 16,614,203 | USD 20.87 (token-only API-equivalent) | Exact 118-request root candidate/validation and cross-app coordination phase; child work and reviewers separate; final numeric insertion and later delivery excluded |
 | 4 Oct 2026 | `PP-20261004-03` | Preserve observed interval distance and coordinate Health reader #80 (#233) | `gpt-6-astra` | 22,924,346 (22,418,816; 0) | 66,118 | 22,990,464 | USD 30.78 (standard-tier API-equivalent) | Exact 157-request root implementation/validation phase; reader child measured separately in WHR; reviewers, final numeric insertion and post-boundary delivery excluded |
 | 4 Oct 2026 | `PP-20261004-02` | Internal TestFlight build 23 delivery receipt (#232) | `gpt-6-astra` | 4,319,634 (4,301,440; 0) | 7,077 | 4,326,711 | USD 4.84 (standard-tier API-equivalent) | Exact 31-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 4 Oct 2026 | `PP-20261004-01` | Internal TestFlight build 23 candidate (#232) | `gpt-6-astra` | 8,062,780 (8,024,320; 0) | 7,979 | 8,070,759 | USD 8.81 (standard-tier API-equivalent) | Exact 68-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
@@ -2438,3 +2439,67 @@ and 1.5 times output. Exact token-only API-equivalent USD 30.780016, rounded
 USD 30.78; this is not a ChatGPT subscription bill. Private final report:
 `/private/tmp/pp233-accounting-final.json`. Original transcript and exact baseline
 `/private/tmp/paceprompt-interval-enrichment-baseline.json` remain unchanged.
+
+## PP-20261004-04 — internal build 24 and privacy-policy access (#116 / #233)
+
+The operator authorised compatible signed releases, then autonomous work through
+5 October 2026 at 09:07 Europe/London. This candidate starts from protected main
+`5e03c4d42bb63c725be99e9e20c1abcdef7bab62` and advances all four production
+phone/Watch builds to 1.0.1 (24), with matching synthetic release fixtures.
+Release review identified the missing policy link under Apple's TestFlight/privacy
+guidelines. Settings now links to the factual public policy; the release runbook
+requires the matching App Store Connect URL before upload. Policy wording retains
+current limitations, including unavailable individual history deletion.
+
+The change is confined to presentation, release metadata and documentation. It
+adds no storage, permission, provider adapter, treadmill command or recording
+behaviour. Existing domain and single-writer contracts stay unchanged. The large-
+text UI case checks the link without opening a network page. App Store privacy
+questionnaire submission and signed-device Health/Drive acceptance are separate.
+
+Focused checks: 57 release tests, metadata, actionlint, shell syntax and shellcheck
+passed. The focused large-text UI check passed. The initial full gate was stopped
+when the policy-link fix became necessary; it is not final release evidence.
+Replacement complete local gate passed on 4 October 2026 with Xcode 27.0
+(27A266a), SDK 27.0 and the dedicated iPhone 17 Pro / iOS 26.5 simulator:
+529 unit, 78 UI and 16 evaluation-target tests, with zero failures. Release
+simulator build including Watch, static analysis, coverage and binary/metadata
+checks passed. Supporting checks passed: 57 release, 41 scorer, 13 summary,
+247 HostEval (36 expected private-evidence skips) and 24 accounting tests.
+All 419 frozen executable/test/build inputs match. Evidence is retained at
+`/private/tmp/pp24-complete-gate-v2/` and
+`/private/tmp/pp24-complete-gate-v2.log`; the input manifest is
+`/private/tmp/pp24-frozen-inputs-v2.json`. Full diff and `git diff --check` passed.
+
+Accounting uses the exact root session
+`01a10414-79bc-7141-988c-871c3fa7fa31` and its original JSONL. The baseline is
+`/private/tmp/pp24-release-baseline.json`, event 217 at
+`2026-10-04T08:05:48.286Z`, captured before candidate edits. The phase includes
+root preparation, privacy review/repair, validation and cross-app release
+coordination. WeeklyHealthReport child work is measured in its own ledger;
+independent reviewer sessions are excluded. No provider call or personal Health
+access is part of this phase.
+
+Official [GPT-6 Astra rates](https://developers.openai.com/api/docs/models/gpt-6-astra)
+checked 4 October 2026: USD 10/M uncached input, 1/M cached input, 12.50/M cache
+writes and 50/M output. Above 272,000 input tokens, input/cache rates double and
+output uses 1.5 times the base rate. This is a token-only API-equivalent estimate,
+not a ChatGPT subscription bill. Reasoning is a subset of output, never added twice.
+Start: event 217 at `2026-10-04T08:05:48.286Z`; input 28,879,511, cached 28,220,416, cache-write 0, output 85,987 (reasoning subset 33,934), total 28,965,498.
+
+Final: event 346 at `2026-10-04T09:00:11.868Z`; input 45,449,093, cached 44,560,000, cache-write 0, output 130,608 (reasoning subset 54,204), total 45,579,701.
+
+Exact delta: 16,569,582 input, 16,339,584 cached,
+0 cache-write, 44,621 output
+(reasoning subset 20,270), 16,614,203 total.
+The helper reconciles 118 requests; largest input
+194,513; 0 requests above
+272,000. Historical counter resets: 0;
+in-boundary resets: 0; exact replay events
+excluded: 11; repeated cumulative snapshots
+excluded: 0.
+
+API-equivalent USD 20.87 (unrounded 20.870614). Original exact
+report: `/private/tmp/pp24-accounting-final.json`. Final numeric ledger insertion,
+commit/push and later delivery are outside this phase; separate child/reviewer
+sessions are not estimated or added to it.

@@ -46,6 +46,8 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.guided-access")
             }
             Section("Privacy") {
+                Link("Privacy Policy", destination: URL(string: "https://github.com/syamaner/paceprompt-ios/blob/main/docs/privacy-policy.md")!)
+                    .accessibilityIdentifier("settings.privacy.policy")
                 privacyDisclosure(
                     "On this device",
                     text: "Saved plans stay on this device. A key is stored in this device’s Keychain. No analytics are used.",

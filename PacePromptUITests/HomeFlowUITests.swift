@@ -190,6 +190,10 @@ final class HomeFlowUITests: XCTestCase {
     func testPrivacyGroupsRetainDisclosuresAtLargeText() throws {
         launch(scenario: "idle", largeText: true)
         app.buttons["Settings"].tap()
+        let policy = app.descendants(matching: .any)["settings.privacy.policy"]
+        reveal(policy)
+        XCTAssertTrue(policy.isHittable)
+        XCTAssertEqual(policy.label, "Privacy Policy")
         let local = app.staticTexts["settings.privacy.local"]
         reveal(local)
         XCTAssertTrue(local.label.contains("Saved plans stay on this device"))
