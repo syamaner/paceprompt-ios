@@ -1002,3 +1002,51 @@ without retry or replacement. Release evidence does not establish installation,
 interactive VoiceOver, Watch scrolling or physical Health/treadmill acceptance.
 #208, #115/#212 and #116/WeeklyHealthReport #80 remain open for their respective
 acceptance. Candidate preparation is not an upload receipt.
+
+## Internal build 23 release receipt (#232)
+
+On 4 October 2026, [candidate PR #234](https://github.com/syamaner/paceprompt-ios/pull/234)
+merged through protected main as `4c56aaefa0a7b724fe04eed75ba6e6fd6df1d614`,
+from independently approved head `461404c7ed2178d2e74aef7eb31ae954fab334a6`.
+Required [PR CI](https://github.com/syamaner/paceprompt-ios/actions/runs/37163568248)
+and [exact-main CI](https://github.com/syamaner/paceprompt-ios/actions/runs/37163642288)
+passed. The merge has exactly two parents, the reviewed head as second parent,
+and the same tree. All 417 frozen candidate inputs are unchanged. The complete
+gate is recorded above. Immutable lightweight tag `testflight/1.0.1-b23` points
+to this source. The existing admin-only tag-creation exception was used; no tag
+update/deletion occurred and main protection was not bypassed.
+
+[Release run 37163697976](https://github.com/syamaner/paceprompt-ios/actions/runs/37163697976),
+attempt 1, succeeded. Protected-source verification and the credential-free Xcode
+26.6 archive passed before normal environment approval under the operator's
+internal-release authorisation. The trusted tools pin
+`796819b21382ac7dd038fb989e79e1352aaf06ca`, workflow, signing profiles and destination
+are unchanged. The exact-tag export-compliance allowlist used the standing
+no-non-exempt-encryption decision for unchanged encryption behaviour.
+
+Trusted preflight verified the existing app, fresh build and sole-tester internal
+group. Both profiles, signed phone/Watch metadata, privacy and fixed entitlements
+passed. The log records exactly one `UPLOAD SUCCEEDED with no errors` marker.
+The Apple guard verified VALID processing, INTERNAL_ONLY audience, an eligible
+internal beta state and assignment in the unchanged sole-tester group's build list.
+No rerun, second upload, added tester or external/public release occurred.
+
+The Actions wrapper SHA-256 is
+`05b7343ce9cbc7069e980040efef1114b1afe3784f988d5ab51741e0b59dae8d`.
+The inner unsigned archive SHA-256 is
+`b2c61cbb64c97cc312ec28b5800ff50e9d77057f3d1808a174f45737d5d1099b`.
+Both match hosted evidence. Bounded extraction verified source/tag/run/attempt;
+unsigned phone and Watch device validation passed. The package, matching archive
+and both dSYMs are retained privately under
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-23/`, with directory
+mode 700 and file mode 600. No signed IPA or signing asset is retained as an Actions
+artifact. Optional symbol upload remains disabled.
+
+#210/#230 and #231 are now included in internal **1.0.1 (23)**. The previous
+unreleased wording is historical. Update both companions before testing the setup,
+Troubleshooting, privacy and workout-screen changes. These are hosted-release and
+Apple API observations; tester visibility, installation, interactive VoiceOver,
+Watch scrolling and physical Health/treadmill acceptance were not observed.
+#208 remains open for its runtime/device audit. #115/#212 repeated/background/
+recovery acceptance and #116/WeeklyHealthReport #80 reader interchange remain
+separate. No hardware or personal Health data was accessed during this release.
