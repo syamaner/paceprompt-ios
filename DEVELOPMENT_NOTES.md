@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 4 Oct 2026 | `PP-20261004-02` | Internal TestFlight build 23 delivery receipt (#232) | `gpt-6-astra` | 4,319,634 (4,301,440; 0) | 7,077 | 4,326,711 | USD 4.84 (standard-tier API-equivalent) | Exact 31-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 4 Oct 2026 | `PP-20261004-01` | Internal TestFlight build 23 candidate (#232) | `gpt-6-astra` | 8,062,780 (8,024,320; 0) | 7,979 | 8,070,759 | USD 8.81 (standard-tier API-equivalent) | Exact 68-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-08` | Workout captions and grouped privacy (#208) | `gpt-6-astra` | 9,488,041 (9,358,976; 0) | 13,979 | 9,502,020 | USD 11.35 (standard-tier API-equivalent) | Exact 74-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-07` | Treadmill setup and troubleshooting (#210) | `gpt-6-astra` | 16,088,271 (15,936,256; 0) | 21,476 | 16,109,747 | USD 18.53 (standard-tier API-equivalent) | Exact 93-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
@@ -2327,4 +2328,56 @@ historical resets 0; in-boundary resets
 0. Every measured event verifies `gpt-6-astra`.
 Standard-tier API-equivalent USD 8.81 (unrounded 8.807870).
 Private final report `/private/tmp/pp23-accounting-final.json`. Reviewer,
+final numeric insertion and post-boundary exact-head delivery are excluded.
+
+## PP-20261004-02 — Internal build 23 delivery and receipt (#232)
+
+The operator authorised internal delivery of the #210/#231 UI changes. This phase
+covers post-merge source verification, exact-main CI, immutable build-23 tag,
+normal protected-environment approval, one upload, archive retention and receipt.
+Source `4c56aaefa0a7b724fe04eed75ba6e6fd6df1d614`; reviewed candidate
+`461404c7ed2178d2e74aef7eb31ae954fab334a6`; release run `37163697976`, attempt 1.
+Apple VALID/INTERNAL_ONLY processing and unchanged sole-tester-group assignment
+passed. Workflow, tools, signing, privacy and encryption behaviour are unchanged.
+No hardware, provider request, added tester or public/external release.
+
+Exact root-session baseline: event 3401 at `2026-10-04T00:01:19.564Z`;
+input 451,767,869, cached input 444,611,968, cache-write input 0,
+output 1,097,042 (reasoning subset 323,839), total 452,864,911.
+Private baseline `/private/tmp/pp23receipt-baseline.json`; original transcript ends
+in `01a0e504-8937-7c80-9128-08ad4b305f87.jsonl`. Candidate accounting insertion,
+commit/review and merge happened before this snapshot and are excluded here.
+The unchanged helper reconciles counters; each selected event is checked against
+its preceding model context. Reviewer usage and post-boundary delivery are excluded.
+
+Retain the GPT-6 Astra rates checked 3 October 2026 in PP-20261003-05:
+[official model pricing](https://developers.openai.com/api/docs/models/gpt-6-astra).
+USD 10/M uncached input, 1/M cached input, 12.50/M cache-write, 50/M output;
+above 272,000 input, 2× input/cache and 1.5× output. API-equivalent comparison only,
+not a ChatGPT bill; reasoning is included in output.
+
+Only release documentation/accounting change in this receipt. All 417 frozen
+executable/test/build inputs are identical to the fully validated candidate.
+Wrapper digest matches Actions metadata; inner digest matches the hosted signing
+handoff. Bounded extraction and unsigned phone/Watch validation passed, with both
+dSYMs retained privately. Full diff, local links and `git diff --check` passed.
+Independent exact-head review and required CI precede protected receipt merge.
+These observations do not establish tester visibility/installation or physical
+Health/treadmill and interactive VoiceOver acceptance.
+
+End snapshot: event 3432 at `2026-10-04T00:15:34.032Z`;
+input 456,087,503, cached input 448,913,408, cache-write
+input 0, output 1,104,119 (reasoning subset
+324,459), total 457,191,622.
+
+Exact delta: 4,319,634 input, 4,301,440 cached,
+0 cache-write, 7,077 output (reasoning subset
+620), 4,326,711 total across 31 requests.
+Largest input 145,795; threshold crossings 0;
+historical resets 0; in-boundary resets
+0; exact replay events
+0; repeated snapshots
+0. Every measured event verifies `gpt-6-astra`.
+Standard-tier API-equivalent USD 4.84 (unrounded 4.837230).
+Private final report `/private/tmp/pp23receipt-accounting-final.json`. Reviewer,
 final numeric insertion and post-boundary exact-head delivery are excluded.
