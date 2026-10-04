@@ -1174,9 +1174,9 @@ visibility, native zone availability or physical treadmill behaviour. No
 personal Health data, real Drive export or physical treadmill operation was
 performed during this release.
 
-## Accepted workout distance repair (unreleased)
+## Accepted workout distance repair (release evidence below)
 
-The proposed compatible producer/reader update uses Watch interchange v3 and
+The compatible producer/reader update uses Watch interchange v3 and
 WeeklyHealthReport Daily schema 7. It preserves the accepted treadmill aggregate
 separately from HealthKit's native distance statistic. It does not replace native
 statistics, infer distance from interval sums, or change the defined interval and
@@ -1201,8 +1201,9 @@ The repeatable synthetic-only procedure is in
 [`Tools/NativeHealthRoundTrip`](../../Tools/NativeHealthRoundTrip/README.md).
 Native archives and diagnostics remain outside Git.
 
-This section describes an unreleased repair. Delivery requires the repository's
-complete gates, independent review, protected merges and compatible signed builds.
+This section records the repair's contract and validation boundaries. The build-25
+receipt below records its subsequent protected release and compatible reader
+availability; physical and installation acceptance remain separate.
 The synthetic simulator round trip must separately prove native persistence,
 paired-phone visibility, the literal native statistic, and the accepted aggregate
 in the final JSON. It does not establish physical treadmill behaviour, personal
@@ -1286,7 +1287,7 @@ runtime input changed during this test repair, so the native producer evidence
 remains bound to the same production bytes.
 
 
-## Internal build 25 candidate (not uploaded)
+## Internal build 25 candidate (pre-release evidence)
 
 The candidate is PacePrompt **1.0.1 (25)**, prepared from protected merge
 `fa7d7e6c7384f5e5ea30dde89d7057a8388340d5`
@@ -1330,10 +1331,10 @@ Existing policy content covers these phone/Watch data flows and retention contro
 the candidate adds no permission or provider behavior. Recheck any subsequent
 policy or metadata change before upload; an App Store privacy questionnaire is a
 separate record and no submission-compliance claim is made here.
-There is no build-25 upload or availability claim here. Tag creation, export gate
-changes, environment approval and upload remain held until the producer candidate
-passes its final protected source/CI, privacy and release gates. Existing internal-only
-membership is unchanged; physical and installation acceptance remain open.
+At this candidate snapshot, no build-25 upload or availability was claimed. Tag
+creation, export gate changes, environment approval and upload were held for the
+final protected source/CI, privacy and release gates. The subsequent receipt below
+records delivery; physical and installation acceptance remain open.
 
 
 The final build 25 candidate gate completed successfully on the dedicated iOS
@@ -1345,3 +1346,81 @@ at `/private/tmp/pp25-complete-gate` and `/private/tmp/pp25-complete-gate.log`.
 All 429 frozen non-Markdown input hashes in
 `/private/tmp/pp25-frozen-inputs.json` matched after the gate. These are simulator
 and software results; they do not establish installation or physical acceptance.
+
+
+## Internal build 25 release receipt (#116 / WHR #80)
+
+Candidate [PR #240](https://github.com/syamaner/paceprompt-ios/pull/240) merged
+through normal protection as `e2fbb13b43a1b6b8ea3f198d1fa8091ec31f8e40` on
+4 October 2026. Independent review approved exact head
+`1ec8c82a068a4d8dfcb7fabd9507c3a0d58f9188`; the two-parent merge has the same
+tree and retains its exact-head attestation. Required PR CI and exact-main
+[CI 37239637921](https://github.com/syamaner/paceprompt-ios/actions/runs/37239637921)
+passed. The candidate's complete local gate remains the validation authority;
+this receipt changes only documentation, with all 429 frozen non-Markdown inputs
+unchanged.
+
+Immutable lightweight tag `testflight/1.0.1-b25` points to that exact merge.
+Creation used the existing administrator exception in tag-creation ruleset
+23625173, unchanged since 17 September. GitHub's bypass warning is retained;
+this is not a claim that creation passed the restriction without an exception.
+The separate immutable-tag ruleset 23625176 forbids updates/deletion with no
+bypass actors. No tag moved and no protection changed. Trusted tools remain
+pinned to `796819b21382ac7dd038fb989e79e1352aaf06ca`.
+
+The exact-tag export allowlist uses the standing no-non-exempt-encryption decision
+for unchanged behaviour. The protected source and credential-free archive gates
+passed before normal approval of the existing `internal-testflight` environment.
+The public policy hash and matching App Store Connect URL were verified as
+recorded above; no privacy metadata or group membership was changed.
+
+[Release run 37239734011](https://github.com/syamaner/paceprompt-ios/actions/runs/37239734011)
+completed successfully on attempt 1. Trusted preflight verified a fresh build
+and the existing sole-tester internal group before signing credentials were
+imported. Both app/profile checks passed; the verified archive was signed without
+executing candidate build code. Internal-only export and fixed phone/Watch
+metadata, privacy, signing and exact-entitlement checks passed. The retained log
+contains exactly one `UPLOAD SUCCEEDED` marker. The trusted Apple guard required
+VALID processing, INTERNAL_ONLY audience and eligible internal beta state, then
+verified assignment to the unchanged sole-tester group. No rerun, second upload,
+added tester, public release or external distribution occurred.
+
+The independently observed signing-job summary records signed IPA SHA-256
+`18103c3ecc1334faaf0051a2501298f5996f72a81ce3ce3d3b7dfd8d886b5d85`,
+with the exact source, tag and trusted-tools pin above. The signed IPA was
+validated on the hosted runner; it was not copied locally.
+
+The Actions artifact ID is `11316737891`; its wrapper SHA-256 is
+`821be03a2f2698805e54eac2fd875a93ddb155f0a63f93a5c038e1b8567ff0a8`.
+The unsigned archive SHA-256 is
+`4dec157d245f14808adde88c0bd201008204b285c8277192fb7633b3b3e01f03`,
+matching both the downloaded bytes and the independently observed build summary.
+Strict bounded extraction verified source/tag/run/attempt and unsigned phone/Watch
+metadata. Phone arm64 and Watch arm64/arm64_32 executable UUIDs match their dSYMs.
+The wrapper/package, extracted archive, matching symbols and non-sensitive receipt
+are retained privately at
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-25/`, created
+without overwriting an earlier release; directories use mode 700 and files 600.
+No signed IPA or signing asset is retained as an Actions artifact.
+
+Independent App Store Connect UI readback confirmed **1.0.1 (25)** is
+**Testing**, with 90 days remaining, and the existing Issue 113 RC internal group
+still contains one tester. The six-paragraph What to Test text was saved and
+confirmed after an explicit reload at 22:42 UTC, with 1,612 characters and
+2,388 remaining. The notes direct the tester to WeeklyHealthReport 23 while
+retaining compatibility with 22. No tester-side installation or launch was
+observed; App Store Connect availability is a separate claim.
+
+The compatible WeeklyHealthReport **0.1.1 (22)** reader was already confirmed
+Testing before producer release approval. It supports Daily schema 7 and separate
+accepted treadmill distance. WeeklyHealthReport **0.1.1 (23)** was also independently
+confirmed Testing from source `5082236`; it preserves that compatibility.
+Re-exporting an existing PacePrompt workout in reader 23 (22 remains compatible)
+can verify the reader without starting a new treadmill session.
+For new unsafe duration-spanning samples, Apple Health/Fitness may show no native
+distance while the separately accepted total remains available in the compatible
+reader. The synthetic proof and bounded final-submillisecond limitation above
+remain explicit. Issues #116 and WeeklyHealthReport #80 remain open for separate
+installation and supervised physical/HealthKit/export acceptance. No personal
+Health data, real Drive export or physical treadmill operation was performed
+by this release process.
