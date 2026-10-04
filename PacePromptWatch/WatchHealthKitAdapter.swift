@@ -167,7 +167,7 @@ import HealthKit
     func addMetadata(_ value: WatchAssembly, distanceIncluded: Bool) async throws {
         guard let builder else { throw WatchStoreError.ambiguous }
         let n = Self.namespace
-        let metadata: [String: Any] = [n+"interchangeSchemaVersion": 1, n+"summaryID": value.summaryID, n+"ownership": "watchPrimary",
+        let metadata: [String: Any] = [n+"interchangeSchemaVersion": value.intervals.contains(where: { $0.intervalDistance != nil }) ? 2 : 1, n+"summaryID": value.summaryID, n+"ownership": "watchPrimary",
                                       n+"interchangeStatus": value.complete ? "complete" : "incomplete", n+"manifestRevision": NSNumber(value: value.revision),
                                       n+"intervalCount": value.intervals.count, n+"distanceProvenance": distanceIncluded ? "fr30zCumulativeDistanceDelta" : "unavailable",
                                       HKMetadataKeyIndoorWorkout: true, HKMetadataKeySyncIdentifier: n+"workout."+value.summaryID, HKMetadataKeySyncVersion: 1]

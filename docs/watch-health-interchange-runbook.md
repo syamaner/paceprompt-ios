@@ -12,7 +12,7 @@ release, paired-device or physical treadmill acceptance is completed by it.
    immutable SHA and record their digests. Keep schema versions independent.
 2. Implement consumer-owned domain/adapter seams and every applicable state-table
    and fake-store case. Preserve iPhone-only saves and v1/v2 records. #80 preserves
-   v3 Daily fixtures and daily aggregates while introducing schema 4.
+   v3 Daily fixtures and daily aggregates while introducing schema 6 (v4 remains the food projection).
 3. Review the complete diff, privacy boundaries and all failure paths. Run the
    fixture tests and the applicable complete local gate. Review the exact final
    head independently, run required hosted checks and merge through protection.
@@ -96,7 +96,7 @@ fake-store tests; do not deliberately corrupt real Health data to manufacture th
 Run the ordinary user-controlled Daily Export for the same workout. Before export,
 confirm preview explicitly names workout HR summaries, calculated energy and
 PacePrompt intervals, missing visibility, reviewed Drive destination and canonical
-replacement. Read the resulting schema-v4 JSON privately and assert:
+replacement. Read the resulting schema-v6 JSON privately and assert:
 
 - workout min/average/max HR and energy carry `healthKitWorkoutStatistics`, and
   each available activity statistic carries `healthKitActivityStatistics`;
@@ -129,7 +129,7 @@ separate observations; lower-level evidence cannot establish them.
 
 #116 closes only after complete and incomplete interchange, single-writer/no
 fallback, single-source distance (or truthful omission), directional recording
-state and schema-v4 round trip pass on the tested combination. Reconcile #7,
+state and schema-v6 round trip pass on the tested combination. Reconcile #7,
 #115 and #80; #7 closes only after all accepted children finish. An executable
 repair invalidates affected device evidence and requires new focused/full gates
 and exact-head review before repeating it. Record every unperformed case.
@@ -291,3 +291,24 @@ installed candidate repeat the existing foreground phone-end procedure, leave
 Watch untouched and verify one nonempty Health workout separately from History.
 Retain failed/uncertain attempts; no finish retry, phone replacement export or
 Health deletion. Keep personal diagnostics and images out of Git/tracker records.
+
+## Executed-interval enrichment acceptance (#233 / WeeklyHealthReport #80)
+
+Use compatible signed builds containing the [interval contract](../design/workout-interval-enrichment-contract.md).
+Software validation does not close this device gate. In a separately supervised
+session, include a normal planned step, console speed change, inclination change
+and pause/resume. Preserve planned segment indices and verify each executed
+sub-interval without resetting the programme clock. Compare readback start/end,
+HR minimum/average/maximum, HealthKit-estimated energy and independent workout totals.
+Verify v2 distance metadata includes actual cumulative readings and observation
+times. A partial observation window stays partial; reset/missing values stay
+unavailable. No per-activity HealthKit distance interpolation is permitted.
+
+On OS 27+ check available native zone durations, BPM boundaries and source; on
+older OS verify unsupported rather than invented zones. Verify exactly one saved
+workout and permanent phone-save suppression. Export only after explicit review
+of the enriched preview and destination; inspect Daily v6 privately and verify
+historical replacement ordering. Partial coverage need not sum to workout totals.
+Exercise the retained manifest byte/count ceiling synthetically; do not operate
+hardware to force a protocol resource failure. #116 remains open until the
+cross-repository signed-device/HealthKit/reader evidence is complete.

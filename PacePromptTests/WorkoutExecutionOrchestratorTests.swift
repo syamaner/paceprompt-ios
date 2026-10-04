@@ -5,6 +5,62 @@ import XCTest
 
 @MainActor
 final class WorkoutExecutionOrchestratorTests: XCTestCase {
+  func testWatchIntervalDistanceRetainsActualBoundariesAndLocalV4RoundTrip() throws {
+    let h = Harness(stepDuration: 30)
+    try h.prepare()
+    XCTAssertTrue(h.orchestrator.reserveWatchAttempt(id: h.uuid(233)))
+    try h.begin()
+    h.send(.telemetry(epoch: h.epoch, h.sample("0.5", "0", distance: "98")))
+    try h.acknowledgeCurrent(); try h.acknowledgeCurrent(); try h.acknowledgeCurrent()
+    h.send(.telemetry(epoch: h.epoch, h.sample("5", "0", distance: "100")))
+    let start = h.clock.read().monotonic.seconds
+    h.send(.telemetry(epoch: h.epoch, h.sample("5", "0", distance: "101")), monotonic: start + 1)
+    h.send(.telemetry(epoch: h.epoch, h.sample("5", "0", distance: "102")), monotonic: start + 2)
+    h.send(.setSpeedOverride(epoch: h.epoch, h.speed("6")), monotonic: start + 2.5)
+    let interval = try XCTUnwrap(h.orchestrator.watchClosedIntervals.first)
+    let distance = try XCTUnwrap(interval.intervalDistance)
+    XCTAssertEqual(distance.state, "observed")
+    XCTAssertEqual(distance.metres, 2)
+    XCTAssertEqual(distance.startObservedAt, interval.startedAt)
+    XCTAssertLessThan(try XCTUnwrap(distance.endObservedAt), interval.endedAt, "A stale endpoint must not be relabelled as full interval coverage")
+    let summary = try XCTUnwrap(h.orchestrator.lastPersistedSummary)
+    XCTAssertEqual(summary.schemaVersion, 4)
+    let codec = WorkoutHistoryJSONCodec()
+    let bytes = try codec.encode(.init(formatVersion: 1, summaries: [summary]))
+    XCTAssertEqual(try codec.decodeStore(from: bytes).summaries, [summary])
+    XCTAssertEqual(WorkoutHealthPayloadFactory.make(summary: summary, syncVersion: 1), .ineligible)
+  }
+
+  func testWatchDistanceBeginningLaterRetainsItsPartialObservationWindow() throws {
+    let h = Harness(stepDuration: 30)
+    try h.prepare(); XCTAssertTrue(h.orchestrator.reserveWatchAttempt(id: h.uuid(233))); try h.begin()
+    h.send(.telemetry(epoch: h.epoch, h.sample("0.5", "0")))
+    try h.acknowledgeCurrent(); try h.acknowledgeCurrent(); try h.acknowledgeCurrent()
+    h.send(.telemetry(epoch: h.epoch, h.sample("5", "0")))
+    let start = h.clock.read().monotonic.seconds
+    h.send(.telemetry(epoch: h.epoch, h.sample("5", "0", distance: "100")), monotonic: start + 1)
+    h.send(.telemetry(epoch: h.epoch, h.sample("5", "0", distance: "102")), monotonic: start + 2)
+    h.send(.setSpeedOverride(epoch: h.epoch, h.speed("6")), monotonic: start + 2.5)
+    let interval = try XCTUnwrap(h.orchestrator.watchClosedIntervals.first)
+    XCTAssertEqual(interval.intervalDistance?.state, "observed")
+    XCTAssertEqual(interval.intervalDistance?.metres, 2)
+    XCTAssertGreaterThan(try XCTUnwrap(interval.intervalDistance?.startObservedAt), interval.startedAt)
+  }
+
+  func testWatchIntervalDistanceResetRemainsUnavailableWithoutChangingControl() throws {
+    let h = Harness(stepDuration: 30)
+    try h.prepare(); XCTAssertTrue(h.orchestrator.reserveWatchAttempt(id: h.uuid(233))); try h.begin()
+    h.send(.telemetry(epoch: h.epoch, h.sample("0.5", "0", distance: "98")))
+    try h.acknowledgeCurrent(); try h.acknowledgeCurrent(); try h.acknowledgeCurrent()
+    h.send(.telemetry(epoch: h.epoch, h.sample("5", "0", distance: "100")))
+    let start = h.clock.read().monotonic.seconds
+    h.send(.telemetry(epoch: h.epoch, h.sample("5", "0", distance: "1")), monotonic: start + 1)
+    h.send(.telemetry(epoch: h.epoch, h.sample("0", "0", distance: "2")), monotonic: start + 2)
+    let interval = try XCTUnwrap(h.orchestrator.watchClosedIntervals.first)
+    XCTAssertEqual(interval.intervalDistance, .unavailable("invalidDistanceEvidence"))
+    XCTAssertEqual(h.orchestrator.state.currentSegment?.stepIndex, 0)
+  }
+
   func testEqualTargetStepsKeepSeparatePlanTransitionIntervalsWithoutCommands() throws {
     let h = Harness(stepDuration: 10, repeatedTargets: true)
     try h.prepare(); try h.begin()

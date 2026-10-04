@@ -995,7 +995,7 @@ extension WorkoutHistoryExportPreview {
 }
 
 private extension WorkoutExecutionSummary {
-    var hasValidWatchOwnership: Bool { schemaVersion == 3 && ownership == .watchPrimary }
+    var hasValidWatchOwnership: Bool { (schemaVersion == 3 || schemaVersion == 4) && ownership == .watchPrimary }
     var recordingSaveStatus: String {
         hasValidWatchOwnership
             ? "iPhone saving is disabled for this workout. Check Apple Watch for its recording and save status."

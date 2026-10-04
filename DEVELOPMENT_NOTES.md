@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 4 Oct 2026 | `PP-20261004-03` | Preserve observed interval distance and coordinate Health reader #80 (#233) | `gpt-6-astra` | 22,924,346 (22,418,816; 0) | 66,118 | 22,990,464 | USD 30.78 (standard-tier API-equivalent) | Exact 157-request root implementation/validation phase; reader child measured separately in WHR; reviewers, final numeric insertion and post-boundary delivery excluded |
 | 4 Oct 2026 | `PP-20261004-02` | Internal TestFlight build 23 delivery receipt (#232) | `gpt-6-astra` | 4,319,634 (4,301,440; 0) | 7,077 | 4,326,711 | USD 4.84 (standard-tier API-equivalent) | Exact 31-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 4 Oct 2026 | `PP-20261004-01` | Internal TestFlight build 23 candidate (#232) | `gpt-6-astra` | 8,062,780 (8,024,320; 0) | 7,979 | 8,070,759 | USD 8.81 (standard-tier API-equivalent) | Exact 68-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
 | 3 Oct 2026 | `PP-20261003-08` | Workout captions and grouped privacy (#208) | `gpt-6-astra` | 9,488,041 (9,358,976; 0) | 13,979 | 9,502,020 | USD 11.35 (standard-tier API-equivalent) | Exact 74-request root implementation/validation phase; reviewer, final numeric insertion and post-boundary exact-head delivery excluded |
@@ -2381,3 +2382,59 @@ historical resets 0; in-boundary resets
 Standard-tier API-equivalent USD 4.84 (unrounded 4.837230).
 Private final report `/private/tmp/pp23receipt-accounting-final.json`. Reviewer,
 final numeric insertion and post-boundary exact-head delivery are excluded.
+
+
+## PP-20261004-03 — observed interval distance and reader coordination (#233 / WHR #80)
+
+The user authorised autonomous software delivery in isolated worktrees. This
+producer preserves actual first/last cumulative-distance observations for each
+existing executed interval, explicit unavailable evidence and immutable closed
+payloads. Watch-owned local history advances to v4; distance-bearing manifests
+and Health metadata use v2. Original v1 fixtures/history, Watch-only Health
+ownership, single workout-distance source and existing control/splitting policies
+remain unchanged. The shared contract and runbook define schema-6 reader export
+and the separate signed-device #116 round trip.
+
+Independent complete-diff review and the final schema-4 assertion review found
+no remaining findings. Focused producer checks passed 161 tests, the separate
+transport-overflow test, and 32 binding tests. The final complete gate passed
+529 unit, 78 UI and 16 evaluation-target tests, unsigned Release build including
+Watch, Xcode analysis, coverage/binary checks and 24 accounting tests. Offline
+checks passed 57 release, 41 scorer, 13 summary and 247 HostEval tests (36 expected
+private-evidence skips). Xcode 27.0 (27A266a), SDK 27.0, dedicated iPhone 17 Pro /
+iOS 26.5. This is software/simulator evidence, not physical Health acceptance.
+
+Final gate evidence: `/private/tmp/pp233-complete-gate-v3.log` and
+`/private/tmp/pp233-complete-gate-v3/`. All 419 frozen non-Markdown inputs match
+`/private/tmp/pp233-frozen-inputs-v3.json`. The final gate replaces earlier runs
+interrupted for concurrent build-23 integration and an obsolete schema-3 test
+expectation. The later main release receipt at `a8f109f7d4578eb7ac8013e802fe5ff2403424a3`
+changed only documentation; all tested inputs remained byte-identical.
+
+Exact selected root session: `01a10414-79bc-7141-988c-871c3fa7fa31`. Baseline event
+26 at `2026-10-03T23:35:46.454Z`: input 2,213,118,
+cached 2,109,056, cache-write 0,
+output 10,361 (reasoning subset 2,672),
+total 2,223,479. Final event 192 at
+`2026-10-04T00:47:47.510Z`: input 25,137,464, cached 24,527,872,
+cache-write 0, output 76,479
+(reasoning subset 29,747), total 25,213,943.
+
+The exact delta covers 157 requests; largest input 226,383;
+0 requests above 272,000 input tokens.
+Reasoning delta 27,075 is included in output.
+The unchanged accounting helper reconciles all request/cumulative counters and
+excludes 8 exact replay events and
+1 repeated cumulative snapshots.
+Model metadata verifies `gpt-6-astra`. Root coordination and reader audit are
+included here only; the separate reader-agent phase is recorded in WHR
+`WHR-20261004-80`. Independent reviewer sessions, final numeric insertion and
+post-boundary delivery are excluded and never estimated.
+
+Official [GPT-6 Astra rates](https://developers.openai.com/api/docs/models/gpt-6-astra)
+checked 4 October 2026: standard USD 10/M uncached input, 1/M cached input,
+12.50/M cache writes and 50/M output; above 272,000 input, 2 times input/cache
+and 1.5 times output. Exact token-only API-equivalent USD 30.780016, rounded
+USD 30.78; this is not a ChatGPT subscription bill. Private final report:
+`/private/tmp/pp233-accounting-final.json`. Original transcript and exact baseline
+`/private/tmp/paceprompt-interval-enrichment-baseline.json` remain unchanged.

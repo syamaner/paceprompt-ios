@@ -3,8 +3,9 @@ import Foundation
 enum WorkoutExecutionSummarySchema {
     static let legacyVersion = 1
     static let currentVersion = 2
-    static let watchVersion = 3
-    static let supportedVersions: Set<Int> = [legacyVersion, currentVersion, watchVersion]
+    static let legacyWatchVersion = 3
+    static let watchVersion = 4
+    static let supportedVersions: Set<Int> = [legacyVersion, currentVersion, legacyWatchVersion, watchVersion]
 }
 
 struct WorkoutExecutionReasonCode: RawRepresentable, Codable, Equatable {
@@ -205,6 +206,7 @@ struct WorkoutExecutedInterval: Codable, Equatable {
     let effectiveInclination: WorkoutEffectiveInclination
     let settledObservation: WorkoutSettledObservation
     let endReason: WorkoutExecutedIntervalEndReason
+    var intervalDistance: WorkoutIntervalDistance? = nil
 
     /// One producer/validator/export rule for Date subtraction near an integer second.
     /// The microsecond tolerance absorbs floating-point representation, not a missing interval.

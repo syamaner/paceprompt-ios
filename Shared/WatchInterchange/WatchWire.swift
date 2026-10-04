@@ -1,6 +1,6 @@
 import Foundation
 
-// Closed v1 interchange vocabulary; no platform or treadmill capability crosses this boundary.
+// Versioned interchange vocabulary; no platform or treadmill capability crosses this boundary.
 struct WatchInterval: Codable, Equatable {
     struct Prescribed: Codable, Equatable { let kind: String; let speedKilometresPerHour: Decimal; let inclinationPercent: Decimal }
     struct Speed: Codable, Equatable { let kilometresPerHour: Decimal; let source: String }
@@ -15,6 +15,7 @@ struct WatchInterval: Codable, Equatable {
     let effectiveInclination: Inclination
     let settledObservation: Observation
     let endReason: String
+    var intervalDistance: WorkoutIntervalDistance? = nil
 }
 
 struct WatchDistance: Codable, Equatable {
@@ -26,7 +27,7 @@ struct WatchDistance: Codable, Equatable {
 
 struct WatchWireMessage: Codable, Equatable {
     enum Kind: String, Codable { case bind, bound, manifest, ack, prepareEnd, endPrepared, finalize, recordingState }
-    let schemaVersion: Int
+    var schemaVersion: Int
     let summaryID: String
     let kind: Kind
     var workoutActivity: String? = nil
@@ -97,7 +98,8 @@ enum WatchWire {
         case .recordingState: fields = ["sequence", "state", "observedAt"]
         }
         _ = try root.fields(required: fields.union(["schemaVersion", "summaryID", "kind"]))
-        guard try integer(root["schemaVersion"], minimum: 1) == 1,
+        let version = try integer(root["schemaVersion"], minimum: 1)
+        guard (version == 1 || (version == 2 && kind == .manifest)),
               let id = root["summaryID"]?.string, let uuid = UUID(uuidString: id), uuid.uuidString.lowercased() == id else { throw WatchWireError.invalid }
         if let r = root["revision"] { _ = try integer(r, minimum: kind == .ack ? 0 : 1) }
         if let s = root["sequence"] { _ = try integer(s, minimum: 1) }
@@ -105,7 +107,7 @@ enum WatchWire {
         for key in ["workoutStart", "observedAt"] where root[key] != nil { _ = try dateValue(root[key]) }
         if kind == .endPrepared { _ = try dateValue(root["workoutEnd"]) }
         if kind == .recordingState { try member(root["state"], ["paused", "running"]) }
-        if kind == .manifest { try validateManifest(root) }
+        if kind == .manifest { try validateManifest(root, version: version) }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in try date(decoder.singleValueContainer().decode(String.self)) }
         return try decoder.decode(WatchWireMessage.self, from: data)
@@ -121,7 +123,21 @@ enum WatchWire {
     private static func dateValue(_ v: ImportJSON?) throws -> Date {
         guard let text = v?.string else { throw WatchWireError.invalid }; return try date(text)
     }
-    private static func validateManifest(_ root: ImportJSON) throws {
+    static func validateIntervalDistance(_ value: ImportJSON?, start: Date, end: Date) throws {
+        guard let value, try integer(value["schemaVersion"], minimum: 1) == 1 else { throw WatchWireError.invalid }
+        if value["state"] == .string("unavailable") {
+            _ = try value.fields(required: ["schemaVersion", "state", "reason"])
+            try member(value["reason"], WorkoutIntervalDistance.unavailableReasons)
+            return
+        }
+        _ = try value.fields(required: ["schemaVersion", "state", "startCumulativeMetres", "endCumulativeMetres", "startObservedAt", "endObservedAt", "metres", "provenance"])
+        guard value["state"] == .string("observed"), value["provenance"] == .string("fr30zCumulativeDistanceDelta"),
+              let first = value["startCumulativeMetres"], let last = value["endCumulativeMetres"], let metres = value["metres"] else { throw WatchWireError.invalid }
+        let a = try dateValue(value["startObservedAt"]), b = try dateValue(value["endObservedAt"])
+        let x = try first.decimal(), y = try last.decimal(), delta = try metres.decimal()
+        guard x >= 0, y >= x, delta == y - x, a >= start, b <= end, b > a else { throw WatchWireError.invalid }
+    }
+    private static func validateManifest(_ root: ImportJSON, version: Int64) throws {
         guard case let .bool(final)? = root["final"], let intervals = root["intervals"]?.array, intervals.count <= 64 else { throw WatchWireError.invalid }
         let start = try dateValue(root["workoutStart"])
         var end: Date?
@@ -132,7 +148,7 @@ enum WatchWire {
         } else if root["workoutEnd"] != .null || root["localOutcome"] != .null { throw WatchWireError.invalid }
         var previousEnd = start, previousSegment: Int64 = -1, previousIndex: Int64 = -1
         for i in intervals {
-            _ = try i.fields(required: ["segmentIndex", "intervalIndex", "startedAt", "endedAt", "prescribed", "effectiveSpeed", "effectiveInclination", "settledObservation", "endReason"])
+            _ = try i.fields(required: Set(["segmentIndex", "intervalIndex", "startedAt", "endedAt", "prescribed", "effectiveSpeed", "effectiveInclination", "settledObservation", "endReason"]).union(version == 2 ? ["intervalDistance"] : []))
             let segment = try integer(i["segmentIndex"]), index = try integer(i["intervalIndex"])
             guard segment >= previousSegment,
                   segment > previousSegment ? index == 0 : (previousIndex < Int64.max && index == previousIndex + 1) else { throw WatchWireError.invalid }
@@ -150,6 +166,7 @@ enum WatchWire {
                 guard let value = object[key] else { throw WatchWireError.invalid }; _ = try value.decimal()
             }
             try member(i["endReason"], ["planTransition", "targetChanged", "paused", "completed", "endedByUser", "interrupted", "failed"])
+            if version == 2 { try validateIntervalDistance(i["intervalDistance"], start: a, end: b) }
             previousEnd = b; previousSegment = segment; previousIndex = index
         }
         guard let d = root["distance"] else { throw WatchWireError.invalid }
@@ -176,5 +193,37 @@ struct WatchSendBudget {
         if kind == 0, let lastNonfinal, now - lastNonfinal < 5 { return false }
         if kind == 2, bytes > 512 || same.count >= 16 { return false }
         sends.append((now, bytes, kind)); if kind == 0 { lastNonfinal = now }; return true
+    }
+}
+
+// Actual endpoint evidence only. This type has no hardware, store or HealthKit dependency.
+struct WorkoutIntervalDistance: Codable, Equatable {
+    let schemaVersion: Int
+    let state: String
+    var reason: String? = nil
+    var startCumulativeMetres: Decimal? = nil
+    var endCumulativeMetres: Decimal? = nil
+    var startObservedAt: Date? = nil
+    var endObservedAt: Date? = nil
+    var metres: Decimal? = nil
+    var provenance: String? = nil
+    static let unavailableReasons: Set<String> = ["missingBoundary", "invalidDistanceEvidence", "legacyInterval"]
+    static func unavailable(_ reason: String = "missingBoundary") -> Self {
+        .init(schemaVersion: 1, state: "unavailable", reason: reason)
+    }
+    static func observed(startMetres: Decimal, endMetres: Decimal, start: Date, end: Date) -> Self {
+        .init(schemaVersion: 1, state: "observed", startCumulativeMetres: startMetres, endCumulativeMetres: endMetres,
+              startObservedAt: start, endObservedAt: end, metres: endMetres - startMetres, provenance: "fr30zCumulativeDistanceDelta")
+    }
+    func isValid(start: Date, end: Date) -> Bool {
+        guard schemaVersion == 1 else { return false }
+        if state == "unavailable" {
+            return reason.map(Self.unavailableReasons.contains) == true && startCumulativeMetres == nil && endCumulativeMetres == nil
+                && startObservedAt == nil && endObservedAt == nil && metres == nil && provenance == nil
+        }
+        guard state == "observed", reason == nil, let x = startCumulativeMetres, let y = endCumulativeMetres,
+              let a = startObservedAt, let b = endObservedAt, let delta = metres else { return false }
+        return x.isFinite && y.isFinite && delta.isFinite && x >= 0 && y >= x && delta == y - x
+            && a >= start && b <= end && b > a && provenance == "fr30zCumulativeDistanceDelta"
     }
 }

@@ -35,7 +35,8 @@ struct WatchBuilderActivity: Equatable {
         // SDK callback failures may leave partial mutation; never retry them in another builder.
         stage(.activities)
         for interval in value.intervals {
-            guard interval.startedAt >= value.start, interval.endedAt <= value.end else { throw WatchStoreError.definite }
+            guard interval.startedAt >= value.start, interval.endedAt <= value.end,
+                  interval.intervalDistance.map({ $0.isValid(start: interval.startedAt, end: interval.endedAt) }) ?? true else { throw WatchStoreError.definite }
             do { try await builder.addActivity(interval, summaryID: value.summaryID, activity: value.activity) }
             catch { throw WatchStoreError.ambiguous }
             try validate()
