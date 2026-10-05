@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 5 Oct 2026 | `PP-20261005-02` | Internal build 26 candidate for Watch saved-start repair (#212) | `gpt-6-astra` | 13,387,079 (13,325,440; 0) | 19,448 | 13,406,527 | USD 14.91 (token-only API-equivalent) | Exact 72-request producer candidate phase; root/reviewers excluded and unmeasured; final numeric insertion and delivery excluded |
 | 5 Oct 2026 | `PP-20261005-01` | Honour a new Watch Start during saved foreground cleanup (#212) | `gpt-6.1-sol` | 11,152,238 (11,044,224; 0) | 32,800 | 11,185,038 | Not calculated | Exact 57-request root phase; historical session spans models; reviewer, final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-08` | Internal build 25 protected delivery and release receipt (#116 / WHR #80) | `gpt-6-astra` | 9,209,838 (8,973,568; 0) | 18,556 | 9,228,394 | USD 12.26 (token-only API-equivalent) | Exact 89-request producer delivery phase; root/reviewers excluded and unmeasured; final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-07` | Internal build 25 candidate for accepted workout distance (#116 / WHR #80) | `gpt-6-astra` | 17,280,366 (16,979,200; 0) | 18,032 | 17,298,398 | USD 20.89 (token-only API-equivalent) | Exact 87-request producer candidate phase; root/reviewers excluded and unmeasured; final numeric insertion and delivery excluded |
@@ -2760,3 +2761,51 @@ Exact delta: 11,152,238 input, 11,044,224 cached,
 Reconciled 57 requests; largest input 224,000;
 0 above 272,000. Report:
 `/private/tmp/pp-watch-start-accounting-final.json`.
+
+
+## PP-20261005-02 — internal build 26 candidate
+
+The candidate changes four production phone/Watch build settings from 25 to 26
+and the corresponding release fixtures, preserving effective negative checks.
+It includes candidate documentation, focused checks, the complete simulator gate
+and independent review. Runtime implementation, signing tools, workflow, privacy
+policy and permissions are unchanged. No release-triggering tag, export gate,
+environment approval or upload is part of this phase.
+
+Accounting measures producer child session `01a1042c-09eb-7332-a89d-21ed72dda8ec`
+from its exact event-976 baseline captured before worktree/edit preparation to
+the final snapshot below. The original fork JSONL remains unmodified. The same
+reviewed read-only recovery described in PP-20261004-06 binds child/parent metadata
+and original event ordinals, using the checked-in reconciliation, reset,
+repeat/replay and pricing validators. Original transcript, recovery script/helper
+and source-prefix hashes remain private. Root coordination and independent
+reviewer/reader sessions are excluded and unmeasured here. Final numeric insertion,
+commit/push, exact-head review and later delivery are outside this boundary.
+
+Official [GPT-6 Astra rates](https://developers.openai.com/api/docs/models/gpt-6-astra)
+checked 4 October 2026 and recorded in PP-20261004-05 (that dated basis is reused,
+not claimed as a fresh pricing check on 5 October): USD 10/M uncached input,
+1/M cached input, 12.50/M cache writes and 50/M output. Above 272,000 input tokens,
+input/cache rates double and output uses 1.5 times its base rate. This is a token-only
+API-equivalent comparison, not a ChatGPT subscription bill. Reasoning remains a
+subset of output and is not added or priced twice.
+
+
+Start: event 976 at `2026-10-05T05:44:08.767Z`; input 117,841,456, cached 116,348,416, cache-write 0, output 228,180 (reasoning subset 62,526), total 118,069,636.
+
+
+Final: event 1049 at `2026-10-05T06:24:16.500Z`; input 131,228,535, cached 129,673,856, cache-write 0, output 247,628 (reasoning subset 69,599), total 131,476,163.
+
+Exact delta: 13,387,079 input, 13,325,440 cached,
+0 cache-write, 19,448 output
+(reasoning subset 7,073), 13,406,527 total.
+Reconciled 72 requests; largest input 198,193;
+0 above 272,000. Historical resets:
+0; in-boundary resets:
+0; exact replay events excluded:
+1; repeated cumulative snapshots excluded:
+0.
+
+API-equivalent USD 14.91 (unrounded 14.914230). Exact report:
+`/private/tmp/pp26-accounting-final.json`; baseline:
+`/private/tmp/pp26-producer-baseline.json`.
