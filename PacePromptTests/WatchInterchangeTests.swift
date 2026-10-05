@@ -269,6 +269,86 @@ import XCTest
         var j = WatchWorkoutJournal(activity: "indoorWalking"); j.phase = .saved; j.summaryID = id; j.startedAt = start
         j.savedWorkoutID = "11400000-0000-4000-8000-000000000099"; return j
     }
+    func testLaunchDuringSavedForegroundCleanupStartsOnceAfterVerifiedStop() async throws {
+        let disk = TestJournal(); let saved = savedJournal(); disk.value = saved
+        let backend = TestSessionOperations(); backend.holdStop = true
+        let lifecycle = WatchWorkoutLifecycle(store: disk, recording: WatchRecordingAdapter(operations: backend),
+            now: { self.start }, monotonic: { self.clock.time }, send: { _ in })
+        let foreground = Task { await lifecycle.foreground() }
+        while backend.stopWaiter == nil { await Task.yield() }
+        await lifecycle.launch(activity: "indoorWalking")
+        await lifecycle.launch(activity: "indoorWalking")
+        XCTAssertEqual(disk.value, saved)
+        XCTAssertFalse(backend.calls.contains("create"))
+        backend.holdStop = false; backend.stopWaiter?.resume(); backend.stopWaiter = nil
+        await foreground.value
+        XCTAssertEqual(backend.calls.filter { $0 == "create" }.count, 1)
+        XCTAssertEqual(lifecycle.journal?.phase, .unbound)
+        XCTAssertTrue(lifecycle.canEnd); XCTAssertTrue(lifecycle.canStop)
+        XCTAssertEqual(lifecycle.display, "Connecting to iPhone…")
+        var bind = WatchWireMessage(.bind, summaryID: "11400000-0000-4000-8000-000000000002")
+        bind.workoutActivity = "indoorWalking"
+        await lifecycle.receive(try WatchWire.encode(bind))
+        XCTAssertEqual(lifecycle.journal?.phase, .recording)
+        XCTAssertEqual(lifecycle.display, "Recording on Apple Watch")
+        XCTAssertTrue(lifecycle.canEnd); XCTAssertTrue(lifecycle.canStop)
+        XCTAssertFalse(backend.calls.contains("finish"))
+    }
+    func testLaunchDuringColdSavedRecoveryIsRetainedUntilProbeCompletes() async throws {
+        let disk = TestJournal(); disk.value = savedJournal()
+        let backend = TestSessionOperations(); backend.holdRecovery = true
+        let lifecycle = WatchWorkoutLifecycle(store: disk, recording: WatchRecordingAdapter(operations: backend),
+            now: { self.start }, monotonic: { 0 }, send: { _ in })
+        let recovery = Task { await lifecycle.recover() }
+        while backend.recoveryWaiter == nil { await Task.yield() }
+        await lifecycle.launch(activity: "indoorRunning")
+        XCTAssertEqual(lifecycle.journal?.phase, .saved)
+        XCTAssertEqual(lifecycle.display, "Preparing next workout. Closing previous recording…")
+        backend.holdRecovery = false; backend.recoveryWaiter?.resume(returning: nil); backend.recoveryWaiter = nil
+        await recovery.value
+        XCTAssertEqual(lifecycle.journal?.activity, "indoorRunning")
+        XCTAssertEqual(lifecycle.journal?.phase, .unbound)
+        XCTAssertEqual(backend.calls.filter { $0 == "create" }.count, 1)
+        XCTAssertFalse(backend.calls.contains("finish"))
+    }
+    func testQueuedSavedLaunchIsClearedOnFailureOrTimeoutAndCannotStartLate() async throws {
+        for timeout in [false, true] {
+            clock.time = 0
+            let disk = TestJournal(); let saved = savedJournal(); disk.value = saved
+            let backend = TestSessionOperations(); backend.holdStop = true
+            let lifecycle = WatchWorkoutLifecycle(store: disk, recording: WatchRecordingAdapter(operations: backend),
+                now: { self.start }, monotonic: { self.clock.time }, send: { _ in })
+            let foreground = Task { await lifecycle.foreground() }
+            while backend.stopWaiter == nil { await Task.yield() }
+            await lifecycle.launch(activity: "indoorWalking")
+            if timeout { clock.time = 15; await lifecycle.tick() }
+            backend.holdStop = false
+            if timeout { backend.stopWaiter?.resume() }
+            else { backend.stopWaiter?.resume(throwing: WatchStoreError.ambiguous) }
+            backend.stopWaiter = nil; await foreground.value
+            XCTAssertEqual(disk.value, saved); XCTAssertEqual(lifecycle.journal, saved)
+            XCTAssertFalse(backend.calls.contains("create")); XCTAssertFalse(backend.calls.contains("finish"))
+            await lifecycle.foreground()
+            XCTAssertEqual(disk.value, saved)
+            XCTAssertFalse(backend.calls.contains("create"), "Foreground retry must not resurrect the failed Start")
+            await lifecycle.launch(activity: "indoorWalking")
+            XCTAssertEqual(backend.calls.filter { $0 == "create" }.count, 1)
+        }
+    }
+    func testDuplicateLaunchWhileLaunchOwnsSavedCleanupDoesNotCreateTwice() async throws {
+        let disk = TestJournal(); disk.value = savedJournal()
+        let backend = TestSessionOperations(); backend.holdStop = true
+        let lifecycle = WatchWorkoutLifecycle(store: disk, recording: WatchRecordingAdapter(operations: backend),
+            now: { self.start }, monotonic: { 0 }, send: { _ in })
+        let launch = Task { await lifecycle.launch(activity: "indoorWalking") }
+        while backend.stopWaiter == nil { await Task.yield() }
+        await lifecycle.launch(activity: "indoorWalking")
+        backend.holdStop = false; backend.stopWaiter?.resume(); backend.stopWaiter = nil
+        await launch.value; await lifecycle.foreground()
+        XCTAssertEqual(backend.calls.filter { $0 == "create" }.count, 1)
+        XCTAssertEqual(lifecycle.journal?.phase, .unbound)
+        XCTAssertTrue(lifecycle.canEnd); XCTAssertTrue(lifecycle.canStop)
+    }
     func testColdSavedReceiptWaitsForMatchingNativeCleanupBeforeNewIdentity() async throws {
         let disk = TestJournal(); let saved = savedJournal(); disk.value = saved
         let backend = TestSessionOperations(); backend.recovered = .init(start: start, activity: "indoorWalking", indoor: true); backend.holdStop = true

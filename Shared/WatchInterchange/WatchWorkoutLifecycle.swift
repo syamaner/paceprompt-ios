@@ -77,6 +77,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
     private(set) var stopVerified = false
     private var recoveryRequired = false
     private var savedCleanupVerified = false
+    private var pendingSavedLaunch: String?
     private var budget = WatchSendBudget()
     private var startupDeadline: TimeInterval?
     private var recordingAttached = false
@@ -109,7 +110,18 @@ enum WatchStoreError: Error { case definite, ambiguous }
         }
     }
     func launch(activity: String) async {
-        guard recoveryGeneration == nil, journal == nil || [.saved, .discarded, .retired].contains(journal!.phase), ["indoorWalking", "indoorRunning"].contains(activity) else { return }
+        guard ["indoorWalking", "indoorRunning"].contains(activity) else { return }
+        if recoveryGeneration != nil {
+            // App foreground recovery may still be closing the last saved
+            // primary when the phone delivers its explicit new Start. Retain
+            // one request, then honour it only after that cleanup is verified.
+            if journal?.phase == .saved, pendingSavedLaunch == nil {
+                pendingSavedLaunch = activity
+                display = "Preparing next workout. Closing previous recording…"; changed?()
+            }
+            return
+        }
+        guard journal == nil || [.saved, .discarded, .retired].contains(journal!.phase) else { return }
         do {
             if let previous = try store.load() {
                 journal = previous
@@ -122,6 +134,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
             }
         } catch { display = "Workout details could not be read. Unlock your Watch and reopen PacePrompt."; changed?(); return }
         generation &+= 1; let token = generation
+        pendingSavedLaunch = nil
         savedCleanupVerified = false
         stopVerified = false; stopping = false; recoveryRequired = false; operationDeadline = nil
         budget = WatchSendBudget(); pendingBind = nil; endDeadline = nil; recordingAttached = false; pauseInFlight = false; resumeInFlight = false; desiredRecordingState = nil
@@ -148,7 +161,10 @@ enum WatchStoreError: Error { case definite, ambiguous }
         let value = original; journal = value
         guard [1, 2].contains(value.formatVersion) else { quarantine(); return }
         if value.phase == .retired { display = "Ready. Start a new workout on iPhone."; changed?(); return }
-        if value.phase == .saved { _ = await cleanUpSaved(value); return }
+        if value.phase == .saved {
+            if await cleanUpSaved(value) { await launchAfterSavedCleanup() }
+            return
+        }
         if value.phase == .discarded {
             display = emptyDiscardDisplay
             changed?(); return
@@ -192,8 +208,14 @@ enum WatchStoreError: Error { case definite, ambiguous }
         } catch {
             guard acceptCompletion(token) else { return false }
             operationDeadline = nil
+            pendingSavedLaunch = nil
             display = "Workout saved. Previous recording could not be closed. Reopen the Watch app to try again."; changed?(); return false
         }
+    }
+    private func launchAfterSavedCleanup() async {
+        guard savedCleanupVerified, recoveryGeneration == nil, let activity = pendingSavedLaunch else { return }
+        pendingSavedLaunch = nil
+        await launch(activity: activity)
     }
     func receive(_ data: Data) async {
         await tick()
@@ -365,7 +387,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
     }
     func foreground() async {
         if let value = journal, value.phase == .saved, !savedCleanupVerified, recoveryGeneration == nil {
-            _ = await cleanUpSaved(value)
+            if await cleanUpSaved(value) { await launchAfterSavedCleanup() }
         } else { await recover() }
         await tick()
         if recoveryGeneration == nil, let value = journal, value.phase == .recording, let id = value.summaryID, let start = value.startedAt {
@@ -409,6 +431,7 @@ enum WatchStoreError: Error { case definite, ambiguous }
     private func expireOperation() {
         generation &+= 1; recoveryGeneration = nil; operationDeadline = nil; stopping = false; stopVerified = false
         if journal?.phase == .saved {
+            pendingSavedLaunch = nil
             recording.cancelSavedCleanup(); savedCleanupVerified = false
             display = "Workout saved. Closing previous recording timed out. Reopen the Watch app to try again."; changed?(); return
         }
