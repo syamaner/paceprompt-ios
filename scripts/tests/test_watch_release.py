@@ -19,7 +19,7 @@ class WatchReleaseTests(unittest.TestCase):
         self.watch = self.app / policy.role('watch')['path']
 
     def test_unsigned_pair_and_each_macho_slice(self):
-        guard.unsigned(self.app, 'testflight/1.0.1-b25')
+        guard.unsigned(self.app, 'testflight/1.0.1-b26')
         for signed in (False, True):
             self.assertEqual(policy.macho(f.fat_watch(signed), 'watch', signed), {0x100000c, 0x200000c})
             with self.assertRaisesRegex(ValueError, 'platform'):
@@ -67,14 +67,14 @@ class WatchReleaseTests(unittest.TestCase):
             for key, value in changes.items():
                 path.write_bytes(plistlib.dumps({**info, key: value}))
                 with self.subTest(role=role, key=key), self.assertRaises(ValueError):
-                    guard.unsigned(self.app, 'testflight/1.0.1-b25')
+                    guard.unsigned(self.app, 'testflight/1.0.1-b26')
             path.write_bytes(original)
             privacy = bundle / 'PrivacyInfo.xcprivacy'; original_privacy = privacy.read_bytes()
             privacy.write_bytes(plistlib.dumps({'NSPrivacyTracking': True}))
-            with self.assertRaisesRegex(ValueError, 'privacy'): guard.unsigned(self.app, 'testflight/1.0.1-b25')
+            with self.assertRaisesRegex(ValueError, 'privacy'): guard.unsigned(self.app, 'testflight/1.0.1-b26')
             privacy.write_bytes(original_privacy)
         (self.watch / 'PacePromptWatch').write_bytes(f.macho('watch', platform=9))
-        with self.assertRaisesRegex(ValueError, 'platform'): guard.unsigned(self.app, 'testflight/1.0.1-b25')
+        with self.assertRaisesRegex(ValueError, 'platform'): guard.unsigned(self.app, 'testflight/1.0.1-b26')
 
     def test_profiles_are_role_bound_and_entitlements_fixed(self):
         for role in policy.BUNDLES:
@@ -121,8 +121,8 @@ class WatchReleaseTests(unittest.TestCase):
             prefix = 'D115000000000000000007' + config + ' /* '
             start = project.index(prefix, project.index('/* Begin XCBuildConfiguration section */'))
             end = project.index('\n', start)
-            altered = project[:start] + project[start:end].replace('CURRENT_PROJECT_VERSION = 25;', 'CURRENT_PROJECT_VERSION = 99;') + project[end:]
-            with self.assertRaises(ValueError): guard.check_tag('testflight/1.0.1-b25', altered)
+            altered = project[:start] + project[start:end].replace('CURRENT_PROJECT_VERSION = 26;', 'CURRENT_PROJECT_VERSION = 99;') + project[end:]
+            with self.assertRaises(ValueError): guard.check_tag('testflight/1.0.1-b26', altered)
 
     def test_exported_pair_checks_each_profile_and_exact_entitlements(self):
         f.app_tree(self.app, signed=True)
@@ -136,17 +136,17 @@ class WatchReleaseTests(unittest.TestCase):
              patch.object(guard.subprocess, 'run') as verify, \
              patch.object(guard, 'verify_signing_leaf') as leaf, \
              patch.object(guard, 'signed_entitlements', side_effect=lambda p, architecture: entitlements['watch' if p == self.watch else 'phone']):
-            guard.artifact(self.app, 'testflight/1.0.1-b25', f.TEAM, f.FINGERPRINT)
+            guard.artifact(self.app, 'testflight/1.0.1-b26', f.TEAM, f.FINGERPRINT)
             self.assertEqual([call.args[0] for call in leaf.call_args_list], [self.watch, self.app])
             self.assertEqual(verify.call_count, 2)
             for role in policy.BUNDLES:
                 entitlements[role]['unapproved-capability'] = True
                 with self.subTest(role=role), self.assertRaisesRegex(ValueError, 'entitlements'):
-                    guard.artifact(self.app, 'testflight/1.0.1-b25', f.TEAM, f.FINGERPRINT)
+                    guard.artifact(self.app, 'testflight/1.0.1-b26', f.TEAM, f.FINGERPRINT)
                 del entitlements[role]['unapproved-capability']
                 profiles[role]['ExpirationDate'] = dt.datetime(2000, 1, 1)
                 with self.assertRaisesRegex(ValueError, 'expired'):
-                    guard.artifact(self.app, 'testflight/1.0.1-b25', f.TEAM, f.FINGERPRINT)
+                    guard.artifact(self.app, 'testflight/1.0.1-b26', f.TEAM, f.FINGERPRINT)
                 profiles[role] = f.profile(role)
 
     def test_exported_ipa_paths_types_collisions_and_bounds_fail_before_extraction(self):

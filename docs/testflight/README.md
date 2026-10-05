@@ -1424,3 +1424,62 @@ remain explicit. Issues #116 and WeeklyHealthReport #80 remain open for separate
 installation and supervised physical/HealthKit/export acceptance. No personal
 Health data, real Drive export or physical treadmill operation was performed
 by this release process.
+
+
+## Internal build 26 candidate (not uploaded)
+
+The candidate is PacePrompt **1.0.1 (26)**, prepared from protected repair merge
+`2be0ebd93966e7459d56cee28c8d37e49cc4e5aa`
+([PR #242](https://github.com/syamaner/paceprompt-ios/pull/242)). Exact-main
+[CI 37269349582](https://github.com/syamaner/paceprompt-ios/actions/runs/37269349582)
+passed. The repair retains one explicit new Watch launch received while saved
+foreground recovery is verifying cleanup, then follows the existing recording
+path only after cleanup succeeds. Failure/timeout clears that request, and
+duplicates cannot create twice. Four deterministic regressions cover the race;
+they do not establish the operator device's exact failure stage or installation.
+
+Only the four phone/Watch production build settings and the matching four release
+fixture files change for this candidate. Deliberately invalid version/mismatch
+fixtures remain effective. No runtime, wire/Health schema, treadmill control,
+permission, signing or workflow behavior is changed by the version increment.
+The existing tools pin remains
+`796819b21382ac7dd038fb989e79e1352aaf06ca`. The release workflow, guards, handoff,
+policy, app privacy source and entitlements match the build-25 release evidence.
+Build 25 remains the latest successful hosted release; the build-26 tag was absent
+at preparation. Recheck freshness before any release action. Apple app/build and
+unchanged sole-tester group verification remains the trusted hosted preflight's
+responsibility before signing credentials are imported or an upload occurs.
+
+The existing privacy policy still covers the candidate's unchanged data flows.
+Its public URL returned HTTP 200 and the raw source matched the candidate
+exactly on 5 October 2026 (SHA-256
+`e9162e7a3c649d3b4a00b45ce99e7564ebe2bee58b6316b0abd37fee584d705c`);
+the private receipt is `/private/tmp/pp26-public-policy-receipt.json`. Matching
+App Store Connect URL evidence remains the independently observed build-25
+readback at 22:00:23 UTC on 4 October, retained in
+`/private/tmp/pp25-asc-policy-readback.json`. Browser authentication expired;
+a fresh App Store Connect UI readback and build-26 notes are not claimed. Under
+the standing release authority, the unchanged app/privacy/encryption behavior,
+current published policy and dated matching-URL evidence permit the normal
+protected release gates to proceed. Trusted hosted Apple freshness, processing
+and existing-group checks remain mandatory and supply release availability
+evidence independently of Safari. Optional notes/UI readback is unperformed;
+no browser login is required to release. The standing no-non-exempt-encryption
+decision applies to unchanged behavior only.
+No release-triggering tag, export-compliance allowlist change, protected
+environment approval or upload has occurred for this candidate. Those actions
+remain gated by the final complete candidate checks, exact-head review,
+protected merge with attestation, exact-main CI and the operator's release
+authority. Existing tester membership and build-25 receipts remain unchanged.
+
+
+The final candidate gate passed on the dedicated iOS 26.5 simulator: 544 unit
+and 78 UI tests (622 total), plus 16 evaluation tests, with zero failures/skips
+in both result summaries. Release builds including Watch, static analysis,
+coverage/binary/metadata checks and offline checks passed (57 release, 41 scorer,
+13 summary, 247 host evaluation with 36 expected skips, and 24 accounting tests).
+All 430 frozen non-Markdown inputs matched after validation. Private evidence:
+`/private/tmp/pp26-complete-gate`, `/private/tmp/pp26-complete-gate.log`,
+`/private/tmp/pp26-frozen-inputs.json`, `/private/tmp/pp26-test-summary.json` and
+`/private/tmp/pp26-evaluation-summary.json`. These remain software/simulator
+results, not installed-device or physical treadmill acceptance.
