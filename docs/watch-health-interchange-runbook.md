@@ -312,3 +312,30 @@ historical replacement ordering. Partial coverage need not sum to workout totals
 Exercise the retained manifest byte/count ceiling synthetically; do not operate
 hardware to force a protocol resource failure. #116 remains open until the
 cross-repository signed-device/HealthKit/reader evidence is complete.
+
+## Starting again while the previous saved recording closes (#212)
+
+Watch foreground recovery can still be verifying termination of a previously
+saved primary when iPhone delivers a new explicit Start. The Watch retains one
+supported Start during that saved cleanup and shows "Preparing next workout.
+Closing previous recording…". Once matching cleanup succeeds, it creates the
+new attempt once and follows the ordinary mirror/bind/collection path. The
+existing saved receipt stays intact until cleanup has been verified. Duplicate
+launch callbacks do not create additional sessions.
+
+A failed cleanup or its existing 15-second timeout clears the waiting Start.
+Foreground retry or a late callback cannot resurrect it; a subsequent new Start
+is required. An unrelated native primary still fails identity verification.
+This queue applies only to an explicit launch during saved cleanup, never an
+uncertain save, a recovered active recording or an automatic programme restart.
+
+Regression coverage holds native-operation ports at the cleanup stop and recovery
+probe boundaries. It checks new recording/binding and controls, cold recovery,
+duplicate starts, failures, timeout and late completion. The new foreground-race
+test failed on the released source with zero creates, a saved journal and hidden
+recording controls; all 137 Watch lifecycle tests pass with the repair.
+These are deterministic simulator tests through the production lifecycle and
+recording adapter, not proof of the operator's native device failure stage.
+After an installed repair, verify the existing phone-start procedure reaches a
+new Watch recording with advancing elapsed time and its recording end/recovery
+controls. Device acceptance and any physical workout remain supervised.

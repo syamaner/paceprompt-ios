@@ -80,6 +80,7 @@ Pricing authority for Claude models: [Anthropic pricing documentation](https://p
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 5 Oct 2026 | `PP-20261005-01` | Honour a new Watch Start during saved foreground cleanup (#212) | `gpt-6.1-sol` | 11,152,238 (11,044,224; 0) | 32,800 | 11,185,038 | Not calculated | Exact 57-request root phase; historical session spans models; reviewer, final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-08` | Internal build 25 protected delivery and release receipt (#116 / WHR #80) | `gpt-6-astra` | 9,209,838 (8,973,568; 0) | 18,556 | 9,228,394 | USD 12.26 (token-only API-equivalent) | Exact 89-request producer delivery phase; root/reviewers excluded and unmeasured; final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-07` | Internal build 25 candidate for accepted workout distance (#116 / WHR #80) | `gpt-6-astra` | 17,280,366 (16,979,200; 0) | 18,032 | 17,298,398 | USD 20.89 (token-only API-equivalent) | Exact 87-request producer candidate phase; root/reviewers excluded and unmeasured; final numeric insertion and delivery excluded |
 | 4 Oct 2026 | `PP-20261004-06` | Preserve accepted workout distance across native pauses; synthetic native round trip (#116 / WHR #80) | `gpt-6-astra` | 53,027,950 (52,527,104; 0) | 114,080 | 53,142,030 | USD 63.24 (token-only API-equivalent) | Exact 421-request producer implementation phase; preceding investigation separately detailed; root/reviewers unmeasured and excluded; final numeric insertion and delivery excluded |
@@ -2709,3 +2710,53 @@ Reconciled 89 requests; largest input 127,061;
 API-equivalent USD 12.26 (unrounded 12.264068). Exact report:
 `/private/tmp/pp25-delivery-accounting-final.json`; baseline:
 `/private/tmp/pp25-delivery-baseline.json`.
+
+## PP-20261005-01 — retain an explicit start during saved Watch cleanup
+
+A new phone Start could arrive while Watch foreground recovery was verifying
+termination of its previous saved primary. The launch guard returned silently;
+cleanup then left the saved display and no recording controls. The new
+regression failed on released source with no new session, a saved journal and
+hidden controls. The repair retains one supported explicit launch until saved
+cleanup succeeds, then follows the existing prepare/mirror/bind/collection path.
+Failure or timeout clears it, and duplicate callbacks cannot create twice.
+
+Architecture gate: this is orchestration in the existing SDK-independent Watch
+lifecycle, using the existing recording capability and injected clock. The
+recording adapter owns native proof; presentation continues to observe lifecycle
+capabilities. Receipt identity, uncertain writes, one finish, permanent phone-save
+suppression, native source and wire/schema invariants remain closed. No new
+provider, persistence abstraction, Health permission or treadmill effect is
+introduced. Four contract regressions exercise the volatile callback ordering,
+verified-stop boundary and cancellation. The runbook documents device follow-up.
+
+The focused simulator result has 137 passing Watch lifecycle tests, including
+four new tests. The regression's original failing result and passing suite are
+retained privately in `/private/tmp/pp-watch-start-before.xcresult` and
+`/private/tmp/pp-watch-start-after.xcresult`. Independent read-only review found no
+issues in the lifecycle or tests. The complete gate passed 544 unit, 78 UI and
+16 evaluation tests, Release builds including Watch, static analysis and offline
+checks. Both result bundles independently report zero failures/skips, and all
+430 frozen non-Markdown input hashes matched. Evidence is retained privately in
+`/private/tmp/pp-watch-start-full`. These results do not establish the operator
+device's exact failure stage or installed-device acceptance.
+
+Accounting uses root session `01a10414-79bc-7141-988c-871c3fa7fa31` and the exact
+pre-implementation baseline at event 1739, `2026-10-05T05:04:21.859Z`:
+212,867,068 input, 209,477,376 cached, 0 cache-write, 351,989 output
+(reasoning subset 136,967), 213,219,057 total. The baseline is retained in
+`/private/tmp/pp-watch-start-saved-baseline.json`; independent producer review is
+excluded and unmeasured. The original transcript is unchanged. Phase turn context
+reports `gpt-6.1-sol`; the full historical session also contains `gpt-6-astra`.
+The checked-in helper reconciles the exact phase counters without cost arguments.
+No API-equivalent estimate is calculated because its cost validator requires a
+single model across the selected session. Final numeric insertion and later
+commit, review, push and release delivery are excluded from this boundary.
+
+Final endpoint: event 1797 at `2026-10-05T05:42:09.987Z`.
+Exact delta: 11,152,238 input, 11,044,224 cached,
+0 cache-write, 32,800 output
+(reasoning subset 22,376), 11,185,038 total.
+Reconciled 57 requests; largest input 224,000;
+0 above 272,000. Report:
+`/private/tmp/pp-watch-start-accounting-final.json`.
