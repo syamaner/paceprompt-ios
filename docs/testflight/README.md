@@ -1426,7 +1426,7 @@ Health data, real Drive export or physical treadmill operation was performed
 by this release process.
 
 
-## Internal build 26 candidate (not uploaded)
+## Internal build 26 candidate (pre-release evidence)
 
 The candidate is PacePrompt **1.0.1 (26)**, prepared from protected repair merge
 `2be0ebd93966e7459d56cee28c8d37e49cc4e5aa`
@@ -1445,9 +1445,9 @@ permission, signing or workflow behavior is changed by the version increment.
 The existing tools pin remains
 `796819b21382ac7dd038fb989e79e1352aaf06ca`. The release workflow, guards, handoff,
 policy, app privacy source and entitlements match the build-25 release evidence.
-Build 25 remains the latest successful hosted release; the build-26 tag was absent
-at preparation. Recheck freshness before any release action. Apple app/build and
-unchanged sole-tester group verification remains the trusted hosted preflight's
+Build 25 was the latest successful hosted release and the build-26 tag was absent
+at preparation. Freshness was rechecked before the release recorded below. Apple
+app/build and unchanged sole-tester group verification remains the trusted hosted preflight's
 responsibility before signing credentials are imported or an upload occurs.
 
 The existing privacy policy still covers the candidate's unchanged data flows.
@@ -1466,11 +1466,12 @@ and existing-group checks remain mandatory and supply release availability
 evidence independently of Safari. Optional notes/UI readback is unperformed;
 no browser login is required to release. The standing no-non-exempt-encryption
 decision applies to unchanged behavior only.
-No release-triggering tag, export-compliance allowlist change, protected
-environment approval or upload has occurred for this candidate. Those actions
-remain gated by the final complete candidate checks, exact-head review,
-protected merge with attestation, exact-main CI and the operator's release
-authority. Existing tester membership and build-25 receipts remain unchanged.
+At candidate preparation, no release-triggering tag, export-compliance allowlist
+change, protected environment approval or upload had occurred. Those actions
+were gated by the final complete candidate checks, exact-head review, protected
+merge with attestation, exact-main CI and the operator's release authority;
+the completed release is recorded below. Existing tester membership and build-25
+receipts remain unchanged.
 
 
 The final candidate gate passed on the dedicated iOS 26.5 simulator: 544 unit
@@ -1483,3 +1484,73 @@ All 430 frozen non-Markdown inputs matched after validation. Private evidence:
 `/private/tmp/pp26-frozen-inputs.json`, `/private/tmp/pp26-test-summary.json` and
 `/private/tmp/pp26-evaluation-summary.json`. These remain software/simulator
 results, not installed-device or physical treadmill acceptance.
+
+
+## Internal build 26 release receipt (#212)
+
+Candidate [PR #243](https://github.com/syamaner/paceprompt-ios/pull/243) merged
+through normal protection as `12024db78ba809197f7f65596cef134e8c2e20e1` on
+5 October 2026. Independent review approved exact head
+`f044747bfca8df9e96aa5f95175526f4936e9962`; the two-parent merge has the same
+tree and retains its exact-head attestation. Required PR CI and exact-main
+[CI 37272361544](https://github.com/syamaner/paceprompt-ios/actions/runs/37272361544)
+passed. The complete candidate gate above remains the validation authority;
+this receipt changes documentation only, with all 430 frozen non-Markdown inputs
+unchanged.
+
+Immutable lightweight tag `testflight/1.0.1-b26` points to that merge. The existing
+administrator exception in tag-creation ruleset 23625173 was used; its warning is
+retained, and no restriction is claimed to have passed without that exception.
+The separate immutable-tag ruleset 23625176 forbids update/deletion with no
+bypass actors. Neither ruleset changed. Trusted tools remain pinned to
+`796819b21382ac7dd038fb989e79e1352aaf06ca`. The exact-tag export allowlist uses the
+standing no-non-exempt-encryption decision for unchanged behavior.
+
+The current public policy and explicitly dated build-25 matching App Store
+Connect URL evidence are recorded above. Safari sign-in is not required for the
+trusted release pipeline. Optional build-26 What to Test notes were prepared but
+not saved, and no fresh App Store Connect UI readback is claimed. Existing
+protected approval and hosted Apple API checks remain separate from browser UI.
+
+[Release run 37272473489](https://github.com/syamaner/paceprompt-ios/actions/runs/37272473489)
+completed successfully on attempt 1. The protected source and credential-free
+archive passed before normal approval of the existing `internal-testflight`
+environment. Trusted Apple preflight verified a fresh build and the existing
+sole-tester internal group before signing identity import. Both app/profile
+checks passed; the verified archive was signed without executing candidate
+build code. Internal-only export and fixed phone/Watch metadata, privacy,
+signing and exact-entitlement checks passed. The retained signing log contains
+exactly one `UPLOAD SUCCEEDED` marker.
+
+The trusted Apple API guard required VALID processing, INTERNAL_ONLY audience
+and an eligible internal beta state, then verified assignment to the unchanged
+sole-tester group. This establishes internal release availability through the
+pipeline; it does not claim a fresh browser UI observation or tester-side
+installation. No rerun, second upload, added tester, public release or external
+distribution occurred.
+
+The independently observed signing-job summary reports signed IPA SHA-256
+`04dfda236d2c56394921b50d516f8ca1cf369dc50a55bf468b9ef1bad959ac3f`
+for the exact source, tools and tag above. No local signed IPA possession is
+claimed.
+
+The Actions artifact ID is `11329525598`; its wrapper SHA-256 is
+`ec55f830fd367a3504934392ec65737493daf8878a8f8bd19153186f9163a008`.
+The unsigned archive SHA-256 is
+`341795c2919da1e7384b25d11e59b5ad2305b5bf6c4dd25599653b30d3ec4c05`,
+matching the downloaded bytes and independently observed build summary. Strict
+bounded extraction verified source/tag/run/attempt and unsigned phone/Watch
+metadata. Phone arm64 and Watch arm64/arm64_32 executable UUIDs match their dSYMs.
+The wrapper/package, extracted archive, matching symbols and non-sensitive receipt
+are retained privately under
+`~/Library/Application Support/PacePrompt/ReleaseArchives/1.0.1-26/`, created
+without overwriting an earlier release; directories use mode 700 and files 600.
+No signed IPA or signing asset is retained as an Actions artifact.
+
+This release carries the reviewed saved-cleanup Start fix without changing wire,
+Health export, treadmill control or privacy behavior. Deterministic regressions
+and the complete simulator gate are software evidence; they do not establish the
+operator device's exact failure stage or installed-device acceptance. No tester
+installation/launch, personal Health access, Drive export or physical treadmill
+operation was observed or performed by this release process. #212 remains open
+for the installed-device Start/progress/recording-control check in the runbook.
