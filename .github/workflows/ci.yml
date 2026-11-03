@@ -65,7 +65,8 @@ jobs:
     # runs; scripts/validate_local.sh remains required before merge.
     name: Deterministic full validation
     runs-on: macos-26
-    timeout-minutes: 45
+    # The UI suite alone took 39 minutes on 3 November 2026.
+    timeout-minutes: 90
 
     steps:
       - name: Check out repository
