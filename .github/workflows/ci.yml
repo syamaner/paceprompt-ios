@@ -61,10 +61,9 @@ jobs:
             -s .agents/skills/codex-phase-accounting/tests -v
 
   validate:
-    # Temporary issue #69 policy: full hosted validation is manual while every
-    # candidate change must pass scripts/validate_local.sh before merge.
-    name: Deterministic full validation (manual)
-    if: github.event_name == 'workflow_dispatch'
+    # Complete hosted validation on pull requests, pushes to main and manual
+    # runs; scripts/validate_local.sh remains required before merge.
+    name: Deterministic full validation
     runs-on: macos-26
     timeout-minutes: 45
 
