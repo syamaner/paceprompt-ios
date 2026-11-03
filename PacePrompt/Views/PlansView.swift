@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct PlansView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject var viewModel: PlansViewModel
     let capabilities: WorkoutPlanCapabilities
     var profiles: PlanningProfilesViewModel? = nil
@@ -196,7 +197,7 @@ struct PlansView: View {
             }
             Section {
                 ForEach(rows) { row in
-                    HStack(spacing: 12) {
+                    savedPlanActionsLayout {
                         Button {
                             guard let record = viewModel.records.first(where: { $0.id == row.id }) else { return }
                             viewModel.beginEdit(record)
@@ -247,6 +248,14 @@ struct PlansView: View {
         }
         .listStyle(.plain)
         .contentMargins(.horizontal, 16, for: .scrollContent)
+    }
+
+    private var savedPlanActionsLayout: AnyLayout {
+        if dynamicTypeSize.isAccessibilitySize {
+            AnyLayout(VStackLayout(alignment: .trailing, spacing: 8))
+        } else {
+            AnyLayout(HStackLayout(spacing: 12))
+        }
     }
 
     private func blockedView(_ status: PlansStatusPresentation) -> some View {
@@ -462,32 +471,25 @@ private struct SavedPlanRow: View {
     let row: PlansPlanRowPresentation
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
                 Text(row.name)
                     .font(.headline)
                     .fixedSize(horizontal: false, vertical: true)
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 7) {
-                        Label(row.activity, systemImage: row.activitySymbol)
-                        Text("·")
-                        Text(row.stepCount)
-                        Text("·")
-                        Text(row.duration)
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Label(row.activity, systemImage: row.activitySymbol)
-                        Text("\(row.stepCount) · \(row.duration)")
-                    }
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.forward")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
-            Spacer(minLength: 8)
-            Image(systemName: "chevron.forward")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Label(row.activity, systemImage: row.activitySymbol)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("\(row.stepCount) · \(row.duration)")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
         }
         .padding(16)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
