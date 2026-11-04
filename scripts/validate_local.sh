@@ -40,27 +40,7 @@ case "$toolchain_identity" in
     ;;
 esac
 
-control_write_sites=$(rg -n '\.writeValue\(' PacePrompt --glob '*.swift' || true)
-if [[ $(printf '%s\n' "$control_write_sites" | sed '/^$/d' | wc -l | tr -d ' ') -ne 1 ]] \
-  || [[ "$control_write_sites" != *"CoreBluetoothFTMSControlPointLink.swift"* ]]; then
-  echo "Production must contain exactly one reviewed CoreBluetooth write edge" >&2
-  printf '%s\n' "$control_write_sites" >&2
-  exit 1
-fi
-
-if rg -n 'case (start|stop|pause)$|case \.(start|stop|pause)|submit\(\.(start|stop|pause)' \
-  PacePrompt/Bluetooth/FTMSControlPointCodec.swift \
-  PacePrompt/Bluetooth/FTMSControlPointTransport.swift \
-  PacePrompt/Execution/ProductionWorkoutExecutionBinding.swift; then
-  echo "Production unexpectedly contains an FTMS Start or Stop command route" >&2
-  exit 1
-fi
-
-if rg -n 'CBCentralManagerOptionRestoreIdentifierKey|willRestoreState' PacePrompt --glob '*.swift'; then
-  echo "Production must not opt into CoreBluetooth state restoration" >&2
-  exit 1
-fi
-
+python3 -B scripts/verify_treadmill_control_surface.py
 python3 -B scripts/verify_planning_profile_boundaries.py
 python3 -B scripts/verify_import_resources.py
 python3 -B scripts/verify_release_configuration.py
