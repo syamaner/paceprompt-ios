@@ -36,7 +36,8 @@ The remote must be `syamaner/paceprompt-ios`, and the final command must print
 `/Applications/Xcode_26.6.app/Contents/Developer`, with iOS Simulator SDK 26.5.
 A different local Xcode version does not validate that hosted toolchain.
 Read the checked-in workflows before changing any toolchain pin. The complete
-local gate also supports Xcode 27.0 (27A266a) with Simulator SDK 27.0, and uses
+local gate also supports Xcode 27.0 (27A266a) with Simulator SDK 27.0 and Xcode
+27.2 (27B52) with Simulator SDK 27.2, and uses
 `uv` to run the locked HostEval tests with Python 3.13. Complete Xcode's first
 launch, required component installation and licence prompts before validation.
 

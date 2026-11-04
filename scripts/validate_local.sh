@@ -32,7 +32,8 @@ simulator_sdk=$(xcrun --sdk iphonesimulator --show-sdk-version)
 toolchain_identity="$xcode_version|$xcode_build|$simulator_sdk"
 case "$toolchain_identity" in
   "Xcode 26.6|Build version 17F113|26.5" \
-  | "Xcode 27.0|Build version 27A266a|27.0") ;;
+  | "Xcode 27.0|Build version 27A266a|27.0" \
+  | "Xcode 27.2|Build version 27B52|27.2") ;;
   *)
     echo "Unsupported Xcode and Simulator SDK combination: $toolchain_identity" >&2
     exit 1

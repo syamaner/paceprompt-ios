@@ -83,6 +83,7 @@ Supported validation toolchains:
 
 - Xcode 26.6 (build 17F113) with iPhoneOS and iPhoneSimulator SDK 26.5
 - Xcode 27.0 (build 27A266a) with iPhoneOS and iPhoneSimulator SDK 27.0
+- Xcode 27.2 (build 27B52) with iPhoneOS and iPhoneSimulator SDK 27.2
 - iOS 17 minimum deployment target for the production app
 - watchOS 10 minimum deployment target for the optional companion (built by the iPhone scheme)
 - iOS 26 minimum deployment target for the developer-only Foundation Models evaluation app
@@ -158,7 +159,8 @@ build, static analysis, deterministic corpus checks and the developer-only
 evaluation tests, on the standard macOS 26 runner with Xcode 26.6. Complete local
 validation through `scripts/validate_local.sh` is still required, and the
 pull-request template records its exact evidence; the local gate also accepts the
-explicitly pinned Xcode 27.0 toolchain. The informational Codecov upload runs from
+explicitly pinned Xcode 27.0 and 27.2 toolchains. Hosted CI stays on Xcode 26.6
+because GitHub offers Xcode 27.2 only as a release candidate on a preview image. The informational Codecov upload runs from
 the Actions **Run workflow** control. All
 Xcode builds are unsigned, and evaluation gates use only checked-in synthetic
 fixtures; neither local nor hosted validation has a provider credential or makes a
