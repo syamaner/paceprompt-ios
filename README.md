@@ -2,9 +2,11 @@
 
 [![Codecov coverage](https://codecov.io/gh/syamaner/paceprompt-ios/graph/badge.svg?branch=main)](https://app.codecov.io/gh/syamaner/paceprompt-ios)
 
-PacePrompt is a local-first iPhone app for turning plain-English interval workouts into validated treadmill plans and, in later authorised slices, running them on a Reebok FR30z over Bluetooth FTMS.
+PacePrompt is a local-first iPhone app for turning plain-English interval workouts into validated treadmill plans and running them on a Reebok FR30z over Bluetooth FTMS, with the person at the treadmill console always in charge of the belt.
 
 The core product rule is: AI may propose a plan; deterministic local code validates it and controls the treadmill.
+
+The code was written by a coding agent (Codex) under the rules in [`AGENTS.md`](AGENTS.md); the product decisions, safety principles and physical-treadmill sessions were the author's. It is a personal app for one person and one treadmill model, not a general FTMS library.
 
 ## Current slice
 
@@ -38,7 +40,7 @@ This version contains:
 - an optional watchOS 10 companion with one Watch-owned HealthKit recording, mirrored interval manifests, available heart rate and estimated active energy; see the [Watch operating runbook](docs/watch-companion-runbook.md);
 - a bounded History surface for deliberately saving an eligible version-2 workout to Apple Health as one indoor walking or running workout, with optional accepted distance and namespaced prescribed, effective-target and separately observed interval metadata. Authorization is write-only, requested only after confirmation, and retry state is kept separate from the local workout facts.
 
-The target-only execution binding is fail-closed in ordinary production use: its app-owned authority always returns no active proof session, no setting, launch argument or persisted value can unlock it, and unmatched FTMS machines remain passive. A later, separately authorised #62 proof session must inject an exact local peripheral/equipment identity and current session authority before the binding can even enable Control Point indications. Compilation and simulator tests do not authorise or prove physical treadmill behaviour.
+The target-only execution binding stays passive unless the connected machine matches the characterised FR30z exactly: its Fitness Machine Feature, Supported Speed Range and Supported Inclination Range bytes must equal the values read from the real treadmill, and it must expose the expected Read, Notify, Write and Indicate properties. Only then does it enable Control Point indications, and any other FTMS machine remains read-only. The production command surface is limited to Request Control, Set Target Speed and Set Target Inclination. Immediately before every write, the binding rechecks the connection epoch, the current procedure, foreground state, the capability profile, telemetry freshness, transport readiness, control permission and the target's range and increment. Compilation and simulator tests do not prove physical treadmill behaviour.
 
 The production app does **not** contain plan recovery, recovery-byte export, complete-store export, History deletion UI, bulk deletion or local-data reset UI, automatic or background export or inference, Apple Foundation Models integration, provider fallback, model comparison results, an FTMS Start/Stop/Pause command. The iPhone does not read Health data; the optional Watch companion reads available heart rate and active energy and saves its own recording. The developer-only evaluation target, corpus, scorer and raw-run boundary remain excluded from the production bundle. The production OpenRouter path sends nothing until the user reviews the exact disclosure and agrees to that one request.
 
@@ -150,20 +152,14 @@ Use another listed iPhone simulator if that model is not installed.
 
 ## Continuous integration and coverage
 
-Temporary issue #69 policy: ordinary pull requests and pushes to `main` run only
-the fast repository checks. Complete validation is required locally through
-`scripts/validate_local.sh`; the pull-request template records its exact evidence.
-This avoids waiting for the slow hosted Xcode suite on every merge without skipping
-or weakening any local test. Local evidence is not independent hosted evidence, so
-this policy is explicit and reversible rather than a claim that the two environments
-are equivalent.
-
-The Actions **Run workflow** control retains the complete hosted production unit/UI
-suite, Release simulator build, static analysis, deterministic corpus checks,
-developer-only evaluation tests and informational Codecov upload on the standard
-macOS 26 runner with Xcode 26.6. The local gate also accepts the explicitly pinned
-Xcode 27.0 toolchain. Use that manual path whenever hosted confirmation is warranted
-and restore its pull-request/main triggers when the high-throughput period ends. All
+Pull requests and pushes to `main` run the fast repository checks and the
+complete hosted validation: the production unit/UI suite, a Release simulator
+build, static analysis, deterministic corpus checks and the developer-only
+evaluation tests, on the standard macOS 26 runner with Xcode 26.6. Complete local
+validation through `scripts/validate_local.sh` is still required, and the
+pull-request template records its exact evidence; the local gate also accepts the
+explicitly pinned Xcode 27.0 toolchain. The informational Codecov upload runs from
+the Actions **Run workflow** control. All
 Xcode builds are unsigned, and evaluation gates use only checked-in synthetic
 fixtures; neither local nor hosted validation has a provider credential or makes a
 model-provider call.
@@ -208,11 +204,11 @@ The first separately authorised Request Control attempt on 9 September 2026 subm
 
 After issue #72 established callback-order-safe correlation and issue #76 added a protected diagnostic journal, a separately authorised proof on 10 September 2026 submitted exact `00` once. One well-formed `80 00 01` indication arrived for the same connection and procedure approximately 2.1 milliseconds before the successful ATT callback; the indication remained provisional until ATT acceptance, after which the procedure was acknowledged. The operator explicitly disconnected and separately reported no belt movement. The [sanitised accepted proof](docs/validation/fr30z-request-control-success-2026-09-10.md) establishes Request Control for that completed connection only.
 
-On 11 September, low-value speed and inclination targets were separately submitted, acknowledged, later reported exactly by `0x2ACD`, and confirmed by the operator across physical-console Stop/Start cycles. FTMS Start and Stop acknowledgements did not provide reliable physical control, so they are excluded from production. The resulting policy is specific to the characterised equipment/profile and still requires a separately authorised end-to-end product proof in issue #62.
+On 11 September, low-value speed and inclination targets were separately submitted, acknowledged, later reported exactly by `0x2ACD`, and confirmed by the operator across physical-console Stop/Start cycles. FTMS Start and Stop acknowledgements did not provide reliable physical control, so they are excluded from production. The resulting policy is specific to the characterised equipment/profile. The end-to-end workout proof in issue #62 passed on 13 September 2026 ([evidence](docs/validation/fr30z-workout-proof-success-2026-09-13.md)).
 
 ## Repository guidance
 
-Product and design sources stay under `design/`. Project-wide safety and slice rules are in `AGENTS.md`; repository-local skills are maintained under `.agents/skills`. Per-commit Codex token measurements and API-equivalent estimates are recorded in `DEVELOPMENT_NOTES.md`.
+Product and design sources stay under `design/`. Project-wide safety and slice rules are in `AGENTS.md`; repository-local skills are maintained under `.agents/skills`. `DEVELOPMENT_NOTES.md` is a deliberate engineering-process experiment: it records per-commit agent token measurements and labelled API-equivalent comparison estimates. It is not a bill and not evidence of productivity or quality. Early UI mock-ups are in `design/ui-ideas/`; they reuse the author's design system from an earlier project, RoastPilot.
 
 ## Watch-primary interchange
 
