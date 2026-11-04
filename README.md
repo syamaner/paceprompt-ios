@@ -6,7 +6,69 @@ PacePrompt is a local-first iPhone app for turning plain-English interval workou
 
 The core product rule is: AI may propose a plan; deterministic local code validates it and controls the treadmill.
 
+![How PacePrompt turns a sentence into a workout: the coach writes it, the AI suggests steps, the app checks them against the treadmill's limits, and the person presses Start on the console](docs/images/readme/how-it-works.png)
+
 The code was written by a coding agent (Codex) under the rules in [`AGENTS.md`](AGENTS.md); the product decisions, safety principles and physical-treadmill sessions were the author's. It is a personal app for one person and one treadmill model, not a general FTMS library.
+
+## Safeguards
+
+A treadmill can hurt someone, so the safety rules came before any code and most of them are enforced by the build rather than by review.
+
+**The person at the console stays in charge of the belt**
+
+- Production has no FTMS Start, Stop or Pause command. The belt is started, paused and stopped on the treadmill console; the app only adjusts speed and incline while it is moving. Why: FTMS Start and Stop acknowledgements did not give reliable physical control on the real treadmill ([11 September characterisation](docs/validation/fr30z-console-target-characterisation-2026-09-11.md), [physical-console execution profile](design/fr30z-physical-console-execution-profile.md)).
+- The production command surface is exactly Request Control, Set Target Speed and Set Target Inclination, through one reviewed CoreBluetooth write edge ([`CoreBluetoothFTMSControlPointLink`](PacePrompt/Bluetooth/CoreBluetoothFTMSControlPointLink.swift), encoded by [`FTMSControlPointCodec`](PacePrompt/Bluetooth/FTMSControlPointCodec.swift)). SwiftUI never receives a write operation.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/readme/preflight-ready.png" alt="Workout check screen: Reebok FR30z ready to begin, treadmill limits 20.0 km/h and 15.0 %, and a reminder to start and stop the belt at the console"></td>
+    <td width="50%"><img src="docs/images/readme/exercise-confirmed.png" alt="Exercise screen with a manual override: speed and inclination each show the treadmill reading, the plan value and the person's setting, both confirmed by the treadmill"></td>
+  </tr>
+  <tr>
+    <td>Before a workout: the checks have passed and the belt is started at the console.</td>
+    <td>During a workout: the treadmill's own reading is shown beside the plan and the person's setting, and a setting is marked confirmed only when the treadmill's latest report matches it.</td>
+  </tr>
+</table>
+
+**The app only controls the treadmill it was characterised on**
+
+- Control stays off unless the connected machine's Fitness Machine Feature, Supported Speed Range and Supported Inclination Range bytes match the values read from the real FR30z exactly, with the expected Read, Notify, Write and Indicate properties. Any other FTMS machine stays read-only ([`ProductionWorkoutExecutionBinding`](PacePrompt/Execution/ProductionWorkoutExecutionBinding.swift)).
+- Immediately before every write, the execution binding rechecks the connection epoch, the current procedure, foreground state, the capability profile, telemetry freshness, transport readiness, control permission and the target's range and increment. Targets are never clamped or rounded ([`WorkoutPlanValidator`](PacePrompt/Plans/WorkoutPlanValidator.swift)).
+
+**AI proposes; local code decides**
+
+- Imported workouts are untrusted proposals. Deterministic local code maps and validates every step against the current capabilities, the person sees the exact plan, and saving is a separate confirmation ([proposal, privacy and evaluation contract](design/workout-proposal-privacy-and-evaluation-contract.md), [workout-import evaluation](Evaluation/WorkoutImport/README.md)).
+- The import makes one request only after a fresh disclosure and consent each time, with the OpenRouter key kept device-only in Keychain. There is no account, analytics, telemetry or cloud storage; see [Privacy](#privacy).
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/images/readme/ai-request-disclosure.png" alt="Review AI request screen explaining exactly what leaves the device, what stays local, and that the plan must be reviewed and confirmed before saving"></td>
+    <td width="33%"><img src="docs/images/readme/validated-plan.png" alt="Imported plan preview showing that treadmill compatibility is not yet checked, with the complete plan and derived totals"></td>
+    <td width="33%"><img src="docs/images/readme/validation-rejected.png" alt="Plan editor blocking preview with two errors: the final step must be a cool-down, and step 2 duration must be greater than 0 seconds"></td>
+  </tr>
+  <tr>
+    <td>Every AI request is disclosed and agreed to first.</td>
+    <td>The result is a proposal to review, not a saved plan.</td>
+    <td>Invalid plans are blocked, never silently corrected.</td>
+  </tr>
+</table>
+
+**What the build enforces**
+
+| Check | Where it runs |
+| --- | --- |
+| Exactly one Bluetooth write edge, no Start/Stop/Pause route and no state restoration (`scripts/verify_treadmill_control_surface.py`, with tests that prove it fails on each of those changes) | Every pull request and push (hosted fast checks) and `scripts/validate_local.sh` |
+| Command byte encoding, capability gate and pre-write rechecks (`FTMSControlPointCodecTests`, `FTMSControlPointTransportTests`, `ProductionWorkoutExecutionBindingTests`) | Every pull request and push (hosted full validation) and the local gate |
+| Watch ownership, saved-profile and import-resource boundaries (`scripts/verify_*.py`) | Every pull request and push and the local gate |
+| Built Debug and Release binaries contain no historical Control Point diagnostic or proof-session UI | `scripts/validate_local.sh` |
+
+Simulator and CI runs prove software behaviour only. Physical behaviour was established in separately authorised, supervised sessions on the real treadmill:
+
+- [Request Control proof, 10 September 2026](docs/validation/fr30z-request-control-success-2026-09-10.md): one exact `00` command, one well-formed acknowledgement, no belt movement.
+- [Console and target characterisation, 11 September 2026](docs/validation/fr30z-console-target-characterisation-2026-09-11.md): low speed and incline targets acknowledged, then reported back exactly by the treadmill.
+- [End-to-end workout proof, 13 September 2026](docs/validation/fr30z-workout-proof-success-2026-09-13.md): a five-minute workout through physical pause, resume and Stop, supervised and confirmed by the operator.
+
+More detail is under [Physical FR30z evidence](#physical-fr30z-evidence). All screenshots are from the iOS Simulator with synthetic data.
 
 ## Current slice
 
