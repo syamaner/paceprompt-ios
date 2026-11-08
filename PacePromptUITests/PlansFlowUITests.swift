@@ -486,9 +486,14 @@ final class PlansFlowUITests: XCTestCase {
     }
 
     private func replaceText(in field: XCUIElement, with value: String) {
-        field.tap()
-        // Keyboard presentation can move the field before a second coordinate gesture.
-        field.typeKey("a", modifierFlags: .command)
+        let current = field.value as? String ?? ""
+        let suffix = current.firstIndex(of: " ").map { String(current[$0...]) } ?? ""
+        let textLength = current.count - suffix.count
+        // Tap at the end, then clear the editable text. Select All can silently fail
+        // on the simulator's numeric keyboard and append to the old value.
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: textLength + 2))
+        XCTAssertTrue(waitForValue(suffix, in: field), "Field did not clear before replacement")
         field.typeText(value)
     }
 
