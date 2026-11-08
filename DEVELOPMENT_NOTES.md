@@ -98,11 +98,31 @@ local gate passed 547 production unit tests, 78 UI tests, 16 evaluation target
 tests, 247 offline HostEval tests (36 expected skips), Release simulator build,
 static analysis and repository checks.
 
+For `PP-20261108-02`, the same root Codex Desktop session measures the build 28
+recovery and its local validation from cumulative event 333 at
+`2026-11-08T12:47:46.972Z`: 52,454,177 input (52,210,432 cached; 0 cache-write),
+60,061 output (22,225 reasoning subset), 52,514,238 total. The final pre-ledger
+snapshot is event 713 at `2026-11-08T15:08:03.865Z`: 100,931,452 input
+(100,582,016 cached; 0 cache-write), 97,090 output (30,490 reasoning subset),
+101,028,542 total. The 380 request records reconcile exactly to the row delta;
+the largest input request was 175,375 tokens and none exceeded the authorised
+272,000-token threshold. The standard-tier token-only API-equivalent estimate
+uses the same official `gpt-6-sol` rates and pricing date above: USD 10.26,
+not a ChatGPT subscription bill. This measurement includes only the root task;
+Qodo, hosted CI, this numeric insertion, commit, push and release delivery are
+excluded. No provider call or physical-device operation was made. The final
+complete local gate passed 247 offline HostEval tests (36 expected skips), 547
+production unit tests, 78 UI tests, 16 evaluation target tests, Release
+simulator build, static analysis and repository checks. A simulator keyboard
+selection failure prompted the narrow UI test clearing fix; the affected case
+then passed three focused repeats and the complete gate.
+
 ## Commit measurements
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
 | 8 Nov 2026 | `PP-20261108-01` | Explicit on-device OpenRouter key check and internal TestFlight 1.0.1 (27) candidate | `gpt-6-sol` | 42,359,659 (42,243,968; 0) | 34,726 | 42,394,385 | USD 9.03 (standard-tier token-only API-equivalent) | Exact 229-request root implementation and local-validation phase; largest input 219,541, none above 272,000; reasoning subset 12,808; final numeric insertion, independent review and delivery excluded |
+| 8 Nov 2026 | `PP-20261108-02` | TestFlight 1.0.1 (28) recovery after the build 27 source guard failed before upload; UI test input reliability | `gpt-6-sol` | 48,477,275 (48,371,584; 0) | 37,029 | 48,514,304 | USD 10.26 (standard-tier token-only API-equivalent) | Exact 380-request root recovery and local-validation phase; largest input 175,375, none above 272,000; reasoning subset 8,265; final numeric insertion, independent review and delivery excluded |
 | 4 Nov 2026 | `PP-20261104-01` | Local gate accepts Xcode 27.2; treadmill command-surface check in hosted CI; README safeguards with evidence and screenshots | `claude-opus-5-5` (Claude Code) | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Claude Code session, no phase boundary captured; not a Codex task |
 | 3 Nov 2026 | `PP-20261103-03` | Developer-only HostEval lock: patch Dependabot alerts in aiohttp, certifi, multidict and urllib3 | `claude-opus-5-5` (Claude Code) | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Claude Code session, no phase boundary captured; not a Codex task |
 | 3 Nov 2026 | `PP-20261103-02` | Public repository hygiene: README safety gate matches the code, complete hosted validation on pull requests, ledger framing, design mock-ups renamed | `claude-opus-5-5` (Claude Code) | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Claude Code session, no phase boundary captured; not a Codex task |
