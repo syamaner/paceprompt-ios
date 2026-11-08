@@ -67,6 +67,68 @@ final class WorkoutImportTests: XCTestCase {
 
 @MainActor
 final class WorkoutImportBoundaryTests: XCTestCase {
+    func testExplicitKeyCheckUsesOnlyFixedGetAndRedactedStatuses() throws {
+        let backend = SyntheticKeychain(), credential = ImportCredentialStore(backend: backend)
+        let transport = CapturingTransport()
+        let checker = OpenRouterKeyChecker(credential: credential, transport: transport)
+        checker.check()
+        XCTAssertEqual(checker.result, .unavailable)
+        XCTAssertTrue(transport.requests.isEmpty)
+
+        backend.data = Data("synthetic-key".utf8)
+        checker.check()
+        XCTAssertEqual(checker.result, .checking)
+        let request = try XCTUnwrap(transport.requests.only)
+        XCTAssertEqual(request.url, OpenRouterKeyChecker.endpoint)
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertNil(request.httpBody)
+        XCTAssertEqual(request.allHTTPHeaderFields?.count, 1)
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer synthetic-key")
+        let response = { (status: Int, url: URL) in
+            HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
+        }
+        transport.complete(.success((Data("private response ignored".utf8), response(200, OpenRouterKeyChecker.endpoint))))
+        XCTAssertEqual(checker.result, .accepted)
+        checker.check()
+        transport.complete(.success((Data(), response(401, OpenRouterKeyChecker.endpoint))))
+        XCTAssertEqual(checker.result, .rejected)
+        checker.check()
+        transport.complete(.success((Data(), response(403, OpenRouterKeyChecker.endpoint))))
+        XCTAssertEqual(checker.result, .unavailable)
+        checker.check()
+        transport.complete(.success((Data(), response(200, URL(string: "https://example.invalid/")!))))
+        XCTAssertEqual(checker.result, .unavailable)
+    }
+
+    func testKeyCheckRejectsLateResultAfterCancellationOrKeyChange() {
+        let backend = SyntheticKeychain(), credential = ImportCredentialStore(backend: backend)
+        backend.data = Data("synthetic-key".utf8)
+        let transport = CapturingTransport()
+        let checker = OpenRouterKeyChecker(credential: credential, transport: transport)
+        let accepted = HTTPURLResponse(url: OpenRouterKeyChecker.endpoint, statusCode: 200,
+                                       httpVersion: "HTTP/1.1", headerFields: nil)!
+        checker.check(); checker.cancel()
+        transport.complete(.success((Data(), accepted)))
+        XCTAssertEqual(checker.result, .idle)
+        checker.check()
+        credential.entry = "replacement-key"
+        credential.save(replacing: true)
+        transport.complete(.success((Data(), accepted)))
+        XCTAssertNotEqual(checker.result, .accepted)
+        checker.cancel()
+        XCTAssertEqual(checker.result, .idle)
+    }
+
+    func testKeyCheckCredentialCannotBeSentToOtherDestinationOrAsPost() {
+        let backend = SyntheticKeychain(), credential = ImportCredentialStore(backend: backend)
+        backend.data = Data("synthetic-key".utf8)
+        var wrong = URLRequest(url: WorkoutImportContract.endpoint); wrong.httpMethod = "GET"
+        XCTAssertThrowsError(try credential.authorizeKeyCheck(&wrong))
+        wrong = URLRequest(url: OpenRouterKeyChecker.endpoint); wrong.httpMethod = "POST"
+        XCTAssertThrowsError(try credential.authorizeKeyCheck(&wrong))
+        XCTAssertEqual(backend.reads, 0)
+    }
+
     func testKeychainQueryIsScopedAndNonSynchronisingWithoutReadingAKey() {
         let query = DeviceImportKeychain.query
         XCTAssertEqual(query[kSecAttrSynchronizable as String] as? Bool, false)

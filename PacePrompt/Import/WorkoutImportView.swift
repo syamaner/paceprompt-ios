@@ -80,10 +80,16 @@ struct WorkoutImportView: View {
 
 struct ImportCredentialView: View {
     @ObservedObject var credential: ImportCredentialStore
+    @StateObject private var checker: OpenRouterKeyChecker
     @State private var editing = false
     @State private var replacing = false
     @State private var confirmDelete = false
     @Environment(\.scenePhase) private var scenePhase
+
+    init(credential: ImportCredentialStore) {
+        self.credential = credential
+        _checker = StateObject(wrappedValue: OpenRouterKeyChecker(credential: credential))
+    }
 
     var body: some View {
         Form {
@@ -100,7 +106,7 @@ struct ImportCredentialView: View {
                         .autocorrectionDisabled()
                         .privacySensitive()
                     Button(replacing ? "Confirm replacement" : "Save key") {
-                        credential.save(replacing: replacing); editing = false
+                        checker.cancel(); credential.save(replacing: replacing); editing = false
                     }
                     Button("Cancel") { credential.cancelEntry(); editing = false }
                 } else {
@@ -110,21 +116,36 @@ struct ImportCredentialView: View {
                         Button("Replace key") { replacing = true; credential.beginReplacement(); editing = true }
                         Button("Delete key", role: .destructive) { confirmDelete = true }
                     }
-                    Button("Check key status", action: credential.refresh)
+                    Button("Refresh saved-key status", action: credential.refresh)
+                    if credential.state == .present {
+                        Button("Check key with OpenRouter", action: checker.check)
+                            .disabled(checker.result == .checking)
+                            .accessibilityIdentifier("import.keyCheck")
+                    }
+                    switch checker.result {
+                    case .idle: EmptyView()
+                    case .checking: ProgressView("Checking key with OpenRouter…")
+                    case .accepted: Text("OpenRouter accepted this saved key. Workout import may still fail for other reasons.")
+                    case .rejected: Text("OpenRouter rejected this saved key.")
+                    case .unavailable: Text("Could not check this key. Try again later.")
+                    }
+                    Text("Checking sends only the saved key to OpenRouter. It does not send workout text or generate a plan.")
+                        .font(.footnote)
                 }
             }
         }
         .navigationTitle("Remote import key")
         .onAppear(perform: credential.refresh)
-        .onDisappear { credential.cancelEntry(); editing = false }
+        .onDisappear { checker.cancel(); credential.cancelEntry(); editing = false }
+        .onChange(of: credential.version) { _, _ in checker.cancel() }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active { credential.protectedDataLost(); editing = false }
+            if phase != .active { checker.cancel(); credential.protectedDataLost(); editing = false }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataWillBecomeUnavailableNotification)) { _ in
-            credential.protectedDataLost(); editing = false
+            checker.cancel(); credential.protectedDataLost(); editing = false
         }
         .confirmationDialog("Delete the stored OpenRouter key?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete key", role: .destructive, action: credential.delete)
+            Button("Delete key", role: .destructive) { checker.cancel(); credential.delete() }
             Button("Cancel", role: .cancel) {}
         }
     }
