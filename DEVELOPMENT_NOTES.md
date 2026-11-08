@@ -76,10 +76,33 @@ API-equivalent =
 
 Pricing authority for Claude models: [Anthropic pricing documentation](https://platform.claude.com/docs/en/pricing).
 
+For `PP-20261108-01`, the selected root Codex Desktop session is
+`01a1baa6-846e-77a0-8c00-65ec4c6748fa` at
+`/Users/sertanyamaner/.codex/sessions/2026/11/08/rollout-2026-11-08T10-13-57-01a1baa6-846e-77a0-8c00-65ec4c6748fa.jsonl`.
+The pre-implementation boundary is cumulative event 15 at
+`2026-11-08T10:19:08.690Z`: 860,372 input (793,216 cached; 0 cache-write),
+6,662 output (3,095 reasoning subset), 867,034 total. The final pre-ledger
+snapshot is event 244 at `2026-11-08T11:16:44.703Z`: 43,220,031 input
+(43,037,184 cached; 0 cache-write), 41,388 output (15,903 reasoning subset),
+43,261,419 total. The 229 request records reconcile exactly to the row delta.
+Only the root session is measured; Qodo review was blocked, and hosted review,
+this numeric insertion, commit, push and release delivery are outside the phase.
+The USD 9.03 figure is a standard-tier token-only API-equivalent comparison,
+not a ChatGPT subscription bill. The exact `gpt-6-sol` rates checked on
+8 November 2026 against the [official model page](https://developers.openai.com/api/docs/models/gpt-6-sol)
+are USD 2.00 per million uncached input, 0.20 cached input, 2.50 cache writes
+and 10.00 output. The 272,000-input-token long-context threshold was not crossed;
+there were no cache writes. No OpenRouter credential or provider call, physical
+device, treadmill or HealthKit operation was used for this change. The complete
+local gate passed 547 production unit tests, 78 UI tests, 16 evaluation target
+tests, 247 offline HostEval tests (36 expected skips), Release simulator build,
+static analysis and repository checks.
+
 ## Commit measurements
 
 | Date | Change ID | Feature or change | Model | Input tokens (cached; cache write) | Output tokens | Total tokens | Token-only API-equivalent | Measurement scope |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 8 Nov 2026 | `PP-20261108-01` | Explicit on-device OpenRouter key check and internal TestFlight 1.0.1 (27) candidate | `gpt-6-sol` | 42,359,659 (42,243,968; 0) | 34,726 | 42,394,385 | USD 9.03 (standard-tier token-only API-equivalent) | Exact 229-request root implementation and local-validation phase; largest input 219,541, none above 272,000; reasoning subset 12,808; final numeric insertion, independent review and delivery excluded |
 | 4 Nov 2026 | `PP-20261104-01` | Local gate accepts Xcode 27.2; treadmill command-surface check in hosted CI; README safeguards with evidence and screenshots | `claude-opus-5-5` (Claude Code) | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Claude Code session, no phase boundary captured; not a Codex task |
 | 3 Nov 2026 | `PP-20261103-03` | Developer-only HostEval lock: patch Dependabot alerts in aiohttp, certifi, multidict and urllib3 | `claude-opus-5-5` (Claude Code) | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Claude Code session, no phase boundary captured; not a Codex task |
 | 3 Nov 2026 | `PP-20261103-02` | Public repository hygiene: README safety gate matches the code, complete hosted validation on pull requests, ledger framing, design mock-ups renamed | `claude-opus-5-5` (Claude Code) | Unmeasured | Unmeasured | Unmeasured | Unmeasured | Claude Code session, no phase boundary captured; not a Codex task |

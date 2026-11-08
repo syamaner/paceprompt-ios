@@ -93,6 +93,14 @@ missing or mismatched provider, service tier and optional message model without 
 or displaying any received value. No error body or
 native error description is shown or stored.
 
+Settings provides a separate, explicit credential check using the same stored
+Keychain item. It sends only `GET https://openrouter.ai/api/v1/key` with the
+Bearer credential through an ephemeral session. HTTP 200 means OpenRouter
+accepted the saved key for this check; 401 means it rejected it. Other status,
+transport or endpoint outcomes are inconclusive. No response body is parsed,
+displayed or retained. This check sends no workout text, makes no generation
+request, and does not prove the pinned model route or full import will succeed.
+
 ## Proposal and local authority
 
 The copied nested v2.3 schema is checked completely, followed by exact sentinel,

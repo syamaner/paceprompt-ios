@@ -45,7 +45,7 @@ handling of your data is covered by their policies.
 
 ## Optional remote workout import
 
-You can use the app without remote import. Each remote request requires a
+You can use the app without remote import. Each remote workout import request requires a
 separate disclosure and your agreement. If you proceed, the workout text you
 entered is sent to OpenRouter and the selected OpenAI service to produce a plan
 for your review. This is an external service using your own OpenRouter account
@@ -53,9 +53,11 @@ and key. Do not enter information you do not want those services to receive.
 The request does not automatically attach your local history, HealthKit data or
 Bluetooth diagnostic captures.
 
-Your key is stored in this device's non-synchronising Keychain and is sent only
-to the authorised provider endpoint for the request. The app does not log the key
-or include it in workout exports. Request processing is subject to
+Your key is stored in this device's non-synchronising Keychain. If you tap
+“Check key with OpenRouter” in Settings, only the saved key is sent to OpenRouter's
+key-check endpoint; no workout text or plan-generation request is sent. A separate
+workout-import agreement sends the key to the authorised import endpoint. The app
+does not log the key or include it in workout exports. Request processing is subject to
 [OpenRouter's privacy policy](https://openrouter.ai/privacy) and the applicable
 [OpenAI business terms](https://openai.com/policies/business-terms/). The services
 receive network and account information needed to process requests. PacePrompt

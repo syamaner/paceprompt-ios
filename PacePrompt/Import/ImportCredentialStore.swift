@@ -66,6 +66,7 @@ final class ImportCredentialStore: ObservableObject {
     enum State: String { case absent, present, replacing, deleting, failed }
     @Published private(set) var state: State = .absent
     @Published var entry = ""
+    @Published private(set) var version: UInt64 = 0
     private let backend: any ImportKeychainBackend
 
     init(backend: (any ImportKeychainBackend)? = nil) { self.backend = backend ?? DeviceImportKeychain() }
@@ -77,6 +78,7 @@ final class ImportCredentialStore: ObservableObject {
     func cancelEntry() { entry = ""; refresh() }
     func save(replacing: Bool) {
         defer { entry = "" }
+        version &+= 1
         guard !entry.isEmpty, entry.utf8.allSatisfy({ $0 >= 33 && $0 <= 126 }) else { state = .failed; return }
         do {
             if replacing { try backend.replace(Data(entry.utf8)) }
@@ -85,15 +87,26 @@ final class ImportCredentialStore: ObservableObject {
         } catch { state = .failed }
     }
     func delete() {
+        version &+= 1
         entry = ""
         state = .deleting
         do { try backend.delete(); state = .absent } catch { state = .failed }
     }
-    func protectedDataLost() { entry = ""; state = .failed }
+    func protectedDataLost() { version &+= 1; entry = ""; state = .failed }
 
     // No public key getter. The only permitted release is into the fixed request.
     func authorize(_ request: inout URLRequest) throws {
         guard request.url == WorkoutImportContract.endpoint, request.httpMethod == "POST" else { throw ImportFailure.identity }
+        try attachCredential(to: &request)
+    }
+
+    func authorizeKeyCheck(_ request: inout URLRequest) throws {
+        guard request.url == OpenRouterKeyChecker.endpoint, request.httpMethod == "GET",
+              request.httpBody == nil else { throw ImportFailure.identity }
+        try attachCredential(to: &request)
+    }
+
+    private func attachCredential(to request: inout URLRequest) throws {
         var bytes = try backend.read()
         defer { bytes.resetBytes(in: 0..<bytes.count) }
         guard !bytes.isEmpty, bytes.allSatisfy({ $0 >= 33 && $0 <= 126 }),

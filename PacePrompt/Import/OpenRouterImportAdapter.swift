@@ -1,9 +1,60 @@
+import Combine
 import Foundation
 
 @MainActor
 protocol ImportTransport: AnyObject {
     func send(_ request: URLRequest, completion: @escaping @MainActor (Result<(Data, HTTPURLResponse), ImportFailure>) -> Void)
     func cancel()
+}
+
+@MainActor
+final class OpenRouterKeyChecker: ObservableObject {
+    enum Result: Equatable { case idle, checking, accepted, rejected, unavailable }
+    static let endpoint = URL(string: "https://openrouter.ai/api/v1/key")!
+
+    @Published private(set) var result: Result = .idle
+    private let credential: ImportCredentialStore
+    private let transport: any ImportTransport
+    private var identifier: UUID?
+
+    init(credential: ImportCredentialStore, transport: (any ImportTransport)? = nil) {
+        self.credential = credential
+        self.transport = transport ?? SessionImportTransport()
+    }
+
+    func check() {
+        cancel()
+        let id = UUID()
+        let version = credential.version
+        do {
+            var request = URLRequest(url: Self.endpoint, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 60)
+            request.httpMethod = "GET"
+            try credential.authorizeKeyCheck(&request)
+            identifier = id
+            result = .checking
+            transport.send(request) { [weak self] outcome in
+                guard let self, self.identifier == id, self.credential.version == version else { return }
+                self.identifier = nil
+                guard case let .success((_, response)) = outcome, response.url == Self.endpoint else {
+                    self.result = .unavailable
+                    return
+                }
+                switch response.statusCode {
+                case 200: self.result = .accepted
+                case 401: self.result = .rejected
+                default: self.result = .unavailable
+                }
+            }
+        } catch {
+            result = .unavailable
+        }
+    }
+
+    func cancel() {
+        identifier = nil
+        transport.cancel()
+        result = .idle
+    }
 }
 
 final class ImportSessionDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
